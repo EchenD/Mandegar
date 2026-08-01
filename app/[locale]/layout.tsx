@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { LocaleDocument } from "@/components/layout/LocaleDocument";
 import { ensureLocale, localeConfig, locales, type Locale } from "@/lib/i18n";
 
 export function generateStaticParams() {
@@ -27,8 +28,10 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
   const config = localeConfig[locale];
   return (
     <div className="siteShell" lang={locale} dir={config.dir} data-locale={locale}>
+      <LocaleDocument locale={locale} />
+      <a className="skipLink" href="#main-content">{locale === "fa" ? "رفتن به محتوای اصلی" : locale === "ar" ? "انتقل إلى المحتوى الرئيسي" : "Skip to main content"}</a>
       <Header locale={locale} />
-      <main>{children}</main>
+      <main id="main-content">{children}</main>
       <Footer locale={locale} />
     </div>
   );

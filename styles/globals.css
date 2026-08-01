@@ -22,6 +22,9 @@ body, button, a { font-family: inherit; }
 a { color: inherit; }
 button { font: inherit; }
 ::selection { color: #fff; background: var(--accent); }
+.skipLink { position: fixed; inset-block-start: .75rem; inset-inline-start: .75rem; z-index: 100; padding: .6rem .8rem; border-radius: .5rem; background: var(--ink); color: #fff; font-size: .75rem; text-decoration: none; transform: translateY(-160%); transition: transform .2s ease; }
+.skipLink:focus { transform: translateY(0); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 .siteShell { min-height: 100vh; overflow: clip; }
 .homepageFlow { display: flex; flex-direction: column; }
 .pageWidth { width: var(--page); margin-inline: auto; }
