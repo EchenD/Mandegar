@@ -158,6 +158,15 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[data-stage='proof']")).toBeVisible();
   });
 
+  test("scene atlas stays aligned with the visible chapter", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en", { waitUntil: "networkidle" });
+    for (const stage of ["proof", "capability", "intelligence"]) {
+      await page.locator(`[data-stage="${stage}"]`).scrollIntoViewIfNeeded();
+      await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
+    }
+  });
+
   test("persistent scene does not cover the footer at the end of the narrative", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });

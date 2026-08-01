@@ -49,6 +49,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
             <span data-scene-step="invitation">Invitation</span>
           </div>
         </div>
+        <div className="eventAtlas" aria-hidden="true">
+          <div className="eventAtlasHeader"><span>EVENT ATLAS</span><span>PROOF / SYSTEM / INSIGHT</span></div>
+          <div className="eventAtlasField">
+            <span className="atlasTrace atlasTraceOne" />
+            <span className="atlasTrace atlasTraceTwo" />
+            <span className="atlasTrace atlasTraceThree" />
+            <span className="atlasNode atlasNodeCore"><b>LIVE</b><small>event</small></span>
+            <span className="atlasNode atlasNodeProof"><b>05</b><small>proof</small></span>
+            <span className="atlasNode atlasNodeSystem"><b>06</b><small>system</small></span>
+            <span className="atlasNode atlasNodeInsight"><b>07</b><small>insight</small></span>
+          </div>
+          <div className="eventAtlasFooter"><span>01 — FRAME</span><span>02 — BUILD</span><span>03 — READ</span></div>
+        </div>
         <div className="narrativeRail"><span className="narrativeRailTrack"><i /></span><span className="narrativeRailLabel">IDEA / SPACE / EXPERIENCE</span></div>
       </div>
       <section className="heroSection" data-stage="spark" aria-labelledby="hero-title">
@@ -110,7 +123,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
             <div className="headingWithLink"><h2 id="proof-title">{copy.proofTitle}</h2><Link className="textLink" href={localizedPath(locale, "projects")}>{ui.viewAll}<span aria-hidden="true">↗</span></Link></div>
             <p>{copy.proofBody}</p>
           </div>
-          <div className="pageWidth projectGrid projectGridFeatured">
+          <div className="pageWidth eventAtlasBridge" aria-hidden="true">
+            <span className="eventAtlasBridgeLabel">ONE EVENT / MANY TOUCHPOINTS</span>
+            <span className="eventAtlasBridgeLine"><i /><i /><i /><i /></span>
+            <span className="eventAtlasBridgeLabel">SPACE — EXPERIENCE — MEMORY</span>
+          </div>
+          <div className="pageWidth projectGrid projectGridFeatured eventAtlasProjects">
             {proofProjects.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
           </div>
         </section>
@@ -121,7 +139,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
             <h2 id="system-title">{copy.systemTitle}</h2>
             <p>{copy.systemBody}</p>
           </div>
-          <div className="pageWidth serviceList">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
+          <div className="pageWidth systemAtlasBridge" aria-hidden="true">
+            <span>STRATEGY</span><i /><span>SPATIAL LOGIC</span><i /><span>PRODUCTION</span><i /><span>LIVE SIGNAL</span>
+          </div>
+          <div className="pageWidth serviceList eventAtlasServices">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
         </section>
 
         <section className="sectionPad intelligenceSection" data-stage="intelligence" aria-labelledby="intelligence-title" style={sectionStyle("intelligence", 6)}>

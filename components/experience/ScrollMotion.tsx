@@ -34,11 +34,23 @@ export function ScrollMotion({ children, lenisEnabled = false }: { children: Rea
       gsap.ticker.lagSmoothing(0);
     }
 
+    const syncStoryStage = () => {
+      const marker = window.innerHeight * 0.46;
+      const sections = Array.from(root.querySelectorAll<HTMLElement>("[data-stage]"))
+        .filter((section) => getComputedStyle(section).display !== "none")
+        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+      let active = sections[0]?.dataset.stage || storyStages[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= marker) active = section.dataset.stage || active;
+      }
+      root.dataset.storyStage = active;
+    };
+
     const syncExperience = (progress: number) => {
       const safeProgress = Math.min(1, Math.max(0, progress));
       experienceState.progress = safeProgress;
       root.style.setProperty("--story-progress", safeProgress.toFixed(4));
-      root.dataset.storyStage = storyStages[Math.min(storyStages.length - 1, Math.floor(safeProgress * storyStages.length))];
+      syncStoryStage();
     };
 
     const master = gsap.timeline({
