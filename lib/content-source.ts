@@ -223,7 +223,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     featureFlags: {
       callbackForm: Boolean(result?.featureFlags?.callbackForm),
       immersiveCanvas: result?.featureFlags?.immersiveCanvas !== false,
-      lenis: Boolean(result?.featureFlags?.lenis),
+      // Smooth scrolling is an enhancement and can be disabled editorially.
+      // It defaults on for the immersive homepage when no CMS setting exists.
+      lenis: result?.featureFlags?.lenis !== false,
     },
   };
 }

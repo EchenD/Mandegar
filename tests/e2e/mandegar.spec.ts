@@ -142,6 +142,19 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("#hero-title")).toBeVisible();
   });
 
+  test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-experience-root]")).toHaveCount(1);
+    await expect(page.locator("[data-experience-canvas-host]")).toHaveCount(1);
+    expect(await page.locator("[data-experience-canvas-host] canvas").count()).toBeLessThanOrEqual(1);
+    await expect(page.locator("[data-story-stage]")).toHaveAttribute("data-story-stage", "spark");
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight * 0.48, behavior: "auto" }));
+    await page.waitForTimeout(500);
+    await expect.poll(() => page.locator("[data-story-stage]").getAttribute("data-story-stage")).not.toBe("spark");
+    await expect(page.locator("[data-stage='proof']")).toBeVisible();
+  });
+
   test("project filters and detail route work", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto("/fa/projects", { waitUntil: "networkidle" });

@@ -41,7 +41,7 @@ const siteSettings = defineType({
     localized("globalLine", "Geographic statement"),
     defineField({ name: "seoDefaults", type: "object", fields: [localized("title", "Title"), localized("description", "Description", "text"), defineField({ name: "socialImage", type: "image" })] }),
     defineField({ name: "analytics", type: "object", fields: [defineField({ name: "provider", type: "string" }), defineField({ name: "siteId", type: "string" }), defineField({ name: "requiresConsent", type: "boolean", initialValue: true })] }),
-    defineField({ name: "featureFlags", type: "object", fields: [defineField({ name: "callbackForm", type: "boolean" }), defineField({ name: "immersiveCanvas", type: "boolean", initialValue: true }), defineField({ name: "lenis", type: "boolean", initialValue: false })] }),
+    defineField({ name: "featureFlags", type: "object", fields: [defineField({ name: "callbackForm", type: "boolean" }), defineField({ name: "immersiveCanvas", type: "boolean", initialValue: true }), defineField({ name: "lenis", type: "boolean", title: "Enable Lenis smooth scrolling", initialValue: true })] }),
   ],
 });
 
