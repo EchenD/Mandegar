@@ -1,0 +1,38 @@
+.header {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100% - 2.5rem, 90rem);
+  margin-inline: auto;
+  padding-block: 1.25rem;
+}
+
+.logo { display: inline-flex; align-items: center; gap: .65rem; color: var(--ink); text-decoration: none; font-size: .78rem; font-weight: 750; letter-spacing: .16em; }
+.logoMark { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border: 1px solid var(--ink); border-radius: 50%; }
+.logoMark span { width: .38rem; height: .38rem; border-radius: 50%; background: var(--accent); box-shadow: 0 0 .7rem var(--accent); }
+.logoText { line-height: 1; }
+.nav { display: flex; align-items: center; gap: 2rem; margin-inline-start: auto; margin-inline-end: 2rem; }
+.nav a, .desktopLanguage a, .mobileLanguage a { color: var(--muted); text-decoration: none; font-size: .8rem; transition: color .25s ease; }
+.nav a:hover, .desktopLanguage a:hover, .mobileLanguage a:hover { color: var(--ink); }
+.actions { display: flex; align-items: center; gap: 1rem; }
+.desktopLanguage { display: flex; align-items: center; gap: .5rem; }
+.desktopLanguage a { font-size: .68rem; letter-spacing: .08em; }
+.activeLanguage { color: var(--ink) !important; font-weight: 750; }
+.mobileLanguage { display: none; }
+.menuButton { display: none; border: 0; background: transparent; cursor: pointer; padding: .55rem; }
+.menuButton i { display: block; width: 1.35rem; height: 1px; background: var(--ink); margin-block: .28rem; }
+
+@media (max-width: 760px) {
+  .header { width: min(100% - 1.5rem, 90rem); padding-block: 1rem; }
+  .desktopLanguage, .actions > .button { display: none; }
+  .menuButton { display: block; }
+  .nav { position: fixed; inset: 0; z-index: -1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1.3rem; margin: 0; padding: 5rem 1.5rem 2rem; background: rgba(246, 245, 241, .97); transform: translateY(-110%); transition: transform .35s ease; }
+  .navOpen { transform: translateY(0); }
+  .nav a { font-size: clamp(1.8rem, 8vw, 3rem); color: var(--ink); }
+  .mobileLanguage { display: flex; gap: .75rem; margin-block-start: 1rem; }
+  .mobileLanguage a { font-size: .85rem; }
+}
