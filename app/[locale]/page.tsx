@@ -7,10 +7,11 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ServiceCard } from "@/components/projects/ServiceCard";
 import { getText, media } from "@/lib/content";
 import { getContactChannels, getHomeModel, getProjects, getServices, getSiteSettings, getTrustContent } from "@/lib/content-source";
-import { getUi, localizedPath, type Locale } from "@/lib/i18n";
+import { ensureLocale, getUi, localizedPath, type Locale } from "@/lib/i18n";
 
-export default async function HomePage({ params }: { params: Promise<{ locale: Locale }> }) {
-  const { locale } = await params;
+export default async function HomePage({ params }: { params: Promise<{ locale?: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale = ensureLocale(rawLocale || "fa");
   const ui = getUi(locale);
   const [{ copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides }, projectItems, serviceItems, settings, trustContent, contactChannels] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale), getSiteSettings(), getTrustContent(locale), getContactChannels()]);
   const proofProjects = featuredProjects.length ? featuredProjects : projectItems.slice(0, 3);
