@@ -1,5 +1,5 @@
 import imageUrlBuilder from "@sanity/image-url";
-import { getProject as getFallbackProject, getService as getFallbackService, homeCopy, projects as fallbackProjects, services as fallbackServices, type Localized, type MediaAsset, type Project, type Service } from "@/lib/content";
+import { getProject as getFallbackProject, getService as getFallbackService, homeCopy, media as fallbackMedia, projects as fallbackProjects, services as fallbackServices, type Localized, type MediaAsset, type Project, type Service } from "@/lib/content";
 import { getText } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
 import { sanityFetch } from "@/lib/sanity/client";
@@ -93,7 +93,8 @@ export async function getHomeModel(locale: Locale) {
   const result = await sanityFetch<any>(homepageQuery, { locale });
   const copy = { ...fallback };
   const sectionSettings: Record<string, { order?: number; visible?: boolean }> = {};
-  if (!result) return { copy, sectionSettings };
+  const mediaOverrides: Record<string, MediaAsset> = {};
+  if (!result) return { copy, sectionSettings, mediaOverrides };
 
   const scalar = (value: LocalizedInput, fallbackValue: string) => typeof value === "string" ? value : value?.[locale] || value?.en || value?.fa || fallbackValue;
   copy.title = scalar(result.title, copy.title);
@@ -109,15 +110,17 @@ export async function getHomeModel(locale: Locale) {
     memory: ["memoryTitle", "memoryBody"],
     conversion: ["ctaTitle", "ctaBody"],
   };
+  const fallbackSectionMedia: Record<string, MediaAsset> = { idea: fallbackMedia.spark, space: fallbackMedia.exhibition, experience: fallbackMedia.interactive, intelligence: fallbackMedia.intelligence, memory: fallbackMedia.photo };
   for (const section of result.sections || []) {
     sectionSettings[section.key] = { order: section.order, visible: section.visible };
+    if (section.media && fallbackSectionMedia[section.key]) mediaOverrides[section.key] = mapMedia(section.media, fallbackSectionMedia[section.key]);
     const keys = sectionCopy[section.key];
     if (keys) {
       copy[keys[0]] = scalar(section.title, copy[keys[0]]);
       copy[keys[1]] = scalar(section.body, copy[keys[1]]);
     }
   }
-  return { copy, sectionSettings };
+  return { copy, sectionSettings, mediaOverrides };
 }
 
 export type ContactChannel = {

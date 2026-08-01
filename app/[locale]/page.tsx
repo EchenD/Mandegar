@@ -12,13 +12,14 @@ import { getUi, localizedPath, type Locale } from "@/lib/i18n";
 export default async function HomePage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const ui = getUi(locale);
-  const [{ copy, sectionSettings }, projectItems, serviceItems] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale)]);
+  const [{ copy, sectionSettings, mediaOverrides }, projectItems, serviceItems] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale)]);
   const sectionStyle = (key: string, fallbackOrder: number) => ({ order: sectionSettings[key]?.order ?? fallbackOrder, display: sectionSettings[key]?.visible === false ? "none" : undefined });
+  const sectionMedia = (key: string, fallback: typeof media.spark) => mediaOverrides[key] || fallback;
 
   return (
     <ScrollMotion>
       <section className="heroSection" aria-labelledby="hero-title">
-        <div className="heroBackdrop"><Image src={media.spark.src} alt="" fill priority sizes="100vw" /></div>
+        <div className="heroBackdrop"><Image src={sectionMedia("idea", media.spark).src} alt="" fill priority sizes="100vw" /></div>
         <div className="heroWash" />
         <ExperienceCanvas />
         <div className="heroContent pageWidth">
@@ -48,7 +49,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
 
         <section className="sectionPad spaceSection" aria-labelledby="space-title" style={sectionStyle("space", 2)}>
           <div className="pageWidth imageStory" data-reveal>
-            <div className="storyImage largeMedia"><MediaPlaceholder media={media.exhibition} locale={locale} /></div>
+            <div className="storyImage largeMedia"><MediaPlaceholder media={sectionMedia("space", media.exhibition)} locale={locale} /></div>
             <div className="storyCopy">
               <div className="sectionKicker">03 / {locale === "fa" ? "فضا" : locale === "ar" ? "المساحة" : "Space"}</div>
               <h2 id="space-title">{copy.spaceTitle}</h2>
@@ -66,7 +67,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
               <p>{copy.interactiveBody}</p>
               <div className="featureTags"><span>{locale === "fa" ? "بازی" : locale === "ar" ? "ألعاب" : "Games"}</span><span>{locale === "fa" ? "لمس و حرکت" : locale === "ar" ? "لمس وحركة" : "Touch + motion"}</span><span>{locale === "fa" ? "عکس" : locale === "ar" ? "تصوير" : "Photo"}</span></div>
             </div>
-            <div className="interactionMedia"><MediaPlaceholder media={media.interactive} locale={locale} /></div>
+            <div className="interactionMedia"><MediaPlaceholder media={sectionMedia("experience", media.interactive)} locale={locale} /></div>
           </div>
         </section>
 
@@ -92,7 +93,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
 
         <section className="sectionPad intelligenceSection" aria-labelledby="intelligence-title" style={sectionStyle("intelligence", 6)}>
           <div className="pageWidth intelligenceGrid" data-reveal>
-            <div className="intelligenceMedia"><MediaPlaceholder media={media.intelligence} locale={locale} /></div>
+            <div className="intelligenceMedia"><MediaPlaceholder media={sectionMedia("intelligence", media.intelligence)} locale={locale} /></div>
             <div className="intelligenceCopy">
               <div className="sectionKicker">07 / {getUi(locale).emerging}</div>
               <h2 id="intelligence-title">{copy.intelligenceTitle}</h2>
@@ -119,7 +120,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
         <section className="sectionPad memorySection" aria-labelledby="memory-title" style={sectionStyle("memory", 8)}>
           <div className="pageWidth memoryGrid" data-reveal>
             <div className="memoryCopy"><div className="sectionKicker">09 / {locale === "fa" ? "خاطره" : locale === "ar" ? "الذكرى" : "Memory"}</div><h2 id="memory-title">{copy.memoryTitle}</h2><p>{copy.memoryBody}</p></div>
-            <div className="memoryMedia"><MediaPlaceholder media={media.photo} locale={locale} /></div>
+            <div className="memoryMedia"><MediaPlaceholder media={sectionMedia("memory", media.photo)} locale={locale} /></div>
           </div>
         </section>
 
