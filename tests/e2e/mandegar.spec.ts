@@ -167,6 +167,17 @@ test.describe("Mandegar responsive layout", () => {
     }
   });
 
+  test("assembled event scene remains visible through interaction surfaces", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en", { waitUntil: "networkidle" });
+    const interactionBackground = await page.locator(".interactionSection").evaluate((element) => getComputedStyle(element).backgroundImage);
+    const ctaBackground = await page.locator(".ctaSection").evaluate((element) => getComputedStyle(element).backgroundImage);
+    expect(interactionBackground).toContain("linear-gradient");
+    expect(ctaBackground).toContain("linear-gradient");
+    await page.locator("[data-stage='invitation']").scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-experience-canvas]")).toHaveCount(1);
+  });
+
   test("persistent scene does not cover the footer at the end of the narrative", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });

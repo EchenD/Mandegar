@@ -191,7 +191,7 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .storyCopy h2 { max-width: 8ch; }
 .storyCopy p { font-size: 1.1rem; }
 .microList { display: grid; gap: .65rem; margin-block-start: 3rem; padding-block-start: 1.2rem; border-block-start: 1px solid var(--line); color: var(--muted); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; }
-.interactionSection { background: rgba(29,32,38,.94); color: var(--paper); }
+.interactionSection { background: linear-gradient(90deg, rgba(29,32,38,.92), rgba(29,32,38,.76)); color: var(--paper); }
 .interactionSection .sectionKicker, .interactionSection p { color: rgba(251,250,247,.62); }
 .interactionGrid { display: grid; grid-template-columns: .72fr 1.28fr; gap: clamp(2rem, 7vw, 8rem); align-items: center; }
 .interactionCopy h2 { max-width: 9ch; }
@@ -257,7 +257,7 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .memoryGrid { display: grid; grid-template-columns: .72fr 1.28fr; gap: clamp(2rem, 8vw, 9rem); align-items: center; }
 .memoryCopy h2 { max-width: 8ch; }
 .memoryMedia { min-height: clamp(24rem, 47vw, 42rem); }
-.ctaSection { position: relative; overflow: hidden; padding-block: clamp(7rem, 15vw, 13rem); background: rgba(20,94,255,.94); color: #fff; }
+.ctaSection { position: relative; overflow: hidden; padding-block: clamp(7rem, 15vw, 13rem); background: linear-gradient(90deg, rgba(20,94,255,.92), rgba(20,94,255,.7)); color: #fff; }
 .ctaInner { position: relative; z-index: 1; }
 .ctaInner .sectionKicker, .ctaInner p { color: rgba(255,255,255,.72); }
 .ctaInner h2 { max-width: 10ch; }

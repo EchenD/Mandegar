@@ -67,6 +67,9 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
   const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
   const particleMaterial = useRef<THREE.PointsMaterial>(null);
   const screenMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const eventSurfaceMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const eventRingMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const eventRingAccentMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const lineGeometry = useMemo(() => buildLineGeometry(quality), [quality]);
   const particleGeometry = useMemo(() => buildParticleGeometry(quality), [quality]);
 
@@ -129,6 +132,16 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
     if (screenMaterial.current) {
       screenMaterial.current.opacity = event * 0.52 + impact * 0.24;
     }
+    if (eventSurfaceMaterial.current) {
+      eventSurfaceMaterial.current.color.set(impact > 0.45 ? "#dbe7ff" : "#286cff");
+      eventSurfaceMaterial.current.opacity = 0.7 + impact * 0.16;
+    }
+    if (eventRingMaterial.current) {
+      eventRingMaterial.current.color.set(impact > 0.45 ? "#eef4ff" : "#145eff");
+    }
+    if (eventRingAccentMaterial.current) {
+      eventRingAccentMaterial.current.color.set(impact > 0.45 ? "#91b5ff" : "#b7ceff");
+    }
   });
 
   return (
@@ -164,7 +177,7 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
         </mesh>
         <mesh position={[0, 0.06, -0.33]}>
           <boxGeometry args={[1.55, 0.88, 0.045]} />
-          <meshBasicMaterial color="#286cff" transparent opacity={0.72} />
+          <meshBasicMaterial ref={eventSurfaceMaterial} color="#286cff" transparent opacity={0.72} />
         </mesh>
         <mesh position={[-0.86, 0.04, -0.31]}>
           <boxGeometry args={[0.035, 0.92, 0.05]} />
@@ -194,11 +207,11 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
       <group ref={eventRings} position={[0, -0.42, 0.16]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial color="#145eff" transparent opacity={0.58} />
+          <meshBasicMaterial ref={eventRingMaterial} color="#145eff" transparent opacity={0.72} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} scale={0.7}>
           <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial color="#b7ceff" transparent opacity={0.58} />
+          <meshBasicMaterial ref={eventRingAccentMaterial} color="#b7ceff" transparent opacity={0.72} />
         </mesh>
       </group>
       <points ref={particles} geometry={particleGeometry}>
