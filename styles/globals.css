@@ -110,6 +110,9 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .heroBackdrop, .heroWash { position: absolute; inset: 0; z-index: -3; }
 .heroBackdrop img { object-fit: cover; object-position: 42% center; opacity: .12; mix-blend-mode: screen; }
 .heroWash { z-index: -2; background: radial-gradient(circle at 67% 42%, rgba(20,94,255,.22), transparent 27%), linear-gradient(90deg, rgba(7,10,18,.95) 0%, rgba(7,10,18,.7) 46%, rgba(7,10,18,.2) 100%); }
+.heroSpark { position: absolute; inset-block-start: 43%; inset-inline-start: 68%; z-index: 0; display: block; width: .55rem; aspect-ratio: 1; border-radius: 50%; background: #dbe7ff; box-shadow: 0 0 0 .45rem rgba(20,94,255,.2), 0 0 1.4rem .45rem rgba(54,111,255,.9), 0 0 4rem 1rem rgba(20,94,255,.36); animation: sparkPulse 3.4s ease-in-out infinite; }
+.heroSpark::before, .heroSpark::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: clamp(7rem, 18vw, 14rem); height: 1px; background: linear-gradient(90deg, rgba(117,163,255,.72), transparent); transform-origin: left center; transform: rotate(-18deg); opacity: .7; }
+.heroSpark::after { width: clamp(4rem, 12vw, 9rem); transform: rotate(34deg); opacity: .4; }
 .experienceCanvas { position: absolute !important; inset: 14% 8% 10% 42%; z-index: -1; width: auto !important; height: auto !important; pointer-events: none; }
 .canvasFallback { position: absolute; inset: 20% 20% 20% 43%; z-index: -1; display: grid; place-items: center; pointer-events: none; }
 .canvasFallback::before, .canvasFallback::after, .canvasFallback span { content: ""; position: absolute; width: 7rem; height: 7rem; border: 1px solid rgba(20, 94, 255, .24); border-radius: 50%; animation: pulse 5s ease-in-out infinite; }
@@ -305,6 +308,7 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 
 @keyframes pulse { 0%, 100% { transform: scale(.86); opacity: .5; } 50% { transform: scale(1.06); opacity: 1; } }
 @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(14px, -12px); } }
+@keyframes sparkPulse { 0%, 100% { transform: scale(.86); opacity: .72; } 50% { transform: scale(1.12); opacity: 1; } }
 
 @media (max-width: 900px) {
   .splitIntro, .imageStory, .interactionGrid, .intelligenceGrid, .trustGrid, .memoryGrid, .aboutGrid, .contactGrid { grid-template-columns: 1fr; gap: 2.5rem; }

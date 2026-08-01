@@ -147,6 +147,7 @@ test.describe("Mandegar responsive layout", () => {
     await page.goto("/en", { waitUntil: "networkidle" });
     await expect(page.locator("[data-experience-root]")).toHaveCount(1);
     await expect(page.locator("[data-experience-canvas-host]")).toHaveCount(1);
+    await expect(page.locator(".heroSpark")).toBeVisible();
     await expect(page.locator(".sceneMediaFrame")).toHaveCount(4);
     await expect(page.locator(".sceneNavigator")).toBeVisible();
     expect(await page.locator("[data-experience-canvas-host] canvas").count()).toBeLessThanOrEqual(1);

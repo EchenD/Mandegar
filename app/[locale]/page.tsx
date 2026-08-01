@@ -54,6 +54,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
       <section className="heroSection" data-stage="spark" aria-labelledby="hero-title">
         <div className="heroBackdrop"><Image src={sectionMedia("idea", media.spark).src} alt="" fill priority sizes="100vw" /></div>
         <div className="heroWash" />
+        <span className="heroSpark" aria-hidden="true" />
         <div className="heroContent pageWidth">
           <div className="eyebrow"><span className="eyebrowDot" /> {copy.kicker}</div>
           <h1 id="hero-title">{copy.title}</h1>
