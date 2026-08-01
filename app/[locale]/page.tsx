@@ -34,7 +34,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
         <span className="placeholderPill">{ui.placeholder}</span>
       </section>
 
-      <main className="homepageFlow" id="experience">
+      <div className="homepageFlow" id="experience">
         <section className="sectionPad conceptSection" aria-labelledby="concept-title" style={sectionStyle("idea", 1)}>
           <div className="pageWidth splitIntro" data-reveal>
             <div className="sectionKicker">02 / {locale === "fa" ? "ایده" : locale === "ar" ? "الفكرة" : "Idea"}</div>
@@ -132,7 +132,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
             <div className="ctaActions"><Link className="button buttonPrimary" href={localizedPath(locale, "contact")}>{ui.start}<span aria-hidden="true">↗</span></Link><Link className="button buttonGhost" href={localizedPath(locale, "contact")}>{ui.navigation.contact}</Link></div>
           </div>
         </section>
-      </main>
+      </div>
     </ScrollMotion>
   );
 }

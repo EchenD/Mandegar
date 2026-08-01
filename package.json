@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint app components lib sanity sanity.config.ts sanity.cli.ts next.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

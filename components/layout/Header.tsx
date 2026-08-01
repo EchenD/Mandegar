@@ -25,7 +25,7 @@ export function Header({ locale }: HeaderProps) {
         <span className={styles.logoText}>MANDEGAR</span>
       </Link>
 
-      <nav className={`${styles.nav} ${open ? styles.navOpen : ""}`} aria-label="Primary navigation">
+      <nav id="primary-navigation" className={`${styles.nav} ${open ? styles.navOpen : ""}`} aria-label="Primary navigation">
         {links.map((link) => (
           <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
         ))}

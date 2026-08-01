@@ -76,6 +76,11 @@ export const media = {
     en: "A contemporary stage with a large screen and blue lighting",
     ar: "منصة معاصرة بشاشة كبيرة وإضاءة زرقاء",
   }),
+  videoPlaceholder: placeholder("/media/placeholders/stage-production.webp", {
+    fa: "پیش‌نمایش ویدیویی موقت از یک اجرای رویداد",
+    en: "Temporary video preview of an event delivery",
+    ar: "معاينة فيديو مؤقتة لتنفيذ فعالية",
+  }, "video-placeholder"),
 };
 
 export const projects: Project[] = [
@@ -173,8 +178,8 @@ export const projects: Project[] = [
     category: { fa: "رویداد سازمانی", en: "Corporate event", ar: "فعالية مؤسسية" },
     year: "—",
     location: { fa: "ایران / در انتظار اطلاعات", en: "Iran / details pending", ar: "إيران / التفاصيل قيد الإضافة" },
-    media: media.stage,
-    gallery: [media.stage, media.exhibition, media.photo],
+    media: media.videoPlaceholder,
+    gallery: [media.videoPlaceholder, media.exhibition, media.photo],
     services: [
       { fa: "تولید رویداد", en: "Event production", ar: "إنتاج الفعاليات" },
       { fa: "محتوا و نمایشگر", en: "Content and screens", ar: "المحتوى والشاشات" },
