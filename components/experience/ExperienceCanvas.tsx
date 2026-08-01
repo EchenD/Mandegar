@@ -43,10 +43,13 @@ export function ExperienceCanvas() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lowPower = window.matchMedia("(max-width: 760px)").matches || (navigator.hardwareConcurrency || 8) < 4;
-    const supportsWebGL = Boolean(document.createElement("canvas").getContext("webgl"));
-    setEnabled(!reduce && !lowPower && supportsWebGL);
+    const frame = window.requestAnimationFrame(() => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const lowPower = window.matchMedia("(max-width: 760px)").matches || (navigator.hardwareConcurrency || 8) < 4;
+      const supportsWebGL = Boolean(document.createElement("canvas").getContext("webgl"));
+      setEnabled(!reduce && !lowPower && supportsWebGL);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   if (!enabled) return <div className="canvasFallback" aria-hidden="true"><span /></div>;
