@@ -28,6 +28,21 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
     <ScrollMotion lenisEnabled={settings.featureFlags.lenis}>
       <div className="experienceBackdrop" aria-hidden="true" data-experience-canvas-host>
         <ExperienceCanvas enabledByCms={settings.featureFlags.immersiveCanvas} />
+        <div className="sceneNavigator">
+          <div className="sceneNavigatorHead"><span>MANDEGAR / LIVE BUILD</span><span>01 — 10</span></div>
+          <div className="sceneNavigatorSteps">
+            <span data-scene-step="spark">Spark</span>
+            <span data-scene-step="idea">Idea</span>
+            <span data-scene-step="space">Space</span>
+            <span data-scene-step="experience">Experience</span>
+            <span data-scene-step="proof">Proof</span>
+            <span data-scene-step="capability">System</span>
+            <span data-scene-step="intelligence">Insight</span>
+            <span data-scene-step="trust">Trust</span>
+            <span data-scene-step="memory">Memory</span>
+            <span data-scene-step="invitation">Invitation</span>
+          </div>
+        </div>
         <div className="narrativeRail"><span className="narrativeRailTrack"><i /></span><span className="narrativeRailLabel">IDEA / SPACE / EXPERIENCE</span></div>
       </div>
       <section className="heroSection" data-stage="spark" aria-labelledby="hero-title">

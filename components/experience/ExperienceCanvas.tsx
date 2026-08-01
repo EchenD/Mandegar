@@ -112,7 +112,7 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
       eventRings.current.rotation.x = Math.sin(time * 0.2) * 0.04;
     }
     if (lineMaterial.current) {
-      lineMaterial.current.opacity = 0.04 + formation * 0.34 + impact * 0.12;
+      lineMaterial.current.opacity = 0.12 + formation * 0.52 + impact * 0.18;
     }
     if (particles.current) {
       particles.current.rotation.z = time * 0.025;
@@ -120,14 +120,14 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
       particles.current.scale.setScalar(0.35 + formation * 0.75 + impact * 0.18);
     }
     if (particleMaterial.current) {
-      particleMaterial.current.opacity = 0.1 + formation * 0.42 + impact * 0.16;
+      particleMaterial.current.opacity = 0.16 + formation * 0.5 + impact * 0.2;
     }
     if (screen.current) {
       screen.current.scale.set(0.1 + event * 0.9, 0.1 + event * 0.9, 1);
       screen.current.position.z = -0.28 - impact * 0.12;
     }
     if (screenMaterial.current) {
-      screenMaterial.current.opacity = event * 0.18 + impact * 0.1;
+      screenMaterial.current.opacity = event * 0.52 + impact * 0.24;
     }
   });
 
@@ -149,56 +149,56 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
       </mesh>
       <group ref={structure}>
         <lineSegments geometry={lineGeometry}>
-          <lineBasicMaterial ref={lineMaterial} color="#145eff" transparent opacity={0.2} depthWrite={false} />
+          <lineBasicMaterial ref={lineMaterial} color="#4d82ff" transparent opacity={0.38} depthWrite={false} />
         </lineSegments>
         <mesh ref={screen} position={[0, 0.06, -0.28]}>
           <planeGeometry args={[1.2, 0.68]} />
-          <meshBasicMaterial ref={screenMaterial} color="#bcd0ff" transparent opacity={0} depthWrite={false} />
+          <meshBasicMaterial ref={screenMaterial} color="#145eff" transparent opacity={0} depthWrite={false} />
         </mesh>
       </group>
       <group ref={eventKit} data-placeholder-3d="event-kit">
         {/* Generic event kit: replace these primitives with approved 3D assets later. */}
         <mesh position={[0, -0.42, 0.08]}>
           <boxGeometry args={[2.55, 0.055, 0.78]} />
-          <meshBasicMaterial color="#d7e3ff" transparent opacity={0.55} />
+          <meshBasicMaterial color="#1c2c54" transparent opacity={0.82} />
         </mesh>
         <mesh position={[0, 0.06, -0.33]}>
           <boxGeometry args={[1.55, 0.88, 0.045]} />
-          <meshBasicMaterial color="#8eafff" transparent opacity={0.36} />
+          <meshBasicMaterial color="#286cff" transparent opacity={0.72} />
         </mesh>
         <mesh position={[-0.86, 0.04, -0.31]}>
           <boxGeometry args={[0.035, 0.92, 0.05]} />
-          <meshBasicMaterial color="#145eff" transparent opacity={0.75} />
+          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
         </mesh>
         <mesh position={[0.86, 0.04, -0.31]}>
           <boxGeometry args={[0.035, 0.92, 0.05]} />
-          <meshBasicMaterial color="#145eff" transparent opacity={0.75} />
+          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
         </mesh>
         <mesh position={[0, 0.52, -0.31]}>
           <boxGeometry args={[1.75, 0.035, 0.05]} />
-          <meshBasicMaterial color="#145eff" transparent opacity={0.75} />
+          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
         </mesh>
         {[[-0.98, -0.2, 0.08], [-0.62, -0.2, 0.08], [0.62, -0.2, 0.08], [0.98, -0.2, 0.08]].map(([x, y, z], index) => (
           <mesh key={index} position={[x, y, z]}>
             <boxGeometry args={[0.22, 0.32 + (index % 2) * 0.1, 0.22]} />
-            <meshBasicMaterial color={index % 2 ? "#b9cbf4" : "#eef3ff"} transparent opacity={0.5} />
+            <meshBasicMaterial color={index % 2 ? "#527ddd" : "#dbe6ff"} transparent opacity={0.78} />
           </mesh>
         ))}
         {(quality === "full" ? [-0.8, -0.4, 0, 0.4, 0.8] : [-0.6, 0, 0.6]).map((x, index) => (
           <mesh key={`audience-${index}`} position={[x, -0.3, 0.45 + (index % 2) * 0.1]}>
             <sphereGeometry args={[0.06, 8, 8]} />
-            <meshBasicMaterial color="#145eff" transparent opacity={0.46} />
+            <meshBasicMaterial color="#145eff" transparent opacity={0.76} />
           </mesh>
         ))}
       </group>
       <group ref={eventRings} position={[0, -0.42, 0.16]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial color="#145eff" transparent opacity={0.3} />
+          <meshBasicMaterial color="#145eff" transparent opacity={0.58} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} scale={0.7}>
           <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial color="#7da4ff" transparent opacity={0.3} />
+          <meshBasicMaterial color="#b7ceff" transparent opacity={0.58} />
         </mesh>
       </group>
       <points ref={particles} geometry={particleGeometry}>

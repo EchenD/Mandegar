@@ -155,6 +155,22 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[data-stage='proof']")).toBeVisible();
   });
 
+  test("persistent scene does not cover the footer at the end of the narrative", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en", { waitUntil: "networkidle" });
+    await page.mouse.wheel(0, 100000);
+    await page.waitForTimeout(1800);
+    const result = await page.evaluate(() => {
+      const footer = document.querySelector(".footer");
+      if (!footer) return { covered: false, reason: "missing footer" };
+      const rect = footer.getBoundingClientRect();
+      const y = Math.min(window.innerHeight - 10, Math.max(10, rect.top + 20));
+      const element = document.elementFromPoint(20, y);
+      return { covered: Boolean(element?.closest(".footer")), element: element?.tagName, top: Math.round(rect.top) };
+    });
+    expect(result.covered, JSON.stringify(result)).toBe(true);
+  });
+
   test("project filters and detail route work", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto("/fa/projects", { waitUntil: "networkidle" });
