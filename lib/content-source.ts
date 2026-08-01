@@ -3,7 +3,7 @@ import { getProject as getFallbackProject, getService as getFallbackService, hom
 import { getText } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
 import { sanityFetch } from "@/lib/sanity/client";
-import { projectQuery, projectsQuery, servicesQuery } from "@/lib/sanity/queries";
+import { contactChannelsQuery, homepageQuery, projectQuery, projectsQuery, servicesQuery } from "@/lib/sanity/queries";
 
 type LocalizedInput = string | Partial<Localized> | null | undefined;
 
@@ -88,6 +88,60 @@ export async function getService(locale: Locale, slug: string): Promise<Service 
   return services.find((service) => service.slug === slug) || fallback;
 }
 
-export function getHomeCopy(locale: Locale) {
-  return homeCopy[locale];
+export async function getHomeModel(locale: Locale) {
+  const fallback = homeCopy[locale];
+  const result = await sanityFetch<any>(homepageQuery, { locale });
+  const copy = { ...fallback };
+  const sectionSettings: Record<string, { order?: number; visible?: boolean }> = {};
+  if (!result) return { copy, sectionSettings };
+
+  const scalar = (value: LocalizedInput, fallbackValue: string) => typeof value === "string" ? value : value?.[locale] || value?.en || value?.fa || fallbackValue;
+  copy.title = scalar(result.title, copy.title);
+  copy.intro = scalar(result.intro, copy.intro);
+  const sectionCopy: Record<string, [keyof typeof copy, keyof typeof copy]> = {
+    idea: ["conceptTitle", "conceptBody"],
+    space: ["spaceTitle", "spaceBody"],
+    experience: ["interactiveTitle", "interactiveBody"],
+    proof: ["proofTitle", "proofBody"],
+    capability: ["systemTitle", "systemBody"],
+    intelligence: ["intelligenceTitle", "intelligenceBody"],
+    trust: ["trustTitle", "trustBody"],
+    memory: ["memoryTitle", "memoryBody"],
+    conversion: ["ctaTitle", "ctaBody"],
+  };
+  for (const section of result.sections || []) {
+    sectionSettings[section.key] = { order: section.order, visible: section.visible };
+    const keys = sectionCopy[section.key];
+    if (keys) {
+      copy[keys[0]] = scalar(section.title, copy[keys[0]]);
+      copy[keys[1]] = scalar(section.body, copy[keys[1]]);
+    }
+  }
+  return { copy, sectionSettings };
+}
+
+export type ContactChannel = {
+  purpose: "sales" | "general" | "international" | "whatsapp";
+  label: Localized;
+  department?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  country?: string;
+  availability?: string;
+};
+
+export async function getContactChannels(): Promise<ContactChannel[]> {
+  const result = await sanityFetch<any[]>(contactChannelsQuery);
+  if (!result?.length) return [];
+  return result.map((channel) => ({
+    purpose: channel.purpose || "general",
+    label: toLocalized(channel.label, "Contact"),
+    department: channel.department,
+    phone: channel.phone,
+    whatsapp: channel.whatsapp,
+    email: channel.email,
+    country: channel.country,
+    availability: channel.availability,
+  }));
 }

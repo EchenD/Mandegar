@@ -24,3 +24,7 @@ export const projectQuery = `*[_type == "project" && locale == $locale && slug.c
 export const servicesQuery = `*[_type == "service" && locale == $locale && status != "archived"] | order(order asc){
   title, "slug": slug.current, summary, detail, capabilities, media, status, order
 }`;
+
+export const contactChannelsQuery = `*[_type == "contactChannel" && (defined(priority) || purpose in ["sales", "general", "international", "whatsapp"])] | order(priority asc){
+  purpose, label, department, phone, whatsapp, email, country, availability, priority
+}`;

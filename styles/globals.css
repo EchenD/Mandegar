@@ -23,6 +23,7 @@ a { color: inherit; }
 button { font: inherit; }
 ::selection { color: #fff; background: var(--accent); }
 .siteShell { min-height: 100vh; overflow: clip; }
+.homepageFlow { display: flex; flex-direction: column; }
 .pageWidth { width: var(--page); margin-inline: auto; }
 .sectionPad { padding-block: clamp(6rem, 12vw, 12rem); }
 .sectionKicker, .eyebrow { color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
@@ -187,6 +188,9 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .contactCard h3 { margin-block-end: .5rem; }
 .contactCard p { margin-block-end: 1rem; font-size: .85rem; }
 .contactPlaceholder { color: var(--accent-deep); font-size: .78rem; font-weight: 750; }
+.contactDetails { display: flex; flex-wrap: wrap; gap: .65rem; }
+.contactDetails a { padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: .75rem; text-decoration: none; }
+.contactDetails a:hover { border-color: var(--accent); color: var(--accent); }
 .contactNote { margin-block-start: 2rem; padding: 1rem 1.2rem; border-inline-start: 2px solid var(--accent); background: rgba(220,232,255,.38); color: var(--muted-strong); font-size: .78rem; }
 
 /* Footer */

@@ -5,15 +5,15 @@ import { ScrollMotion } from "@/components/experience/ScrollMotion";
 import { MediaPlaceholder } from "@/components/media/MediaPlaceholder";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ServiceCard } from "@/components/projects/ServiceCard";
-import { getText, homeCopy, media } from "@/lib/content";
-import { getProjects, getServices } from "@/lib/content-source";
+import { getText, media } from "@/lib/content";
+import { getHomeModel, getProjects, getServices } from "@/lib/content-source";
 import { getUi, localizedPath, type Locale } from "@/lib/i18n";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
-  const copy = homeCopy[locale];
   const ui = getUi(locale);
-  const [projectItems, serviceItems] = await Promise.all([getProjects(locale), getServices(locale)]);
+  const [{ copy, sectionSettings }, projectItems, serviceItems] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale)]);
+  const sectionStyle = (key: string, fallbackOrder: number) => ({ order: sectionSettings[key]?.order ?? fallbackOrder, display: sectionSettings[key]?.visible === false ? "none" : undefined });
 
   return (
     <ScrollMotion>
@@ -34,8 +34,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
         <span className="placeholderPill">{ui.placeholder}</span>
       </section>
 
-      <main id="experience">
-        <section className="sectionPad conceptSection" aria-labelledby="concept-title">
+      <main className="homepageFlow" id="experience">
+        <section className="sectionPad conceptSection" aria-labelledby="concept-title" style={sectionStyle("idea", 1)}>
           <div className="pageWidth splitIntro" data-reveal>
             <div className="sectionKicker">02 / {locale === "fa" ? "ایده" : locale === "ar" ? "الفكرة" : "Idea"}</div>
             <div className="sectionLead">
@@ -46,7 +46,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           <div className="lineField pageWidth" aria-hidden="true"><span /><span /><span /><span /></div>
         </section>
 
-        <section className="sectionPad spaceSection" aria-labelledby="space-title">
+        <section className="sectionPad spaceSection" aria-labelledby="space-title" style={sectionStyle("space", 2)}>
           <div className="pageWidth imageStory" data-reveal>
             <div className="storyImage largeMedia"><MediaPlaceholder media={media.exhibition} locale={locale} /></div>
             <div className="storyCopy">
@@ -58,7 +58,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </div>
         </section>
 
-        <section className="sectionPad interactionSection" aria-labelledby="interaction-title">
+        <section className="sectionPad interactionSection" aria-labelledby="interaction-title" style={sectionStyle("experience", 3)}>
           <div className="pageWidth interactionGrid" data-reveal>
             <div className="interactionCopy">
               <div className="sectionKicker">04 / {locale === "fa" ? "تجربه" : locale === "ar" ? "التجربة" : "Experience"}</div>
@@ -70,7 +70,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </div>
         </section>
 
-        <section className="sectionPad proofSection" aria-labelledby="proof-title">
+        <section className="sectionPad proofSection" aria-labelledby="proof-title" style={sectionStyle("proof", 4)}>
           <div className="pageWidth sectionHeading" data-reveal>
             <div className="sectionKicker">05 / {ui.selectedWork}</div>
             <div className="headingWithLink"><h2 id="proof-title">{copy.proofTitle}</h2><Link className="textLink" href={localizedPath(locale, "projects")}>{ui.viewAll}<span aria-hidden="true">↗</span></Link></div>
@@ -81,7 +81,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </div>
         </section>
 
-        <section className="sectionPad systemSection" aria-labelledby="system-title">
+        <section className="sectionPad systemSection" aria-labelledby="system-title" style={sectionStyle("capability", 5)}>
           <div className="pageWidth sectionHeading" data-reveal>
             <div className="sectionKicker">06 / {locale === "fa" ? "سیستم ساختن" : locale === "ar" ? "نظام البناء" : "Build system"}</div>
             <h2 id="system-title">{copy.systemTitle}</h2>
@@ -90,7 +90,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           <div className="pageWidth serviceList">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
         </section>
 
-        <section className="sectionPad intelligenceSection" aria-labelledby="intelligence-title">
+        <section className="sectionPad intelligenceSection" aria-labelledby="intelligence-title" style={sectionStyle("intelligence", 6)}>
           <div className="pageWidth intelligenceGrid" data-reveal>
             <div className="intelligenceMedia"><MediaPlaceholder media={media.intelligence} locale={locale} /></div>
             <div className="intelligenceCopy">
@@ -102,7 +102,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </div>
         </section>
 
-        <section className="sectionPad trustSection" aria-labelledby="trust-title">
+        <section className="sectionPad trustSection" aria-labelledby="trust-title" style={sectionStyle("trust", 7)}>
           <div className="pageWidth trustGrid" data-reveal>
             <div>
               <div className="sectionKicker">08 / {locale === "fa" ? "اعتماد و مقیاس" : locale === "ar" ? "الثقة والنطاق" : "Trust + scale"}</div>
@@ -116,14 +116,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </div>
         </section>
 
-        <section className="sectionPad memorySection" aria-labelledby="memory-title">
+        <section className="sectionPad memorySection" aria-labelledby="memory-title" style={sectionStyle("memory", 8)}>
           <div className="pageWidth memoryGrid" data-reveal>
             <div className="memoryCopy"><div className="sectionKicker">09 / {locale === "fa" ? "خاطره" : locale === "ar" ? "الذكرى" : "Memory"}</div><h2 id="memory-title">{copy.memoryTitle}</h2><p>{copy.memoryBody}</p></div>
             <div className="memoryMedia"><MediaPlaceholder media={media.photo} locale={locale} /></div>
           </div>
         </section>
 
-        <section className="ctaSection" id="contact" aria-labelledby="cta-title">
+        <section className="ctaSection" id="contact" aria-labelledby="cta-title" style={sectionStyle("conversion", 9)}>
           <div className="pageWidth ctaInner" data-reveal>
             <div className="ctaOrb" aria-hidden="true"><span /></div>
             <div className="sectionKicker">10 / {locale === "fa" ? "شروع گفتگو" : locale === "ar" ? "ابدأ الحوار" : "Start a conversation"}</div>
