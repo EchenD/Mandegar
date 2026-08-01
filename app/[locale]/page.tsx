@@ -6,13 +6,20 @@ import { MediaPlaceholder } from "@/components/media/MediaPlaceholder";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ServiceCard } from "@/components/projects/ServiceCard";
 import { getText, media } from "@/lib/content";
-import { getHomeModel, getProjects, getServices } from "@/lib/content-source";
+import { getContactChannels, getHomeModel, getProjects, getServices, getSiteSettings, getTrustContent } from "@/lib/content-source";
 import { getUi, localizedPath, type Locale } from "@/lib/i18n";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const ui = getUi(locale);
-  const [{ copy, sectionSettings, mediaOverrides }, projectItems, serviceItems] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale)]);
+  const [{ copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides }, projectItems, serviceItems, settings, trustContent, contactChannels] = await Promise.all([getHomeModel(locale), getProjects(locale), getServices(locale), getSiteSettings(), getTrustContent(locale), getContactChannels()]);
+  const proofProjects = featuredProjects.length ? featuredProjects : projectItems.slice(0, 3);
+  const safeHref = (href: string | undefined, fallback: string) => href?.startsWith("/") || href?.startsWith("#") ? href : fallback;
+  const heroCta = { label: ctaOverrides.hero?.label || ui.explore, href: safeHref(ctaOverrides.hero?.href, "#experience") };
+  const conversionCta = { label: ctaOverrides.conversion?.label || ui.start, href: safeHref(ctaOverrides.conversion?.href, localizedPath(locale, "contact")) };
+  const salesChannel = contactChannels.find((channel) => channel.purpose === "sales");
+  const whatsappChannel = contactChannels.find((channel) => channel.purpose === "whatsapp") || salesChannel;
+  const whatsappHref = whatsappChannel?.whatsapp ? whatsappChannel.whatsapp.startsWith("http") ? whatsappChannel.whatsapp : `https://wa.me/${whatsappChannel.whatsapp.replace(/\D/g, "")}` : null;
   const sectionStyle = (key: string, fallbackOrder: number) => ({ order: sectionSettings[key]?.order ?? fallbackOrder, display: sectionSettings[key]?.visible === false ? "none" : undefined });
   const sectionMedia = (key: string, fallback: typeof media.spark) => mediaOverrides[key] || fallback;
 
@@ -21,12 +28,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
       <section className="heroSection" aria-labelledby="hero-title">
         <div className="heroBackdrop"><Image src={sectionMedia("idea", media.spark).src} alt="" fill priority sizes="100vw" /></div>
         <div className="heroWash" />
-        <ExperienceCanvas />
+        <ExperienceCanvas enabledByCms={settings.featureFlags.immersiveCanvas} />
         <div className="heroContent pageWidth">
           <div className="eyebrow"><span className="eyebrowDot" /> {copy.kicker}</div>
           <h1 id="hero-title">{copy.title}</h1>
           <p className="heroIntro">{copy.intro}</p>
-          <Link className="button buttonPrimary" href="#experience">{ui.explore}<span aria-hidden="true">↓</span></Link>
+          <Link className="button buttonPrimary" href={heroCta.href} data-analytics="cta_explore">{heroCta.label}<span aria-hidden="true">↓</span></Link>
         </div>
         <div className="heroFooter pageWidth">
           <span>{ui.scroll}</span>
@@ -78,7 +85,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
             <p>{copy.proofBody}</p>
           </div>
           <div className="pageWidth projectGrid projectGridFeatured">
-            {projectItems.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
+            {proofProjects.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
           </div>
         </section>
 
@@ -110,10 +117,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
               <h2 id="trust-title">{copy.trustTitle}</h2>
               <p>{copy.trustBody}</p>
             </div>
-            <div className="sectorWall" aria-label="Sectors served">
-              <span>Corporate</span><span>Exhibitions</span><span>Public</span><span>Event agencies</span><span>Partners</span>
-              <small>{locale === "fa" ? "ادعاها، لوگوها و آمار در CMS با منبع تأیید می‌شوند." : locale === "ar" ? "يتم اعتماد الادعاءات والشعارات والأرقام في CMS مع مصادرها." : "Claims, logos and metrics are verified in the CMS with source notes."}</small>
-            </div>
+            {trustContent.clients.length || trustContent.metrics.length || trustContent.testimonials.length ? (
+              <div className="trustProof">
+                {trustContent.clients.length ? <div className="clientWall">{trustContent.clients.map((client) => client.url ? <a key={client.name} href={client.url} target="_blank" rel="noreferrer" aria-label={client.name}>{client.logo ? <Image src={client.logo} alt={client.name} width={140} height={70} /> : <span>{client.name}</span>}</a> : <div key={client.name}>{client.logo ? <Image src={client.logo} alt={client.name} width={140} height={70} /> : <span>{client.name}</span>}</div>)}</div> : null}
+                {trustContent.metrics.length ? <div className="metricGrid">{trustContent.metrics.map((metric) => <div className="metric" key={`${metric.value}-${getText(metric.label, locale)}`}><strong>{metric.value}{metric.unit}</strong><span>{getText(metric.label, locale)}</span><small>{getText(metric.context, locale)}</small></div>)}</div> : null}
+                {trustContent.testimonials.map((testimonial) => <blockquote className="testimonial" key={getText(testimonial.quote, locale)}><p>“{getText(testimonial.quote, locale)}”</p><footer>{getText(testimonial.person, locale)} · {getText(testimonial.role, locale)} · {getText(testimonial.organization, locale)}</footer></blockquote>)}
+              </div>
+            ) : (
+              <div className="sectorWall" aria-label="Sectors served">
+                <span>Corporate</span><span>Exhibitions</span><span>Public</span><span>Event agencies</span><span>Partners</span>
+                <small>{locale === "fa" ? "ادعاها، لوگوها و آمار در CMS با منبع تأیید می‌شوند." : locale === "ar" ? "يتم اعتماد الادعاءات والشعارات والأرقام في CMS مع مصادرها." : "Claims, logos and metrics are verified in the CMS with source notes."}</small>
+              </div>
+            )}
           </div>
         </section>
 
@@ -130,7 +145,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
             <div className="sectionKicker">10 / {locale === "fa" ? "شروع گفتگو" : locale === "ar" ? "ابدأ الحوار" : "Start a conversation"}</div>
             <h2 id="cta-title">{copy.ctaTitle}</h2>
             <p>{copy.ctaBody}</p>
-            <div className="ctaActions"><Link className="button buttonPrimary" href={localizedPath(locale, "contact")}>{ui.start}<span aria-hidden="true">↗</span></Link><Link className="button buttonGhost" href={localizedPath(locale, "contact")}>{ui.navigation.contact}</Link></div>
+            <div className="ctaActions">
+              {salesChannel?.phone ? <a className="button buttonPrimary" href={`tel:${salesChannel.phone}`} data-analytics="phone_click" data-analytics-label="sales">{ui.callSales}<span aria-hidden="true">↗</span></a> : <Link className="button buttonPrimary" href={conversionCta.href} data-analytics="cta_start_project">{conversionCta.label}<span aria-hidden="true">↗</span></Link>}
+              {whatsappHref ? <a className="button buttonGhost" href={whatsappHref} target="_blank" rel="noreferrer" data-analytics="whatsapp_click" data-analytics-label="sales">{ui.whatsapp}</a> : <Link className="button buttonGhost" href={localizedPath(locale, "contact")} data-analytics="cta_general_contact">{ui.navigation.contact}</Link>}
+            </div>
           </div>
         </section>
       </div>

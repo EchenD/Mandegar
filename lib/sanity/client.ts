@@ -1,4 +1,5 @@
 import { createClient } from "next-sanity";
+import { draftMode } from "next/headers";
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
@@ -15,5 +16,12 @@ export const sanityClient = projectId
 
 export async function sanityFetch<T>(query: string, params: Record<string, unknown> = {}) {
   if (!sanityClient) return null;
-  return sanityClient.fetch<T>(query, params, { next: { revalidate: 60 } });
+  const preview = (await draftMode()).isEnabled;
+  const token = preview ? process.env.SANITY_API_READ_TOKEN : undefined;
+  const client = sanityClient.withConfig({
+    useCdn: !preview,
+    perspective: preview && token ? "previewDrafts" : "published",
+    token,
+  });
+  return client.fetch<T>(query, params, preview ? { cache: "no-store" } : { next: { revalidate: 60 } });
 }

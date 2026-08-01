@@ -1,8 +1,8 @@
-"use client";
-
-import { NextStudio } from "next-sanity/studio";
-import config from "@/sanity.config";
+import { notFound } from "next/navigation";
+import { StudioClient } from "@/components/studio/StudioClient";
 
 export default function StudioPage() {
-  return <NextStudio config={config} />;
+  const enabled = process.env.NODE_ENV !== "production" || process.env.ENABLE_EMBEDDED_STUDIO === "true";
+  if (!enabled) notFound();
+  return <StudioClient />;
 }

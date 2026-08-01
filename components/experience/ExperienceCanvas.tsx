@@ -39,18 +39,19 @@ function SparkScene() {
   );
 }
 
-export function ExperienceCanvas() {
+export function ExperienceCanvas({ enabledByCms = true }: { enabledByCms?: boolean }) {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const lowPower = window.matchMedia("(max-width: 760px)").matches || (navigator.hardwareConcurrency || 8) < 4;
+      const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
       const supportsWebGL = Boolean(document.createElement("canvas").getContext("webgl"));
-      setEnabled(!reduce && !lowPower && supportsWebGL);
+      setEnabled(enabledByCms && !reduce && !lowPower && !saveData && supportsWebGL);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [enabledByCms]);
 
   if (!enabled) return <div className="canvasFallback" aria-hidden="true"><span /></div>;
 

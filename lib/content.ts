@@ -4,9 +4,23 @@ export type Localized = Record<Locale, string>;
 
 export type MediaAsset = {
   src: string;
+  mobileSrc?: string;
+  poster?: string;
+  captionsSrc?: string;
   alt: Localized;
-  kind: "image" | "video-placeholder";
+  caption?: Localized;
+  kind: "image" | "video" | "video-placeholder";
   isPlaceholder?: boolean;
+};
+
+export type RelatedProject = {
+  slug: string;
+  title: Localized;
+  summary: Localized;
+  category: Localized;
+  year: string;
+  location: Localized;
+  media: MediaAsset;
 };
 
 export type Project = {
@@ -15,6 +29,8 @@ export type Project = {
   eyebrow: Localized;
   summary: Localized;
   category: Localized;
+  categories?: Localized[];
+  client?: Localized;
   year: string;
   location: Localized;
   media: MediaAsset;
@@ -24,6 +40,8 @@ export type Project = {
   approach: Localized;
   scope: Localized;
   outcome: Localized;
+  credits?: Localized;
+  relatedProjects?: RelatedProject[];
   isPlaceholder: boolean;
 };
 

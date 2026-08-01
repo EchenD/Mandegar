@@ -12,7 +12,8 @@ export function ScrollMotion({ children }: { children: React.ReactNode }) {
 
   useGSAP(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
+    const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+    if (reduced || saveData) return;
 
     const elements = gsap.utils.toArray<HTMLElement>("[data-reveal]");
     elements.forEach((element) => {

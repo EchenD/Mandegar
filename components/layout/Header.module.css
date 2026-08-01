@@ -30,8 +30,8 @@
   .header { width: min(100% - 1.5rem, 90rem); padding-block: 1rem; }
   .desktopLanguage, .actions > .button { display: none; }
   .menuButton { display: block; }
-  .nav { position: fixed; inset: 0; z-index: -1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1.3rem; margin: 0; padding: 5rem 1.5rem 2rem; background: rgba(246, 245, 241, .97); transform: translateY(-110%); transition: transform .35s ease; }
-  .navOpen { transform: translateY(0); }
+  .nav { position: fixed; inset: 0; z-index: -1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1.3rem; margin: 0; padding: 5rem 1.5rem 2rem; background: rgba(246, 245, 241, .97); visibility: hidden; pointer-events: none; transform: translateY(-110%); transition: transform .35s ease, visibility 0s linear .35s; }
+  .navOpen { visibility: visible; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
   .nav a { font-size: clamp(1.8rem, 8vw, 3rem); color: var(--ink); }
   .mobileLanguage { display: flex; gap: .75rem; margin-block-start: 1rem; }
   .mobileLanguage a { font-size: .85rem; }

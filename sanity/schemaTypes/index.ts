@@ -15,12 +15,14 @@ const mediaAsset = defineType({
   fields: [
     defineField({ name: "image", title: "Image", type: "image", options: { hotspot: true } }),
     defineField({ name: "videoUrl", title: "Video URL", type: "url" }),
+    defineField({ name: "mobileVideoUrl", title: "Mobile video URL", type: "url" }),
+    defineField({ name: "captionsUrl", title: "Caption track (VTT)", type: "url" }),
     defineField({ name: "kind", title: "Kind", type: "string", options: { list: ["image", "video", "video-placeholder"] } }),
     defineField({ name: "isPlaceholder", title: "Temporary placeholder", type: "boolean", initialValue: false }),
     defineField({ name: "mobileCrop", title: "Mobile crop", type: "image", options: { hotspot: true } }),
     localized("alt", "Alt text"),
     defineField({ name: "caption", title: "Caption", type: "object", fields: localizedFields("text") }),
-    defineField({ name: "copyrightStatus", title: "Copyright status", type: "string" }),
+    defineField({ name: "copyrightStatus", title: "Copyright status", type: "string", options: { list: ["approved", "pending", "restricted", "placeholder"] }, validation: (rule) => rule.required() }),
   ],
 });
 
@@ -33,9 +35,12 @@ const siteSettings = defineType({
     defineField({ name: "brandMark", title: "Brand mark", type: "image" }),
     defineField({ name: "defaultLocale", type: "string", initialValue: "fa" }),
     defineField({ name: "enabledLocales", type: "array", of: [{ type: "string" }], initialValue: ["fa", "en", "ar"] }),
-    defineField({ name: "navigation", type: "array", of: [{ type: "object", fields: [defineField({ name: "label", type: "string" }), defineField({ name: "path", type: "string" }), defineField({ name: "order", type: "number" })] }] }),
-    defineField({ name: "socialLinks", type: "array", of: [{ type: "url" }] }),
+    defineField({ name: "navigation", type: "array", of: [{ type: "object", fields: [localized("label", "Label"), defineField({ name: "path", type: "string" }), defineField({ name: "order", type: "number" })] }] }),
+    defineField({ name: "socialLinks", type: "array", of: [{ type: "object", fields: [defineField({ name: "label", type: "string" }), defineField({ name: "url", type: "url" })] }] }),
+    localized("footerLine", "Footer line", "text"),
+    localized("globalLine", "Geographic statement"),
     defineField({ name: "seoDefaults", type: "object", fields: [localized("title", "Title"), localized("description", "Description", "text"), defineField({ name: "socialImage", type: "image" })] }),
+    defineField({ name: "analytics", type: "object", fields: [defineField({ name: "provider", type: "string" }), defineField({ name: "siteId", type: "string" }), defineField({ name: "requiresConsent", type: "boolean", initialValue: true })] }),
     defineField({ name: "featureFlags", type: "object", fields: [defineField({ name: "callbackForm", type: "boolean" }), defineField({ name: "immersiveCanvas", type: "boolean", initialValue: true }), defineField({ name: "lenis", type: "boolean", initialValue: false })] }),
   ],
 });
@@ -48,8 +53,10 @@ const homepage = defineType({
     defineField({ name: "locale", type: "string", options: { list: ["fa", "en", "ar"] } }),
     defineField({ name: "translationGroup", type: "string" }),
     localized("title", "SEO title"),
+    localized("kicker", "Hero kicker"),
     localized("intro", "Intro", "text"),
-    defineField({ name: "sections", type: "array", of: [{ type: "object", fields: [defineField({ name: "key", type: "string" }), defineField({ name: "variant", type: "string" }), defineField({ name: "visible", type: "boolean", initialValue: true }), defineField({ name: "order", type: "number" }), localized("title", "Title"), localized("body", "Body", "text"), defineField({ name: "media", type: "mediaAsset" }), defineField({ name: "projects", type: "array", of: [{ type: "reference", to: [{ type: "project" }] }] })] }] }),
+    defineField({ name: "heroCta", type: "object", fields: [localized("label", "Label"), defineField({ name: "href", type: "string" })] }),
+    defineField({ name: "sections", type: "array", of: [{ type: "object", fields: [defineField({ name: "key", type: "string" }), defineField({ name: "variant", type: "string" }), defineField({ name: "visible", type: "boolean", initialValue: true }), defineField({ name: "order", type: "number" }), localized("title", "Title"), localized("body", "Body", "text"), defineField({ name: "media", type: "mediaAsset" }), defineField({ name: "projects", type: "array", of: [{ type: "reference", to: [{ type: "project" }] }] }), defineField({ name: "cta", type: "object", fields: [localized("label", "Label"), defineField({ name: "href", type: "string" })] })] }] }),
   ],
 });
 
@@ -75,6 +82,8 @@ const project = defineType({
     defineField({ name: "heroMedia", type: "mediaAsset" }),
     defineField({ name: "mediaGallery", type: "array", of: [{ type: "mediaAsset" }] }),
     localized("credits", "Credits", "text"),
+    defineField({ name: "relatedProjects", type: "array", of: [{ type: "reference", to: [{ type: "project" }] }] }),
+    defineField({ name: "isPlaceholder", title: "Temporary placeholder project", type: "boolean", initialValue: false }),
     defineField({ name: "featured", type: "boolean", initialValue: false }), defineField({ name: "featuredRank", type: "number" }),
     defineField({ name: "publicationState", type: "string", options: { list: ["draft", "published", "archived"] }, initialValue: "draft" }),
   ],
@@ -84,9 +93,11 @@ const service = defineType({ name: "service", title: "Service", type: "document"
 
 const testimonial = defineType({ name: "testimonial", title: "Testimonial", type: "document", fields: [defineField({ name: "locale", type: "string" }), localized("quote", "Quote", "text"), localized("person", "Person"), localized("role", "Role"), localized("organization", "Organization"), defineField({ name: "project", type: "reference", to: [{ type: "project" }] }), defineField({ name: "approved", type: "boolean" })] });
 const client = defineType({ name: "client", title: "Client", type: "document", fields: [defineField({ name: "name", type: "string" }), defineField({ name: "logo", type: "image" }), defineField({ name: "url", type: "url" }), defineField({ name: "sector", type: "string" }), defineField({ name: "visibility", type: "string", options: { list: ["visible", "hidden", "pending-permission"] } })] });
-const metric = defineType({ name: "metric", title: "Metric", type: "document", fields: [localized("label", "Label"), defineField({ name: "value", type: "string" }), defineField({ name: "unit", type: "string" }), localized("context", "Context", "text"), defineField({ name: "sourceNote", type: "text" }), defineField({ name: "project", type: "reference", to: [{ type: "project" }] })] });
+const metric = defineType({ name: "metric", title: "Metric", type: "document", fields: [localized("label", "Label"), defineField({ name: "value", type: "string" }), defineField({ name: "unit", type: "string" }), localized("context", "Context", "text"), defineField({ name: "sourceNote", type: "text", validation: (rule) => rule.required() }), defineField({ name: "project", type: "reference", to: [{ type: "project" }] })] });
 const contactChannel = defineType({ name: "contactChannel", title: "Contact channel", type: "document", fields: [defineField({ name: "purpose", type: "string", options: { list: ["sales", "general", "international", "whatsapp"] } }), localized("label", "Label"), defineField({ name: "department", type: "string" }), defineField({ name: "phone", type: "string" }), defineField({ name: "whatsapp", type: "string" }), defineField({ name: "email", type: "email" }), defineField({ name: "country", type: "string" }), defineField({ name: "availability", type: "string" }), defineField({ name: "priority", type: "number" })] });
-const teamPartner = defineType({ name: "teamPartner", title: "Team / partner", type: "document", fields: [defineField({ name: "name", type: "string" }), localized("role", "Role"), localized("biography", "Biography", "text"), defineField({ name: "image", type: "image" }), defineField({ name: "location", type: "string" }), defineField({ name: "partnerType", type: "string" })] });
+const teamPartner = defineType({ name: "teamPartner", title: "Team / partner", type: "document", fields: [defineField({ name: "name", type: "string" }), localized("role", "Role"), localized("biography", "Biography", "text"), defineField({ name: "image", type: "image" }), defineField({ name: "location", type: "string" }), defineField({ name: "partnerType", type: "string" }), defineField({ name: "order", type: "number" }), defineField({ name: "visibility", type: "string", options: { list: ["visible", "hidden"] }, initialValue: "visible" })] });
 const redirect = defineType({ name: "redirect", title: "Redirect", type: "document", fields: [defineField({ name: "oldPath", type: "string" }), defineField({ name: "newPath", type: "string" }), defineField({ name: "statusCode", type: "number", initialValue: 301 })] });
+const legalPage = defineType({ name: "legalPage", title: "Legal page", type: "document", fields: [defineField({ name: "locale", type: "string", options: { list: ["fa", "en", "ar"] } }), defineField({ name: "translationGroup", type: "string" }), localized("title", "Title"), localized("intro", "Introduction", "text"), defineField({ name: "status", type: "string", options: { list: ["draft", "approved"] }, initialValue: "draft" }), defineField({ name: "updatedAt", type: "date" }), defineField({ name: "sections", type: "array", of: [{ type: "object", fields: [localized("heading", "Heading"), localized("body", "Body", "text")] }] })] });
+const editorialPage = defineType({ name: "editorialPage", title: "Editorial page", type: "document", fields: [defineField({ name: "locale", type: "string", options: { list: ["fa", "en", "ar"] } }), defineField({ name: "translationGroup", type: "string" }), defineField({ name: "pageKey", type: "string", options: { list: ["projects", "services", "about", "contact"] }, validation: (rule) => rule.required() }), localized("heroKicker", "Hero kicker"), localized("title", "Title"), localized("intro", "Introduction", "text"), defineField({ name: "sections", type: "array", of: [{ type: "object", fields: [defineField({ name: "key", type: "string" }), localized("kicker", "Kicker"), localized("title", "Title"), localized("body", "Body", "text"), defineField({ name: "items", type: "array", of: [{ type: "object", fields: localizedFields() }] })] }] }), defineField({ name: "seo", type: "object", fields: [localized("title", "SEO title"), localized("description", "SEO description", "text"), defineField({ name: "socialImage", type: "image" })] })] });
 
-export const schemaTypes = [mediaAsset, siteSettings, homepage, projectCategory, project, service, testimonial, client, metric, contactChannel, teamPartner, redirect];
+export const schemaTypes = [mediaAsset, siteSettings, homepage, editorialPage, projectCategory, project, service, testimonial, client, metric, contactChannel, teamPartner, legalPage, redirect];
