@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const aspectMatrix = [
   { name: "desktop-wide", width: 1440, height: 900 },
@@ -18,6 +19,7 @@ const routeMatrix = [
   { name: "services", path: "/fa/services" },
   { name: "projects", path: "/fa/projects" },
   { name: "contact", path: "/fa/contact" },
+  { name: "legal", path: "/fa/legal" },
   { name: "project-detail", path: "/fa/projects/placeholder-exhibition-01" },
   { name: "service-detail", path: "/fa/services/event-production" },
 ];
@@ -102,7 +104,36 @@ test.describe("Mandegar responsive layout", () => {
     await menu.click();
     await expect(menu).toHaveAttribute("aria-expanded", "true");
     await expect(page.locator("#primary-navigation a").first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(menu).toBeFocused();
   });
+
+  test("language switcher preserves the current route", async ({ page }) => {
+    await page.goto("/fa/projects", { waitUntil: "networkidle" });
+    const englishLink = page.locator("a[hreflang='en']:visible").first();
+    await expect(englishLink).toHaveAttribute("href", "/en/projects");
+    await englishLink.click();
+    await expect(page).toHaveURL(/\/en\/projects$/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+  });
+
+  test("localized metadata, structured data and security headers are present", async ({ page }) => {
+    const response = await page.goto("/en/services/event-production", { waitUntil: "networkidle" });
+    expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
+    await expect(page.locator("link[rel='canonical']")).toHaveAttribute("href", /\/en\/services\/event-production$/);
+    await expect(page.locator("link[rel='alternate'][hreflang='fa']")).toHaveCount(1);
+    await expect(page.locator("script[type='application/ld+json']")).not.toHaveCount(0);
+  });
+
+  for (const path of ["/fa", "/en", "/fa/projects", "/fa/contact", "/fa/legal"]) {
+    test(`${path} has no automated WCAG A/AA violations`, async ({ page }) => {
+      await page.goto(path, { waitUntil: "networkidle" });
+      const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      expect(result.violations, result.violations.map((violation) => `${violation.id}: ${violation.help}`).join("\n")).toEqual([]);
+    });
+  }
 
   test("reduced motion keeps the semantic fallback visible", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });

@@ -2,6 +2,8 @@
 
 Persian-first, CMS-ready experiential website for Mandegar. The site is intentionally useful before Sanity credentials and approved project media are available: local fallback content keeps every route renderable, while the Sanity adapter takes over automatically when environment variables are configured.
 
+See [Docs/Implementation_Audit.md](Docs/Implementation_Audit.md) for the brief-by-brief readiness review and the remaining external launch blockers.
+
 ## Run locally
 
 ```bash
@@ -37,6 +39,7 @@ Use `npm run test:e2e:ui` for Playwright’s interactive runner. The suite check
 3. Open `/studio` to use the embedded Studio route after deployment.
 4. Add `SANITY_REVALIDATE_SECRET` and configure a Sanity webhook to `POST /api/revalidate` with the `x-sanity-revalidate-secret` header.
 5. Enable preview with `/api/draft-mode/enable?secret=...&redirect=/fa`.
+6. Set `SANITY_API_READ_TOKEN` for draft preview. Embedded Studio is disabled in production unless `ENABLE_EMBEDDED_STUDIO=true` is explicitly configured.
 
 The schema supports site settings, homepage modules, localized projects, project categories, services, testimonials, clients, metrics, contact channels, team/partners, redirects, and media metadata. Content is organized by locale and translation group so Persian, English, and Arabic can be published independently.
 
@@ -56,10 +59,6 @@ Video placeholders already use the same media abstraction. Add a `videoUrl`, pos
 
 The fallback content contains no invented clients, metrics, awards, contact numbers, addresses, or international project claims. AI/event intelligence is marked as emerging. Replace placeholder copy only with approved Mandegar content and source notes for numeric claims.
 
-## Git checkpoints
+## Git workflow
 
-- `edbef6d` — foundation, multilingual shell, fallback content, generated media
-- `bc4cd1c` — editorial routes, Sanity client, queries, and page architecture
-- `ec66307` — Sanity schemas
-
-Continue implementation in small commits so each milestone remains recoverable.
+Implementation is committed in recoverable milestones. Use `git log --oneline` to review the complete checkpoint history before deployment or content migration.
