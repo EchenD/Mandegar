@@ -20,8 +20,8 @@ The code can proceed to staging and content entry. Public launch should wait unt
 | Preview and revalidation | Pass with deployment condition | Draft mode reads `previewDrafts` with a read token; enable/disable routes and secret-verified revalidation exist. Production secrets must be configured. |
 | Media pipeline | Pass with content condition | Next Image supports Sanity CDN, mobile crops, modern formats and marked placeholders. Real videos support mobile sources, posters, VTT captions, controls, reduced-motion and data-saving behavior. Approved media is still required. |
 | Project evidence | Pass structurally | Cards support multiple categories, year and location. Details support challenge, approach, scope, services, outcomes, credits, galleries and related projects. Current records remain clearly labeled placeholders. |
-| Homepage narrative | Partial | The editorial sequence, section ordering and selective spark WebGL are coherent. The brief’s full persistent spark-to-architectural-space R3F timeline/state machine has not been implemented and requires a dedicated creative-production phase with real media. |
-| Adaptive performance | Pass at foundation level | WebGL is deferred and disabled for mobile, low hardware concurrency, reduced motion, failed WebGL and data-saving contexts. Heavy gallery media remains lazy. Lighthouse CI and real-device performance budgets still need staging measurements. |
+| Homepage narrative | Pass with content condition | A single persistent R3F canvas now carries a GSAP/ScrollTrigger spark-to-idea-to-space-to-event progression with generic stage, screen, truss, booth and audience primitives. CMS media and project proof remain replaceable placeholders until approved Mandegar assets arrive. |
+| Adaptive performance | Pass at foundation level | WebGL uses full/lite quality tiers, capped DPR, visibility pausing, reduced-motion and Save-Data fallbacks, and the Lenis bridge is opt-in through the CMS feature flag. Heavy gallery media remains lazy. Lighthouse CI and real-device performance budgets still need staging measurements. |
 | Accessibility | Pass for automated launch baseline | Keyboard menu and filters, Escape handling, focus return, skip link, semantic content, reduced motion, media labels and WCAG A/AA axe scans pass on representative routes. Manual screen-reader and touch-device testing remains a launch task. |
 | SEO | Pass structurally | Localized canonical/hreflang/social metadata, CMS-aware sitemap, robots controls and Organization, WebSite, BreadcrumbList, Service and CreativeWork structured data are present. Final production domain and social image are required. |
 | Conversion | Pass with content condition | Header CTA, final CTA, contact separation and CMS-controlled phone/WhatsApp/email channels are implemented. Real sales and general contact details are required. |
@@ -38,7 +38,7 @@ The code can proceed to staging and content entry. Public launch should wait unt
 4. Obtain final Persian, English and Arabic editorial approval.
 5. Obtain final legal/privacy/cookie/media-rights approval and mark the CMS legal record approved.
 6. Supply the final logo, colors, typefaces and social sharing image.
-7. Decide whether the full persistent 3D spark-to-event sequence is required for launch; if yes, complete and performance-test that creative phase.
+7. Replace the generic event-kit primitives with approved 3D models/media when available, then complete final real-device performance profiling.
 8. Select analytics/consent tooling, configure only approved non-sensitive events, and document retention.
 9. Deploy staging and run Lighthouse, manual screen-reader, iOS Safari, Android Chrome and low-end-device tests using realistic media and network profiles.
 10. Configure the production domain, monitoring, backups, redirect inventory, CMS training and editorial operating documentation.
