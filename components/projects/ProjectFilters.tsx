@@ -9,7 +9,7 @@ import { ProjectCard } from "./ProjectCard";
 export function ProjectFilters({ projects, locale }: { projects: Project[]; locale: Locale }) {
   const copy = getUi(locale);
   const categories = useMemo(() => [copy.all, ...Array.from(new Set(projects.map((project) => getText(project.category, locale))))], [copy.all, locale, projects]);
-  const [active, setActive] = useState(copy.all);
+  const [active, setActive] = useState<string>(copy.all);
   const filtered = active === copy.all ? projects : projects.filter((project) => getText(project.category, locale) === active);
 
   return (

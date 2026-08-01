@@ -1,0 +1,16 @@
+import { defineConfig } from "sanity";
+import { structureTool } from "sanity/structure";
+import { documentInternationalization } from "@sanity/document-internationalization";
+import { schemaTypes } from "./sanity/schemaTypes";
+
+export default defineConfig({
+  name: "mandegar-studio",
+  title: "Mandegar Studio",
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "replace-me",
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
+  plugins: [
+    structureTool(),
+    documentInternationalization({ supportedLanguages: [{ id: "fa", title: "Persian" }, { id: "en", title: "English" }, { id: "ar", title: "Arabic" }], schemaTypes: ["homepage", "project", "projectCategory", "service", "testimonial", "client", "metric", "contactChannel", "teamPartner"] }),
+  ],
+  schema: { types: schemaTypes },
+});
