@@ -5,13 +5,15 @@ import { ScrollMotion } from "@/components/experience/ScrollMotion";
 import { MediaPlaceholder } from "@/components/media/MediaPlaceholder";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ServiceCard } from "@/components/projects/ServiceCard";
-import { getText, homeCopy, media, projects, services } from "@/lib/content";
+import { getText, homeCopy, media } from "@/lib/content";
+import { getProjects, getServices } from "@/lib/content-source";
 import { getUi, localizedPath, type Locale } from "@/lib/i18n";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const copy = homeCopy[locale];
   const ui = getUi(locale);
+  const [projectItems, serviceItems] = await Promise.all([getProjects(locale), getServices(locale)]);
 
   return (
     <ScrollMotion>
@@ -75,7 +77,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
             <p>{copy.proofBody}</p>
           </div>
           <div className="pageWidth projectGrid projectGridFeatured">
-            {projects.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
+            {projectItems.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
           </div>
         </section>
 
@@ -85,7 +87,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
             <h2 id="system-title">{copy.systemTitle}</h2>
             <p>{copy.systemBody}</p>
           </div>
-          <div className="pageWidth serviceList">{services.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
+          <div className="pageWidth serviceList">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
         </section>
 
         <section className="sectionPad intelligenceSection" aria-labelledby="intelligence-title">

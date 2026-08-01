@@ -24,7 +24,7 @@ export type Project = {
   approach: Localized;
   scope: Localized;
   outcome: Localized;
-  isPlaceholder: true;
+  isPlaceholder: boolean;
 };
 
 export type Service = {

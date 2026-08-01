@@ -1,9 +1,10 @@
 import { ProjectFilters } from "@/components/projects/ProjectFilters";
-import { projects } from "@/lib/content";
+import { getProjects } from "@/lib/content-source";
 import type { Locale } from "@/lib/i18n";
 
 export default async function ProjectsPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
+  const projects = await getProjects(locale);
   const text = {
     fa: { kicker: "آرشیو پروژه‌ها", title: "ایده‌ها وقتی واقعی می‌شوند، ماندگارترند.", body: "این آرشیو به‌صورت کامل از CMS تغذیه می‌شود. نمونه‌های فعلی placeholder هستند تا ساختار جایگزینی رسانه و محتوا آماده باشد." },
     en: { kicker: "Project archive", title: "Ideas last longer when they become real.", body: "This archive is designed to be fully CMS-driven. Current entries are placeholders so the media and content replacement system is ready." },
