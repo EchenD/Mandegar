@@ -19,6 +19,17 @@ npm run build
 npm start
 ```
 
+## Browser QA
+
+Install the pinned Chromium browser once, then run the responsive and route checks:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Use `npm run test:e2e:ui` for Playwright’s interactive runner. The suite checks the homepage at eight aspect ratios (including narrow mobile, portrait tablet, tall desktop, and ultrawide), then checks About, Services, Projects, Contact, project detail, and service detail at desktop, tablet, and mobile sizes. It also verifies locale direction, keyboard navigation, reduced-motion fallback, project filtering, horizontal overflow, and non-zero media placement.
+
 ## CMS setup
 
 1. Create a Sanity project and set `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET` in `.env.local`.

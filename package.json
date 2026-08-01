@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib sanity sanity.config.ts sanity.cli.ts next.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@gsap/react": "2.1.2",
@@ -24,6 +26,7 @@
     "three": "0.170.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.52.0",
     "@types/node": "22.15.30",
     "@types/react": "19.1.5",
     "@types/react-dom": "19.1.6",
