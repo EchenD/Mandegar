@@ -104,16 +104,16 @@ export const media = {
 export const projects: Project[] = [
   {
     slug: "placeholder-exhibition-01",
-    title: { fa: "پروژه نمایشگاهی نمونه ۰۱", en: "Placeholder exhibition 01", ar: "مشروع معرض نموذجي ٠١" },
-    eyebrow: { fa: "نمونه موقت / نمایشگاه", en: "Temporary sample / Exhibition", ar: "عينة مؤقتة / معرض" },
+    title: { fa: "نمایشگاه مفهومی / فضای تجربه", en: "Concept build / Exhibition environment", ar: "نموذج مفاهيمي / مساحة معرض" },
+    eyebrow: { fa: "دموی مفهومی / نمایشگاه", en: "Concept demo / Exhibition", ar: "عرض مفاهيمي / معرض" },
     summary: {
       fa: "یک قاب موقت برای نمایش پروژه واقعی آینده؛ از فضای خالی تا تجربه‌ای که مخاطب را درگیر می‌کند.",
       en: "A temporary frame for a future real project: from empty space to an experience that invites participation.",
       ar: "إطار مؤقت لمشروع حقيقي قادم؛ من مساحة فارغة إلى تجربة تدعو الجمهور للمشاركة.",
     },
     category: { fa: "نمایشگاه", en: "Exhibition", ar: "معرض" },
-    year: "—",
-    location: { fa: "ایران / در انتظار اطلاعات", en: "Iran / details pending", ar: "إيران / التفاصيل قيد الإضافة" },
+    year: "Demo",
+    location: { fa: "دموی مفهومی / قابل جایگزینی", en: "Concept demo / replaceable", ar: "عرض مفاهيمي / قابل للاستبدال" },
     media: media.exhibition,
     gallery: [media.exhibition, media.interactive, media.stage],
     services: [
@@ -145,16 +145,16 @@ export const projects: Project[] = [
   },
   {
     slug: "placeholder-interactive-02",
-    title: { fa: "پروژه تعاملی نمونه ۰۲", en: "Placeholder interactive 02", ar: "مشروع تفاعلي نموذجي ٠٢" },
-    eyebrow: { fa: "نمونه موقت / تعامل", en: "Temporary sample / Interaction", ar: "عينة مؤقتة / تفاعل" },
+    title: { fa: "دیوار تعاملی / دعوت به مشارکت", en: "Interactive wall / Audience participation", ar: "جدار تفاعلي / مشاركة الجمهور" },
+    eyebrow: { fa: "دموی مفهومی / تعامل", en: "Concept demo / Interaction", ar: "عرض مفاهيمي / تفاعل" },
     summary: {
       fa: "مخاطب فقط تماشا نمی‌کند؛ با فضا وارد گفت‌وگو می‌شود.",
       en: "The audience does not only watch; it enters into a conversation with the space.",
       ar: "الجمهور لا يكتفي بالمشاهدة؛ بل يدخل في حوار مع المساحة.",
     },
     category: { fa: "تجربه تعاملی", en: "Interactive experience", ar: "تجربة تفاعلية" },
-    year: "—",
-    location: { fa: "ایران / در انتظار اطلاعات", en: "Iran / details pending", ar: "إيران / التفاصيل قيد الإضافة" },
+    year: "Demo",
+    location: { fa: "دموی مفهومی / قابل جایگزینی", en: "Concept demo / replaceable", ar: "عرض مفاهيمي / قابل للاستبدال" },
     media: media.interactive,
     gallery: [media.interactive, media.photo, media.exhibition],
     services: [
@@ -186,16 +186,16 @@ export const projects: Project[] = [
   },
   {
     slug: "placeholder-live-03",
-    title: { fa: "رویداد نمونه ۰۳", en: "Placeholder live event 03", ar: "فعالية مباشرة نموذجية ٠٣" },
-    eyebrow: { fa: "نمونه موقت / رویداد", en: "Temporary sample / Live event", ar: "عينة مؤقتة / فعالية مباشرة" },
+    title: { fa: "صحنه زنده / لحظه مشترک", en: "Live stage / Shared moment", ar: "منصة مباشرة / لحظة مشتركة" },
+    eyebrow: { fa: "دموی مفهومی / رویداد زنده", en: "Concept demo / Live event", ar: "عرض مفاهيمي / فعالية مباشرة" },
     summary: {
       fa: "وقتی صحنه، محتوا، نور و آدم‌ها در یک لحظه ماندگار به هم می‌رسند.",
       en: "When stage, content, light and people meet in one lasting moment.",
       ar: "عندما تلتقي المنصة والمحتوى والضوء والناس في لحظة باقية.",
     },
     category: { fa: "رویداد سازمانی", en: "Corporate event", ar: "فعالية مؤسسية" },
-    year: "—",
-    location: { fa: "ایران / در انتظار اطلاعات", en: "Iran / details pending", ar: "إيران / التفاصيل قيد الإضافة" },
+    year: "Demo",
+    location: { fa: "دموی مفهومی / قابل جایگزینی", en: "Concept demo / replaceable", ar: "عرض مفاهيمي / قابل للاستبدال" },
     media: media.videoPlaceholder,
     gallery: [media.videoPlaceholder, media.exhibition, media.photo],
     services: [

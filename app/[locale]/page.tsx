@@ -28,6 +28,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
     <ScrollMotion lenisEnabled={settings.featureFlags.lenis}>
       <div className="experienceBackdrop" aria-hidden="true" data-experience-canvas-host>
         <ExperienceCanvas enabledByCms={settings.featureFlags.immersiveCanvas} />
+        <div className="sceneMediaSurface">
+          <div className="sceneMediaFrame sceneMediaSpace"><Image src={sectionMedia("space", media.exhibition).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+          <div className="sceneMediaFrame sceneMediaExperience"><Image src={sectionMedia("experience", media.interactive).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+          <div className="sceneMediaFrame sceneMediaProof"><Image src={proofProjects[0]?.media.src || media.stage.src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+          <div className="sceneMediaFrame sceneMediaMemory"><Image src={sectionMedia("memory", media.photo).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+        </div>
         <div className="sceneNavigator">
           <div className="sceneNavigatorHead"><span>MANDEGAR / LIVE BUILD</span><span>01 — 10</span></div>
           <div className="sceneNavigatorSteps">

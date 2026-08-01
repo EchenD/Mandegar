@@ -51,6 +51,15 @@ button { font: inherit; }
 .immersiveRoot[data-story-stage="invitation"] .experienceBackdrop { background: radial-gradient(circle at 75% 26%, rgba(137,173,255,.22), transparent 30%), linear-gradient(135deg, #145eff, #0d42bd); }
 .experienceBackdrop .experienceCanvas { position: absolute !important; inset: 0 !important; z-index: 1; width: 100% !important; height: 100% !important; opacity: calc(.9 + var(--scene-energy) * .1); pointer-events: none; }
 .experienceBackdrop .canvasFallback { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.sceneMediaSurface { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.sceneMediaFrame { position: absolute; inset-block-start: 50%; inset-inline-start: 58%; width: clamp(17rem, 38vw, 39rem); aspect-ratio: 1.36; overflow: hidden; border: 1px solid rgba(20,94,255,.28); border-radius: clamp(1rem, 2vw, 2rem); opacity: 0; transform: translate(-50%, -50%) scale(.82) rotate(-4deg); box-shadow: 0 2rem 5rem rgba(12,31,82,.18); transition: opacity 800ms ease, transform 1000ms var(--ease-standard); }
+.sceneMediaFrame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(20,94,255,.16), transparent 54%); mix-blend-mode: screen; }
+.sceneMediaFrame img { object-fit: cover; filter: saturate(.82) contrast(1.04); }
+.immersiveRoot[data-story-stage="space"] .sceneMediaSpace,
+.immersiveRoot[data-story-stage="experience"] .sceneMediaExperience,
+.immersiveRoot[data-story-stage="proof"] .sceneMediaProof,
+.immersiveRoot[data-story-stage="memory"] .sceneMediaMemory { opacity: .54; transform: translate(-50%, -50%) scale(1) rotate(0); }
+.immersiveRoot[data-story-stage="invitation"] .sceneMediaMemory { opacity: .2; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); }
 .narrativeRail { position: absolute; inset-block: 24%; inset-inline-end: clamp(1rem, 3vw, 3rem); z-index: 2; display: grid; align-items: center; justify-items: center; gap: .75rem; color: rgba(29,32,38,.5); }
 .narrativeRailTrack { position: relative; display: block; width: 1px; height: 34vh; background: rgba(29,32,38,.16); overflow: hidden; }
 .narrativeRailTrack i { position: absolute; inset: 0; display: block; background: var(--accent); transform: scaleY(var(--story-progress)); transform-origin: top; }
@@ -320,6 +329,7 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
   .mediaMobile { display: block; }
   .experienceCanvas { inset: 31% -5% 17% 18%; opacity: .75; }
   .canvasFallback { inset: 33% 6% 20% 28%; }
+  .sceneMediaFrame { inset-inline-start: 50%; width: 72vw; }
   .sceneNavigator { inset-inline: 1rem; inset-block-end: 1rem; }
   .sceneNavigatorSteps { justify-content: flex-start; }
   .sceneNavigatorSteps span { display: none; }
