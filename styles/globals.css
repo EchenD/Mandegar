@@ -63,11 +63,12 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .canvasFallback::after { width: 18rem; height: 18rem; opacity: .5; animation-delay: -.8s; }
 .canvasFallback span { width: .55rem; height: .55rem; border: 0; background: var(--accent); box-shadow: 0 0 1.7rem var(--accent); animation: float 4s ease-in-out infinite; }
 .heroContent { display: flex; flex-direction: column; justify-content: center; width: var(--page); flex: 1; padding-block: 9rem 6rem; }
+.heroContent .button { align-self: flex-start; }
 .heroIntro { margin-block-end: 2rem; color: var(--ink); font-family: var(--serif); font-size: clamp(1.2rem, 2vw, 1.6rem); }
 .heroFooter { display: flex; align-items: center; justify-content: space-between; padding-block: 1.1rem 1.4rem; color: var(--muted); font-size: .67rem; letter-spacing: .1em; text-transform: uppercase; }
 .heroIndex { color: var(--ink); }
 .placeholderPill, .mediaNotice { position: absolute; z-index: 2; display: inline-flex; align-items: center; min-height: 1.75rem; padding-inline: .7rem; border: 1px solid rgba(29, 32, 38, .15); border-radius: 999px; background: rgba(251,250,247,.76); color: var(--muted-strong); font-size: .62rem; backdrop-filter: blur(12px); }
-.placeholderPill { inset-block-end: 4.25rem; inset-inline-start: 50%; transform: translateX(-50%); }
+.placeholderPill { inset-block-end: 4.25rem; inset-inline-start: auto; left: 50%; transform: translateX(-50%); }
 
 /* Shared sections */
 .conceptSection { background: var(--paper); }
@@ -93,7 +94,8 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
 .interactionSection .featureTags { display: flex; flex-wrap: wrap; gap: .6rem; margin-block-start: 2.6rem; }
 .featureTags span, .insightList span { display: inline-flex; padding: .55rem .8rem; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; color: rgba(255,255,255,.7); font-size: .7rem; }
 .interactionMedia { min-height: clamp(22rem, 48vw, 42rem); }
-.mediaFrame { position: relative; min-height: 100%; overflow: hidden; border-radius: var(--radius-lg); background: #e8e7e1; }
+.mediaFrame { position: relative; height: 100%; min-height: 100%; overflow: hidden; border-radius: var(--radius-lg); background: #e8e7e1; }
+.storyImage .mediaFrame, .interactionMedia .mediaFrame, .intelligenceMedia .mediaFrame, .memoryMedia .mediaFrame, .detailHeroMedia .mediaFrame { min-height: inherit; }
 .mediaFrame img { object-fit: cover; transition: transform .8s cubic-bezier(.2,.75,.25,1); }
 .mediaFrame:hover img { transform: scale(1.035); }
 .mediaNotice { inset-block-start: 1rem; inset-inline-start: 1rem; }
