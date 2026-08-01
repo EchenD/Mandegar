@@ -100,26 +100,31 @@ function SparkScene({ quality }: { quality: ExperienceQuality }) {
     }
     if (structure.current) {
       structure.current.scale.setScalar(0.25 + formation * 0.76 + event * 0.12);
-      structure.current.rotation.y = experienceState.pointerX * 0.08 + Math.sin(time * 0.12) * 0.04;
-      structure.current.rotation.x = experienceState.pointerY * 0.04;
+      structure.current.rotation.y = experienceState.pointerX * 0.18 + Math.sin(time * 0.12) * 0.04;
+      structure.current.rotation.x = experienceState.pointerY * 0.1;
       structure.current.position.y = (1 - formation) * 0.12;
     }
     if (eventKit.current) {
       eventKit.current.scale.setScalar(0.06 + event * 0.94);
       eventKit.current.position.y = -0.14 + event * 0.04;
-      eventKit.current.rotation.y = experienceState.pointerX * 0.04;
+      eventKit.current.position.x = experienceState.pointerX * 0.09;
+      eventKit.current.position.z = experienceState.pointerY * 0.05;
+      eventKit.current.rotation.y = experienceState.pointerX * 0.14;
     }
     if (eventRings.current) {
       eventRings.current.scale.setScalar(0.2 + impact * 0.8);
       eventRings.current.rotation.z = time * 0.04;
-      eventRings.current.rotation.x = Math.sin(time * 0.2) * 0.04;
+      eventRings.current.rotation.x = Math.sin(time * 0.2) * 0.04 + experienceState.pointerY * 0.08;
+      eventRings.current.rotation.y = experienceState.pointerX * 0.12;
+      eventRings.current.position.x = experienceState.pointerX * 0.12;
     }
     if (lineMaterial.current) {
       lineMaterial.current.opacity = 0.12 + formation * 0.52 + impact * 0.18;
     }
     if (particles.current) {
       particles.current.rotation.z = time * 0.025;
-      particles.current.rotation.y = time * 0.018 + experienceState.pointerX * 0.04;
+      particles.current.rotation.y = time * 0.018 + experienceState.pointerX * 0.12;
+      particles.current.rotation.x = experienceState.pointerY * 0.06;
       particles.current.scale.setScalar(0.35 + formation * 0.75 + impact * 0.18);
     }
     if (particleMaterial.current) {
