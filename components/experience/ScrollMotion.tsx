@@ -6,12 +6,21 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
+import { getPreviewProgress, getScenePhase, scenePhases, type ScenePhaseId } from "./scene-config";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const storyStages = ["spark", "idea", "space", "capability", "event", "proof", "interaction", "intelligence", "trust", "memory", "invitation"];
-
-export function ScrollMotion({ children, lenisEnabled = false }: { children: React.ReactNode; lenisEnabled?: boolean }) {
+export function ScrollMotion({
+  children,
+  className,
+  lenisEnabled = false,
+  onPhaseChange,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  lenisEnabled?: boolean;
+  onPhaseChange?: (phase: ScenePhaseId) => void;
+}) {
   const scope = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -24,156 +33,113 @@ export function ScrollMotion({ children, lenisEnabled = false }: { children: Rea
     let smooth: Lenis | undefined;
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
+    let activePhase: ScenePhaseId = "arrival";
 
-    if (lenisEnabled && !reduced && !saveData && supportsSmooth) {
-      smooth = new Lenis({ autoRaf: false, smoothWheel: true, syncTouch: false, lerp: 0.08 });
+    const syncExperience = (progress: number) => {
+      const safeProgress = Math.min(1, Math.max(0, progress));
+      const phase = getScenePhase(safeProgress);
+      experienceState.progress = safeProgress;
+      root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
+      root.dataset.storyStage = phase;
+      if (phase !== activePhase) {
+        activePhase = phase;
+        onPhaseChange?.(phase);
+      }
+    };
+
+    if (reduced || saveData) {
+      root.dataset.reducedMotion = "true";
+      syncExperience(scenePhases.find((phase) => phase.id === "reveal")?.preview ?? 0.83);
+      return () => {
+        experienceState.progress = 0;
+        root.removeAttribute("data-story-stage");
+      };
+    }
+
+    if (lenisEnabled && supportsSmooth) {
+      smooth = new Lenis({ autoRaf: false, smoothWheel: true, syncTouch: false, lerp: 0.075 });
       lenisScroll = () => ScrollTrigger.update();
       smooth.on("scroll", lenisScroll);
       lenisTick = (time) => smooth?.raf(time * 1000);
       gsap.ticker.add(lenisTick);
     }
 
-    const syncStoryStage = (progress: number) => {
-      const stages: Array<[number, string]> = [[0, "spark"], [.11, "idea"], [.235, "space"], [.35, "capability"], [.45, "event"], [.56, "proof"], [.70, "interaction"], [.80, "intelligence"], [.875, "trust"], [.925, "memory"], [.975, "invitation"]];
-      root.dataset.storyStage = stages.reduce((active, [start, stage]) => progress >= start ? stage : active, storyStages[0]);
-    };
-
-    const syncExperience = (progress: number) => {
-      const safeProgress = Math.min(1, Math.max(0, progress));
-      experienceState.progress = safeProgress;
-      root.style.setProperty("--story-progress", safeProgress.toFixed(4));
-      syncStoryStage(safeProgress);
-    };
-
-    const master = gsap.timeline({
+    const timeline = gsap.timeline({
+      defaults: { ease: "none" },
       scrollTrigger: {
         trigger: root,
         start: "top top",
         end: "bottom bottom",
-        scrub: true,
+        scrub: 0.4,
         invalidateOnRefresh: true,
+        onUpdate: (self) => syncExperience(self.progress),
       },
     });
 
-    master.eventCallback("onUpdate", () => syncExperience(master.progress()));
+    const copyRanges: Record<Exclude<ScenePhaseId, "arrival">, readonly [number, number, number, number]> = {
+      discovery: [0.185, 0.22, 0.345, 0.38],
+      activation: [0.385, 0.425, 0.69, 0.73],
+      reveal: [0.745, 0.78, 0.875, 0.91],
+      loop: [0.905, 0.93, 0.982, 1],
+    };
 
-    master
-      .to(root, { "--scene-energy": 1, duration: 0.42, ease: "none" }, 0.08)
-      .to(root, { "--scene-structure": 1, duration: 0.34, ease: "none" }, 0.2)
-      .to(root, { "--scene-event": 1, duration: 0.32, ease: "none" }, 0.42)
-      .to(root, { "--scene-impact": 1, duration: 0.24, ease: "none" }, 0.76);
-
-    gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((element) => {
-      gsap.fromTo(element, { opacity: 0, y: 30 }, {
-        opacity: 1,
-        y: 0,
-        duration: 0.9,
-        ease: "power3.out",
-        scrollTrigger: { trigger: element, start: "top 86%", once: true },
-      });
+    root.querySelectorAll<HTMLElement>("[data-scene-copy]").forEach((copy) => {
+      const phase = copy.dataset.sceneCopy as Exclude<ScenePhaseId, "arrival">;
+      const timing = copyRanges[phase];
+      if (!timing) return;
+      const [enterStart, enterEnd, exitStart, exitEnd] = timing;
+      gsap.set(copy, { autoAlpha: 0, y: 18, scale: 0.985, filter: "blur(8px)", clipPath: "inset(0 0 100% 0)" });
+      timeline
+        .fromTo(copy, { autoAlpha: 0, y: 18, scale: 0.985, filter: "blur(8px)", clipPath: "inset(0 0 100% 0)" }, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          clipPath: "inset(0 0 0% 0)",
+          duration: enterEnd - enterStart,
+          ease: "sine.out",
+        }, enterStart)
+        .to(copy, { autoAlpha: 1, duration: exitStart - enterEnd }, enterEnd)
+        .to(copy, {
+          autoAlpha: 0,
+          y: -12,
+          scale: 1.006,
+          filter: "blur(5px)",
+          clipPath: "inset(100% 0 0 0)",
+          duration: exitEnd - exitStart,
+          ease: "sine.inOut",
+        }, exitStart);
     });
 
-    if (!reduced) {
-      const spark = root.querySelector<HTMLElement>("[data-scene-spark]");
-      if (spark) {
-        gsap.set(spark, { autoAlpha: 0, xPercent: -50, yPercent: -50, scale: .72 });
-        master.fromTo(spark, { autoAlpha: 0, xPercent: -50, yPercent: -50, scale: .72 }, { autoAlpha: 1, xPercent: -50, yPercent: -50, scale: 1, duration: .035, ease: "sine.out" }, .09)
-          .to(spark, { left: "39%", top: "44%", scale: .92, duration: .13, ease: "none" }, .22)
-          .to(spark, { left: "47%", top: "46%", autoAlpha: .72, scale: .8, duration: .12, ease: "none" }, .35)
-          .to(spark, { autoAlpha: .14, duration: .08, ease: "sine.inOut" }, .47)
-          .to(spark, { autoAlpha: .1, duration: .31, ease: "none" }, .55)
-          .to(spark, { left: "31%", top: "51%", autoAlpha: .92, scale: .78, duration: .1, ease: "sine.out" }, .87)
-          .to(spark, { autoAlpha: .92, duration: .028, ease: "none" }, .97);
-      }
-
-      const guides = root.querySelector<SVGElement>("[data-scene-guides]");
-      if (guides) {
-        const paths = guides.querySelectorAll<SVGPathElement>("path");
-        gsap.set(guides, { autoAlpha: 0 });
-        gsap.set(paths, { strokeDasharray: 1, strokeDashoffset: 1 });
-        master.to(guides, { autoAlpha: .9, duration: .018, ease: "none" }, .205)
-          .to(paths, { strokeDashoffset: 0, duration: .14, stagger: .018, ease: "none" }, .215)
-          .to(guides, { autoAlpha: .18, duration: .06, ease: "sine.inOut" }, .37)
-          .to(guides, { autoAlpha: 0, duration: .055, ease: "sine.inOut" }, .44);
-      }
-
-      const media = (selector: string, timing: readonly [number, number, number, number], scale = 1) => {
-        const element = root.querySelector<HTMLElement>(selector);
-        if (!element) return;
-        const [enterStart, enterEnd, exitStart, exitEnd] = timing;
-        gsap.set(element, { x: 0, y: 0, xPercent: -50, yPercent: -50, scale: 1, rotate: 0 });
-        master.fromTo(element, { autoAlpha: 0, x: 0, y: 0, xPercent: -50, yPercent: -50, scale: scale * .94, rotate: -1.6 }, { autoAlpha: .94, x: 0, y: 0, xPercent: -50, yPercent: -50, scale, rotate: 0, duration: enterEnd - enterStart, ease: "sine.out" }, enterStart)
-          .to(element, { autoAlpha: .94, duration: Math.max(.001, exitStart - enterEnd) }, enterEnd)
-          .to(element, { autoAlpha: 0, x: 0, y: 0, xPercent: -50, yPercent: -50, scale: scale * 1.008, rotate: .18, duration: exitEnd - exitStart, ease: "sine.inOut" }, exitStart);
-      };
-      // Each large screen has an explicit arrival, hold and departure. Their
-      // low-opacity crossover is only a few pixels of scroll, so a panel is
-      // never left ghosting behind the next cinematic beat.
-      media('[data-scene-media="event"]', [.43, .454, .535, .555]);
-      media('[data-scene-media="project-0"]', [.552, .582, .662, .684]);
-      media('[data-scene-media="project-1"]', [.57, .594, .656, .676], .72);
-      media('[data-scene-media="project-2"]', [.586, .606, .647, .667], .62);
-      media('[data-scene-media="memory"]', [.9, .92, .93, .948], .84);
-
-      const layer = (selector: string, start: number, end: number, scale = 1) => {
-        const element = root.querySelector<HTMLElement>(selector);
-        if (!element) return;
-        const fade = Math.min(.026, Math.max(.014, (end - start) * .18));
-        gsap.set(element, { autoAlpha: 0, scale: .97, filter: "blur(6px)" });
-        master.fromTo(element, { autoAlpha: 0, scale: .97, filter: "blur(6px)" }, { autoAlpha: 1, scale, filter: "blur(0px)", duration: fade, ease: "sine.out" }, start)
-          .to(element, { autoAlpha: 1, duration: Math.max(.01, end - start - fade * 2) }, start + fade)
-          .to(element, { autoAlpha: 0, scale: scale * 1.01, filter: "blur(4px)", duration: fade, ease: "sine.inOut" }, end - fade);
-      };
-      layer('[data-scene-layer="construction"]', .34, .52);
-      layer('[data-scene-layer="build"]', .35, .505);
-      layer('[data-scene-layer="interaction"]', .682, .798);
-      layer('[data-scene-layer="data"]', .798, .895);
-      layer('[data-scene-layer="memory-particles"]', .882, 1);
-
-      const memoryParticles = root.querySelectorAll<HTMLElement>(".sceneMemoryParticles i");
-      if (memoryParticles.length) {
-        gsap.set(memoryParticles, { autoAlpha: 0, scale: .2 });
-        master.fromTo(memoryParticles, { autoAlpha: 0, scale: .2 }, { autoAlpha: 1, scale: 1, duration: .055, stagger: .0015, ease: "sine.out" }, .885)
-          .to(memoryParticles, { autoAlpha: .55, scale: .72, duration: .032, ease: "sine.inOut" }, .962);
-      }
-
-      // The copy is a replacement, not a document scroll: each entry begins
-      // just before the prior exit ends, keeping a continuous reading rhythm.
-      const copyTimings: Record<string, readonly [number, number, number, number]> = {
-        idea: [.105, .125, .22, .238],
-        space: [.223, .243, .335, .353],
-        build: [.338, .358, .437, .455],
-        event: [.44, .46, .548, .566],
-        proof: [.551, .571, .694, .712],
-        interaction: [.697, .717, .792, .81],
-        intelligence: [.795, .815, .866, .884],
-        trust: [.869, .889, .916, .934],
-        memory: [.919, .939, .941, .959],
-        invitation: [.944, .964, 1, 1],
-      };
-      gsap.utils.toArray<HTMLElement>("[data-scene-copy]").forEach((copy) => {
-        const timing = copyTimings[copy.dataset.sceneCopy || ""];
-        if (!timing) return;
-        const [enterStart, enterEnd, exitStart, exitEnd] = timing;
-        const persistent = copy.dataset.sceneCopy === "invitation";
-        gsap.set(copy, { autoAlpha: 0, x: 0, y: 0, yPercent: -50, scale: .985, filter: "blur(8px)", clipPath: "inset(0 0 100% 0)" });
-        const copyTween = master.fromTo(copy, { autoAlpha: 0, x: 0, y: 0, yPercent: -50, scale: .985, filter: "blur(8px)", clipPath: "inset(0 0 100% 0)" }, { autoAlpha: 1, x: 0, y: 0, yPercent: -50, scale: 1, filter: "blur(0px)", clipPath: "inset(0 0 0% 0)", duration: enterEnd - enterStart, ease: "sine.out" }, enterStart)
-          .to(copy, { autoAlpha: 1, duration: Math.max(.001, exitStart - enterEnd) }, enterEnd);
-        if (!persistent) copyTween.to(copy, { autoAlpha: 0, x: 0, y: 0, yPercent: -50, scale: 1.008, filter: "blur(5px)", clipPath: "inset(100% 0 0% 0)", duration: exitEnd - exitStart, ease: "sine.inOut" }, exitStart);
-      });
-    }
-
-    syncExperience(master.scrollTrigger?.progress ?? 0);
+    syncExperience(timeline.scrollTrigger?.progress ?? 0);
     ScrollTrigger.refresh();
 
+    const preview = getPreviewProgress(new URLSearchParams(window.location.search).get("phase"));
+    const previewFrame = preview === undefined ? 0 : window.requestAnimationFrame(() => {
+      const distance = Math.max(0, root.offsetHeight - window.innerHeight);
+      window.scrollTo({ top: root.offsetTop + distance * preview, behavior: "auto" });
+      ScrollTrigger.update();
+    });
+
     return () => {
+      if (previewFrame) window.cancelAnimationFrame(previewFrame);
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);
       smooth?.destroy();
       experienceState.progress = 0;
       root.removeAttribute("data-story-stage");
     };
-  }, { scope, dependencies: [lenisEnabled] });
+  }, { scope, dependencies: [lenisEnabled, onPhaseChange] });
 
-  return <div ref={scope} className="immersiveRoot" data-experience-root style={{ "--story-progress": 0, "--scene-energy": 0, "--scene-structure": 0, "--scene-event": 0, "--scene-impact": 0 } as CSSProperties}>{children}</div>;
+  return (
+    <div
+      ref={scope}
+      className={className}
+      data-experience-root
+      data-story-stage="arrival"
+      style={{ "--scene-progress": 0 } as CSSProperties}
+    >
+      {children}
+    </div>
+  );
 }

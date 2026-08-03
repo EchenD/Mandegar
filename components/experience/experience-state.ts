@@ -1,4 +1,4 @@
-export type ExperienceQuality = "full" | "lite";
+import type { SceneQuality } from "./scene-config";
 
 /**
  * A tiny mutable bridge keeps the scroll timeline and the WebGL renderer in
@@ -6,12 +6,14 @@ export type ExperienceQuality = "full" | "lite";
  */
 export const experienceState: {
   progress: number;
-  quality: ExperienceQuality;
+  quality: SceneQuality;
   pointerX: number;
   pointerY: number;
+  lightScale: number;
 } = {
   progress: 0,
   quality: "full",
   pointerX: 0,
   pointerY: 0,
+  lightScale: 1,
 };

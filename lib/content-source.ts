@@ -122,7 +122,7 @@ export async function getHomeModel(locale: Locale) {
   const mediaOverrides: Record<string, MediaAsset> = {};
   const ctaOverrides: Record<string, { label?: string; href?: string }> = {};
   const featuredProjects: Project[] = [];
-  if (!result) return { copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides };
+  if (!result) return { copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides, fromCms: false };
 
   const scalar = (value: LocalizedInput, fallbackValue: string) => typeof value === "string" ? value : value?.[locale] || value?.en || value?.fa || fallbackValue;
   copy.title = scalar(result.title, copy.title);
@@ -154,7 +154,7 @@ export async function getHomeModel(locale: Locale) {
       copy[keys[1]] = scalar(section.body, copy[keys[1]]);
     }
   }
-  return { copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides };
+  return { copy, sectionSettings, mediaOverrides, featuredProjects, ctaOverrides, fromCms: true };
 }
 
 export type ContactChannel = {

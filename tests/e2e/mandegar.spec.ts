@@ -71,7 +71,7 @@ async function settleAndLoadPage(page: import("@playwright/test").Page) {
 
 async function revealAndLoadPage(page: import("@playwright/test").Page) {
   await settleAndLoadPage(page);
-  await expect(page.locator("#hero-title")).toBeInViewport();
+  await expect(page.locator("[data-mandegar-experience]")).toBeInViewport();
 }
 
 test.describe("Mandegar responsive layout", () => {
@@ -79,7 +79,7 @@ test.describe("Mandegar responsive layout", () => {
     test(`home fits ${viewport.name}`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto("/fa", { waitUntil: "networkidle" });
-      await expect(page.locator("#hero-title")).toBeVisible();
+      await expect(page.locator("[data-mandegar-experience]")).toBeVisible();
       await expect(page.locator("#main-content")).toBeVisible();
       await revealAndLoadPage(page);
       await assertNoHorizontalOverflow(page);
@@ -93,7 +93,7 @@ test.describe("Mandegar responsive layout", () => {
       await page.goto(`/${locale}`, { waitUntil: "networkidle" });
       await expect.poll(() => page.locator("html").getAttribute("lang")).toBe(locale);
       await expect(page.locator("[data-locale]")).toHaveAttribute("dir", locale === "en" ? "ltr" : "rtl");
-      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(page.locator("[data-mandegar-experience]")).toBeVisible();
       await assertNoHorizontalOverflow(page);
     });
   }
@@ -141,31 +141,30 @@ test.describe("Mandegar responsive layout", () => {
   test("reduced motion keeps the semantic fallback visible", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/fa", { waitUntil: "networkidle" });
-    await expect(page.locator(".canvasFallback")).toBeVisible();
-    await expect(page.locator("#hero-title")).toBeVisible();
+    await expect(page.locator("[data-webgl='fallback']")).toBeVisible();
+    await expect(page.locator("[data-semantic-fallback] h2").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "شروع یک پروژه" }).last()).toBeVisible();
   });
 
   test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
     await expect(page.locator("[data-experience-root]")).toHaveCount(1);
-    await expect(page.locator("[data-experience-canvas-host]")).toHaveCount(1);
-    await expect(page.locator(".heroSpark")).toBeVisible();
-    await expect(page.locator(".sceneMediaFrame")).toHaveCount(6);
-    await expect(page.locator(".sceneNavigator")).toHaveCount(1);
-    await expect(page.locator(".sceneStageShell")).toHaveCount(1);
-    expect(await page.locator("[data-experience-canvas-host] canvas").count()).toBeLessThanOrEqual(1);
-    await expect(page.locator("[data-story-stage]")).toHaveAttribute("data-story-stage", "spark");
-    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight * 0.48, behavior: "auto" }));
-    await page.waitForTimeout(500);
-    await expect.poll(() => page.locator("[data-story-stage]").getAttribute("data-story-stage")).not.toBe("spark");
-    await expect(page.locator("[data-stage='proof']")).toHaveCount(1);
+    await expect(page.locator("[data-mandegar-experience]")).toHaveCount(1);
+    await expect(page.locator("[data-experience-root] canvas")).toHaveCount(1);
+    await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "arrival");
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
+    await page.evaluate(() => {
+      const root = document.querySelector<HTMLElement>("[data-experience-root]");
+      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - innerHeight) * .57, behavior: "auto" });
+    });
+    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("activation");
   });
 
-  test("scene atlas stays aligned with the visible chapter", async ({ page }) => {
+  test("five-state scene stays aligned with named checkpoints", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
-    for (const [stage, progress] of [["capability", .4], ["proof", .63], ["intelligence", .83]] as const) {
+    for (const [stage, progress] of [["arrival", .08], ["discovery", .29], ["activation", .57], ["reveal", .83], ["loop", .955]] as const) {
       await page.evaluate((value) => {
         const root = document.querySelector<HTMLElement>("[data-experience-root]");
         if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
@@ -177,12 +176,12 @@ test.describe("Mandegar responsive layout", () => {
   test("storyboard copy appears one beat at a time", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/fa", { waitUntil: "networkidle" });
-    for (const [stage, progress] of [["idea", .17], ["space", .29], ["build", .4], ["event", .5], ["proof", .63], ["interaction", .75], ["intelligence", .835], ["trust", .895], ["memory", .937], ["invitation", .975]] as const) {
+    for (const [stage, progress] of [["discovery", .29], ["activation", .57], ["reveal", .83], ["loop", .955]] as const) {
       await page.evaluate((value) => {
         const root = document.querySelector<HTMLElement>("[data-experience-root]");
         if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
       }, progress);
-      await page.waitForTimeout(750);
+      await page.waitForTimeout(550);
       await expect(page.locator(`[data-scene-copy='${stage}']`)).toBeVisible();
       const visibleCopies = await page.locator("[data-scene-copy]").evaluateAll((elements) => elements.filter((element) => {
         const style = getComputedStyle(element);
@@ -193,34 +192,12 @@ test.describe("Mandegar responsive layout", () => {
     }
   });
 
-  test("proof media panels stay inside the viewport", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/fa", { waitUntil: "networkidle" });
-    await page.evaluate(() => {
-      const root = document.querySelector<HTMLElement>("[data-experience-root]");
-      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * .63, behavior: "auto" });
-    });
-    await page.waitForTimeout(1200);
-    const boxes = await page.locator("[data-scene-media^='project-']").evaluateAll((elements) => elements.map((element) => {
-      const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      return { opacity: Number(style.opacity), cssLeft: style.left, transform: style.transform, left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-    }));
-    expect(boxes.filter((box) => box.opacity > .1).every((box) => box.left >= -2 && box.top >= -2 && box.right <= 1442 && box.bottom <= 902), JSON.stringify(boxes)).toBe(true);
-  });
-
-  test("interactive, data and final scene layers remain available", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/en", { waitUntil: "networkidle" });
-    for (const [selector, progress] of [["[data-scene-layer='interaction']", .75], ["[data-scene-layer='data']", .835], ["[data-scene-copy='invitation']", .975]] as const) {
-      await page.evaluate((value) => {
-        const root = document.querySelector<HTMLElement>("[data-experience-root]");
-        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
-      }, progress);
-      await page.waitForTimeout(650);
-      await expect(page.locator(selector)).toBeVisible();
-    }
-    await expect(page.locator("[data-experience-canvas]")).toHaveCount(1);
+  test("mobile controls remain available without pointer input", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fa?phase=reveal", { waitUntil: "networkidle" });
+    await expect(page.getByRole("button", { name: "فعال‌کردن صدا" })).toBeVisible();
+    await expect(page.locator("[data-scene-copy='reveal']")).toBeVisible();
+    await assertNoHorizontalOverflow(page);
   });
 
   test("persistent scene does not cover the footer at the end of the narrative", async ({ page }) => {
