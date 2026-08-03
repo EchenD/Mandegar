@@ -84,7 +84,6 @@ test.describe("Mandegar responsive layout", () => {
       await revealAndLoadPage(page);
       await assertNoHorizontalOverflow(page);
       await page.screenshot({ path: `test-results/ui/${viewport.name}-fa-viewport.png`, fullPage: false });
-      await page.screenshot({ path: `test-results/ui/${viewport.name}-fa.png`, fullPage: true });
     });
   }
 
@@ -156,31 +155,28 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
     await page.evaluate(() => {
       const root = document.querySelector<HTMLElement>("[data-experience-root]");
-      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - innerHeight) * .57, behavior: "auto" });
+      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - innerHeight) * .31, behavior: "auto" });
     });
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("activation");
   });
 
-  test("five-state scene stays aligned with named checkpoints", async ({ page }) => {
+  test("nine-state scene stays aligned with named checkpoints", async ({ page }) => {
+    test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
-    for (const [stage, progress] of [["arrival", .08], ["discovery", .29], ["activation", .57], ["reveal", .83], ["loop", .955]] as const) {
-      await page.evaluate((value) => {
-        const root = document.querySelector<HTMLElement>("[data-experience-root]");
-        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
-      }, progress);
+    for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
+      await page.locator(`[data-phase-target='${stage}']`).click();
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
     }
   });
 
   test("storyboard copy appears one beat at a time", async ({ page }) => {
+    test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/fa", { waitUntil: "networkidle" });
-    for (const [stage, progress] of [["discovery", .29], ["activation", .57], ["reveal", .83], ["loop", .955]] as const) {
-      await page.evaluate((value) => {
-        const root = document.querySelector<HTMLElement>("[data-experience-root]");
-        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
-      }, progress);
+    for (const stage of ["discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
+      await page.locator(`[data-phase-target='${stage}']`).click();
+      await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
       await page.waitForTimeout(550);
       await expect(page.locator(`[data-scene-copy='${stage}']`)).toBeVisible();
       const visibleCopies = await page.locator("[data-scene-copy]").evaluateAll((elements) => elements.filter((element) => {
@@ -188,8 +184,26 @@ test.describe("Mandegar responsive layout", () => {
         const rect = element.getBoundingClientRect();
         return style.visibility !== "hidden" && Number(style.opacity) > .1 && rect.width > 10 && rect.height > 10;
       }).map((element) => element.getAttribute("data-scene-copy")));
-      expect(visibleCopies, `at progress ${progress}`).toEqual([stage]);
+      expect(visibleCopies, `at stage ${stage}`).toEqual([stage]);
     }
+  });
+
+  test("experience zones respond to keyboard and project proof stays CMS-addressable", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?phase=experiences", { waitUntil: "networkidle" });
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
+    const experiences = page.locator("[data-scene-copy='experiences']");
+    await expect(experiences).toBeVisible();
+    const photo = experiences.getByRole("button", { name: /Photo/ });
+    await photo.focus();
+    await expect(photo).toHaveAttribute("data-active", "true");
+    await page.keyboard.press("Enter");
+    await expect(photo).toHaveAttribute("data-active", "false");
+
+    await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
+    const proofLinks = page.locator("[data-scene-copy='proof'] a");
+    await expect(proofLinks).toHaveCount(3);
+    await expect(proofLinks.first()).toHaveAttribute("href", /\/en\/projects\//);
   });
 
   test("mobile controls remain available without pointer input", async ({ page }) => {

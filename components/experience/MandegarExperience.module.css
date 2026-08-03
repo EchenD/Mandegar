@@ -1,7 +1,7 @@
 .root {
   --scene-progress: 0;
   position: relative;
-  height: 540svh;
+  height: 900svh;
   color: #16191d;
   background: #e8ebea;
   isolation: isolate;
@@ -213,7 +213,10 @@
 }
 
 .root[data-story-stage="reveal"] .atmosphere::after,
-.root[data-story-stage="loop"] .atmosphere::after {
+.root[data-story-stage="experiences"] .atmosphere::after,
+.root[data-story-stage="proof"] .atmosphere::after,
+.root[data-story-stage="intelligence"] .atmosphere::after,
+.root[data-story-stage="invitation"] .atmosphere::after {
   opacity: 1;
   transform: scale(1);
 }
@@ -257,7 +260,10 @@
 }
 
 .root[data-story-stage="activation"] .spatialBrand,
-.root[data-story-stage="reveal"] .spatialBrand {
+.root[data-story-stage="reveal"] .spatialBrand,
+.root[data-story-stage="experiences"] .spatialBrand,
+.root[data-story-stage="proof"] .spatialBrand,
+.root[data-story-stage="intelligence"] .spatialBrand {
   opacity: .88;
 }
 
@@ -289,7 +295,8 @@
 .capabilityLabels span:nth-child(3) { inset-inline-start: 50%; inset-block-start: 66%; transform: translateX(-50%); }
 
 .root[data-story-stage="activation"] .capabilityLabels,
-.root[data-story-stage="reveal"] .capabilityLabels { opacity: 1; }
+.root[data-story-stage="reveal"] .capabilityLabels,
+.root[data-story-stage="experiences"] .capabilityLabels { opacity: 1; }
 
 .copyLayer {
   position: absolute;
@@ -334,7 +341,13 @@
 
 .sceneCopy {
   position: absolute;
-  width: min(31rem, 34vw);
+  width: min(26rem, 29vw);
+  padding: 1.15rem 1.25rem 1.3rem;
+  border: 1px solid rgba(22, 25, 29, .08);
+  border-radius: 1rem;
+  background: rgba(247, 247, 244, .68);
+  box-shadow: 0 1.4rem 4rem rgba(67, 77, 86, .08);
+  backdrop-filter: blur(16px);
   opacity: 0;
   visibility: hidden;
   will-change: opacity, transform, filter, clip-path;
@@ -365,7 +378,7 @@
   max-width: 12ch;
   margin: 0;
   color: #16191d;
-  font-size: clamp(2.2rem, 4vw, 5.2rem);
+  font-size: clamp(1.75rem, 2.65vw, 3.55rem);
   font-weight: 520;
   line-height: 1.05;
   letter-spacing: -.045em;
@@ -398,17 +411,132 @@
 
 .revealCopy h2 { max-width: 10ch; }
 
+.experiencesCopy {
+  inset-inline-end: clamp(2rem, 6vw, 7rem);
+  inset-block-end: 14%;
+}
+
+.proofCopy {
+  inset-inline-start: clamp(2rem, 5vw, 6rem);
+  inset-block-end: 12%;
+  width: min(61rem, 68vw);
+}
+
+.proofCopy h2 { max-width: 16ch; }
+.proofCopy > p { max-width: 38rem; }
+
+.intelligenceCopy {
+  inset-inline-end: clamp(2rem, 7vw, 8rem);
+  inset-block-start: 18%;
+  width: min(29rem, 32vw);
+}
+
+.zoneControls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .45rem;
+  margin-block-start: 1.2rem;
+  pointer-events: auto;
+}
+
+.zoneControls button {
+  display: grid;
+  gap: .35rem;
+  min-height: 3.4rem;
+  padding: .65rem;
+  border: 1px solid rgba(34, 92, 255, .2);
+  border-radius: .65rem;
+  color: #16191d;
+  background: rgba(255, 255, 255, .5);
+  font: inherit;
+  font-size: .62rem;
+  text-align: start;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.zoneControls button:hover,
+.zoneControls button:focus-visible,
+.zoneControls button[data-active="true"] {
+  color: #fff;
+  background: #225cff;
+  transform: translateY(-2px);
+}
+
+.zoneControls small { color: #50c7ff; font-size: .46rem; }
+
+.projectStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .55rem;
+  margin-block-start: 1.15rem;
+  direction: ltr;
+  pointer-events: auto;
+}
+
+.projectCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .38rem;
+  min-width: 0;
+  padding: .5rem;
+  border: 1px solid rgba(22, 25, 29, .11);
+  border-radius: .72rem;
+  color: #16191d;
+  background: rgba(255, 255, 255, .56);
+  text-decoration: none;
+  overflow: hidden;
+  transition: border-color .25s ease, transform .25s ease;
+}
+
+.projectCard:hover,
+.projectCard:focus-visible { border-color: #225cff; transform: translateY(-3px); }
+.projectCard > i { grid-column: 1 / -1; height: 5rem; border-radius: .46rem; background: #dfe5e9 center / cover no-repeat; }
+.projectCard small { color: #225cff; font-size: .45rem; letter-spacing: .08em; }
+.projectCard strong { grid-column: 1; font-size: .7rem; font-weight: 620; line-height: 1.45; }
+.projectCard em { grid-column: 2; grid-row: 2 / 4; align-self: end; color: #225cff; font-style: normal; }
+
+.intelligenceMap {
+  width: 100%;
+  margin-block-start: 1rem;
+  overflow: visible;
+}
+
+.intelligenceMap path {
+  fill: none;
+  stroke: rgba(34, 92, 255, .7);
+  stroke-width: 1.4;
+}
+
+.intelligenceMap circle {
+  fill: #f7f7f4;
+  stroke: #225cff;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 5px rgba(34, 92, 255, .55));
+}
+
 .invitationCopy {
-  inset-inline-start: 50%;
+  inset-inline-start: 25%;
   inset-block-start: 50%;
-  width: min(44rem, calc(100% - 3rem));
+  width: 50%;
   text-align: center;
-  transform: translate(-50%, -50%);
 }
 
 .invitationCopy > span { justify-content: center; }
 .invitationCopy h2 { max-width: 15ch; margin-inline: auto; }
 .invitationCopy p { max-width: 37rem; margin-inline: auto; }
+
+.loopCopy {
+  inset-inline-start: 27%;
+  inset-block-start: 49%;
+  width: 46%;
+  text-align: center;
+}
+
+.loopCopy > span { justify-content: center; }
+.loopCopy h2,
+.loopCopy p { margin-inline: auto; }
 
 .ctaRow {
   display: flex;
@@ -548,7 +676,7 @@
 
 .phaseButtons {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(9, 1fr);
   gap: .35rem;
   margin-block-start: .55rem;
 }
@@ -706,7 +834,8 @@
 @media (max-width: 900px) {
   .sideDock { display: none; }
   .phaseRail { width: min(38rem, 74vw); }
-  .sceneCopy { width: min(28rem, 43vw); }
+  .sceneCopy { width: min(26rem, 43vw); }
+  .proofCopy { width: min(50rem, 76vw); }
 }
 
 @media (min-width: 761px) {
@@ -714,7 +843,7 @@
 }
 
 @media (max-width: 760px) {
-  .root { height: 470svh; }
+  .root { height: 820svh; }
   .loaderMark { width: 7.2rem; }
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }
@@ -732,20 +861,36 @@
     padding: 1rem;
     border: 1px solid rgba(22,25,29,.08);
     border-radius: 1rem;
-    background: rgba(247,247,244,.48);
+    background: rgba(247,247,244,.78);
     backdrop-filter: blur(12px);
   }
   .sceneCopy h1,
-  .sceneCopy h2 { max-width: 12ch; font-size: clamp(2rem, 10vw, 3.2rem); }
+  .sceneCopy h2 { max-width: 13ch; font-size: clamp(1.72rem, 8.4vw, 2.65rem); }
   .sceneCopy p { max-width: 28rem; margin-block-start: .8rem; font-size: .8rem; line-height: 1.65; }
   .sceneCopy > span { margin-block-end: .7rem; }
   .discoveryCopy { inset-block: auto 11%; }
   .activationCopy { inset-block: auto 11%; }
   .revealCopy { inset-block: auto 11%; }
-  .invitationCopy { inset-inline-start: 1.2rem; inset-block: auto 10%; text-align: start; transform: none; }
+  .experiencesCopy,
+  .proofCopy,
+  .intelligenceCopy { inset-inline: 1.2rem auto; inset-block: auto 10%; width: calc(100% - 2.4rem); }
+  .proofCopy { padding: .85rem; }
+  .proofCopy > p { display: none; }
+  .projectStrip { gap: .3rem; margin-block-start: .75rem; }
+  .projectCard { padding: .32rem; }
+  .projectCard > i { height: 3.5rem; }
+  .projectCard strong { font-size: .54rem; }
+  .projectCard small { font-size: .36rem; }
+  .intelligenceMap { max-height: 5rem; }
+  .zoneControls button { min-height: 3rem; padding: .5rem; font-size: .55rem; }
+  .invitationCopy,
+  .loopCopy { inset-inline-start: 1.2rem; inset-block: auto 10%; width: calc(100% - 2.4rem); text-align: start; }
   .invitationCopy > span { justify-content: flex-start; }
+  .loopCopy > span { justify-content: flex-start; }
   .invitationCopy h2,
-  .invitationCopy p { margin-inline: 0; }
+  .invitationCopy p,
+  .loopCopy h2,
+  .loopCopy p { margin-inline: 0; }
   .ctaRow { justify-content: flex-start; margin-block-start: 1.1rem; }
   .primaryCta,
   .replayButton { min-height: 2.7rem; }

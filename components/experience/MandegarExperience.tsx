@@ -25,15 +25,28 @@ type ExperienceCopy = {
   revealEyebrow: string;
   revealTitle: string;
   revealBody: string;
+  experiencesEyebrow: string;
+  experiencesTitle: string;
+  experiencesBody: string;
+  proofEyebrow: string;
+  proofTitle: string;
+  proofBody: string;
+  intelligenceEyebrow: string;
+  intelligenceTitle: string;
+  intelligenceBody: string;
   invitationEyebrow: string;
   invitationTitle: string;
   invitationBody: string;
+  loopEyebrow: string;
+  loopTitle: string;
+  loopBody: string;
   startProject: string;
   scroll: string;
   replay: string;
   enableSound: string;
   muteSound: string;
   loading: string;
+  zones: { photo: string; game: string; touch: string };
   phases: Record<ScenePhaseId, string>;
   navigation: {
     projects: string;
@@ -43,21 +56,32 @@ type ExperienceCopy = {
   };
 };
 
+export type ExperienceProject = {
+  slug: string;
+  title: string;
+  eyebrow: string;
+  summary: string;
+  mediaSrc: string;
+  isPlaceholder: boolean;
+};
+
 type ExperienceProps = {
   locale: Locale;
   copy: ExperienceCopy;
   ctaHref: string;
+  projects?: ExperienceProject[];
   enabledByCms?: boolean;
   lenisEnabled?: boolean;
 };
 
 type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
 
-export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true, lenisEnabled = false }: ExperienceProps) {
+export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabledByCms = true, lenisEnabled = false }: ExperienceProps) {
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [activeZone, setActiveZone] = useState<"photo" | "game" | "touch" | null>(null);
   const audioContext = useRef<AudioContext | undefined>(undefined);
   const audioNodes = useRef<AudioNode[]>([]);
 
@@ -73,6 +97,13 @@ export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true,
     };
   }, []);
 
+  useEffect(() => {
+    experienceState.focusZone = activeZone;
+    return () => {
+      experienceState.focusZone = null;
+    };
+  }, [activeZone]);
+
   const handleRuntimeReady = useCallback((nextRuntime: "pending" | "fallback" | "adaptive" | "full") => {
     setRuntime(nextRuntime);
     setLoadProgress(72);
@@ -84,8 +115,7 @@ export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true,
   const scrollToProgress = useCallback((progress: number) => {
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     if (!root) return;
-    const distance = Math.max(0, root.offsetHeight - window.innerHeight);
-    window.scrollTo({ top: root.offsetTop + distance * progress, behavior: "smooth" });
+    root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress } }));
   }, []);
 
   const scrollToPhase = useCallback((phase: ScenePhaseId) => {
@@ -201,12 +231,64 @@ export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true,
               <h2>{copy.revealTitle}</h2>
               <p>{copy.revealBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.invitationCopy}`} data-scene-copy="loop" data-cinematic-beat>
+            <section className={`${styles.sceneCopy} ${styles.experiencesCopy}`} data-scene-copy="experiences" data-cinematic-beat>
+              <span>{copy.experiencesEyebrow}</span>
+              <h2>{copy.experiencesTitle}</h2>
+              <p>{copy.experiencesBody}</p>
+              <div className={styles.zoneControls} aria-label={copy.experiencesTitle}>
+                {(["photo", "game", "touch"] as const).map((zone, index) => (
+                  <button
+                    key={zone}
+                    type="button"
+                    data-active={activeZone === zone ? "true" : "false"}
+                    onPointerEnter={() => setActiveZone(zone)}
+                    onPointerLeave={() => setActiveZone(null)}
+                    onFocus={() => setActiveZone(zone)}
+                    onClick={() => setActiveZone(activeZone === zone ? null : zone)}
+                  >
+                    <small>0{index + 1}</small>{copy.zones[zone]}
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section className={`${styles.sceneCopy} ${styles.proofCopy}`} data-scene-copy="proof" data-cinematic-beat>
+              <span>{copy.proofEyebrow}</span>
+              <h2>{copy.proofTitle}</h2>
+              <p>{copy.proofBody}</p>
+              <div className={styles.projectStrip}>
+                {projects.slice(0, 3).map((project, index) => (
+                  <Link key={project.slug} href={`/${locale}/projects/${project.slug}`} className={styles.projectCard}>
+                    <i style={{ backgroundImage: `url(${project.mediaSrc})` }} aria-hidden="true" />
+                    <small>0{index + 1} / {project.isPlaceholder ? "DEMO" : project.eyebrow}</small>
+                    <strong>{project.title}</strong>
+                    <em aria-hidden="true">↗</em>
+                  </Link>
+                ))}
+              </div>
+            </section>
+            <section className={`${styles.sceneCopy} ${styles.intelligenceCopy}`} data-scene-copy="intelligence" data-cinematic-beat>
+              <span>{copy.intelligenceEyebrow}</span>
+              <h2>{copy.intelligenceTitle}</h2>
+              <p>{copy.intelligenceBody}</p>
+              <svg className={styles.intelligenceMap} viewBox="0 0 420 118" aria-hidden="true">
+                <path d="M18 77 C76 22 122 98 177 54 S278 22 323 61 S380 86 402 38" />
+                {[18, 95, 177, 251, 323, 402].map((x, index) => <circle key={x} cx={x} cy={[77, 45, 54, 35, 61, 38][index]} r={index === 2 ? 6 : 3} />)}
+              </svg>
+            </section>
+            <section className={`${styles.sceneCopy} ${styles.invitationCopy}`} data-scene-copy="invitation" data-cinematic-beat>
               <span>{copy.invitationEyebrow}</span>
               <h2>{copy.invitationTitle}</h2>
               <p>{copy.invitationBody}</p>
               <div className={styles.ctaRow}>
                 <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project">{copy.startProject}<i aria-hidden="true">↗</i></Link>
+              </div>
+            </section>
+            <section className={`${styles.sceneCopy} ${styles.loopCopy}`} data-scene-copy="loop" data-cinematic-beat>
+              <span>{copy.loopEyebrow}</span>
+              <h2>{copy.loopTitle}</h2>
+              <p>{copy.loopBody}</p>
+              <div className={styles.ctaRow}>
+                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project_loop">{copy.startProject}<i aria-hidden="true">↗</i></Link>
                 <button type="button" className={styles.replayButton} onClick={() => scrollToPhase("arrival")}>{copy.replay}<i aria-hidden="true">↺</i></button>
               </div>
             </section>
@@ -223,10 +305,10 @@ export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true,
           </button>
 
           <div className={styles.phaseRail} aria-label={locale === "en" ? "Experience phases" : locale === "ar" ? "مراحل التجربة" : "مراحل تجربه"}>
-            <span className={styles.phaseTrack}><i style={{ transform: `scaleX(${Math.max(0.03, scenePhases.findIndex((phase) => phase.id === activePhase) / 4)})` }} /></span>
+            <span className={styles.phaseTrack}><i style={{ transform: `scaleX(${Math.max(0.03, scenePhases.findIndex((phase) => phase.id === activePhase) / (scenePhases.length - 1))})` }} /></span>
             <div className={styles.phaseButtons}>
               {scenePhases.map((phase, index) => (
-                <button key={phase.id} type="button" data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
+                <button key={phase.id} type="button" data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
                   <small>0{index + 1}</small><span>{copy.phases[phase.id]}</span>
                 </button>
               ))}
@@ -241,15 +323,23 @@ export function MandegarExperience({ locale, copy, ctaHref, enabledByCms = true,
       </div>
 
       <div className={styles.semanticFallback} data-semantic-fallback data-cinematic-beat>
-        {["discovery", "activation", "reveal", "loop"].map((phase) => {
+        {["discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"].map((phase) => {
           const content = phase === "discovery"
             ? [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody]
             : phase === "activation"
               ? [copy.activationEyebrow, copy.activationTitle, copy.activationBody]
               : phase === "reveal"
                 ? [copy.revealEyebrow, copy.revealTitle, copy.revealBody]
-                : [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody];
-          return <section key={phase}><span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>{phase === "loop" ? <Link href={ctaHref}>{copy.startProject}</Link> : null}</section>;
+                : phase === "experiences"
+                  ? [copy.experiencesEyebrow, copy.experiencesTitle, copy.experiencesBody]
+                  : phase === "proof"
+                    ? [copy.proofEyebrow, copy.proofTitle, copy.proofBody]
+                    : phase === "intelligence"
+                      ? [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody]
+                      : phase === "invitation"
+                        ? [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody]
+                        : [copy.loopEyebrow, copy.loopTitle, copy.loopBody];
+          return <section key={phase}><span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>{phase === "invitation" || phase === "loop" ? <Link href={ctaHref}>{copy.startProject}</Link> : null}</section>;
         })}
       </div>
     </ScrollMotion>

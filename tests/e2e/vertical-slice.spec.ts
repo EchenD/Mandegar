@@ -5,7 +5,13 @@ const checkpoints = [
   { phase: "discovery", viewport: { width: 1440, height: 900 }, file: "desktop-discovery.png" },
   { phase: "activation", viewport: { width: 1440, height: 900 }, file: "desktop-activation.png" },
   { phase: "reveal", viewport: { width: 1440, height: 900 }, file: "desktop-reveal.png" },
+  { phase: "experiences", viewport: { width: 1440, height: 900 }, file: "desktop-experiences.png" },
+  { phase: "proof", viewport: { width: 1440, height: 900 }, file: "desktop-proof.png" },
+  { phase: "intelligence", viewport: { width: 1440, height: 900 }, file: "desktop-intelligence.png" },
+  { phase: "invitation", viewport: { width: 1440, height: 900 }, file: "desktop-invitation.png" },
   { phase: "activation", viewport: { width: 390, height: 844 }, file: "mobile-activation.png" },
+  { phase: "proof", viewport: { width: 390, height: 844 }, file: "mobile-proof.png" },
+  { phase: "intelligence", viewport: { width: 390, height: 844 }, file: "mobile-intelligence.png" },
   { phase: "loop", viewport: { width: 390, height: 844 }, file: "mobile-loop.png" },
 ] as const;
 

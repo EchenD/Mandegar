@@ -10,10 +10,12 @@ export const experienceState: {
   pointerX: number;
   pointerY: number;
   lightScale: number;
+  focusZone: "photo" | "game" | "touch" | null;
 } = {
   progress: 0,
   quality: "full",
   pointerX: 0,
   pointerY: 0,
   lightScale: 1,
+  focusZone: null,
 };

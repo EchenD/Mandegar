@@ -1,4 +1,13 @@
-export type ScenePhaseId = "arrival" | "discovery" | "activation" | "reveal" | "loop";
+export type ScenePhaseId =
+  | "arrival"
+  | "discovery"
+  | "activation"
+  | "reveal"
+  | "experiences"
+  | "proof"
+  | "intelligence"
+  | "invitation"
+  | "loop";
 export type SceneQuality = "full" | "adaptive";
 export type CameraKeyframe = {
   progress: number;
@@ -19,7 +28,7 @@ export const sceneTokens = {
     magenta: "#d95cff",
     amber: "#ffb54a",
   },
-  scrollLengthVh: { desktop: 540, mobile: 470 },
+  scrollLengthVh: { desktop: 900, mobile: 820 },
   pointerParallax: { desktop: 0.085, mobile: 0 },
   featureFlags: {
     audience: true,
@@ -34,36 +43,43 @@ export const scenePhases: ReadonlyArray<{
   end: number;
   preview: number;
 }> = [
-  { id: "arrival", start: 0, end: 0.18, preview: 0.08 },
-  { id: "discovery", start: 0.18, end: 0.38, preview: 0.29 },
-  { id: "activation", start: 0.38, end: 0.74, preview: 0.57 },
-  { id: "reveal", start: 0.74, end: 0.91, preview: 0.83 },
-  { id: "loop", start: 0.91, end: 1, preview: 0.955 },
+  { id: "arrival", start: 0, end: 0.11, preview: 0.045 },
+  { id: "discovery", start: 0.11, end: 0.22, preview: 0.165 },
+  { id: "activation", start: 0.22, end: 0.4, preview: 0.31 },
+  { id: "reveal", start: 0.4, end: 0.53, preview: 0.465 },
+  { id: "experiences", start: 0.53, end: 0.65, preview: 0.59 },
+  { id: "proof", start: 0.65, end: 0.77, preview: 0.71 },
+  { id: "intelligence", start: 0.77, end: 0.87, preview: 0.82 },
+  { id: "invitation", start: 0.87, end: 0.96, preview: 0.915 },
+  { id: "loop", start: 0.96, end: 1, preview: 0.982 },
 ] as const;
 
 export const activationSequence = {
-  lightTrails: [0.16, 0.43],
+  lightTrails: [0.1, 0.22],
   screens: [
-    [0.28, 0.4],
-    [0.42, 0.53],
-    [0.49, 0.61],
+    [0.2, 0.28],
+    [0.25, 0.33],
+    [0.29, 0.37],
   ],
-  mediaWall: [0.52, 0.65],
-  booths: [0.59, 0.72],
-  branding: [0.66, 0.77],
-  audience: [0.7, 0.84],
-  totalReveal: [0.75, 0.9],
-  loopReset: [0.92, 1],
+  mediaWall: [0.29, 0.38],
+  booths: [0.34, 0.43],
+  branding: [0.38, 0.47],
+  audience: [0.41, 0.51],
+  totalReveal: [0.4, 0.52],
+  loopReset: [0.96, 1],
 } as const;
 
 export const cameraKeyframes: readonly CameraKeyframe[] = [
-  { progress: 0, position: [0, 2.85, 15.6], mobilePosition: [0, 3.1, 18.2], target: [0, 1.65, 0], ease: "calm" },
-  { progress: 0.18, position: [0.25, 2.65, 13.4], mobilePosition: [0.2, 2.95, 16.4], target: [0, 1.55, 0], ease: "calm" },
-  { progress: 0.38, position: [4.15, 2.65, 10.6], mobilePosition: [2.45, 2.9, 13.8], target: [0, 1.35, 0], ease: "calm" },
-  { progress: 0.7, position: [-3.45, 2.5, 9.6], mobilePosition: [-1.8, 2.85, 12.8], target: [0, 1.3, -0.1], ease: "calm" },
-  { progress: 0.82, position: [0.15, 3.45, 11.9], mobilePosition: [0.05, 3.45, 14.7], target: [0, 1.45, 0], ease: "reveal" },
-  { progress: 0.92, position: [0, 3.0, 13.7], mobilePosition: [0, 3.2, 16.5], target: [0, 1.55, 0], ease: "calm" },
-  { progress: 1, position: [0, 2.85, 15.6], mobilePosition: [0, 3.1, 18.2], target: [0, 1.65, 0], ease: "calm" },
+  { progress: 0, position: [0, 3.0, 16.2], mobilePosition: [0, 4.15, 27.5], target: [0, 2.35, 0], ease: "calm" },
+  { progress: 0.11, position: [0.2, 2.9, 15], mobilePosition: [0.15, 4.05, 26.5], target: [0, 2.3, 0], ease: "calm" },
+  { progress: 0.22, position: [3.4, 2.95, 13.5], mobilePosition: [1.4, 3.95, 24.5], target: [0, 2.2, 0], ease: "calm" },
+  { progress: 0.4, position: [-2.6, 2.9, 13], mobilePosition: [-1.15, 3.9, 24], target: [0, 2.15, 0], ease: "calm" },
+  { progress: 0.53, position: [0.1, 3.45, 14.1], mobilePosition: [0, 4.25, 24.6], target: [0, 2.35, 0], ease: "reveal" },
+  { progress: 0.65, position: [4.5, 2.55, 11.8], mobilePosition: [2.1, 3.75, 22.8], target: [1.4, 1.75, -0.1], ease: "calm" },
+  { progress: 0.77, position: [-4.1, 2.75, 12.3], mobilePosition: [-1.8, 3.9, 23.4], target: [-1.25, 1.85, 0], ease: "calm" },
+  { progress: 0.87, position: [0, 4.1, 14.8], mobilePosition: [0, 4.45, 25], target: [0, 2.45, 0], ease: "calm" },
+  { progress: 0.96, position: [0, 3.3, 15.5], mobilePosition: [0, 4.2, 26.2], target: [0, 2.35, 0], ease: "calm" },
+  { progress: 1, position: [0, 3.0, 16.2], mobilePosition: [0, 4.15, 27.5], target: [0, 2.35, 0], ease: "calm" },
 ] as const;
 
 export const qualityProfiles: Record<SceneQuality, {
@@ -77,14 +93,16 @@ export const qualityProfiles: Record<SceneQuality, {
 };
 
 export const assetSlots = {
-  hall: "hall_shell_v01.glb",
-  hero: "hero_zone_v01.glb",
-  halo: "ring_signature_v01.glb",
-  stage: "stage_central_v01.glb",
-  mediaWall: "led_main_16x9_v01.glb",
-  photoBooth: "booth_photo_v01.glb",
-  gameStation: "booth_game_v01.glb",
-  touchTable: "touch_table_v01.glb",
+  assembled: "/models/mandegar-v1/mandegar_hero_assembled_v1.glb",
+  hall: "/models/mandegar-v1/mandegar_hall_shell_v1.glb",
+  hero: "/models/mandegar-v1/mandegar_hero_core_v1.glb",
+  halo: "/models/mandegar-v1/mandegar_halo_v1.glb",
+  experiencePods: "/models/mandegar-v1/mandegar_experience_pods_v1.glb",
+  stage: "stage_base",
+  mediaWall: "led_central_media_21x9",
+  photoBooth: "booth_left_shell",
+  gameStation: "booth_right_shell",
+  touchTable: "touch_left_surface",
   audience: "audience_style_pending_v01.glb",
 } as const;
 

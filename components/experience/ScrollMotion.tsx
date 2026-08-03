@@ -49,7 +49,7 @@ export function ScrollMotion({
 
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
-      syncExperience(scenePhases.find((phase) => phase.id === "reveal")?.preview ?? 0.83);
+      syncExperience(scenePhases.find((phase) => phase.id === "reveal")?.preview ?? 0.465);
       return () => {
         experienceState.progress = 0;
         root.removeAttribute("data-story-stage");
@@ -76,12 +76,38 @@ export function ScrollMotion({
       },
     });
 
-    const copyRanges: Record<Exclude<ScenePhaseId, "arrival">, readonly [number, number, number, number]> = {
-      discovery: [0.185, 0.22, 0.345, 0.38],
-      activation: [0.385, 0.425, 0.69, 0.73],
-      reveal: [0.745, 0.78, 0.875, 0.91],
-      loop: [0.905, 0.93, 0.982, 1],
+    const seekExperience = (event: Event) => {
+      const requested = (event as CustomEvent<{ progress?: number }>).detail?.progress;
+      if (typeof requested !== "number") return;
+      const progress = Math.min(1, Math.max(0, requested));
+      const distance = Math.max(0, root.offsetHeight - window.innerHeight);
+      const target = root.offsetTop + distance * progress;
+      if (smooth) {
+        smooth.scrollTo(target, { immediate: true, force: true });
+      } else {
+        const previousBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = "auto";
+        window.scrollTo({ top: target, behavior: "auto" });
+        window.requestAnimationFrame(() => {
+          document.documentElement.style.scrollBehavior = previousBehavior;
+        });
+      }
+      syncExperience(progress);
+      ScrollTrigger.update();
     };
+    root.addEventListener("mandegar:seek", seekExperience);
+
+    const copyRanges = Object.fromEntries(scenePhases
+      .filter((phase) => phase.id !== "arrival")
+      .map((phase) => {
+        const span = phase.end - phase.start;
+        return [phase.id, [
+          phase.start + span * 0.04,
+          phase.start + span * 0.24,
+          phase.end - span * 0.2,
+          phase.end,
+        ]] as const;
+      })) as Record<Exclude<ScenePhaseId, "arrival">, readonly [number, number, number, number]>;
 
     root.querySelectorAll<HTMLElement>("[data-scene-copy]").forEach((copy) => {
       const phase = copy.dataset.sceneCopy as Exclude<ScenePhaseId, "arrival">;
@@ -126,6 +152,7 @@ export function ScrollMotion({
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);
       smooth?.destroy();
+      root.removeEventListener("mandegar:seek", seekExperience);
       experienceState.progress = 0;
       root.removeAttribute("data-story-stage");
     };
