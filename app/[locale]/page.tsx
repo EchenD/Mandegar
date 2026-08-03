@@ -23,16 +23,76 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
   const whatsappHref = whatsappChannel?.whatsapp ? whatsappChannel.whatsapp.startsWith("http") ? whatsappChannel.whatsapp : `https://wa.me/${whatsappChannel.whatsapp.replace(/\D/g, "")}` : null;
   const sectionStyle = (key: string, fallbackOrder: number) => ({ order: sectionSettings[key]?.order ?? fallbackOrder, display: sectionSettings[key]?.visible === false ? "none" : undefined });
   const sectionMedia = (key: string, fallback: typeof media.spark) => mediaOverrides[key] || fallback;
+  const sceneUi = locale === "fa" ? {
+    spark: "01 / جرقه", space: "02 / فضا", build: "03 / ساخت", event: "04 / رویداد زنده", proof: "05 / پروژه‌های منتخب", interaction: "06 / تعامل", intelligence: "07 / هوشمندی رویداد", trust: "08 / همکاری", memory: "09 / خاطره", invitation: "10 / شروع گفتگو",
+    production: "طراحی. تولید. فضا. اجرا.", eventTitle: "تجربه‌ها شکل می‌گیرند.", interactionTitle: "تعامل، تجربه و مشارکت ماندگار.",
+    labels: ["طراحی مفهومی", "طراحی فضا", "تولید سازه", "نورپردازی", "اجرای رویداد"],
+    engagement: "مشارکت", signals: "سیگنال‌های تعامل", next: "بینش برای رویداد بعدی",
+  } : locale === "ar" ? {
+    spark: "01 / الشرارة", space: "02 / المساحة", build: "03 / البناء", event: "04 / فعالية حية", proof: "05 / أعمال مختارة", interaction: "06 / التفاعل", intelligence: "07 / ذكاء الفعاليات", trust: "08 / التعاون", memory: "09 / الذكرى", invitation: "10 / ابدأ الحوار",
+    production: "تصميم. إنتاج. مساحة. تنفيذ.", eventTitle: "تتشكّل التجارب.", interactionTitle: "تفاعل وتجربة ومشاركة تبقى.",
+    labels: ["التصميم المفاهيمي", "تصميم المساحة", "إنتاج الهيكل", "الإضاءة", "تنفيذ الفعالية"],
+    engagement: "المشاركة", signals: "إشارات التفاعل", next: "رؤى للفعالية التالية",
+  } : {
+    spark: "01 / Spark", space: "02 / Space", build: "03 / Build", event: "04 / Live event", proof: "05 / Selected work", interaction: "06 / Interaction", intelligence: "07 / Event intelligence", trust: "08 / Collaboration", memory: "09 / Memory", invitation: "10 / Start a conversation",
+    production: "Design. Production. Space. Delivery.", eventTitle: "Experiences come alive.", interactionTitle: "Interaction, experience and lasting participation.",
+    labels: ["Concept design", "Spatial design", "Structure build", "Lighting", "Live delivery"],
+    engagement: "Engagement", signals: "Interaction signals", next: "Insight for the next event",
+  };
 
   return (
     <ScrollMotion lenisEnabled={settings.featureFlags.lenis}>
-      <div className="experienceBackdrop" aria-hidden="true" data-experience-canvas-host>
+      <div className="experienceBackdrop" data-experience-canvas-host>
         <ExperienceCanvas enabledByCms={settings.featureFlags.immersiveCanvas} />
+        <div className="sceneRoom" aria-hidden="true"><span className="sceneRoomGlass" /><span className="sceneRoomCeiling" /><span className="sceneRoomFloor" /><span className="sceneRoomPlinth" /><span className="sceneRoomWall" /></div>
+        <div className="sceneChrome" aria-hidden="true"><span className="sceneChromeCount">01 — 10</span><span className="sceneChromeRail"><i /></span><span className="sceneChromeLabel">SCROLL TO ASSEMBLE</span></div>
+        <div className="sceneSpark" data-scene-spark aria-hidden="true"><i /><span className="sceneSparkTrail sceneSparkTrailOne" /><span className="sceneSparkTrail sceneSparkTrailTwo" /></div>
+        <svg className="sceneGuides" data-scene-guides aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path className="sceneGuidePath sceneGuidePathOne" pathLength="1" d="M 31 52 C 35 40, 42 31, 49 35 S 58 59, 64 42" />
+          <path className="sceneGuidePath sceneGuidePathTwo" pathLength="1" d="M 31 52 C 39 48, 43 60, 51 52 S 58 39, 63 47" />
+          <path className="sceneGuidePath sceneGuidePathThree" pathLength="1" d="M 31 52 C 42 54, 49 43, 59 57" />
+        </svg>
+        <div className="sceneBuildAssembly" data-scene-layer="construction" aria-hidden="true">
+          <div className="sceneBuildDeck"><i /><i /><i /></div>
+          <div className="sceneBuildTruss"><i /><i /><i /><i /></div>
+          <div className="sceneBuildLed"><i /></div>
+          <div className="sceneBuildWall sceneBuildWallLeft" /><div className="sceneBuildWall sceneBuildWallRight" />
+          <div className="sceneBuildCase sceneBuildCaseOne" /><div className="sceneBuildCase sceneBuildCaseTwo" />
+          <div className="sceneBuildLight sceneBuildLightOne" /><div className="sceneBuildLight sceneBuildLightTwo" /><div className="sceneBuildLight sceneBuildLightThree" />
+        </div>
         <div className="sceneMediaSurface">
-          <div className="sceneMediaFrame sceneMediaSpace"><Image src={sectionMedia("space", media.exhibition).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
-          <div className="sceneMediaFrame sceneMediaExperience"><Image src={sectionMedia("experience", media.interactive).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
-          <div className="sceneMediaFrame sceneMediaProof"><Image src={proofProjects[0]?.media.src || media.stage.src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
-          <div className="sceneMediaFrame sceneMediaMemory"><Image src={sectionMedia("memory", media.photo).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+          <div className="sceneMediaFrame sceneMediaEvent" data-scene-media="event"><Image src={sectionMedia("space", media.exhibition).src} alt="" fill sizes="(max-width: 760px) 78vw, 46vw" /></div>
+          <div className="sceneMediaFrame sceneMediaExperience" data-scene-media="experience"><Image src={sectionMedia("experience", media.interactive).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+          {proofProjects.slice(0, 3).map((project, index) => <div className={`sceneMediaFrame sceneMediaProof sceneMediaProof${index + 1}`} data-scene-media={`project-${index}`} key={project.slug}><Image src={project.media.src} alt="" fill sizes="(max-width: 760px) 86vw, 58vw" /><span className="sceneMediaMeta"><span>{getText(project.category, locale)}</span><small>{project.year}</small></span></div>)}
+          <div className="sceneMediaFrame sceneMediaMemory" data-scene-media="memory"><Image src={sectionMedia("memory", media.photo).src} alt="" fill sizes="(max-width: 760px) 72vw, 42vw" /></div>
+        </div>
+        <div className="sceneBuildLabels" data-scene-layer="build" aria-hidden="true">
+          {sceneUi.labels.map((label, index) => <span key={label} className={`sceneBuildLabel sceneBuildLabel${index + 1}`}>{label}</span>)}
+        </div>
+        <div className="sceneInteractionSurface" data-scene-layer="interaction" aria-hidden="true">
+          <div className="sceneInteractionStation sceneInteractionGame"><Image src={sectionMedia("experience", media.interactive).src} alt="" fill sizes="(max-width: 760px) 32vw, 16vw" /><span>01 / GAME</span></div>
+          <div className="sceneInteractionStation sceneInteractionPhoto"><Image src={sectionMedia("memory", media.photo).src} alt="" fill sizes="(max-width: 760px) 26vw, 13vw" /><span>02 / PHOTO</span></div>
+          <div className="sceneInteractionStation sceneInteractionTouch"><Image src={sectionMedia("space", media.exhibition).src} alt="" fill sizes="(max-width: 760px) 26vw, 13vw" /><span>03 / TOUCH</span></div>
+          <div className="sceneInteractionPulse" />
+        </div>
+        <div className="sceneDataSurface" data-scene-layer="data" aria-hidden="true">
+          <div className="sceneDataNexus"><i /><i /><i /><b /></div>
+          <div className="sceneInsightPanel sceneInsightEngagement"><span>01 / {sceneUi.engagement}</span><strong>•••</strong><i /></div>
+          <div className="sceneInsightPanel sceneInsightSignals"><span>02 / {sceneUi.signals}</span><strong>••••</strong><i /></div>
+          <div className="sceneInsightPanel sceneInsightNext"><span>03 / {sceneUi.next}</span><strong>••</strong><i /></div>
+        </div>
+        <div className="sceneMemoryParticles" data-scene-layer="memory-particles" aria-hidden="true">{Array.from({ length: 16 }, (_, index) => <i key={index} />)}</div>
+        <div className="storyCopyLayer">
+          <section className="storyCopy storyCopySpark" data-scene-copy="idea"><span>{sceneUi.spark}</span><h2>{copy.conceptTitle}</h2><p>{copy.conceptBody}</p></section>
+          <section className="storyCopy storyCopySpace" data-scene-copy="space"><span>{sceneUi.space}</span><h2>{copy.spaceTitle}</h2><p>{copy.spaceBody}</p></section>
+          <section className="storyCopy storyCopyProduction" data-scene-copy="build"><span>{sceneUi.build}</span><h2>{sceneUi.production}</h2><p>{copy.systemBody}</p></section>
+          <section className="storyCopy storyCopyEvent" data-scene-copy="event"><span>{sceneUi.event}</span><h2>{sceneUi.eventTitle}</h2></section>
+          <section className="storyCopy storyCopyProof" data-scene-copy="proof"><span>{sceneUi.proof}</span><h2>{copy.proofTitle}</h2><p>{copy.proofBody}</p></section>
+          <section className="storyCopy storyCopyInteractive" data-scene-copy="interaction"><span>{sceneUi.interaction}</span><h2>{sceneUi.interactionTitle}</h2><p>{copy.interactiveBody}</p></section>
+          <section className="storyCopy storyCopyIntelligence" data-scene-copy="intelligence"><span>{sceneUi.intelligence}</span><h2>{copy.intelligenceTitle}</h2><p>{copy.intelligenceBody}</p></section>
+          <section className="storyCopy storyCopyTrust" data-scene-copy="trust"><span>{sceneUi.trust}</span><h2>{copy.trustTitle}</h2><p>{copy.trustBody}</p></section>
+          <section className="storyCopy storyCopyMemory" data-scene-copy="memory"><span>{sceneUi.memory}</span><h2>{copy.memoryTitle}</h2><p>{copy.memoryBody}</p></section>
+          <section className="storyCopy storyCopyInvitation" data-scene-copy="invitation"><span>{sceneUi.invitation}</span><h2>{copy.ctaTitle}</h2><p>{copy.ctaBody}</p><div className="storyCtaActions"><Link className="button buttonPrimary" href={conversionCta.href} data-analytics="cta_start_project">{conversionCta.label}<span aria-hidden="true">↗</span></Link>{salesChannel?.phone ? <a className="button buttonGhost" href={`tel:${salesChannel.phone}`} data-analytics="phone_click" data-analytics-label="sales">{ui.callSales}</a> : null}{whatsappHref ? <a className="button buttonGhost" href={whatsappHref} target="_blank" rel="noreferrer" data-analytics="whatsapp_click" data-analytics-label="sales">{ui.whatsapp}</a> : <Link className="button buttonGhost" href={localizedPath(locale, "contact")}>{ui.navigation.contact}</Link>}</div></section>
         </div>
         <div className="sceneNavigator">
           <div className="sceneNavigatorHead"><span>MANDEGAR / LIVE BUILD</span><span>01 — 10</span></div>
@@ -62,6 +122,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
           </div>
           <div className="eventAtlasFooter"><span>01 — FRAME</span><span>02 — BUILD</span><span>03 — READ</span></div>
         </div>
+        <div className="sceneStageShell" aria-hidden="true">
+          <div className="sceneStageHeader"><span>LIVE EVENT / SCENE SYSTEM</span><span>PROVISIONAL BUILD</span></div>
+          <div className="sceneStageFloor"><span /><span /><span /></div>
+          <div className="sceneStageFooter"><span>SPACE / SIGNAL / MEMORY</span><span>SCROLL TO ASSEMBLE</span></div>
+        </div>
         <div className="narrativeRail"><span className="narrativeRailTrack"><i /></span><span className="narrativeRailLabel">IDEA / SPACE / EXPERIENCE</span></div>
       </div>
       <section className="heroSection" data-stage="spark" aria-labelledby="hero-title">
@@ -82,8 +147,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
       </section>
 
       <div className="homepageFlow" id="experience">
-        <section className="sectionPad conceptSection" data-stage="idea" aria-labelledby="concept-title" style={sectionStyle("idea", 1)}>
-          <div className="pageWidth splitIntro" data-reveal>
+        <section className="sectionPad conceptSection" data-stage="idea" data-cinematic-beat aria-labelledby="concept-title" style={sectionStyle("idea", 1)}>
+          <div className="pageWidth splitIntro" data-cinematic-content>
             <div className="sectionKicker">02 / {locale === "fa" ? "ایده" : locale === "ar" ? "الفكرة" : "Idea"}</div>
             <div className="sectionLead">
               <h2 id="concept-title">{copy.conceptTitle}</h2>
@@ -93,9 +158,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
           <div className="lineField pageWidth" aria-hidden="true"><span /><span /><span /><span /></div>
         </section>
 
-        <section className="sectionPad spaceSection" data-stage="space" aria-labelledby="space-title" style={sectionStyle("space", 2)}>
-          <div className="pageWidth imageStory" data-reveal>
-            <div className="storyImage largeMedia"><MediaPlaceholder media={sectionMedia("space", media.exhibition)} locale={locale} /></div>
+        <section className="sectionPad spaceSection" data-stage="space" data-cinematic-beat aria-labelledby="space-title" style={sectionStyle("space", 2)}>
+          <div className="pageWidth imageStory" data-cinematic-content>
+            <div className="storyImage largeMedia"><MediaPlaceholder media={sectionMedia("space", media.exhibition)} locale={locale} className="cinematicDomMedia" /></div>
             <div className="storyCopy">
               <div className="sectionKicker">03 / {locale === "fa" ? "فضا" : locale === "ar" ? "المساحة" : "Space"}</div>
               <h2 id="space-title">{copy.spaceTitle}</h2>
@@ -105,49 +170,49 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
           </div>
         </section>
 
-        <section className="sectionPad interactionSection" data-stage="experience" aria-labelledby="interaction-title" style={sectionStyle("experience", 3)}>
-          <div className="pageWidth interactionGrid" data-reveal>
+        <section className="sectionPad interactionSection" data-stage="experience" data-cinematic-beat aria-labelledby="interaction-title" style={sectionStyle("experience", 3)}>
+          <div className="pageWidth interactionGrid" data-cinematic-content>
             <div className="interactionCopy">
               <div className="sectionKicker">04 / {locale === "fa" ? "تجربه" : locale === "ar" ? "التجربة" : "Experience"}</div>
               <h2 id="interaction-title">{copy.interactiveTitle}</h2>
               <p>{copy.interactiveBody}</p>
               <div className="featureTags"><span>{locale === "fa" ? "بازی" : locale === "ar" ? "ألعاب" : "Games"}</span><span>{locale === "fa" ? "لمس و حرکت" : locale === "ar" ? "لمس وحركة" : "Touch + motion"}</span><span>{locale === "fa" ? "عکس" : locale === "ar" ? "تصوير" : "Photo"}</span></div>
             </div>
-            <div className="interactionMedia"><MediaPlaceholder media={sectionMedia("experience", media.interactive)} locale={locale} /></div>
+            <div className="interactionMedia"><MediaPlaceholder media={sectionMedia("experience", media.interactive)} locale={locale} className="cinematicDomMedia" /></div>
           </div>
         </section>
 
-        <section className="sectionPad proofSection" data-stage="proof" aria-labelledby="proof-title" style={sectionStyle("proof", 4)}>
-          <div className="pageWidth sectionHeading" data-reveal>
+        <section className="sectionPad proofSection" data-stage="proof" data-cinematic-beat aria-labelledby="proof-title" style={sectionStyle("proof", 4)}>
+          <div className="pageWidth sectionHeading" data-cinematic-content>
             <div className="sectionKicker">05 / {ui.selectedWork}</div>
             <div className="headingWithLink"><h2 id="proof-title">{copy.proofTitle}</h2><Link className="textLink" href={localizedPath(locale, "projects")}>{ui.viewAll}<span aria-hidden="true">↗</span></Link></div>
             <p>{copy.proofBody}</p>
           </div>
-          <div className="pageWidth eventAtlasBridge" aria-hidden="true">
+          <div className="pageWidth eventAtlasBridge cinematicDecoration" aria-hidden="true">
             <span className="eventAtlasBridgeLabel">ONE EVENT / MANY TOUCHPOINTS</span>
             <span className="eventAtlasBridgeLine"><i /><i /><i /><i /></span>
             <span className="eventAtlasBridgeLabel">SPACE — EXPERIENCE — MEMORY</span>
           </div>
-          <div className="pageWidth projectGrid projectGridFeatured eventAtlasProjects">
+          <div className="pageWidth projectGrid projectGridFeatured eventAtlasProjects cinematicProjectIndex">
             {proofProjects.map((project, index) => <ProjectCard key={project.slug} project={project} locale={locale} featured={index === 0} />)}
           </div>
         </section>
 
-        <section className="sectionPad systemSection" data-stage="capability" aria-labelledby="system-title" style={sectionStyle("capability", 5)}>
-          <div className="pageWidth sectionHeading" data-reveal>
+        <section className="sectionPad systemSection" data-stage="capability" data-cinematic-beat aria-labelledby="system-title" style={sectionStyle("capability", 5)}>
+          <div className="pageWidth sectionHeading" data-cinematic-content>
             <div className="sectionKicker">06 / {locale === "fa" ? "سیستم ساختن" : locale === "ar" ? "نظام البناء" : "Build system"}</div>
             <h2 id="system-title">{copy.systemTitle}</h2>
             <p>{copy.systemBody}</p>
           </div>
-          <div className="pageWidth systemAtlasBridge" aria-hidden="true">
+          <div className="pageWidth systemAtlasBridge cinematicDecoration" aria-hidden="true">
             <span>STRATEGY</span><i /><span>SPATIAL LOGIC</span><i /><span>PRODUCTION</span><i /><span>LIVE SIGNAL</span>
           </div>
-          <div className="pageWidth serviceList eventAtlasServices">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
+          <div className="pageWidth serviceList eventAtlasServices cinematicProjectIndex">{serviceItems.slice(0, 5).map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div>
         </section>
 
-        <section className="sectionPad intelligenceSection" data-stage="intelligence" aria-labelledby="intelligence-title" style={sectionStyle("intelligence", 6)}>
-          <div className="pageWidth intelligenceGrid" data-reveal>
-            <div className="intelligenceMedia"><MediaPlaceholder media={sectionMedia("intelligence", media.intelligence)} locale={locale} /></div>
+        <section className="sectionPad intelligenceSection" data-stage="intelligence" data-cinematic-beat aria-labelledby="intelligence-title" style={sectionStyle("intelligence", 6)}>
+          <div className="pageWidth intelligenceGrid" data-cinematic-content>
+            <div className="intelligenceMedia"><MediaPlaceholder media={sectionMedia("intelligence", media.intelligence)} locale={locale} className="cinematicDomMedia" /></div>
             <div className="intelligenceCopy">
               <div className="sectionKicker">07 / {getUi(locale).emerging}</div>
               <h2 id="intelligence-title">{copy.intelligenceTitle}</h2>
@@ -157,8 +222,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
           </div>
         </section>
 
-        <section className="sectionPad trustSection" data-stage="trust" aria-labelledby="trust-title" style={sectionStyle("trust", 7)}>
-          <div className="pageWidth trustGrid" data-reveal>
+        <section className="sectionPad trustSection" data-stage="trust" data-cinematic-beat aria-labelledby="trust-title" style={sectionStyle("trust", 7)}>
+          <div className="pageWidth trustGrid" data-cinematic-content>
             <div>
               <div className="sectionKicker">08 / {locale === "fa" ? "اعتماد و مقیاس" : locale === "ar" ? "الثقة والنطاق" : "Trust + scale"}</div>
               <h2 id="trust-title">{copy.trustTitle}</h2>
@@ -179,15 +244,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
           </div>
         </section>
 
-        <section className="sectionPad memorySection" data-stage="memory" aria-labelledby="memory-title" style={sectionStyle("memory", 8)}>
-          <div className="pageWidth memoryGrid" data-reveal>
+        <section className="sectionPad memorySection" data-stage="memory" data-cinematic-beat aria-labelledby="memory-title" style={sectionStyle("memory", 8)}>
+          <div className="pageWidth memoryGrid" data-cinematic-content>
             <div className="memoryCopy"><div className="sectionKicker">09 / {locale === "fa" ? "خاطره" : locale === "ar" ? "الذكرى" : "Memory"}</div><h2 id="memory-title">{copy.memoryTitle}</h2><p>{copy.memoryBody}</p></div>
-            <div className="memoryMedia"><MediaPlaceholder media={sectionMedia("memory", media.photo)} locale={locale} /></div>
+            <div className="memoryMedia"><MediaPlaceholder media={sectionMedia("memory", media.photo)} locale={locale} className="cinematicDomMedia" /></div>
           </div>
         </section>
 
-        <section className="ctaSection" data-stage="invitation" id="contact" aria-labelledby="cta-title" style={sectionStyle("conversion", 9)}>
-          <div className="pageWidth ctaInner" data-reveal>
+        <section className="ctaSection" data-stage="invitation" data-cinematic-beat id="contact" aria-labelledby="cta-title" style={sectionStyle("conversion", 9)}>
+          <div className="pageWidth ctaInner" data-cinematic-content>
             <div className="ctaOrb" aria-hidden="true"><span /></div>
             <div className="sectionKicker">10 / {locale === "fa" ? "شروع گفتگو" : locale === "ar" ? "ابدأ الحوار" : "Start a conversation"}</div>
             <h2 id="cta-title">{copy.ctaTitle}</h2>

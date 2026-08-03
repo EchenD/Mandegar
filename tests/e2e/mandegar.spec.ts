@@ -36,14 +36,17 @@ async function assertNoHorizontalOverflow(page: import("@playwright/test").Page)
     const viewportWidth = window.innerWidth;
     const offenders = Array.from(document.querySelectorAll<HTMLElement>("body *"))
       .map((element) => ({ element, rect: element.getBoundingClientRect() }))
-      .filter(({ element, rect }) => !element.closest("[aria-hidden='true']") && rect.width > 0 && (rect.right > viewportWidth + 2 || rect.left < -2))
+      .filter(({ element, rect }) => !element.closest("[aria-hidden='true'], [data-cinematic-beat]") && rect.width > 0 && (rect.right > viewportWidth + 2 || rect.left < -2))
       .slice(0, 8)
       .map(({ element, rect }) => ({ tag: element.tagName, className: element.className, right: Math.round(rect.right), left: Math.round(rect.left) }));
     return { documentWidth, viewportWidth, offenders };
   });
   expect(result.documentWidth, JSON.stringify(result.offenders)).toBeLessThanOrEqual(result.viewportWidth + 2);
   expect(result.offenders, JSON.stringify(result)).toEqual([]);
-  const mediaBoxes = await page.locator(".mediaFrame").evaluateAll((elements) => elements.map((element) => {
+  const mediaBoxes = await page.locator(".mediaFrame").evaluateAll((elements) => elements.filter((element) => {
+    const rect = element.getBoundingClientRect();
+    return !element.classList.contains("cinematicDomMedia") && rect.width > 32 && rect.height > 32;
+  }).map((element) => {
     const rect = element.getBoundingClientRect();
     return { width: Math.round(rect.width), height: Math.round(rect.height) };
   }));
@@ -148,33 +151,75 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[data-experience-root]")).toHaveCount(1);
     await expect(page.locator("[data-experience-canvas-host]")).toHaveCount(1);
     await expect(page.locator(".heroSpark")).toBeVisible();
-    await expect(page.locator(".sceneMediaFrame")).toHaveCount(4);
-    await expect(page.locator(".sceneNavigator")).toBeVisible();
+    await expect(page.locator(".sceneMediaFrame")).toHaveCount(6);
+    await expect(page.locator(".sceneNavigator")).toHaveCount(1);
+    await expect(page.locator(".sceneStageShell")).toHaveCount(1);
     expect(await page.locator("[data-experience-canvas-host] canvas").count()).toBeLessThanOrEqual(1);
     await expect(page.locator("[data-story-stage]")).toHaveAttribute("data-story-stage", "spark");
     await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight * 0.48, behavior: "auto" }));
     await page.waitForTimeout(500);
     await expect.poll(() => page.locator("[data-story-stage]").getAttribute("data-story-stage")).not.toBe("spark");
-    await expect(page.locator("[data-stage='proof']")).toBeVisible();
+    await expect(page.locator("[data-stage='proof']")).toHaveCount(1);
   });
 
   test("scene atlas stays aligned with the visible chapter", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
-    for (const stage of ["proof", "capability", "intelligence"]) {
-      await page.locator(`[data-stage="${stage}"]`).scrollIntoViewIfNeeded();
+    for (const [stage, progress] of [["capability", .4], ["proof", .63], ["intelligence", .83]] as const) {
+      await page.evaluate((value) => {
+        const root = document.querySelector<HTMLElement>("[data-experience-root]");
+        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
+      }, progress);
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
     }
   });
 
-  test("assembled event scene remains visible through interaction surfaces", async ({ page }) => {
+  test("storyboard copy appears one beat at a time", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/fa", { waitUntil: "networkidle" });
+    for (const [stage, progress] of [["idea", .17], ["space", .29], ["build", .4], ["event", .5], ["proof", .63], ["interaction", .75], ["intelligence", .835], ["trust", .895], ["memory", .937], ["invitation", .975]] as const) {
+      await page.evaluate((value) => {
+        const root = document.querySelector<HTMLElement>("[data-experience-root]");
+        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
+      }, progress);
+      await page.waitForTimeout(750);
+      await expect(page.locator(`[data-scene-copy='${stage}']`)).toBeVisible();
+      const visibleCopies = await page.locator("[data-scene-copy]").evaluateAll((elements) => elements.filter((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.visibility !== "hidden" && Number(style.opacity) > .1 && rect.width > 10 && rect.height > 10;
+      }).map((element) => element.getAttribute("data-scene-copy")));
+      expect(visibleCopies, `at progress ${progress}`).toEqual([stage]);
+    }
+  });
+
+  test("proof media panels stay inside the viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/fa", { waitUntil: "networkidle" });
+    await page.evaluate(() => {
+      const root = document.querySelector<HTMLElement>("[data-experience-root]");
+      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * .63, behavior: "auto" });
+    });
+    await page.waitForTimeout(1200);
+    const boxes = await page.locator("[data-scene-media^='project-']").evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return { opacity: Number(style.opacity), cssLeft: style.left, transform: style.transform, left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    }));
+    expect(boxes.filter((box) => box.opacity > .1).every((box) => box.left >= -2 && box.top >= -2 && box.right <= 1442 && box.bottom <= 902), JSON.stringify(boxes)).toBe(true);
+  });
+
+  test("interactive, data and final scene layers remain available", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
-    const interactionBackground = await page.locator(".interactionSection").evaluate((element) => getComputedStyle(element).backgroundImage);
-    const ctaBackground = await page.locator(".ctaSection").evaluate((element) => getComputedStyle(element).backgroundImage);
-    expect(interactionBackground).toContain("linear-gradient");
-    expect(ctaBackground).toContain("linear-gradient");
-    await page.locator("[data-stage='invitation']").scrollIntoViewIfNeeded();
+    for (const [selector, progress] of [["[data-scene-layer='interaction']", .75], ["[data-scene-layer='data']", .835], ["[data-scene-copy='invitation']", .975]] as const) {
+      await page.evaluate((value) => {
+        const root = document.querySelector<HTMLElement>("[data-experience-root]");
+        if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - window.innerHeight) * value, behavior: "auto" });
+      }, progress);
+      await page.waitForTimeout(650);
+      await expect(page.locator(selector)).toBeVisible();
+    }
     await expect(page.locator("[data-experience-canvas]")).toHaveCount(1);
   });
 

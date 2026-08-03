@@ -8,248 +8,204 @@ import { experienceState, type ExperienceQuality } from "./experience-state";
 type RuntimeState = "pending" | "fallback" | ExperienceQuality;
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+const range = (progress: number, start: number, end: number) => clamp((progress - start) / (end - start));
 
-function buildLineGeometry(quality: ExperienceQuality) {
+function createSegments(points: number[]) {
   const geometry = new THREE.BufferGeometry();
-  const points: number[] = [];
-  const frames = quality === "full"
-    ? [
-        [-1.45, -0.62, 0, 1.45, -0.62, 0],
-        [-1.45, -0.62, 0, -1.45, 0.58, 0],
-        [1.45, -0.62, 0, 1.45, 0.58, 0],
-        [-1.45, 0.58, 0, 1.45, 0.58, 0],
-        [-1.05, -0.62, -0.12, -1.05, 0.58, -0.12],
-        [0.15, -0.62, -0.12, 0.15, 0.58, -0.12],
-        [1.05, -0.62, -0.12, 1.05, 0.58, -0.12],
-        [-1.05, 0.35, -0.12, 1.05, 0.35, -0.12],
-        [-1.05, -0.18, -0.12, 1.05, -0.18, -0.12],
-        [-0.62, -0.62, -0.18, -0.62, 0.58, -0.18],
-        [0.62, -0.62, -0.18, 0.62, 0.58, -0.18],
-      ]
-    : [
-        [-1.25, -0.58, 0, 1.25, -0.58, 0],
-        [-1.25, -0.58, 0, -1.25, 0.45, 0],
-        [1.25, -0.58, 0, 1.25, 0.45, 0],
-        [-1.25, 0.45, 0, 1.25, 0.45, 0],
-        [-0.82, -0.58, -0.12, -0.82, 0.45, -0.12],
-        [0.82, -0.58, -0.12, 0.82, 0.45, -0.12],
-      ];
-  frames.forEach((frame) => points.push(...frame));
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+  geometry.setDrawRange(0, 0);
   return geometry;
 }
 
-function buildParticleGeometry(quality: ExperienceQuality) {
-  const geometry = new THREE.BufferGeometry();
-  const count = quality === "full" ? 54 : 22;
-  const points: number[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const angle = (index / count) * Math.PI * 2;
-    const radius = 0.85 + (index % 5) * 0.12;
-    points.push(
-      Math.cos(angle) * radius,
-      Math.sin(angle * 1.7) * 0.46,
-      Math.sin(angle) * 0.28 - 0.18,
-    );
+function densifySegments(points: number[], subdivisions: number) {
+  const dense: number[] = [];
+  for (let index = 0; index < points.length; index += 6) {
+    const start = new THREE.Vector3(points[index], points[index + 1], points[index + 2]);
+    const end = new THREE.Vector3(points[index + 3], points[index + 4], points[index + 5]);
+    for (let step = 0; step < subdivisions; step += 1) {
+      dense.push(...start.clone().lerp(end, step / subdivisions).toArray(), ...start.clone().lerp(end, (step + 1) / subdivisions).toArray());
+    }
   }
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
-  return geometry;
+  return dense;
+}
+
+function curveSegments(points: Array<[number, number, number]>, segments: number) {
+  const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point)));
+  const sampled = curve.getPoints(segments);
+  const output: number[] = [];
+  for (let index = 1; index < sampled.length; index += 1) output.push(...sampled[index - 1].toArray(), ...sampled[index].toArray());
+  return output;
 }
 
 function SparkScene({ quality }: { quality: ExperienceQuality }) {
   const spark = useRef<THREE.Group>(null);
-  const halo = useRef<THREE.Mesh>(null);
-  const structure = useRef<THREE.Group>(null);
-  const eventKit = useRef<THREE.Group>(null);
-  const eventRings = useRef<THREE.Group>(null);
-  const particles = useRef<THREE.Points>(null);
-  const screen = useRef<THREE.Mesh>(null);
-  const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
-  const particleMaterial = useRef<THREE.PointsMaterial>(null);
-  const screenMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const eventSurfaceMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const eventRingMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const eventRingAccentMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const lineGeometry = useMemo(() => buildLineGeometry(quality), [quality]);
-  const particleGeometry = useMemo(() => buildParticleGeometry(quality), [quality]);
+  const sparkCoreMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const sparkHaloMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const trail = useRef<THREE.LineSegments>(null);
+  const structure = useRef<THREE.LineSegments>(null);
+  const grid = useRef<THREE.GridHelper>(null);
+  const planes = useRef<THREE.Group>(null);
+  const eventEnvironment = useRef<THREE.Group>(null);
+  const intelligence = useRef<THREE.Group>(null);
+  const intelligencePoints = useRef<THREE.Points>(null);
+  const intelligenceMaterial = useRef<THREE.PointsMaterial>(null);
+  const memoryCore = useRef<THREE.Mesh>(null);
+  const smoothPointer = useRef(new THREE.Vector2());
+  const pointerTarget = useRef(new THREE.Vector2());
+  const trailGeometry = useMemo(() => createSegments([
+    ...curveSegments([[-1.28, -.12, 0], [-.96, -.08, 0], [-.62, .14, 0], [-.3, .34, 0], [.12, .02, 0], [.58, .04, 0]], 64),
+    ...curveSegments([[-.76, -.24, -.02], [-.45, -.03, -.02], [-.14, -.16, -.02], [.24, .18, -.02], [.62, .1, -.02]], 46),
+  ]), []);
+  const structureGeometry = useMemo(() => createSegments(densifySegments([
+    -1.35, -0.7, 0, 1.35, -0.7, 0, -1.35, -0.7, 0, -1.35, 0.64, 0, 1.35, -0.7, 0, 1.35, 0.64, 0, -1.35, 0.64, 0, 1.35, 0.64, 0,
+    -1.04, -0.7, -0.12, -1.04, 0.64, -0.12, -0.32, -0.7, -0.12, -0.32, 0.64, -0.12, .32, -0.7, -0.12, .32, 0.64, -0.12, 1.04, -0.7, -0.12, 1.04, 0.64, -0.12,
+    -1.04, .29, -.12, 1.04, .29, -.12, -1.04, -.24, -.12, 1.04, -.24, -.12,
+    -1.52, -.7, .22, -1.08, -.34, .22, -1.08, -.34, .22, -.7, -.7, .22, .7, -.7, .22, 1.08, -.34, .22, 1.08, -.34, .22, 1.52, -.7, .22,
+  ], 10)), []);
+  const intelligenceGeometry = useMemo(() => {
+    const points: number[] = [];
+    const count = quality === "full" ? 72 : 32;
+    for (let index = 0; index < count; index += 1) {
+      const angle = (index / count) * Math.PI * 8;
+      const radius = .22 + (index % 9) * .075;
+      points.push(Math.cos(angle) * radius, Math.sin(angle) * radius * .62, ((index % 5) - 2) * .06);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+    return geometry;
+  }, [quality]);
 
-  useEffect(() => () => {
-    lineGeometry.dispose();
-    particleGeometry.dispose();
-  }, [lineGeometry, particleGeometry]);
+  useEffect(() => () => { trailGeometry.dispose(); structureGeometry.dispose(); intelligenceGeometry.dispose(); }, [trailGeometry, structureGeometry, intelligenceGeometry]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ camera, clock }) => {
     const progress = experienceState.progress;
-    const formation = clamp((progress - 0.08) / 0.42);
-    const event = clamp((progress - 0.34) / 0.38);
-    const impact = clamp((progress - 0.72) / 0.28);
+    const sparkPhase = range(progress, 0, .18);
+    const construction = range(progress, .12, .48);
+    const environment = range(progress, .42, .68);
+    const mediaFocus = range(progress, .54, .61);
+    const data = range(progress, .79, .855) * (1 - range(progress, .865, .94));
+    const memory = range(progress, .90, .97);
     const time = clock.getElapsedTime();
+    const finalSparkX = quality === "lite" ? -.62 : -.72;
+    // The DOM spark and guided paths take ownership of the early beats. The
+    // WebGL version stays a restrained depth layer, then returns subtly for
+    // the memory state instead of remaining as a giant diagram over media.
+    const sparkPresence = Math.max((1 - range(progress, .27, .42)) * .42, range(progress, .875, .945) * .34);
+    const trailPresence = (1 - range(progress, .25, .42)) * .56;
+    const structurePresence = range(progress, .12, .37) * (1 - range(progress, .38, .54));
+    pointerTarget.current.set(experienceState.pointerX, experienceState.pointerY);
+    smoothPointer.current.lerp(pointerTarget.current, .045);
+    const pointerX = smoothPointer.current.x * .008;
+    const pointerY = smoothPointer.current.y * .006;
+
+    // The scroll path owns the camera. Pointer input only adds a tiny depth offset.
+    camera.position.set(0.05 + environment * .1 + pointerX, .04 + pointerY, 3.05 - environment * .62);
+    camera.lookAt(0, -.06 + environment * -.08, 0);
 
     if (spark.current) {
-      spark.current.position.x = 1.05 - progress * 2.05;
-      spark.current.position.y = 0.12 + Math.sin(time * 1.2) * 0.045 + experienceState.pointerY * 0.06;
-      spark.current.position.z = 0.18 + experienceState.pointerX * 0.08;
-      spark.current.rotation.z = time * 0.5;
-      spark.current.scale.setScalar(0.78 + formation * 0.34 + event * 0.18);
+      const forwardX = -1.28 + sparkPhase * 1.86;
+      spark.current.position.set(THREE.MathUtils.lerp(forwardX, finalSparkX, memory), -.12 + sparkPhase * .17 * (1 - memory) + Math.sin(time * 1.6) * .018, .08);
+      spark.current.visible = sparkPresence > .002;
+      spark.current.scale.setScalar((.46 + sparkPhase * .54 + construction * .06) * (1 - memory * .55));
     }
-    if (halo.current) {
-      halo.current.position.copy(spark.current?.position || new THREE.Vector3());
-      halo.current.scale.setScalar(1.4 + formation * 2.1 + Math.sin(time * 1.4) * 0.08);
-      const material = halo.current.material as THREE.MeshBasicMaterial;
-      material.opacity = 0.08 + formation * 0.1 + impact * 0.08;
+    if (sparkCoreMaterial.current) sparkCoreMaterial.current.opacity = sparkPresence;
+    if (sparkHaloMaterial.current) sparkHaloMaterial.current.opacity = sparkPresence * .16;
+    if (trail.current) {
+      const vertexCount = trail.current.geometry.getAttribute("position").count;
+      trail.current.geometry.setDrawRange(0, Math.max(2, Math.floor(vertexCount * sparkPhase)));
+      const material = trail.current.material as THREE.LineBasicMaterial;
+      material.opacity = (.04 + sparkPhase * .42) * trailPresence;
     }
     if (structure.current) {
-      structure.current.scale.setScalar(0.25 + formation * 0.76 + event * 0.12);
-      structure.current.rotation.y = experienceState.pointerX * 0.18 + Math.sin(time * 0.12) * 0.04;
-      structure.current.rotation.x = experienceState.pointerY * 0.1;
-      structure.current.position.y = (1 - formation) * 0.12;
+      const vertexCount = structure.current.geometry.getAttribute("position").count;
+      structure.current.geometry.setDrawRange(0, Math.max(2, Math.floor(vertexCount * construction)));
+      const material = structure.current.material as THREE.LineBasicMaterial;
+      material.opacity = (.035 + construction * .24) * structurePresence;
     }
-    if (eventKit.current) {
-      eventKit.current.scale.setScalar(0.06 + event * 0.94);
-      eventKit.current.position.y = -0.14 + event * 0.04;
-      eventKit.current.position.x = experienceState.pointerX * 0.09;
-      eventKit.current.position.z = experienceState.pointerY * 0.05;
-      eventKit.current.rotation.y = experienceState.pointerX * 0.14;
+    if (grid.current) {
+      const materials = Array.isArray(grid.current.material) ? grid.current.material : [grid.current.material];
+      materials.forEach((material) => {
+        const transparentMaterial = material as THREE.Material & { opacity: number; transparent: boolean };
+        transparentMaterial.transparent = true;
+        transparentMaterial.opacity = (construction * .09 + environment * .035) * (1 - range(progress, .36, .52));
+      });
+      grid.current.scale.setScalar(.8 + construction * .2);
     }
-    if (eventRings.current) {
-      eventRings.current.scale.setScalar(0.2 + impact * 0.8);
-      eventRings.current.rotation.z = time * 0.04;
-      eventRings.current.rotation.x = Math.sin(time * 0.2) * 0.04 + experienceState.pointerY * 0.08;
-      eventRings.current.rotation.y = experienceState.pointerX * 0.12;
-      eventRings.current.position.x = experienceState.pointerX * 0.12;
+    if (eventEnvironment.current) {
+      const scale = .16 + environment * .84;
+      eventEnvironment.current.scale.setScalar(scale);
+      eventEnvironment.current.position.y = .12 - environment * .12;
     }
-    if (lineMaterial.current) {
-      lineMaterial.current.opacity = 0.12 + formation * 0.52 + impact * 0.18;
+    planes.current?.traverse((object) => {
+      const material = (object as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+      if (material) material.opacity = range(construction, .2, .62) * .08 * (1 - range(progress, .36, .52));
+    });
+    eventEnvironment.current?.traverse((object) => {
+      const material = (object as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+      if (material) material.opacity = environment * (object.position.y < -.4 ? .66 : .42) * (1 - mediaFocus * .99);
+    });
+    if (intelligence.current) {
+      intelligence.current.rotation.z = time * .08;
+      intelligence.current.rotation.y = smoothPointer.current.x * .02;
+      intelligence.current.scale.setScalar(Math.max(.12, .45 + data * .9 - memory * .42));
+      intelligence.current.position.set(finalSparkX * memory, .04, .1);
     }
-    if (particles.current) {
-      particles.current.rotation.z = time * 0.025;
-      particles.current.rotation.y = time * 0.018 + experienceState.pointerX * 0.12;
-      particles.current.rotation.x = experienceState.pointerY * 0.06;
-      particles.current.scale.setScalar(0.35 + formation * 0.75 + impact * 0.18);
-    }
-    if (particleMaterial.current) {
-      particleMaterial.current.opacity = 0.16 + formation * 0.5 + impact * 0.2;
-    }
-    if (screen.current) {
-      screen.current.scale.set(0.1 + event * 0.9, 0.1 + event * 0.9, 1);
-      screen.current.position.z = -0.28 - impact * 0.12;
-    }
-    if (screenMaterial.current) {
-      screenMaterial.current.opacity = event * 0.52 + impact * 0.24;
-    }
-    if (eventSurfaceMaterial.current) {
-      eventSurfaceMaterial.current.color.set(impact > 0.45 ? "#dbe7ff" : "#286cff");
-      eventSurfaceMaterial.current.opacity = 0.7 + impact * 0.16;
-    }
-    if (eventRingMaterial.current) {
-      eventRingMaterial.current.color.set(impact > 0.45 ? "#eef4ff" : "#145eff");
-    }
-    if (eventRingAccentMaterial.current) {
-      eventRingAccentMaterial.current.color.set(impact > 0.45 ? "#91b5ff" : "#b7ceff");
+    if (intelligenceMaterial.current) intelligenceMaterial.current.opacity = data * (1 - memory) * .82;
+    if (memoryCore.current) {
+      memoryCore.current.position.set(finalSparkX, -.02, .1);
+      memoryCore.current.scale.setScalar(.05 + memory * (quality === "lite" ? .32 : .44));
+      const material = memoryCore.current.material as THREE.MeshBasicMaterial;
+      material.opacity = memory * .9;
     }
   });
 
   return (
     <group>
+      <ambientLight intensity={.8} />
       <group ref={spark}>
-        <mesh>
-          <sphereGeometry args={[0.065, quality === "full" ? 16 : 10, quality === "full" ? 16 : 10]} />
-          <meshBasicMaterial color="#145eff" />
-        </mesh>
-        <mesh scale={1.7}>
-          <sphereGeometry args={[0.065, 12, 12]} />
-          <meshBasicMaterial color="#6f9dff" transparent opacity={0.2} />
-        </mesh>
+        <mesh><sphereGeometry args={[.055, quality === "full" ? 20 : 12, quality === "full" ? 20 : 12]} /><meshBasicMaterial ref={sparkCoreMaterial} color="#145eff" transparent opacity={0} /></mesh>
+        <mesh scale={2.2}><sphereGeometry args={[.055, 16, 16]} /><meshBasicMaterial ref={sparkHaloMaterial} color="#91b5ff" transparent opacity={0} depthWrite={false} /></mesh>
       </group>
-      <mesh ref={halo}>
-        <sphereGeometry args={[0.14, 16, 16]} />
-        <meshBasicMaterial color="#7da4ff" transparent opacity={0.1} depthWrite={false} />
-      </mesh>
-      <group ref={structure}>
-        <lineSegments geometry={lineGeometry}>
-          <lineBasicMaterial ref={lineMaterial} color="#4d82ff" transparent opacity={0.38} depthWrite={false} />
-        </lineSegments>
-        <mesh ref={screen} position={[0, 0.06, -0.28]}>
-          <planeGeometry args={[1.2, 0.68]} />
-          <meshBasicMaterial ref={screenMaterial} color="#145eff" transparent opacity={0} depthWrite={false} />
-        </mesh>
+      <lineSegments ref={trail} geometry={trailGeometry}><lineBasicMaterial color="#145eff" transparent opacity={0} depthWrite={false} /></lineSegments>
+      <lineSegments ref={structure} geometry={structureGeometry}><lineBasicMaterial color="#286cff" transparent opacity={0} depthWrite={false} /></lineSegments>
+      <gridHelper ref={grid} args={[3.3, quality === "full" ? 14 : 9, "#7aa0ff", "#d4e0fa"]} position={[0, -.71, .2]} />
+
+      {/* Planes materialise just after their framing lines are drawn. */}
+      <group ref={planes}>{[[[-.68, .03, -.14], [.54, .5]], [[.02, .18, -.2], [.48, .88]], [[.72, -.02, -.1], [.48, .62]]].map(([position, size], index) => (
+        <mesh key={index} position={position as [number, number, number]}><planeGeometry args={size as [number, number]} /><meshBasicMaterial color="#8eb0ff" transparent opacity={0} depthWrite={false} /></mesh>
+      ))}</group>
+
+      {/* The same construction resolves into a stage, screen, booths and audience zones. */}
+      <group ref={eventEnvironment}>
+        <mesh position={[0, -.47, .12]}><boxGeometry args={[2.7, .07, .88]} /><meshBasicMaterial color="#123b98" transparent opacity={0} /></mesh>
+        <mesh position={[0, .06, -.34]}><boxGeometry args={[1.62, .92, .05]} /><meshBasicMaterial color="#286cff" transparent opacity={0} /></mesh>
+        <mesh position={[-.92, .04, -.3]}><boxGeometry args={[.045, .98, .05]} /><meshBasicMaterial color="#8eb0ff" transparent opacity={0} /></mesh>
+        <mesh position={[.92, .04, -.3]}><boxGeometry args={[.045, .98, .05]} /><meshBasicMaterial color="#8eb0ff" transparent opacity={0} /></mesh>
+        <mesh position={[0, .56, -.3]}><boxGeometry args={[1.9, .045, .05]} /><meshBasicMaterial color="#8eb0ff" transparent opacity={0} /></mesh>
+        <mesh position={[-1.18, -.1, .18]}><boxGeometry args={[.35, .5, .34]} /><meshBasicMaterial color="#dce8ff" transparent opacity={0} /></mesh>
+        <mesh position={[1.18, -.1, .18]}><boxGeometry args={[.35, .5, .34]} /><meshBasicMaterial color="#dce8ff" transparent opacity={0} /></mesh>
+        {[-.8, -.4, 0, .4, .8].slice(0, quality === "full" ? 5 : 3).map((x, index) => <mesh key={x} position={[x, -.32, .52 + (index % 2) * .12]}><sphereGeometry args={[.07, 10, 10]} /><meshBasicMaterial color="#145eff" transparent opacity={0} /></mesh>)}
       </group>
-      <group ref={eventKit} data-placeholder-3d="event-kit">
-        {/* Generic event kit: replace these primitives with approved 3D assets later. */}
-        <mesh position={[0, -0.42, 0.08]}>
-          <boxGeometry args={[2.55, 0.055, 0.78]} />
-          <meshBasicMaterial color="#1c2c54" transparent opacity={0.82} />
-        </mesh>
-        <mesh position={[0, 0.06, -0.33]}>
-          <boxGeometry args={[1.55, 0.88, 0.045]} />
-          <meshBasicMaterial ref={eventSurfaceMaterial} color="#286cff" transparent opacity={0.72} />
-        </mesh>
-        <mesh position={[-0.86, 0.04, -0.31]}>
-          <boxGeometry args={[0.035, 0.92, 0.05]} />
-          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
-        </mesh>
-        <mesh position={[0.86, 0.04, -0.31]}>
-          <boxGeometry args={[0.035, 0.92, 0.05]} />
-          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
-        </mesh>
-        <mesh position={[0, 0.52, -0.31]}>
-          <boxGeometry args={[1.75, 0.035, 0.05]} />
-          <meshBasicMaterial color="#86aaff" transparent opacity={0.88} />
-        </mesh>
-        {[[-0.98, -0.2, 0.08], [-0.62, -0.2, 0.08], [0.62, -0.2, 0.08], [0.98, -0.2, 0.08]].map(([x, y, z], index) => (
-          <mesh key={index} position={[x, y, z]}>
-            <boxGeometry args={[0.22, 0.32 + (index % 2) * 0.1, 0.22]} />
-            <meshBasicMaterial color={index % 2 ? "#527ddd" : "#dbe6ff"} transparent opacity={0.78} />
-          </mesh>
-        ))}
-        {(quality === "full" ? [-0.8, -0.4, 0, 0.4, 0.8] : [-0.6, 0, 0.6]).map((x, index) => (
-          <mesh key={`audience-${index}`} position={[x, -0.3, 0.45 + (index % 2) * 0.1]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshBasicMaterial color="#145eff" transparent opacity={0.76} />
-          </mesh>
-        ))}
+      <group ref={intelligence} position={[0, .04, .1]}>
+        <points ref={intelligencePoints} geometry={intelligenceGeometry}><pointsMaterial ref={intelligenceMaterial} color="#145eff" size={quality === "full" ? .03 : .045} transparent opacity={0} sizeAttenuation /></points>
       </group>
-      <group ref={eventRings} position={[0, -0.42, 0.16]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial ref={eventRingMaterial} color="#145eff" transparent opacity={0.72} />
-        </mesh>
-        <mesh rotation={[Math.PI / 2, 0, 0]} scale={0.7}>
-          <torusGeometry args={[0.82, 0.008, 6, 64]} />
-          <meshBasicMaterial ref={eventRingAccentMaterial} color="#b7ceff" transparent opacity={0.72} />
-        </mesh>
-      </group>
-      <points ref={particles} geometry={particleGeometry}>
-        <pointsMaterial ref={particleMaterial} color="#5f8fff" size={quality === "full" ? 0.026 : 0.035} transparent opacity={0.2} sizeAttenuation />
-      </points>
+      <mesh ref={memoryCore} position={[.12, .04, .12]}><sphereGeometry args={[.09, 18, 18]} /><meshBasicMaterial color="#145eff" transparent opacity={0} /></mesh>
     </group>
   );
 }
 
 class CanvasErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    if (process.env.NODE_ENV !== "production") console.warn("Mandegar immersive canvas fallback", error, info.componentStack);
-  }
-
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { if (process.env.NODE_ENV !== "production") console.warn("Mandegar immersive canvas fallback", error, info.componentStack); }
+  render() { return this.state.hasError ? this.props.fallback : this.props.children; }
 }
 
-function CanvasFallback() {
-  return <div className="canvasFallback" data-webgl="fallback" aria-hidden="true"><span /><i /><b /></div>;
-}
+function CanvasFallback() { return <div className="canvasFallback" data-webgl="fallback" aria-hidden="true"><span /><i /><b /></div>; }
 
 export function ExperienceCanvas({ enabledByCms = true }: { enabledByCms?: boolean }) {
   const [runtime, setRuntime] = useState<RuntimeState>("pending");
   const [pageVisible, setPageVisible] = useState(true);
-
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -260,37 +216,10 @@ export function ExperienceCanvas({ enabledByCms = true }: { enabledByCms?: boole
       setRuntime(enabledByCms && !reduced && !saveData && supportsWebGL ? experienceState.quality : "fallback");
     });
     const onVisibilityChange = () => setPageVisible(document.visibilityState === "visible");
-    const onPointerMove = (event: PointerEvent) => {
-      experienceState.pointerX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 2;
-      experienceState.pointerY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 2;
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    return () => {
-      window.cancelAnimationFrame(frame);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pointermove", onPointerMove);
-      experienceState.progress = 0;
-      experienceState.pointerX = 0;
-      experienceState.pointerY = 0;
-    };
+    const onPointerMove = (event: PointerEvent) => { experienceState.pointerX = (event.clientX / Math.max(window.innerWidth, 1) - .5) * 2; experienceState.pointerY = (event.clientY / Math.max(window.innerHeight, 1) - .5) * 2; };
+    document.addEventListener("visibilitychange", onVisibilityChange); window.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => { window.cancelAnimationFrame(frame); document.removeEventListener("visibilitychange", onVisibilityChange); window.removeEventListener("pointermove", onPointerMove); experienceState.progress = 0; experienceState.pointerX = 0; experienceState.pointerY = 0; };
   }, [enabledByCms]);
-
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback />;
-
-  return (
-    <CanvasErrorBoundary fallback={<CanvasFallback />}>
-      <Canvas
-        className="experienceCanvas"
-        data-experience-canvas="true"
-        aria-hidden="true"
-        dpr={runtime === "full" ? [1, 1.5] : [1, 1.15]}
-        frameloop={pageVisible ? "always" : "never"}
-        camera={{ position: [0, 0, 2.8], fov: 42 }}
-        gl={{ alpha: true, antialias: runtime === "full", powerPreference: "low-power" }}
-      >
-        <SparkScene quality={runtime} />
-      </Canvas>
-    </CanvasErrorBoundary>
-  );
+  return <CanvasErrorBoundary fallback={<CanvasFallback />}><Canvas className="experienceCanvas" data-experience-canvas="true" aria-hidden="true" dpr={runtime === "full" ? [1, 1.5] : [1, 1.15]} frameloop={pageVisible ? "always" : "never"} camera={{ position: [0, 0, 3.05], fov: 42 }} gl={{ alpha: true, antialias: runtime === "full", powerPreference: "low-power" }}><SparkScene quality={runtime} /></Canvas></CanvasErrorBoundary>;
 }

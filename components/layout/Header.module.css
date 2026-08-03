@@ -28,13 +28,14 @@
 
 :global(body:has(.heroSection)) .header .logo,
 :global(body:has(.heroSection)) .header .nav a,
-:global(body:has(.heroSection)) .header .desktopLanguage a { color: rgba(255,255,255,.78); }
+:global(body:has(.heroSection)) .header .desktopLanguage a { color: var(--muted-strong); }
+:global(body:has(.heroSection)) .header { position: fixed; }
 :global(body:has(.heroSection)) .header .logo:hover,
 :global(body:has(.heroSection)) .header .nav a:hover,
-:global(body:has(.heroSection)) .header .desktopLanguage a:hover { color: #fff; }
-:global(body:has(.heroSection)) .header .logoMark { border-color: rgba(255,255,255,.7); }
-:global(body:has(.heroSection)) .header .menuButton i { background: #fff; }
-:global(body:has(.heroSection)) .header .actions > .button { color: var(--ink); background: #fff; }
+:global(body:has(.heroSection)) .header .desktopLanguage a:hover { color: var(--ink); }
+:global(body:has(.heroSection)) .header .logoMark { border-color: var(--ink); }
+:global(body:has(.heroSection)) .header .menuButton i { background: var(--ink); }
+:global(body:has(.heroSection)) .header .actions > .button { color: #fff; background: var(--ink); }
 :global(body:has(.heroSection)) .header .navOpen a { color: var(--ink); }
 
 @media (max-width: 760px) {

@@ -15,8 +15,8 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
     { href: localizedPath(locale, "contact"), label: copy.navigation.contact },
   ];
   return (
-    <footer className="footer section-pad">
-      <div className="footerTop">
+    <footer className="footer">
+      <div className="pageWidth footerTop">
         <div>
           <div className="footerBrand"><span className="footerDot" /> MANDEGAR</div>
           <p className="footerLine">{settings?.footerLine ? getText(settings.footerLine, locale) : copy.footer}</p>
@@ -30,7 +30,7 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
           <span>© {new Date().getFullYear()} Mandegar</span>
         </div>
       </div>
-      <div className="footerBottom">
+      <div className="pageWidth footerBottom">
         <Link href={localizedPath(locale, "legal")}>{legal}</Link>
         <span>{mediaNote}</span>
       </div>
