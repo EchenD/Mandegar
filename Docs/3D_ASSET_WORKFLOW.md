@@ -1,6 +1,6 @@
 # Mandegar Web 3D Asset Contract
 
-The procedural meshes in the homepage are replaceable stand-ins. Final assets are authored in 3ds Max and delivered as independently loadable GLB modules matching the slots in `components/experience/scene-config.ts`.
+All architectural homepage geometry is authored in 3ds Max and delivered as GLB modules matching the slots in `components/experience/scene-config.ts`. Runtime-generated geometry is reserved for light paths, audience traces, particles, ripples, and data connections; it must not replace the hall, stage, halo, booth, screen, or other architectural surfaces.
 
 ## Scene and hierarchy
 
@@ -24,11 +24,12 @@ The procedural meshes in the homepage are replaceable stand-ins. Final assets ar
 
 - Keep curves visually smooth at the closest approved camera while supplying lower-detail modules for mobile.
 - Preserve physically plausible thickness; do not model single-plane architectural shells visible from both sides.
-- Asset-owned animation clips use `idle_*`, `activate_*`, or `loop_*`. Camera movement and the master activation sequence remain code-controlled.
-- Export GLB with embedded buffers, normals, tangents only when needed, UV0, vertex colors only when used, and no cameras or unapproved lights.
+- Asset-owned animation clips use `idle_*`, `activate_*`, or `loop_*`. The code camera remains the fallback until an approved authored master camera is delivered.
+- An optional authored camera handoff uses a camera named `camera_mandegar_master` and one clip named `camera_master_loop`. Its first and final transforms must match exactly, and its timing must follow the nine scene checkpoints in `components/experience/scene-config.ts`.
+- Export GLB with embedded buffers, normals, tangents only when needed, UV0, vertex colors only when used, and no unapproved lights. Export the named master camera only when it is part of the reviewed camera handoff.
 - Starting budgets: hall 2.0 MB, hero zone 2.5 MB, each booth 500 KB, halo 350 KB, and audience module 600 KB after compression.
 - Run glTF Transform prune, deduplicate, inspect, and tested Meshopt/Draco compression. Record triangles, draw calls, texture memory, and final size for every module.
 
 ## Delivery check
 
-Each delivery includes the `.max` source, optimized `.glb`, texture source folder, a reference render, recorded budgets, expected node names, and a note listing any animation clips. Validate pivots, color space, normals, media UVs, mobile LOD, and visual parity before replacing a procedural slot.
+Each delivery includes the `.max` source, optimized `.glb`, texture source folder, a reference render, recorded budgets, expected node names, and a note listing any animation clips or authored camera. Validate pivots, color space, normals, media UVs, mobile LOD, loop-matched camera endpoints, and visual parity before replacing a slot.

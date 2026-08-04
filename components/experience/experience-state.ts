@@ -9,13 +9,21 @@ export const experienceState: {
   quality: SceneQuality;
   pointerX: number;
   pointerY: number;
+  pointerPulse: number;
+  assemblyProgress: number;
+  focusDistance: number;
   lightScale: number;
   focusZone: "photo" | "game" | "touch" | null;
+  focusProject: number | null;
 } = {
   progress: 0,
   quality: "full",
   pointerX: 0,
   pointerY: 0,
+  pointerPulse: 0,
+  assemblyProgress: 0,
+  focusDistance: 18,
   lightScale: 1,
   focusZone: null,
+  focusProject: null,
 };

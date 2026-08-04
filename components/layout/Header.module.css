@@ -49,6 +49,15 @@
 :global(body:has([data-mandegar-experience])) .header .actions > .button { color: #fff; background: var(--ink); }
 :global(body:has([data-mandegar-experience])) .header .navOpen a { color: var(--ink); }
 
+@media (min-width: 761px) {
+  :global(body:has([data-mandegar-experience])) .header .nav {
+    position: absolute;
+    left: 50%;
+    margin: 0;
+    transform: translateX(-50%);
+  }
+}
+
 @media (max-width: 760px) {
   .header { width: min(100% - 1.5rem, 90rem); padding-block: 1rem; }
   .desktopLanguage, .actions > .button { display: none; }

@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Locale } from "@/lib/i18n";
 import { ScrollMotion } from "./ScrollMotion";
@@ -77,32 +78,34 @@ type ExperienceProps = {
 type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
 
 export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabledByCms = true, lenisEnabled = false }: ExperienceProps) {
+  const router = useRouter();
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const [activeZone, setActiveZone] = useState<"photo" | "game" | "touch" | null>(null);
+  const loader = useRef<HTMLDivElement>(null);
   const audioContext = useRef<AudioContext | undefined>(undefined);
   const audioNodes = useRef<AudioNode[]>([]);
 
   useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => setLoadProgress(38));
+    const onPointerMove = (event: PointerEvent) => {
+      loader.current?.style.setProperty("--loader-x", `${event.clientX}px`);
+      loader.current?.style.setProperty("--loader-y", `${event.clientY}px`);
+    };
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
     return () => {
       window.cancelAnimationFrame(hydrationFrame);
+      window.removeEventListener("pointermove", onPointerMove);
       audioNodes.current.forEach((node) => {
         if ("stop" in node) (node as OscillatorNode).stop();
         node.disconnect();
       });
       audioContext.current?.close();
+      experienceState.focusZone = null;
+      experienceState.focusProject = null;
     };
   }, []);
-
-  useEffect(() => {
-    experienceState.focusZone = activeZone;
-    return () => {
-      experienceState.focusZone = null;
-    };
-  }, [activeZone]);
 
   const handleRuntimeReady = useCallback((nextRuntime: "pending" | "fallback" | "adaptive" | "full") => {
     setRuntime(nextRuntime);
@@ -114,14 +117,18 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
 
   const scrollToProgress = useCallback((progress: number) => {
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
-    if (!root) return;
-    root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress } }));
+    root?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress } }));
   }, []);
 
   const scrollToPhase = useCallback((phase: ScenePhaseId) => {
     const checkpoint = scenePhases.find((item) => item.id === phase);
     if (checkpoint) scrollToProgress(checkpoint.preview);
   }, [scrollToProgress]);
+
+  const selectProject = useCallback((index: number) => {
+    const project = projects[index];
+    if (project) router.push(`/${locale}/projects/${project.slug}`);
+  }, [locale, projects, router]);
 
   const toggleSound = useCallback(async () => {
     if (soundEnabled) {
@@ -165,23 +172,19 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
     setSoundEnabled(true);
   }, [soundEnabled]);
 
-  const navItems = [
-    { label: copy.navigation.projects, href: `/${locale}/projects` },
-    { label: copy.navigation.services, href: `/${locale}/services` },
-    { label: copy.navigation.about, href: `/${locale}/about` },
-    { label: copy.navigation.contact, href: `/${locale}/contact` },
-  ];
-
   return (
     <ScrollMotion className={styles.root} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
       <div
+        ref={loader}
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
+        data-particle-loader="pointer-spark"
         aria-live="polite"
         aria-label={`${copy.loading} ${loadProgress}%`}
       >
-        <div className={styles.loaderMark} style={{ "--load-progress": `${loadProgress * 3.6}deg` } as CSSProperties}>
+        <div className={styles.loaderMark} style={{ "--load-progress": `${loadProgress * 3.6}deg` } as CSSProperties} aria-hidden="true">
           <span />
+          {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
         </div>
         <div className={styles.loaderMeta}>
           <span>MANDEGAR / EXHIBITION WORLD</span>
@@ -195,9 +198,12 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           <ExperienceCanvas
             className={styles.canvas}
             enabledByCms={enabledByCms}
+            projects={projects.slice(0, 3).map((project) => ({ src: project.mediaSrc, label: project.title }))}
+            onProjectSelect={selectProject}
             onRuntimeReady={handleRuntimeReady}
             onFirstFrame={handleFirstFrame}
           />
+
           <div className={styles.fallbackScene} aria-hidden="true">
             <span className={styles.fallbackHall} />
             <span className={styles.fallbackStage} />
@@ -205,107 +211,90 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             <span className={styles.fallbackHalo} />
             <span className={styles.fallbackTrail} />
           </div>
-          <div className={styles.atmosphere} aria-hidden="true"><i /><i /><i /></div>
-          <div className={styles.spatialBrand} aria-hidden="true">MANDEGAR <small>CREATING TOMORROW</small></div>
-          <div className={styles.capabilityLabels} aria-hidden="true">
-            <span>PHOTO / 01</span><span>GAME / 02</span><span>TOUCH / 03</span>
-          </div>
 
           <div className={styles.copyLayer}>
-            <div className={styles.arrivalSignal}>
+            <div className={styles.arrivalSignal} data-arrival-signal>
               <span>01</span>
               <p>{copy.arrivalLabel}</p>
             </div>
+
             <section className={`${styles.sceneCopy} ${styles.discoveryCopy}`} data-scene-copy="discovery" data-cinematic-beat>
-              <span>{copy.discoveryEyebrow}</span>
-              <h1>{copy.discoveryTitle}</h1>
-              <p>{copy.discoveryBody}</p>
+              <span data-copy-line>{copy.discoveryEyebrow}</span>
+              <h2 data-copy-line>{copy.discoveryTitle}</h2>
+              <p data-copy-line>{copy.discoveryBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.activationCopy}`} data-scene-copy="activation" data-cinematic-beat>
-              <span>{copy.activationEyebrow}</span>
-              <h2>{copy.activationTitle}</h2>
-              <p>{copy.activationBody}</p>
+              <span data-copy-line>{copy.activationEyebrow}</span>
+              <h2 data-copy-line>{copy.activationTitle}</h2>
+              <p data-copy-line>{copy.activationBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.revealCopy}`} data-scene-copy="reveal" data-cinematic-beat>
-              <span>{copy.revealEyebrow}</span>
-              <h2>{copy.revealTitle}</h2>
-              <p>{copy.revealBody}</p>
+              <span data-copy-line>{copy.revealEyebrow}</span>
+              <h2 data-copy-line>{copy.revealTitle}</h2>
+              <p data-copy-line>{copy.revealBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.experiencesCopy}`} data-scene-copy="experiences" data-cinematic-beat>
-              <span>{copy.experiencesEyebrow}</span>
-              <h2>{copy.experiencesTitle}</h2>
-              <p>{copy.experiencesBody}</p>
-              <div className={styles.zoneControls} aria-label={copy.experiencesTitle}>
-                {(["photo", "game", "touch"] as const).map((zone, index) => (
-                  <button
-                    key={zone}
-                    type="button"
-                    data-active={activeZone === zone ? "true" : "false"}
-                    onPointerEnter={() => setActiveZone(zone)}
-                    onPointerLeave={() => setActiveZone(null)}
-                    onFocus={() => setActiveZone(zone)}
-                    onClick={() => setActiveZone(activeZone === zone ? null : zone)}
-                  >
-                    <small>0{index + 1}</small>{copy.zones[zone]}
-                  </button>
-                ))}
-              </div>
+              <span data-copy-line>{copy.experiencesEyebrow}</span>
+              <h2 data-copy-line>{copy.experiencesTitle}</h2>
+              <p data-copy-line>{copy.experiencesBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.proofCopy}`} data-scene-copy="proof" data-cinematic-beat>
-              <span>{copy.proofEyebrow}</span>
-              <h2>{copy.proofTitle}</h2>
-              <p>{copy.proofBody}</p>
-              <div className={styles.projectStrip}>
-                {projects.slice(0, 3).map((project, index) => (
-                  <Link key={project.slug} href={`/${locale}/projects/${project.slug}`} className={styles.projectCard}>
-                    <i style={{ backgroundImage: `url(${project.mediaSrc})` }} aria-hidden="true" />
-                    <small>0{index + 1} / {project.isPlaceholder ? "DEMO" : project.eyebrow}</small>
-                    <strong>{project.title}</strong>
-                    <em aria-hidden="true">↗</em>
-                  </Link>
-                ))}
-              </div>
+              <span data-copy-line>{copy.proofEyebrow}</span>
+              <h2 data-copy-line>{copy.proofTitle}</h2>
+              <p data-copy-line>{copy.proofBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.intelligenceCopy}`} data-scene-copy="intelligence" data-cinematic-beat>
-              <span>{copy.intelligenceEyebrow}</span>
-              <h2>{copy.intelligenceTitle}</h2>
-              <p>{copy.intelligenceBody}</p>
-              <svg className={styles.intelligenceMap} viewBox="0 0 420 118" aria-hidden="true">
-                <path d="M18 77 C76 22 122 98 177 54 S278 22 323 61 S380 86 402 38" />
-                {[18, 95, 177, 251, 323, 402].map((x, index) => <circle key={x} cx={x} cy={[77, 45, 54, 35, 61, 38][index]} r={index === 2 ? 6 : 3} />)}
-              </svg>
+              <span data-copy-line>{copy.intelligenceEyebrow}</span>
+              <h2 data-copy-line>{copy.intelligenceTitle}</h2>
+              <p data-copy-line>{copy.intelligenceBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.invitationCopy}`} data-scene-copy="invitation" data-cinematic-beat>
-              <span>{copy.invitationEyebrow}</span>
-              <h2>{copy.invitationTitle}</h2>
-              <p>{copy.invitationBody}</p>
-              <div className={styles.ctaRow}>
-                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project">{copy.startProject}<i aria-hidden="true">↗</i></Link>
+              <span data-copy-line>{copy.invitationEyebrow}</span>
+              <h2 data-copy-line>{copy.invitationTitle}</h2>
+              <p data-copy-line>{copy.invitationBody}</p>
+              <div className={styles.ctaRow} data-copy-line>
+                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project">
+                  {copy.startProject}<i aria-hidden="true">↗</i>
+                </Link>
               </div>
             </section>
             <section className={`${styles.sceneCopy} ${styles.loopCopy}`} data-scene-copy="loop" data-cinematic-beat>
-              <span>{copy.loopEyebrow}</span>
-              <h2>{copy.loopTitle}</h2>
-              <p>{copy.loopBody}</p>
-              <div className={styles.ctaRow}>
-                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project_loop">{copy.startProject}<i aria-hidden="true">↗</i></Link>
-                <button type="button" className={styles.replayButton} onClick={() => scrollToPhase("arrival")}>{copy.replay}<i aria-hidden="true">↺</i></button>
+              <span data-copy-line>{copy.loopEyebrow}</span>
+              <h2 data-copy-line>{copy.loopTitle}</h2>
+              <p data-copy-line>{copy.loopBody}</p>
+              <div className={styles.ctaRow} data-copy-line>
+                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project_loop">
+                  {copy.startProject}<i aria-hidden="true">↗</i>
+                </Link>
               </div>
             </section>
           </div>
 
-          <aside className={styles.sideDock} aria-label={locale === "en" ? "Direct navigation" : locale === "ar" ? "التنقل المباشر" : "دسترسی مستقیم"}>
-            <span className={styles.sideDockLine} />
-            {navItems.map((item, index) => <Link key={item.href} href={item.href}><small>0{index + 1}</small>{item.label}</Link>)}
-          </aside>
+          <nav className={styles.sceneA11y} aria-label={copy.experiencesTitle}>
+            {(["photo", "game", "touch"] as const).map((zone) => (
+              <button
+                key={zone}
+                type="button"
+                onFocus={() => { experienceState.focusZone = zone; }}
+                onBlur={() => { experienceState.focusZone = null; }}
+              >
+                {copy.zones[zone]}
+              </button>
+            ))}
+            {projects.slice(0, 3).map((project) => (
+              <Link key={project.slug} href={`/${locale}/projects/${project.slug}`}>{project.title}</Link>
+            ))}
+          </nav>
 
           <button className={styles.soundControl} type="button" aria-pressed={soundEnabled} onClick={toggleSound}>
             <span aria-hidden="true">{soundEnabled ? "◖" : "○"}</span>
             {soundEnabled ? copy.muteSound : copy.enableSound}
           </button>
 
-          <div className={styles.phaseRail} aria-label={locale === "en" ? "Experience phases" : locale === "ar" ? "مراحل التجربة" : "مراحل تجربه"}>
-            <span className={styles.phaseTrack}><i style={{ transform: `scaleX(${Math.max(0.03, scenePhases.findIndex((phase) => phase.id === activePhase) / (scenePhases.length - 1))})` }} /></span>
+          <div className={styles.phaseRail} data-phase-rail aria-label={locale === "en" ? "Experience phases" : locale === "ar" ? "مراحل التجربة" : "مراحل تجربه"}>
+            <span className={styles.phaseTrack}>
+              <i />
+            </span>
             <div className={styles.phaseButtons}>
               {scenePhases.map((phase, index) => (
                 <button key={phase.id} type="button" data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
@@ -315,50 +304,30 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             </div>
           </div>
 
-          <div className={styles.scrollCue} data-hidden={activePhase === "loop" ? "true" : "false"}>
+          <div className={styles.scrollCue}>
             <span>{copy.scroll}</span><i />
           </div>
-          {process.env.NODE_ENV !== "production" ? <DevTuner scrollToProgress={scrollToProgress} /> : null}
         </div>
       </div>
 
       <div className={styles.semanticFallback} data-semantic-fallback data-cinematic-beat>
-        {["discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"].map((phase) => {
-          const content = phase === "discovery"
-            ? [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody]
-            : phase === "activation"
-              ? [copy.activationEyebrow, copy.activationTitle, copy.activationBody]
-              : phase === "reveal"
-                ? [copy.revealEyebrow, copy.revealTitle, copy.revealBody]
-                : phase === "experiences"
-                  ? [copy.experiencesEyebrow, copy.experiencesTitle, copy.experiencesBody]
-                  : phase === "proof"
-                    ? [copy.proofEyebrow, copy.proofTitle, copy.proofBody]
-                    : phase === "intelligence"
-                      ? [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody]
-                      : phase === "invitation"
-                        ? [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody]
-                        : [copy.loopEyebrow, copy.loopTitle, copy.loopBody];
-          return <section key={phase}><span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>{phase === "invitation" || phase === "loop" ? <Link href={ctaHref}>{copy.startProject}</Link> : null}</section>;
-        })}
+        {[
+          [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody],
+          [copy.activationEyebrow, copy.activationTitle, copy.activationBody],
+          [copy.revealEyebrow, copy.revealTitle, copy.revealBody],
+          [copy.experiencesEyebrow, copy.experiencesTitle, copy.experiencesBody],
+          [copy.proofEyebrow, copy.proofTitle, copy.proofBody],
+          [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody],
+          [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody],
+          [copy.loopEyebrow, copy.loopTitle, copy.loopBody],
+        ].map((content, index) => (
+          <section key={content[0]}>
+            <span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>
+            {index >= 6 ? <Link href={ctaHref}>{copy.startProject}</Link> : null}
+          </section>
+        ))}
       </div>
     </ScrollMotion>
-  );
-}
-
-function DevTuner({ scrollToProgress }: { scrollToProgress: (progress: number) => void }) {
-  const [open, setOpen] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [lightScale, setLightScale] = useState(1);
-  return (
-    <div className={styles.devTuner} data-open={open ? "true" : "false"} data-dev-tuner>
-      <button type="button" onClick={() => setOpen(!open)}>TUNE</button>
-      {open ? <div>
-        <label>Scene <input type="range" min="0" max="1" step="0.001" value={progress} onChange={(event) => { const value = Number(event.target.value); setProgress(value); scrollToProgress(value); }} /></label>
-        <label>Light <input type="range" min="0.5" max="1.5" step="0.05" value={lightScale} onChange={(event) => { const value = Number(event.target.value); setLightScale(value); experienceState.lightScale = value; }} /></label>
-        <span>{progress.toFixed(3)} / {lightScale.toFixed(2)}</span>
-      </div> : null}
-    </div>
   );
 }
 

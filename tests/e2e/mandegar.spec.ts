@@ -192,18 +192,18 @@ test.describe("Mandegar responsive layout", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?phase=experiences", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
-    const experiences = page.locator("[data-scene-copy='experiences']");
-    await expect(experiences).toBeVisible();
-    const photo = experiences.getByRole("button", { name: /Photo/ });
+    await expect(page.locator("[data-scene-copy='experiences']")).toBeVisible();
+    const sceneNavigation = page.locator("[data-mandegar-experience] nav");
+    const photo = sceneNavigation.getByRole("button", { name: /Photo/ });
     await photo.focus();
-    await expect(photo).toHaveAttribute("data-active", "true");
-    await page.keyboard.press("Enter");
-    await expect(photo).toHaveAttribute("data-active", "false");
+    await expect(photo).toBeFocused();
 
     await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
-    const proofLinks = page.locator("[data-scene-copy='proof'] a");
+    const proofLinks = page.locator("[data-mandegar-experience] nav a");
     await expect(proofLinks).toHaveCount(3);
     await expect(proofLinks.first()).toHaveAttribute("href", /\/en\/projects\//);
+    await expect(page.locator("[data-particle-system='signal-network']")).toHaveCount(1);
+    await expect(page.locator("[data-interaction-system='pointer-touch']")).toHaveCount(1);
   });
 
   test("mobile controls remain available without pointer input", async ({ page }) => {
@@ -214,20 +214,32 @@ test.describe("Mandegar responsive layout", () => {
     await assertNoHorizontalOverflow(page);
   });
 
-  test("persistent scene does not cover the footer at the end of the narrative", async ({ page }) => {
+  test("homepage hides the footer and forward scroll wraps from loop to arrival", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en", { waitUntil: "networkidle" });
-    await page.mouse.wheel(0, 100000);
-    await page.waitForTimeout(1800);
-    const result = await page.evaluate(() => {
-      const footer = document.querySelector(".footer");
-      if (!footer) return { covered: false, reason: "missing footer" };
-      const rect = footer.getBoundingClientRect();
-      const y = Math.min(window.innerHeight - 10, Math.max(10, rect.top + 20));
-      const element = document.elementFromPoint(20, y);
-      return { covered: Boolean(element?.closest(".footer")), element: element?.tagName, top: Math.round(rect.top) };
+    await expect(page.locator(".footer")).toBeHidden();
+    await page.evaluate(() => {
+      document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .995 } }));
     });
-    expect(result.covered, JSON.stringify(result)).toBe(true);
+    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("loop");
+    await page.mouse.wheel(0, 900);
+    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("arrival");
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(100);
+  });
+
+  test("homepage uses the unified variable typeface and left-side story placement", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const locale of ["fa", "en"] as const) {
+      await page.goto(`/${locale}?phase=discovery`, { waitUntil: "networkidle" });
+      const copy = page.locator("[data-scene-copy='discovery']");
+      await expect(copy).toBeVisible();
+      const result = await copy.evaluate((element) => ({
+        left: element.getBoundingClientRect().left,
+        font: getComputedStyle(element).fontFamily,
+      }));
+      expect(result.left).toBeLessThan(220);
+      expect(result.font).toContain("Vazirmatn Variable");
+    }
   });
 
   test("project filters and detail route work", async ({ page }) => {
