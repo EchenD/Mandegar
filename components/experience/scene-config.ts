@@ -87,10 +87,44 @@ export const sceneTokens = {
       maximum: { full: 14, adaptive: 12 },
     },
   },
+  visualStory: {
+    livingWorld: {
+      enter: [0.36, 0.5] as const,
+      exit: [0.84, 0.93] as const,
+    },
+    peakReveal: {
+      enter: [0.405, 0.465] as const,
+      exit: [0.505, 0.57] as const,
+    },
+    particles: {
+      quietPopulation: 0.58,
+      livingPopulation: 0.86,
+      peakPopulation: 1,
+      livingScale: 1.18,
+      peakScale: 1.52,
+      livingBrightness: 1.16,
+      peakBrightness: 1.42,
+    },
+    audience: {
+      enter: [0.41, 0.51] as const,
+      exit: [0.875, 0.93] as const,
+      opacity: { full: 0.42, adaptive: 0.48 },
+      peakBoost: 0.2,
+      gatherDistance: 0.58,
+      motion: 0.035,
+      palette: ["#657184", "#7187a4", "#83768e", "#8b8078"],
+    },
+    trails: {
+      colors: ["#225cff", "#50c7ff", "#d95cff", "#50c7ff", "#ffb54a", "#d95cff"],
+      livingOpacity: 0.68,
+      peakOpacity: 0.96,
+    },
+  },
   environment: {
     background: {
       quiet: "#cdd2d4",
-      active: "#bec8d5",
+      active: "#b7c2cf",
+      peak: "#98a7bc",
     },
     fog: { near: 15, far: 44 },
     exposure: 0.92,
@@ -105,6 +139,7 @@ export const sceneTokens = {
         bloom: true,
         bloomStrength: 0.34,
         bloomRevealBoost: 0.16,
+        bloomPeakBoost: 0.2,
         bloomAssemblyBoost: 0.2,
         bloomRadius: 0.3,
         bloomThreshold: 1.7,
@@ -116,6 +151,7 @@ export const sceneTokens = {
         bloom: false,
         bloomStrength: 0,
         bloomRevealBoost: 0,
+        bloomPeakBoost: 0,
         bloomAssemblyBoost: 0,
         bloomRadius: 0,
         bloomThreshold: 2,
@@ -242,8 +278,8 @@ export const qualityProfiles: Record<SceneQuality, {
   radialSegments: number;
   antialias: boolean;
 }> = {
-  full: { dpr: [1, 1.5], audiencePoints: 26, radialSegments: 64, antialias: true },
-  adaptive: { dpr: [1, 1.15], audiencePoints: 12, radialSegments: 32, antialias: false },
+  full: { dpr: [1, 1.5], audiencePoints: 34, radialSegments: 64, antialias: true },
+  adaptive: { dpr: [1, 1.15], audiencePoints: 16, radialSegments: 32, antialias: false },
 };
 
 export const assetSlots = {
@@ -256,6 +292,27 @@ export function clamp01(value: number) {
 
 export function phaseProgress(progress: number, range: readonly [number, number]) {
   return clamp01((progress - range[0]) / (range[1] - range[0]));
+}
+
+function smoothPhase(progress: number, range: readonly [number, number]) {
+  const value = phaseProgress(progress, range);
+  return value * value * (3 - 2 * value);
+}
+
+export function getVisualStoryState(progress: number) {
+  const reset = smoothPhase(progress, activationSequence.loopReset);
+  const living = smoothPhase(progress, sceneTokens.visualStory.livingWorld.enter)
+    * (1 - smoothPhase(progress, sceneTokens.visualStory.livingWorld.exit))
+    * (1 - reset);
+  const peak = smoothPhase(progress, sceneTokens.visualStory.peakReveal.enter)
+    * (1 - smoothPhase(progress, sceneTokens.visualStory.peakReveal.exit))
+    * (1 - reset);
+  return {
+    living,
+    peak,
+    energy: Math.min(1, Math.max(living * 0.72, peak)),
+    reset,
+  };
 }
 
 export function getScenePhase(progress: number): ScenePhaseId {

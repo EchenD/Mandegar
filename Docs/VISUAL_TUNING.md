@@ -20,6 +20,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Global colors | `globals.css` → `:root` | `--bg`, `--paper`, `--ink`, `--muted`, `--accent`, lines and radii |
 | Homepage UI colors | `MandegarExperience.module.css` | Search `#` or `rgba(`; `#225cff` is the main UI blue, `#16191d` the main ink |
 | 3D color palette | `scene-config.ts` → `sceneTokens.colors` | Fog, silver, charcoal, cobalt, cyan, magenta and amber |
+| Story color escalation | `scene-config.ts` → `sceneTokens.visualStory` | Living-world and peak-reveal timing, particle population, audience presence and trail palette |
 | Particles | `scene-config.ts` → `sceneTokens.particles` | Count, color palette, HDR luminance, separate core/glow opacity and size |
 | Particle layers | `scene-config.ts` → `particles.layers` / `particles.surfaceNodes` | Atmosphere/surface/signal allocation plus object name, activation point, color and sampling weight |
 | Particle motion and formations | `scene-config.ts` → `particles.motion` / `particles.modelNodes` | Drift, signal speed, surface offset, pointer response and model-anchored routes |
@@ -30,6 +31,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Depth of field | `scene-config.ts` → `environment.postprocessing` | Full-profile aperture/max blur; adaptive depth of field is disabled |
 | Base lights | `scene-config.ts` → `environment.lights` | Ambient, hemisphere, key and fill intensity |
 | Animated lights | `ExperienceCanvas.tsx` → `revealLight` / `interactionLight` | Point-light color, intensity, position and distance |
+| Audience | `scene-config.ts` → `visualStory.audience` / `qualityProfiles.audiencePoints` | Gather timing, count, opacity, motion and muted silhouette palette |
 | Material finish | `ExperienceCanvas.tsx` → `envMapIntensity`, `roughness`, `metalness` | Lower roughness is glossier; higher metalness is more metallic |
 | Wireframe/reveal | `ExperienceCanvas.tsx` → `revealBindings` / `beaconVisibility` | Per-object bottom-to-top reveal, lift distance, wire opacity and reveal-light visibility |
 | Authored 3D camera | `scene-config.ts` → `sceneTokens.authoredCamera` | Enable/disable the GLB camera, mobile use, node/clip names and depth-of-field focus target |
