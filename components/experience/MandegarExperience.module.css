@@ -85,7 +85,7 @@
   display: grid;
   place-items: center;
   color: #16191d;
-  background: #f7f7f4;
+  background: #dbdbd8;
   opacity: 1;
   visibility: visible;
   transition: opacity .7s cubic-bezier(.65, 0, .35, 1), visibility 0s linear 0s;

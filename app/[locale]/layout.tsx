@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import "@fontsource-variable/estedad";
+import "@fontsource-variable/vazirmatn";
 import "@/styles/globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";

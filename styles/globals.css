@@ -21,14 +21,15 @@
   --ease-standard: cubic-bezier(.2, .75, .25, 1);
   --inline-direction: 1;
   --page: min(100% - 2.5rem, 90rem);
-  --serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: "Vazirmatn Variable", "Tahoma", sans-serif;
+  --serif: var(--font-sans);
 }
 [dir="rtl"] { --inline-direction: -1; }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; background: var(--bg); }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Estedad Variable", "Tahoma", sans-serif; font-size: 16px; line-height: 1.7; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
-body, button, a { font-family: inherit; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 16px; line-height: 1.7; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font-family: inherit; }
 
 body:has([data-mandegar-experience]) .footer { display: none; }
 html:has([data-mandegar-experience]),

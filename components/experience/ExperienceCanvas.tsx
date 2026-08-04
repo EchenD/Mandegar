@@ -680,7 +680,7 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
       new THREE.Vector2(size.width, size.height),
       quality === "full" ? 0.72 : 0.48,
       quality === "full" ? 0.52 : 0.36,
-      0.78,
+      1.5,
     );
     const bokehPass = new BokehPass(scene, camera, {
       focus: experienceState.focusDistance,
