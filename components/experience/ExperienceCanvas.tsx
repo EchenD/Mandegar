@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/immutability -- R3F render-loop callbacks intentionally mutate Three.js scene objects. */
 
 import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Component, Suspense, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, type CSSProperties, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
@@ -14,6 +14,7 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
 import { activationSequence, assetSlots, cameraKeyframes, phaseProgress, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
+import spatialStyles from "./SpatialLabels.module.css";
 
 type RuntimeState = "pending" | "fallback" | SceneQuality;
 type SceneProject = { src: string; label: string };
@@ -21,9 +22,67 @@ type ExperienceCanvasProps = {
   className?: string;
   enabledByCms?: boolean;
   projects?: SceneProject[];
+  zoneLabels?: { photo: string; game: string };
   onProjectSelect?: (index: number) => void;
   onRuntimeReady?: (runtime: RuntimeState) => void;
   onFirstFrame?: () => void;
+};
+
+type ModelAnchor = {
+  object: THREE.Object3D;
+  localPosition: THREE.Vector3;
+  localBounds: THREE.Box3 | null;
+  surfaceFacing: boolean;
+};
+
+type SurfaceProjectionScratch = {
+  inverseMatrix: THREE.Matrix4;
+  localCamera: THREE.Vector3;
+  localDirection: THREE.Vector3;
+  localHit: THREE.Vector3;
+  ray: THREE.Ray;
+  raycaster: THREE.Raycaster;
+  worldDirection: THREE.Vector3;
+  intersections: THREE.Intersection[];
+};
+
+type SpatialScreenPoint = {
+  x: number;
+  y: number;
+  visible: boolean;
+};
+
+type SpatialHudModeId = "assembly" | "activationLeft" | "activationRight" | "reveal" | "experiences" | "proof" | "intelligence";
+
+type SpatialHudMode = {
+  id: SpatialHudModeId;
+  range: readonly [number, number];
+  primary: ModelAnchor;
+  secondary: ModelAnchor | null;
+  measureStart: ModelAnchor | null;
+  measureEnd: ModelAnchor | null;
+  measureMeters: number;
+};
+
+type SpatialHudModeCopy = {
+  primaryCode: string;
+  primaryValue: string;
+  secondaryCode?: string;
+  secondaryValue?: string;
+  measurementPrefix?: string;
+};
+
+type SpatialHudFrame = {
+  mode: SpatialHudModeId | null;
+  opacity: number;
+  compact: boolean;
+  width: number;
+  height: number;
+  primary: SpatialScreenPoint;
+  secondary: SpatialScreenPoint;
+  measureStart: SpatialScreenPoint;
+  measureEnd: SpatialScreenPoint;
+  measureMeters: number;
 };
 
 const defaultProjectMedia = [
@@ -76,6 +135,102 @@ const fragmentShader = `
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
   return safe * safe * (3 - 2 * safe);
+}
+
+function createModelAnchor(
+  root: THREE.Object3D,
+  name: string,
+  normalizedPosition: readonly [number, number, number],
+  surfaceFacing = false,
+) {
+  const object = root.getObjectByName(name);
+  if (!object) return null;
+  root.updateMatrixWorld(true);
+  if (object instanceof THREE.Mesh) {
+    object.geometry.computeBoundingBox();
+    const localBounds = object.geometry.boundingBox;
+    if (localBounds && !localBounds.isEmpty()) {
+      return {
+        object,
+        localPosition: new THREE.Vector3(
+          THREE.MathUtils.lerp(localBounds.min.x, localBounds.max.x, normalizedPosition[0]),
+          THREE.MathUtils.lerp(localBounds.min.y, localBounds.max.y, normalizedPosition[1]),
+          THREE.MathUtils.lerp(localBounds.min.z, localBounds.max.z, normalizedPosition[2]),
+        ),
+        localBounds: localBounds.clone(),
+        surfaceFacing,
+      } satisfies ModelAnchor;
+    }
+  }
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) return null;
+  const worldPosition = new THREE.Vector3(
+    THREE.MathUtils.lerp(bounds.min.x, bounds.max.x, normalizedPosition[0]),
+    THREE.MathUtils.lerp(bounds.min.y, bounds.max.y, normalizedPosition[1]),
+    THREE.MathUtils.lerp(bounds.min.z, bounds.max.z, normalizedPosition[2]),
+  );
+  return {
+    object,
+    localPosition: object.worldToLocal(worldPosition),
+    localBounds: null,
+    surfaceFacing: false,
+  } satisfies ModelAnchor;
+}
+
+function projectModelAnchor(
+  anchor: ModelAnchor,
+  camera: THREE.Camera,
+  size: { width: number; height: number },
+  worldPosition: THREE.Vector3,
+  projectedPosition: THREE.Vector3,
+  output: SpatialScreenPoint,
+  surfaceScratch: SurfaceProjectionScratch,
+) {
+  worldPosition.copy(anchor.localPosition);
+  anchor.object.localToWorld(worldPosition);
+  if (anchor.surfaceFacing && anchor.localBounds) {
+    surfaceScratch.worldDirection.copy(worldPosition).sub(camera.position);
+    const targetDistance = surfaceScratch.worldDirection.length();
+    surfaceScratch.worldDirection.normalize();
+    surfaceScratch.raycaster.set(camera.position, surfaceScratch.worldDirection);
+    surfaceScratch.raycaster.near = 0;
+    surfaceScratch.raycaster.far = targetDistance + anchor.localBounds.getSize(surfaceScratch.localHit).length();
+    surfaceScratch.intersections.length = 0;
+    surfaceScratch.raycaster.intersectObject(anchor.object, false, surfaceScratch.intersections);
+    const meshHit = surfaceScratch.intersections[0];
+    if (meshHit) {
+      worldPosition.copy(meshHit.point);
+    } else {
+      surfaceScratch.inverseMatrix.copy(anchor.object.matrixWorld).invert();
+      surfaceScratch.localCamera.copy(camera.position).applyMatrix4(surfaceScratch.inverseMatrix);
+      surfaceScratch.localDirection.copy(anchor.localPosition).sub(surfaceScratch.localCamera).normalize();
+      surfaceScratch.ray.set(surfaceScratch.localCamera, surfaceScratch.localDirection);
+      if (surfaceScratch.ray.intersectBox(anchor.localBounds, surfaceScratch.localHit)) {
+        worldPosition.copy(surfaceScratch.localHit).applyMatrix4(anchor.object.matrixWorld);
+      }
+    }
+  }
+  projectedPosition.copy(worldPosition).project(camera);
+  const matrix = camera.matrixWorld.elements;
+  const cameraX = worldPosition.x - camera.position.x;
+  const cameraY = worldPosition.y - camera.position.y;
+  const cameraZ = worldPosition.z - camera.position.z;
+  const forwardDistance = cameraX * -matrix[8] + cameraY * -matrix[9] + cameraZ * -matrix[10];
+  output.x = (projectedPosition.x * 0.5 + 0.5) * size.width;
+  output.y = (-projectedPosition.y * 0.5 + 0.5) * size.height;
+  output.visible = forwardDistance > 0
+    && projectedPosition.z >= -1
+    && projectedPosition.z <= 1
+    && Math.abs(projectedPosition.x) <= 1.12
+    && Math.abs(projectedPosition.y) <= 1.12;
+}
+
+function getSpatialMomentOpacity(progress: number, range: readonly [number, number]) {
+  const span = Math.max(0.001, range[1] - range[0]);
+  const fade = Math.min(0.026, span * 0.2);
+  const enter = smoothstep(phaseProgress(progress, [range[0], range[0] + fade]));
+  const exit = smoothstep(phaseProgress(progress, [range[1] - fade, range[1]]));
+  return enter * (1 - exit);
 }
 
 function sampleCamera(progress: number, mobile: boolean) {
@@ -159,7 +314,17 @@ function getInteraction(object: THREE.Object3D) {
   return { projectIndex: null, zone: null };
 }
 
-function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: SceneProject[]; onFirstFrame?: () => void; onProjectSelect?: (index: number) => void }) {
+function MandegarModel({
+  projects,
+  onFirstFrame,
+  onProjectSelect,
+  onSpatialFrame,
+}: {
+  projects: SceneProject[];
+  onFirstFrame?: () => void;
+  onProjectSelect?: (index: number) => void;
+  onSpatialFrame?: (frame: SpatialHudFrame) => void;
+}) {
   const gltf = useLoader(GLTFLoader, assetSlots.assembled);
   const { camera, size } = useThree();
   const projectSources = useMemo(() => defaultProjectMedia.map((fallback, index) => projects[index]?.src || fallback), [projects]);
@@ -177,6 +342,24 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
   const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const cameraLifeQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
+  const spatialProjection = useRef({
+    world: Array.from({ length: 4 }, () => new THREE.Vector3()),
+    projected: Array.from({ length: 4 }, () => new THREE.Vector3()),
+    primary: { x: 0, y: 0, visible: false },
+    secondary: { x: 0, y: 0, visible: false },
+    measureStart: { x: 0, y: 0, visible: false },
+    measureEnd: { x: 0, y: 0, visible: false },
+    surface: {
+      inverseMatrix: new THREE.Matrix4(),
+      localCamera: new THREE.Vector3(),
+      localDirection: new THREE.Vector3(),
+      localHit: new THREE.Vector3(),
+      ray: new THREE.Ray(),
+      raycaster: new THREE.Raycaster(),
+      worldDirection: new THREE.Vector3(),
+      intersections: [] as THREE.Intersection[],
+    },
+  });
   const revealBeacon = useRef<THREE.Group>(null);
   const revealBeaconLight = useRef<THREE.PointLight>(null);
   const revealBeaconMaterial = useRef<THREE.MeshBasicMaterial>(null);
@@ -310,6 +493,85 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       }];
     });
     const revealByName = new Map(revealBindings.map((binding) => [binding.name, binding]));
+    const makeSpatialMode = (
+      id: SpatialHudModeId,
+      range: readonly [number, number],
+      primary: ModelAnchor | null,
+      secondary: ModelAnchor | null = null,
+      measureStart: ModelAnchor | null = null,
+      measureEnd: ModelAnchor | null = null,
+    ): SpatialHudMode | null => {
+      if (!primary) return null;
+      const hasMeasurement = Boolean(measureStart && measureEnd);
+      const measureMeters = measureStart && measureEnd
+        ? measureStart.object.localToWorld(measureStart.localPosition.clone()).distanceTo(
+          measureEnd.object.localToWorld(measureEnd.localPosition.clone()),
+        )
+        : 0;
+      return {
+        id,
+        range,
+        primary,
+        secondary,
+        measureStart: hasMeasurement ? measureStart : null,
+        measureEnd: hasMeasurement ? measureEnd : null,
+        measureMeters,
+      };
+    };
+    const surfaceAnchor = (name: string, position: readonly [number, number, number]) => createModelAnchor(scene, name, position, true);
+    const fixedAnchor = (name: string, position: readonly [number, number, number]) => createModelAnchor(scene, name, position);
+    const spatialModes = [
+      makeSpatialMode(
+        "assembly",
+        sceneTokens.spatialLabels.moments.assembly,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.core, [0.72, 0.56, 0.5]),
+        null,
+        fixedAnchor(sceneTokens.spatialLabels.nodes.core, [1.07, 0, 1.02]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.core, [1.07, 1, 1.02]),
+      ),
+      makeSpatialMode(
+        "activationLeft",
+        sceneTokens.spatialLabels.moments.activationLeft,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.leftShell, [0.58, 0.58, 0.5]),
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.leftTouch, [0.5, 0.55, 0.5]),
+      ),
+      makeSpatialMode(
+        "activationRight",
+        sceneTokens.spatialLabels.moments.activationRight,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.rightShell, [0.42, 0.58, 0.5]),
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.rightTouch, [0.5, 0.55, 0.5]),
+      ),
+      makeSpatialMode(
+        "reveal",
+        sceneTokens.spatialLabels.moments.reveal,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.canopy, [0.78, 0.5, 0.5]),
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.core, [0.7, 0.62, 0.5]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.canopy, [0, 0.5, 0.5]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.canopy, [1, 0.5, 0.5]),
+      ),
+      makeSpatialMode(
+        "experiences",
+        sceneTokens.spatialLabels.moments.experiences,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.leftZone, [0.5, 0.68, 0.5]),
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.rightZone, [0.5, 0.68, 0.5]),
+      ),
+      makeSpatialMode(
+        "proof",
+        sceneTokens.spatialLabels.moments.proof,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.media, [0.82, 0.68, 0.5]),
+        null,
+        fixedAnchor(sceneTokens.spatialLabels.nodes.media, [0, 1.14, 1.02]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.media, [1, 1.14, 1.02]),
+      ),
+      makeSpatialMode(
+        "intelligence",
+        sceneTokens.spatialLabels.moments.intelligence,
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.leftZone, [0.5, 0.62, 0.5]),
+        surfaceAnchor(sceneTokens.spatialLabels.nodes.core, [0.72, 0.54, 0.5]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.leftZone, [0.5, 0.78, 1.02]),
+        fixedAnchor(sceneTokens.spatialLabels.nodes.core, [0.5, 0.78, 1.02]),
+      ),
+    ].filter((mode): mode is SpatialHudMode => mode !== null);
     return {
       scene,
       wireScene,
@@ -323,6 +585,7 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       authoredCameraClip,
       authoredCameraMixer,
       authoredCameraAction,
+      spatialModes,
     };
   }, [gltf.animations, gltf.scene, textures]);
 
@@ -356,6 +619,12 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       });
     }
   }, [gltf.animations, runtime]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" && runtime.spatialModes.length < 7) {
+      console.warn("Some Mandegar spatial-label moments are unavailable; check the configured model nodes", sceneTokens.spatialLabels.nodes);
+    }
+  }, [runtime.spatialModes.length]);
 
   useFrame(({ clock }, delta) => {
     if (!firstFrame.current) {
@@ -540,6 +809,46 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
         material.emissiveIntensity = media * 0.22;
       }
     });
+
+    if (onSpatialFrame) {
+      const mode = runtime.spatialModes.find((candidate) => progress >= candidate.range[0] && progress < candidate.range[1]) ?? null;
+      const opacity = mode ? getSpatialMomentOpacity(progress, mode.range) * (1 - reset) : 0;
+      const projection = spatialProjection.current;
+      if (mode && opacity > 0.001) {
+        runtime.scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        projectModelAnchor(mode.primary, camera, size, projection.world[0], projection.projected[0], projection.primary, projection.surface);
+        if (mode.secondary) {
+          projectModelAnchor(mode.secondary, camera, size, projection.world[1], projection.projected[1], projection.secondary, projection.surface);
+        } else {
+          projection.secondary.visible = false;
+        }
+        if (mode.measureStart && mode.measureEnd) {
+          projectModelAnchor(mode.measureStart, camera, size, projection.world[2], projection.projected[2], projection.measureStart, projection.surface);
+          projectModelAnchor(mode.measureEnd, camera, size, projection.world[3], projection.projected[3], projection.measureEnd, projection.surface);
+        } else {
+          projection.measureStart.visible = false;
+          projection.measureEnd.visible = false;
+        }
+      } else {
+        projection.primary.visible = false;
+        projection.secondary.visible = false;
+        projection.measureStart.visible = false;
+        projection.measureEnd.visible = false;
+      }
+      onSpatialFrame({
+        mode: mode?.id ?? null,
+        opacity,
+        compact: mobile,
+        width: size.width,
+        height: size.height,
+        primary: projection.primary,
+        secondary: projection.secondary,
+        measureStart: projection.measureStart,
+        measureEnd: projection.measureEnd,
+        measureMeters: mode?.measureMeters ?? 0,
+      });
+    }
   });
 
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
@@ -1155,7 +1464,19 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
   return null;
 }
 
-function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: { quality: SceneQuality; projects: SceneProject[]; onFirstFrame?: () => void; onProjectSelect?: (index: number) => void }) {
+function ExhibitionWorld({
+  quality,
+  projects,
+  onFirstFrame,
+  onProjectSelect,
+  onSpatialFrame,
+}: {
+  quality: SceneQuality;
+  projects: SceneProject[];
+  onFirstFrame?: () => void;
+  onProjectSelect?: (index: number) => void;
+  onSpatialFrame?: (frame: SpatialHudFrame) => void;
+}) {
   const { scene } = useThree();
   const trailMaterials = useRef<Array<THREE.LineBasicMaterial | null>>([]);
   const trailObjects = useRef<Array<THREE.LineSegments | null>>([]);
@@ -1213,7 +1534,12 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
       <pointLight ref={interactionLight} position={[0, 3.7, 4.5]} intensity={0.18} distance={8} color={sceneTokens.colors.cyan} />
 
       <Suspense fallback={null}>
-        <MandegarModel projects={projects} onFirstFrame={onFirstFrame} onProjectSelect={onProjectSelect} />
+        <MandegarModel
+          projects={projects}
+          onFirstFrame={onFirstFrame}
+          onProjectSelect={onProjectSelect}
+          onSpatialFrame={onSpatialFrame}
+        />
         <SignalField quality={quality} />
       </Suspense>
       {trails.map((geometry, index) => (
@@ -1239,9 +1565,145 @@ function CanvasFallback({ className }: { className?: string }) {
   return <div className={className} data-webgl="fallback" aria-hidden="true" />;
 }
 
-export function ExperienceCanvas({ className, enabledByCms = true, projects = [], onProjectSelect, onRuntimeReady, onFirstFrame }: ExperienceCanvasProps) {
+export function ExperienceCanvas({ className, enabledByCms = true, projects = [], zoneLabels, onProjectSelect, onRuntimeReady, onFirstFrame }: ExperienceCanvasProps) {
   const [runtime, setRuntime] = useState<RuntimeState>("pending");
   const [pageVisible, setPageVisible] = useState(true);
+  const spatialRoot = useRef<HTMLDivElement>(null);
+  const primaryLeader = useRef<SVGPathElement>(null);
+  const secondaryLeader = useRef<SVGPathElement>(null);
+  const measurementGroup = useRef<SVGGElement>(null);
+  const measurementLine = useRef<SVGPathElement>(null);
+  const primaryLabel = useRef<HTMLDivElement>(null);
+  const secondaryLabel = useRef<HTMLDivElement>(null);
+  const primaryCode = useRef<HTMLSpanElement>(null);
+  const primaryValue = useRef<HTMLElement>(null);
+  const secondaryCode = useRef<HTMLSpanElement>(null);
+  const secondaryValue = useRef<HTMLElement>(null);
+  const measurementLabel = useRef<HTMLDivElement>(null);
+  const projectLabel = projects[0]?.label || "PRIMARY DISPLAY";
+  const spatialHudCopy = useMemo<Record<SpatialHudModeId, SpatialHudModeCopy>>(() => ({
+    assembly: {
+      primaryCode: "FORM / 01",
+      primaryValue: "CORE ASSEMBLY",
+      measurementPrefix: "H",
+    },
+    activationLeft: {
+      primaryCode: "SIGNAL / L",
+      primaryValue: "EXPERIENCE POD",
+      secondaryCode: "TOUCH / L",
+      secondaryValue: "INTERACTION SURFACE",
+    },
+    activationRight: {
+      primaryCode: "SIGNAL / R",
+      primaryValue: "EXPERIENCE POD",
+      secondaryCode: "TOUCH / R",
+      secondaryValue: "INTERACTION SURFACE",
+    },
+    reveal: {
+      primaryCode: "LIGHT / 01",
+      primaryValue: "CANOPY SIGNAL",
+      secondaryCode: "CORE / ACTIVE",
+      secondaryValue: "REVEAL COMPLETE",
+      measurementPrefix: "DIA",
+    },
+    experiences: {
+      primaryCode: "ZONE / L",
+      primaryValue: zoneLabels?.photo || "PHOTO EXPERIENCE",
+      secondaryCode: "ZONE / R",
+      secondaryValue: zoneLabels?.game || "GAME EXPERIENCE",
+    },
+    proof: {
+      primaryCode: "MEDIA / 21:9",
+      primaryValue: projectLabel,
+      measurementPrefix: "W",
+    },
+    intelligence: {
+      primaryCode: "FLOW / INPUT",
+      primaryValue: "HUMAN SIGNAL",
+      secondaryCode: "CORE / OUTPUT",
+      secondaryValue: "SOFT INSIGHT",
+      measurementPrefix: "DELTA",
+    },
+  }), [projectLabel, zoneLabels?.game, zoneLabels?.photo]);
+
+  const renderSpatialHud = useCallback((frame: SpatialHudFrame) => {
+    const root = spatialRoot.current;
+    if (!root) return;
+    const copy = frame.mode ? spatialHudCopy[frame.mode] : null;
+    const active = Boolean(copy) && frame.opacity > 0.002 && (frame.primary.visible || frame.secondary.visible);
+    root.style.opacity = frame.opacity.toFixed(4);
+    root.style.visibility = active ? "visible" : "hidden";
+    root.dataset.compact = frame.compact ? "true" : "false";
+    root.dataset.mode = frame.mode ?? "none";
+    if (!active || !copy) return;
+
+    if (primaryCode.current?.textContent !== copy.primaryCode) primaryCode.current!.textContent = copy.primaryCode;
+    if (primaryValue.current?.textContent !== copy.primaryValue) primaryValue.current!.textContent = copy.primaryValue;
+    if (secondaryCode.current && secondaryCode.current.textContent !== (copy.secondaryCode ?? "")) secondaryCode.current.textContent = copy.secondaryCode ?? "";
+    if (secondaryValue.current && secondaryValue.current.textContent !== (copy.secondaryValue ?? "")) secondaryValue.current.textContent = copy.secondaryValue ?? "";
+
+    const safeArea = frame.compact ? sceneTokens.spatialLabels.safeArea.compact : sceneTokens.spatialLabels.safeArea.desktop;
+    const labelHalfWidth = frame.compact ? 60 : 84;
+    const horizontalOffset = frame.compact ? 82 : 128;
+    const coreSide = frame.primary.x <= frame.width * 0.52 ? -1 : 1;
+    const mediaSide = -coreSide;
+    const inlineSafety = Math.min(safeArea.inline, Math.max(12, (frame.width - labelHalfWidth * 2) / 3));
+    const safeTop = Math.min(safeArea.top, frame.height * 0.35);
+    const safeBottom = Math.min(safeArea.bottom, frame.height * 0.35);
+    const clampX = (value: number) => THREE.MathUtils.clamp(value, inlineSafety + labelHalfWidth, frame.width - inlineSafety - labelHalfWidth);
+    const clampY = (value: number) => THREE.MathUtils.clamp(value, safeTop, frame.height - safeBottom);
+    const placeAnnotation = (
+      point: SpatialScreenPoint,
+      side: number,
+      verticalOffset: number,
+      label: HTMLDivElement | null,
+      leader: SVGPathElement | null,
+    ) => {
+      if (!label || !leader) return;
+      const visible = point.visible;
+      label.dataset.side = side < 0 ? "left" : "right";
+      label.style.opacity = visible ? "1" : "0";
+      label.style.visibility = visible ? "visible" : "hidden";
+      leader.style.opacity = visible ? "1" : "0";
+      if (!visible) return;
+      const labelX = clampX(point.x + side * horizontalOffset);
+      const labelY = clampY(point.y + verticalOffset);
+      const edgeX = labelX - side * labelHalfWidth;
+      const elbowX = point.x + side * Math.min(34, Math.abs(edgeX - point.x) * 0.42);
+      const elbowY = THREE.MathUtils.lerp(point.y, labelY, 0.48);
+      label.style.transform = `translate3d(${labelX.toFixed(2)}px, ${labelY.toFixed(2)}px, 0) translate(-50%, -50%)`;
+      leader.setAttribute(
+        "d",
+        `M ${point.x.toFixed(2)} ${point.y.toFixed(2)} L ${elbowX.toFixed(2)} ${elbowY.toFixed(2)} L ${edgeX.toFixed(2)} ${labelY.toFixed(2)} M ${(point.x - 3).toFixed(2)} ${point.y.toFixed(2)} L ${point.x.toFixed(2)} ${(point.y - 3).toFixed(2)} L ${(point.x + 3).toFixed(2)} ${point.y.toFixed(2)} L ${point.x.toFixed(2)} ${(point.y + 3).toFixed(2)} Z`,
+      );
+    };
+
+    placeAnnotation(frame.primary, coreSide, frame.compact ? -46 : -62, primaryLabel.current, primaryLeader.current);
+    placeAnnotation(frame.secondary, mediaSide, frame.compact ? 38 : 52, secondaryLabel.current, secondaryLeader.current);
+
+    const showMeasurement = frame.measureStart.visible && frame.measureEnd.visible && frame.measureMeters > 0;
+    if (measurementGroup.current) measurementGroup.current.style.opacity = showMeasurement ? "1" : "0";
+    if (measurementLabel.current) {
+      measurementLabel.current.style.opacity = showMeasurement ? "1" : "0";
+      measurementLabel.current.style.visibility = showMeasurement ? "visible" : "hidden";
+    }
+    if (!showMeasurement || !measurementLine.current || !measurementLabel.current) return;
+    const dx = frame.measureEnd.x - frame.measureStart.x;
+    const dy = frame.measureEnd.y - frame.measureStart.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const normalX = -dy / length;
+    const normalY = dx / length;
+    const tick = frame.compact ? 4 : 5;
+    measurementLine.current.setAttribute(
+      "d",
+      `M ${frame.measureStart.x.toFixed(2)} ${frame.measureStart.y.toFixed(2)} L ${frame.measureEnd.x.toFixed(2)} ${frame.measureEnd.y.toFixed(2)} M ${(frame.measureStart.x - normalX * tick).toFixed(2)} ${(frame.measureStart.y - normalY * tick).toFixed(2)} L ${(frame.measureStart.x + normalX * tick).toFixed(2)} ${(frame.measureStart.y + normalY * tick).toFixed(2)} M ${(frame.measureEnd.x - normalX * tick).toFixed(2)} ${(frame.measureEnd.y - normalY * tick).toFixed(2)} L ${(frame.measureEnd.x + normalX * tick).toFixed(2)} ${(frame.measureEnd.y + normalY * tick).toFixed(2)}`,
+    );
+    const measurementX = clampX((frame.measureStart.x + frame.measureEnd.x) * 0.5 + normalX * 14);
+    const measurementY = clampY((frame.measureStart.y + frame.measureEnd.y) * 0.5 + normalY * 14);
+    const measurementText = `${copy.measurementPrefix ? `${copy.measurementPrefix} / ` : ""}${frame.measureMeters.toFixed(2)} M`;
+    if (measurementLabel.current.textContent !== measurementText) measurementLabel.current.textContent = measurementText;
+    measurementLabel.current.style.transform = `translate3d(${measurementX.toFixed(2)}px, ${measurementY.toFixed(2)}px, 0) translate(-50%, -50%)`;
+  }, [spatialHudCopy]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -1290,30 +1752,67 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback className={className} />;
   const profile = qualityProfiles[runtime];
   return (
-    <CanvasErrorBoundary fallback={<CanvasFallback className={className} />}>
-      <Canvas
-        className={className}
-        data-experience-canvas="true"
-        data-particle-system="signal-network"
-        data-interaction-system="pointer-touch"
-        data-color-mode="aces"
-        data-postprocessing={runtime === "full" ? "bloom-dof" : "performance"}
+    <>
+      <CanvasErrorBoundary fallback={<CanvasFallback className={className} />}>
+        <Canvas
+          className={className}
+          data-experience-canvas="true"
+          data-particle-system="signal-network"
+          data-interaction-system="pointer-touch"
+          data-color-mode="aces"
+          data-postprocessing={runtime === "full" ? "bloom-dof" : "performance"}
+          aria-hidden="true"
+          dpr={[profile.dpr[0], profile.dpr[1]]}
+          frameloop={pageVisible ? "always" : "never"}
+          camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
+          shadows={runtime === "full"}
+          gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}
+          onPointerDown={() => { experienceState.pointerPulse = 1; }}
+          onCreated={({ gl }) => {
+            gl.toneMapping = THREE.ACESFilmicToneMapping;
+            gl.toneMappingExposure = sceneTokens.environment.exposure;
+            gl.outputColorSpace = THREE.SRGBColorSpace;
+          }}
+        >
+          <ExhibitionWorld
+            quality={runtime}
+            projects={projects}
+            onFirstFrame={onFirstFrame}
+            onProjectSelect={onProjectSelect}
+            onSpatialFrame={renderSpatialHud}
+          />
+          <PostProcessing quality={runtime} />
+        </Canvas>
+      </CanvasErrorBoundary>
+      <div
+        ref={spatialRoot}
+        className={spatialStyles.root}
+        data-spatial-labels="model-anchored"
+        data-compact="false"
+        dir="ltr"
+        style={{
+          "--hud-accent": sceneTokens.spatialLabels.accent,
+          "--hud-ink": sceneTokens.spatialLabels.ink,
+        } as CSSProperties}
         aria-hidden="true"
-        dpr={[profile.dpr[0], profile.dpr[1]]}
-        frameloop={pageVisible ? "always" : "never"}
-        camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
-        shadows={runtime === "full"}
-        gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}
-        onPointerDown={() => { experienceState.pointerPulse = 1; }}
-        onCreated={({ gl }) => {
-          gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = sceneTokens.environment.exposure;
-          gl.outputColorSpace = THREE.SRGBColorSpace;
-        }}
       >
-        <ExhibitionWorld quality={runtime} projects={projects} onFirstFrame={onFirstFrame} onProjectSelect={onProjectSelect} />
-        <PostProcessing quality={runtime} />
-      </Canvas>
-    </CanvasErrorBoundary>
+        <svg className={spatialStyles.graphics} aria-hidden="true">
+          <path ref={primaryLeader} className={spatialStyles.leader} />
+          <path ref={secondaryLeader} className={`${spatialStyles.leader} ${spatialStyles.secondaryGraphic}`} />
+          <g ref={measurementGroup} className={spatialStyles.measurementGroup}>
+            <path ref={measurementLine} className={spatialStyles.dimension} />
+          </g>
+        </svg>
+        <div ref={primaryLabel} className={spatialStyles.label} data-side="left">
+          <span ref={primaryCode}>FORM / 01</span>
+          <strong ref={primaryValue} dir="auto">CORE ASSEMBLY</strong>
+        </div>
+        <div ref={secondaryLabel} className={`${spatialStyles.label} ${spatialStyles.secondaryLabel}`} data-side="right">
+          <span ref={secondaryCode} />
+          <strong ref={secondaryValue} dir="auto" />
+        </div>
+        <div ref={measurementLabel} className={spatialStyles.measurementLabel}>0.00 M</div>
+      </div>
+    </>
   );
 }

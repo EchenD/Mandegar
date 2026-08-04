@@ -199,6 +199,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             className={styles.canvas}
             enabledByCms={enabledByCms}
             projects={projects.slice(0, 3).map((project) => ({ src: project.mediaSrc, label: project.title }))}
+            zoneLabels={{ photo: copy.zones.photo, game: copy.zones.game }}
             onProjectSelect={selectProject}
             onRuntimeReady={handleRuntimeReady}
             onFirstFrame={handleFirstFrame}

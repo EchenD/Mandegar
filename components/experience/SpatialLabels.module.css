@@ -1,0 +1,122 @@
+.root {
+  --hud-accent: #75d8ff;
+  --hud-ink: #16191d;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  direction: ltr;
+  contain: layout paint style;
+  will-change: opacity;
+}
+
+.graphics {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.leader,
+.dimension {
+  fill: none;
+  stroke: var(--hud-accent);
+  vector-effect: non-scaling-stroke;
+}
+
+.leader {
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .76;
+}
+
+.dimension {
+  stroke-width: 1;
+  opacity: .68;
+}
+
+.label,
+.measurementLabel {
+  position: absolute;
+  z-index: 1;
+  color: var(--hud-ink);
+  font-variant-numeric: tabular-nums;
+  transform: translate3d(-50%, -50%, 0);
+  will-change: transform;
+}
+
+.label {
+  box-sizing: border-box;
+  width: 10.5rem;
+  border: 0;
+}
+
+.label[data-side="left"] {
+  padding-right: .65rem;
+  border-right: 1px solid var(--hud-accent);
+  text-align: right;
+}
+
+.label[data-side="right"] {
+  padding-left: .65rem;
+  border-left: 1px solid var(--hud-accent);
+  text-align: left;
+}
+
+.label span,
+.label strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label span {
+  color: color-mix(in srgb, var(--hud-ink) 58%, transparent);
+  font-size: .49rem;
+  font-weight: 720;
+  letter-spacing: .14em;
+  line-height: 1.4;
+}
+
+.label strong {
+  margin-block-start: .16rem;
+  font-size: .68rem;
+  font-weight: 620;
+  letter-spacing: .035em;
+  line-height: 1.35;
+  unicode-bidi: plaintext;
+}
+
+.measurementLabel {
+  padding: .15rem .36rem;
+  color: color-mix(in srgb, var(--hud-ink) 68%, transparent);
+  background: color-mix(in srgb, var(--hud-accent) 6%, transparent);
+  font-size: .48rem;
+  font-weight: 720;
+  letter-spacing: .12em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.root[data-compact="true"] .secondaryLabel,
+.root[data-compact="true"] .secondaryGraphic,
+.root[data-compact="true"] .measurementGroup,
+.root[data-compact="true"] .measurementLabel {
+  display: none;
+}
+
+.root[data-compact="true"] .label {
+  width: 7.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root { display: none; }
+}

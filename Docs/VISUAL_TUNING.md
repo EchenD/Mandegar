@@ -8,6 +8,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | --- | --- |
 | Global site palette, typography, common component sizing | `styles/globals.css` |
 | Homepage DOM text, loader, controls, blur and responsive sizes | `components/experience/MandegarExperience.module.css` |
+| Model-anchored HUD label typography, lines and compact layout | `components/experience/SpatialLabels.module.css` |
 | 3D palette, environment, particles, phase timing, camera path and quality limits | `components/experience/scene-config.ts` |
 | Renderer, shaders, model materials and animated light behavior | `components/experience/ExperienceCanvas.tsx` |
 | Scroll feel and copy reveal motion | `components/experience/ScrollMotion.tsx` |
@@ -35,6 +36,8 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
 | Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Local position/rotation amplitudes, three low frequencies and mobile scale |
 | Pointer camera response | `scene-config.ts` → `cameraMotion.pointer` | Local position/rotation range plus frame-rate-independent spring stiffness and damping |
+| Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
+| Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `MandegarExperience.module.css` → `.root` | Smaller than `1450svh`/`1300svh` makes the story advance faster; larger makes it slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
 | Phase timing | `scene-config.ts` → `scenePhases` | Start/end/preview point for each narrative phase |
