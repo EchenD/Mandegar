@@ -25,7 +25,7 @@ All architectural homepage geometry is authored in 3ds Max and delivered as GLB 
 - Keep curves visually smooth at the closest approved camera while supplying lower-detail modules for mobile.
 - Preserve physically plausible thickness; do not model single-plane architectural shells visible from both sides.
 - Asset-owned animation clips use `idle_*`, `activate_*`, or `loop_*`. The code camera remains the fallback until an approved authored master camera is delivered.
-- An optional authored camera handoff uses a camera named `camera_mandegar_master` and one clip named `camera_master_loop`. Its first and final transforms must match exactly, and its timing must follow the nine scene checkpoints in `components/experience/scene-config.ts`.
+- An optional authored camera handoff uses a camera named `camera_mandegar_master` and one clip named `camera_master_loop`. Its first and final transforms must match exactly, and its timing must follow the nine scene checkpoints in `components/experience/scene-config.ts`. Runtime scrubs this clip from normalized scroll progress in both directions; the procedural keyframes remain the default mobile and missing-camera fallback.
 - Export GLB with embedded buffers, normals, tangents only when needed, UV0, vertex colors only when used, and no unapproved lights. Export the named master camera only when it is part of the reviewed camera handoff.
 - Starting budgets: hall 2.0 MB, hero zone 2.5 MB, each booth 500 KB, halo 350 KB, and audience module 600 KB after compression.
 - Run glTF Transform prune, deduplicate, inspect, and tested Meshopt/Draco compression. Record triangles, draw calls, texture memory, and final size for every module.

@@ -19,6 +19,8 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Global colors | `globals.css` → `:root` | `--bg`, `--paper`, `--ink`, `--muted`, `--accent`, lines and radii |
 | Homepage UI colors | `MandegarExperience.module.css` | Search `#` or `rgba(`; `#225cff` is the main UI blue, `#16191d` the main ink |
 | 3D color palette | `scene-config.ts` → `sceneTokens.colors` | Fog, silver, charcoal, cobalt, cyan, magenta and amber |
+| Particles | `scene-config.ts` → `sceneTokens.particles` | Count, idle color, four-color palette, HDR luminance, opacity and core/glow size |
+| Particle motion and formations | `ExperienceCanvas.tsx` → `makeSignalField` / `SignalField` | Spatial distribution, pointer response, breathing and transitions into network/ring formations |
 | Canvas background | `ExperienceCanvas.tsx` → `quietBackground` / `activeBackground` | Start and energized background colors; `lerp(..., reveal * 0.72)` controls the blend amount |
 | Fog | `ExperienceCanvas.tsx` → `<fog` | First value is color, then near and far distance (`13`, `40`) |
 | ACES exposure | `ExperienceCanvas.tsx` → `toneMappingExposure` | Higher is brighter; current value is `1.04` |
@@ -28,7 +30,8 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Lights | `ExperienceCanvas.tsx` → `<ambientLight`, `<hemisphereLight`, `<directionalLight`, `<pointLight` | Color, intensity, position and distance. Animated maximums are immediately above these elements |
 | Material finish | `ExperienceCanvas.tsx` → `envMapIntensity`, `roughness`, `metalness` | Lower roughness is glossier; higher metalness is more metallic |
 | Wireframe/reveal | `ExperienceCanvas.tsx` → `revealBindings` / `beaconVisibility` | Per-object bottom-to-top reveal, lift distance, wire opacity and reveal-light visibility |
-| 3D camera | `scene-config.ts` → `cameraKeyframes` | Progress, desktop/mobile position, target, roll and FOV |
+| Authored 3D camera | `scene-config.ts` → `sceneTokens.authoredCamera` | Enable/disable the GLB camera, mobile use, node/clip names and depth-of-field focus target |
+| Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
 | Pointer movement | `scene-config.ts` → `pointerParallax` | Desktop camera response; mobile is intentionally zero |
 | Total scroll speed | `MandegarExperience.module.css` → `.root` | Smaller than `1450svh`/`1300svh` makes the story advance faster; larger makes it slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |

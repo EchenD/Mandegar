@@ -160,9 +160,17 @@ function getInteraction(object: THREE.Object3D) {
 
 function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: SceneProject[]; onFirstFrame?: () => void; onProjectSelect?: (index: number) => void }) {
   const gltf = useLoader(GLTFLoader, assetSlots.assembled);
+  const { camera, size } = useThree();
   const projectSources = useMemo(() => defaultProjectMedia.map((fallback, index) => projects[index]?.src || fallback), [projects]);
   const textures = useLoader(THREE.TextureLoader, projectSources);
   const firstFrame = useRef(false);
+  const cameraPointer = useRef(new THREE.Vector2());
+  const cameraPointerInput = useRef(new THREE.Vector2());
+  const cameraTarget = useRef(new THREE.Vector3());
+  const authoredPosition = useRef(new THREE.Vector3());
+  const authoredQuaternion = useRef(new THREE.Quaternion());
+  const authoredRight = useRef(new THREE.Vector3());
+  const authoredUp = useRef(new THREE.Vector3());
   const revealBeacon = useRef<THREE.Group>(null);
   const revealBeaconLight = useRef<THREE.PointLight>(null);
   const revealBeaconMaterial = useRef<THREE.MeshBasicMaterial>(null);
@@ -188,6 +196,18 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
   const runtime = useMemo(() => {
     const scene = gltf.scene.clone(true);
     const wireScene = gltf.scene.clone(true);
+    const authoredCameraRoot = gltf.scene.clone(true);
+    const authoredCameraObject = authoredCameraRoot.getObjectByName(sceneTokens.authoredCamera.node);
+    const authoredCamera = authoredCameraObject?.type === "PerspectiveCamera"
+      ? authoredCameraObject as THREE.PerspectiveCamera
+      : null;
+    const authoredCameraClip = THREE.AnimationClip.findByName(gltf.animations, sceneTokens.authoredCamera.clip) ?? null;
+    const authoredCameraMixer = authoredCamera && authoredCameraClip
+      ? new THREE.AnimationMixer(authoredCameraRoot)
+      : null;
+    const authoredCameraAction = authoredCameraMixer && authoredCameraClip
+      ? authoredCameraMixer.clipAction(authoredCameraClip)
+      : null;
     const ownedMaterials: THREE.Material[] = [];
     const sceneMeshes: THREE.Mesh[] = [];
     const wireMeshes = new Map<string, THREE.Mesh>();
@@ -286,10 +306,52 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       }];
     });
     const revealByName = new Map(revealBindings.map((binding) => [binding.name, binding]));
-    return { scene, wireScene, ownedMaterials, screens, standardMaterials, revealBindings, revealByName };
-  }, [gltf.scene, textures]);
+    return {
+      scene,
+      wireScene,
+      ownedMaterials,
+      screens,
+      standardMaterials,
+      revealBindings,
+      revealByName,
+      authoredCameraRoot,
+      authoredCamera,
+      authoredCameraClip,
+      authoredCameraMixer,
+      authoredCameraAction,
+    };
+  }, [gltf.animations, gltf.scene, textures]);
 
-  useEffect(() => () => runtime.ownedMaterials.forEach((material) => material.dispose()), [runtime]);
+  useEffect(() => {
+    const action = runtime.authoredCameraAction;
+    const mixer = runtime.authoredCameraMixer;
+    if (action && mixer) {
+      action.reset();
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      action.play();
+      mixer.setTime(0);
+      runtime.authoredCameraRoot.updateMatrixWorld(true);
+    }
+    return () => {
+      action?.stop();
+      mixer?.stopAllAction();
+      runtime.ownedMaterials.forEach((material) => material.dispose());
+    };
+  }, [runtime]);
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "production"
+      && sceneTokens.authoredCamera.enabled
+      && (!runtime.authoredCamera || !runtime.authoredCameraClip || !runtime.authoredCameraMixer)
+    ) {
+      console.warn("Mandegar authored camera unavailable; using procedural fallback", {
+        cameraFound: Boolean(runtime.authoredCamera),
+        clipFound: Boolean(runtime.authoredCameraClip),
+        clipNames: gltf.animations.map((clip) => clip.name),
+      });
+    }
+  }, [gltf.animations, runtime]);
 
   useFrame(({ clock }) => {
     if (!firstFrame.current) {
@@ -297,6 +359,54 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       onFirstFrame?.();
     }
     const progress = experienceState.progress;
+    const mobile = size.width <= 760 || size.height > size.width * 1.35;
+    const cameraSample = sampleCamera(progress, mobile);
+    cameraPointerInput.current.set(experienceState.pointerX, experienceState.pointerY);
+    cameraPointer.current.lerp(cameraPointerInput.current, 0.045);
+    const parallax = mobile ? sceneTokens.pointerParallax.mobile : sceneTokens.pointerParallax.desktop;
+    const authoredCamera = runtime.authoredCamera;
+    const authoredCameraClip = runtime.authoredCameraClip;
+    const authoredCameraMixer = runtime.authoredCameraMixer;
+    if (
+      sceneTokens.authoredCamera.enabled
+      && (!mobile || sceneTokens.authoredCamera.enabledOnMobile)
+      && authoredCamera
+      && authoredCameraClip
+      && authoredCameraMixer
+    ) {
+      authoredCameraMixer.setTime(progress * authoredCameraClip.duration);
+      runtime.authoredCameraRoot.updateMatrixWorld(true);
+      authoredCamera.getWorldPosition(authoredPosition.current);
+      authoredCamera.getWorldQuaternion(authoredQuaternion.current);
+      camera.position.copy(authoredPosition.current);
+      camera.quaternion.copy(authoredQuaternion.current);
+      authoredRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+      authoredUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(authoredRight.current, cameraPointer.current.x * parallax);
+      camera.position.addScaledVector(authoredUp.current, -cameraPointer.current.y * parallax * 0.45);
+      cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
+      experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
+      const perspectiveCamera = camera as THREE.PerspectiveCamera;
+      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - authoredCamera.fov) > 0.01) {
+        perspectiveCamera.fov = authoredCamera.fov;
+        perspectiveCamera.updateProjectionMatrix();
+      }
+    } else {
+      camera.position.copy(cameraSample.position);
+      camera.position.x += cameraPointer.current.x * parallax;
+      camera.position.y -= cameraPointer.current.y * parallax * 0.45;
+      cameraTarget.current.copy(cameraSample.target);
+      cameraTarget.current.x += cameraPointer.current.x * parallax * 0.2;
+      experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
+      camera.lookAt(cameraTarget.current);
+      camera.rotateZ(cameraSample.roll);
+      const perspectiveCamera = camera as THREE.PerspectiveCamera;
+      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - cameraSample.fov) > 0.01) {
+        perspectiveCamera.fov = cameraSample.fov;
+        perspectiveCamera.updateProjectionMatrix();
+      }
+    }
+
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
     const scrolledAssembly = smoothstep(phaseProgress(progress, activationSequence.objectAssembly));
@@ -477,13 +587,10 @@ function makeSignalField(count: number): SignalFieldData {
   const network = new Float32Array(count * 3);
   const ring = new Float32Array(count * 3);
   const energyColors = new Float32Array(count * 3);
-  const quiet = new THREE.Color("#aebbc8");
-  const palette = [
-    new THREE.Color(sceneTokens.colors.cobalt),
-    new THREE.Color(sceneTokens.colors.cyan),
-    new THREE.Color(sceneTokens.colors.magenta),
-    new THREE.Color(sceneTokens.colors.amber),
-  ];
+  const quiet = new THREE.Color(sceneTokens.particles.quietColor).multiplyScalar(sceneTokens.particles.luminance.quiet);
+  const palette = sceneTokens.particles.palette.map((color) => (
+    new THREE.Color(color).multiplyScalar(sceneTokens.particles.luminance.active)
+  ));
   for (let index = 0; index < count; index += 1) {
     const offset = index * 3;
     const seedA = seededNoise(index * 3.17 + 1.3);
@@ -543,8 +650,11 @@ function SignalField({ quality }: { quality: SceneQuality }) {
   const field = useRef<THREE.Group>(null);
   const material = useRef<THREE.PointsMaterial>(null);
   const glowMaterial = useRef<THREE.PointsMaterial>(null);
-  const data = useMemo(() => makeSignalField(quality === "full" ? 1500 : 650), [quality]);
-  const quietColor = useMemo(() => new THREE.Color("#aebbc8"), []);
+  const data = useMemo(() => makeSignalField(sceneTokens.particles.count[quality]), [quality]);
+  const quietColor = useMemo(() => (
+    new THREE.Color(sceneTokens.particles.quietColor).multiplyScalar(sceneTokens.particles.luminance.quiet)
+  ), []);
+  const particleSize = sceneTokens.particles.size[quality];
 
   useEffect(() => () => data.geometry.dispose(), [data]);
   useFrame(({ clock }, delta) => {
@@ -598,24 +708,33 @@ function SignalField({ quality }: { quality: SceneQuality }) {
       field.current.rotation.y = Math.sin(clock.elapsedTime * 0.16) * 0.022 * (1 - ringAmount);
     }
     const breath = 0.88 + Math.sin(clock.elapsedTime * 1.35) * 0.12;
+    const activity = Math.max(activation, networkAmount, ringAmount);
     if (material.current) {
-      const visibility = 0.24 + activation * 0.48 + networkAmount * 0.18 + ringAmount * 0.08;
+      const visibility = THREE.MathUtils.lerp(
+        sceneTokens.particles.opacity.core.idle,
+        sceneTokens.particles.opacity.core.active,
+        activity,
+      );
       material.current.opacity = visibility * breath;
-      material.current.size = (quality === "full" ? 0.018 : 0.026) + pulse * 0.009;
+      material.current.size = particleSize.core + pulse * 0.009;
     }
     if (glowMaterial.current) {
-      glowMaterial.current.opacity = (0.07 + activation * 0.14 + networkAmount * 0.1 + ringAmount * 0.06) * breath;
-      glowMaterial.current.size = (quality === "full" ? 0.052 : 0.074) + pulse * 0.018;
+      glowMaterial.current.opacity = THREE.MathUtils.lerp(
+        sceneTokens.particles.opacity.glow.idle,
+        sceneTokens.particles.opacity.glow.active,
+        activity,
+      ) * breath;
+      glowMaterial.current.size = particleSize.glow + pulse * 0.018;
     }
   });
 
   return (
     <group ref={field}>
       <points geometry={data.geometry}>
-        <pointsMaterial ref={glowMaterial} color="#ffffff" vertexColors size={quality === "full" ? 0.052 : 0.074} transparent opacity={0.07} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
+        <pointsMaterial ref={glowMaterial} color="#ffffff" vertexColors size={particleSize.glow} toneMapped={false} transparent opacity={sceneTokens.particles.opacity.glow.idle} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
       </points>
       <points geometry={data.geometry}>
-        <pointsMaterial ref={material} color="#ffffff" vertexColors size={quality === "full" ? 0.018 : 0.026} transparent opacity={0.24} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
+        <pointsMaterial ref={material} color="#ffffff" vertexColors size={particleSize.core} toneMapped={false} transparent opacity={sceneTokens.particles.opacity.core.idle} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
       </points>
     </group>
   );
@@ -721,7 +840,7 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
 }
 
 function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: { quality: SceneQuality; projects: SceneProject[]; onFirstFrame?: () => void; onProjectSelect?: (index: number) => void }) {
-  const { camera, scene, size } = useThree();
+  const { scene } = useThree();
   const trailMaterials = useRef<Array<THREE.LineBasicMaterial | null>>([]);
   const trailObjects = useRef<Array<THREE.LineSegments | null>>([]);
   const revealLight = useRef<THREE.PointLight>(null);
@@ -729,7 +848,6 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
   const amberLight = useRef<THREE.PointLight>(null);
   const interactionLight = useRef<THREE.PointLight>(null);
   const pointer = useRef(new THREE.Vector2());
-  const target = useRef(new THREE.Vector3());
   const quietBackground = useMemo(() => new THREE.Color("#e1e4e4"), []);
   const activeBackground = useMemo(() => new THREE.Color("#cfd9e7"), []);
   const background = useMemo(() => new THREE.Color(), []);
@@ -742,23 +860,7 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
 
   useFrame(({ clock }) => {
     const progress = experienceState.progress;
-    const mobile = size.width <= 760 || size.height > size.width * 1.35;
-    const cameraSample = sampleCamera(progress, mobile);
     pointer.current.lerp(new THREE.Vector2(experienceState.pointerX, experienceState.pointerY), 0.045);
-    const parallax = mobile ? 0 : sceneTokens.pointerParallax.desktop;
-    camera.position.copy(cameraSample.position);
-    camera.position.x += pointer.current.x * parallax;
-    camera.position.y -= pointer.current.y * parallax * 0.45;
-    target.current.copy(cameraSample.target);
-    target.current.x += pointer.current.x * parallax * 0.2;
-    experienceState.focusDistance = camera.position.distanceTo(target.current);
-    camera.lookAt(target.current);
-    camera.rotateZ(cameraSample.roll);
-    if (camera instanceof THREE.PerspectiveCamera && Math.abs(camera.fov - cameraSample.fov) > 0.01) {
-      camera.fov = cameraSample.fov;
-      camera.updateProjectionMatrix();
-    }
-
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
     const trailAmount = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);

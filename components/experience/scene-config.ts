@@ -31,6 +31,27 @@ export const sceneTokens = {
     magenta: "#d95cff",
     amber: "#ffb54a",
   },
+  particles: {
+    count: { full: 1500, adaptive: 650 },
+    quietColor: "#aebbc8",
+    palette: ["#789dff", "#75d8ff", "#ef86ff", "#ffc77a"],
+    luminance: { quiet: 1.5, active: 4.8 },
+    opacity: {
+      core: { idle: 0.36, active: 0.82 },
+      glow: { idle: 0.09, active: 0.3 },
+    },
+    size: {
+      full: { core: 0.018, glow: 0.052 },
+      adaptive: { core: 0.026, glow: 0.074 },
+    },
+  },
+  authoredCamera: {
+    enabled: true,
+    enabledOnMobile: true,
+    node: "camera_mandegar_master",
+    clip: "camera_master_loop",
+    focusTarget: [0, 2.4, 0] as const,
+  },
   scrollLengthVh: { desktop: 1450, mobile: 1300 },
   pointerParallax: { desktop: 0.085, mobile: 0 },
   featureFlags: {
@@ -101,17 +122,7 @@ export const qualityProfiles: Record<SceneQuality, {
 };
 
 export const assetSlots = {
-  assembled: "/models/mandegar-v1/mandegar_hero_assembled_v1.glb",
-  hall: "/models/mandegar-v1/mandegar_hall_shell_v1.glb",
-  hero: "/models/mandegar-v1/mandegar_hero_core_v1.glb",
-  halo: "/models/mandegar-v1/mandegar_halo_v1.glb",
-  experiencePods: "/models/mandegar-v1/mandegar_experience_pods_v1.glb",
-  stage: "stage_base",
-  mediaWall: "led_central_media_21x9",
-  photoBooth: "booth_left_shell",
-  gameStation: "booth_right_shell",
-  touchTable: "touch_left_surface",
-  audience: "audience_style_pending_v01.glb",
+  assembled: "/models/mandegar/mandegar_hero.glb?revision=camera-v2",
 } as const;
 
 export function clamp01(value: number) {
