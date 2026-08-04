@@ -11,6 +11,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
 import { activationSequence, assetSlots, cameraKeyframes, phaseProgress, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
 
@@ -259,23 +260,21 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       object.material = material;
       ownedMaterials.push(material);
       if (!(material instanceof THREE.MeshStandardMaterial)) return;
-      material.envMapIntensity = 0.72;
-      material.roughness = 0.42;
-      material.metalness = 0.015;
+      material.envMapIntensity = 0.62;
       if (object.name === "hall_floor") {
-        material.color.set("#d9dfe1");
-        material.roughness = 0.26;
-        material.metalness = 0.12;
+        material.color.set("#bec5c8");
+        material.roughness = 0.34;
+        material.metalness = 0.08;
       } else if (object.name === "hall_circular_inlay") {
-        material.color.set("#89929a");
+        material.color.set("#77828b");
         material.transparent = true;
-        material.opacity = 0.28;
+        material.opacity = 0.32;
       } else if (object.name.includes("portal")) {
-        material.color.set("#e4eaec");
-        material.roughness = 0.28;
+        material.color.set("#d2d8da");
+        material.roughness = 0.34;
       } else if (object.name.startsWith("hero_core_rib_")) {
-        material.color.set(Number(object.name.slice(-3)) % 2 ? "#e1e3e2" : "#f6f5f1");
-        material.roughness = 0.5;
+        material.color.set(Number(object.name.slice(-3)) % 2 ? "#cbd0d1" : "#dededa");
+        material.roughness = Math.max(material.roughness, 0.46);
       }
       standardMaterials.set(object.name, { material, opacity: material.opacity });
     });
@@ -561,81 +560,251 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
 
 type SignalFieldData = {
   geometry: THREE.BufferGeometry;
-  ambient: Float32Array;
-  network: Float32Array;
-  ring: Float32Array;
-  energyColors: Float32Array;
+  focus: THREE.Vector3;
 };
 
-const networkHubs: ReadonlyArray<readonly [number, number, number]> = [
-  [-7.2, 1.2, -1.4],
-  [-4.2, 4.7, -1.8],
-  [-1.5, 2.5, -0.4],
-  [0, 5.6, 0],
-  [2.4, 2, -0.8],
-  [5.2, 4.2, -1.5],
-  [7.5, 1.4, -1.8],
-];
+type SurfaceParticleBinding = {
+  mesh: THREE.Mesh;
+  sampler: MeshSurfaceSampler;
+  bounds: THREE.Box3;
+  normalMatrix: THREE.Matrix3;
+  wake: number;
+  color: THREE.Color;
+  cumulativeWeight: number;
+};
+
+type SignalRoute = {
+  from: THREE.Vector3;
+  control: THREE.Vector3;
+  to: THREE.Vector3;
+};
 
 function seededNoise(value: number) {
   const raw = Math.sin(value * 12.9898 + 78.233) * 43758.5453;
   return raw - Math.floor(raw);
 }
 
-function makeSignalField(count: number): SignalFieldData {
+function getObjectCenter(scene: THREE.Object3D, name: string, target = new THREE.Vector3()) {
+  const object = scene.getObjectByName(name);
+  if (!object) return null;
+  if (object instanceof THREE.Mesh) {
+    const bounds = new THREE.Box3().setFromObject(object);
+    if (!bounds.isEmpty()) return bounds.getCenter(target);
+  }
+  return object.getWorldPosition(target);
+}
+
+function getNamedMesh(scene: THREE.Object3D, name: string) {
+  const object = scene.getObjectByName(name);
+  if (object instanceof THREE.Mesh) return object;
+  let mesh: THREE.Mesh | null = null;
+  object?.traverse((child) => {
+    if (!mesh && child instanceof THREE.Mesh) mesh = child;
+  });
+  return mesh;
+}
+
+function makeSurfaceSampler(mesh: THREE.Mesh, salt: number) {
+  const sampler = new MeshSurfaceSampler(mesh);
+  let sampleIndex = 0;
+  (sampler as unknown as {
+    setRandomGenerator: (generator: () => number) => MeshSurfaceSampler;
+  }).setRandomGenerator(() => seededNoise((sampleIndex += 1) * 9.731 + salt));
+  sampler.build();
+  return sampler;
+}
+
+function getSurfaceParticleBindings(sourceScene: THREE.Object3D) {
+  let cumulativeWeight = 0;
+  return sceneTokens.particles.surfaceNodes.flatMap<SurfaceParticleBinding>((definition, index) => {
+    const mesh = getNamedMesh(sourceScene, definition.name);
+    if (!mesh) return [];
+    cumulativeWeight += definition.weight;
+    return [{
+      mesh,
+      sampler: makeSurfaceSampler(mesh, 7.17 + index * 13.1),
+      bounds: new THREE.Box3().setFromObject(mesh),
+      normalMatrix: new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld),
+      wake: definition.wake,
+      color: new THREE.Color(definition.color).multiplyScalar(sceneTokens.particles.luminance.active),
+      cumulativeWeight,
+    }];
+  });
+}
+
+function getSignalRoutes(sourceScene: THREE.Object3D, knownHaloCenter?: THREE.Vector3) {
+  sourceScene.updateMatrixWorld(true);
+  const sceneBounds = new THREE.Box3().setFromObject(sourceScene);
+  const sceneCenter = sceneBounds.getCenter(new THREE.Vector3());
+  const haloCenter = knownHaloCenter
+    ?? getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.haloMesh)
+    ?? getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.haloAnchor)
+    ?? new THREE.Vector3(0, sceneCenter.y, 0);
+  const getRoutePoint = (name: string) => name === sceneTokens.particles.modelNodes.haloMesh
+    ? haloCenter.clone()
+    : getObjectCenter(sourceScene, name);
+  const routes = sceneTokens.particles.modelNodes.signalRoutes.flatMap<SignalRoute>((names) => {
+    const from = getRoutePoint(names[0]);
+    const to = getRoutePoint(names[1]);
+    if (!from || !to) return [];
+    const control = from.clone().lerp(to, 0.5);
+    const horizontalDistance = Math.hypot(to.x - from.x, to.z - from.z);
+    control.y += Math.min(0.72, 0.16 + horizontalDistance * 0.08);
+    control.z = THREE.MathUtils.lerp(control.z, sceneCenter.z, 0.08);
+    return [{ from, control, to }];
+  });
+  if (routes.length === 0) {
+    const left = new THREE.Vector3(sceneBounds.min.x, sceneCenter.y, sceneCenter.z);
+    const right = new THREE.Vector3(sceneBounds.max.x, sceneCenter.y, sceneCenter.z);
+    routes.push(
+      { from: left, control: left.clone().lerp(haloCenter, 0.5).add(new THREE.Vector3(0, 0.3, 0)), to: haloCenter.clone() },
+      { from: haloCenter.clone(), control: haloCenter.clone().lerp(right, 0.5).add(new THREE.Vector3(0, 0.3, 0)), to: right },
+    );
+  }
+  return routes;
+}
+
+function makeSignalField(count: number, sourceScene: THREE.Object3D): SignalFieldData {
+  sourceScene.updateMatrixWorld(true);
+  const sceneBounds = new THREE.Box3().setFromObject(sourceScene);
+  const sceneCenter = sceneBounds.getCenter(new THREE.Vector3());
+  const sceneSize = sceneBounds.getSize(new THREE.Vector3());
+  const floorObject = sourceScene.getObjectByName(sceneTokens.particles.modelNodes.floor);
+  const floorBounds = floorObject ? new THREE.Box3().setFromObject(floorObject) : sceneBounds;
+  const floorY = floorBounds.isEmpty() ? sceneBounds.min.y : floorBounds.max.y;
+  const haloMeshObject = sourceScene.getObjectByName(sceneTokens.particles.modelNodes.haloMesh);
+  const haloMesh = haloMeshObject instanceof THREE.Mesh ? haloMeshObject : null;
+  const haloCenter = haloMesh
+    ? new THREE.Box3().setFromObject(haloMesh).getCenter(new THREE.Vector3())
+    : getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.haloAnchor) ?? new THREE.Vector3(0, sceneCenter.y, 0);
+  const focus = getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.focusAnchor) ?? sceneCenter.clone();
+  const signalRoutes = getSignalRoutes(sourceScene, haloCenter);
+  const surfaceBindings = getSurfaceParticleBindings(sourceScene);
+  const surfaceWeight = surfaceBindings.at(-1)?.cumulativeWeight ?? 0;
+  const layerWeight = sceneTokens.particles.layers.atmosphere
+    + sceneTokens.particles.layers.surface
+    + sceneTokens.particles.layers.signal;
+  const atmosphereCount = Math.floor(count * sceneTokens.particles.layers.atmosphere / layerWeight);
+  const surfaceCount = Math.floor(count * sceneTokens.particles.layers.surface / layerWeight);
+  const surfaceEnd = Math.min(count, atmosphereCount + surfaceCount);
+
   const ambient = new Float32Array(count * 3);
-  const network = new Float32Array(count * 3);
+  const surfaceTargets = new Float32Array(count * 3);
+  const pathFrom = new Float32Array(count * 3);
+  const pathControl = new Float32Array(count * 3);
+  const pathTo = new Float32Array(count * 3);
   const ring = new Float32Array(count * 3);
   const energyColors = new Float32Array(count * 3);
+  const seeds = new Float32Array(count);
+  const layers = new Float32Array(count);
+  const wakes = new Float32Array(count);
+  const pointScales = new Float32Array(count);
   const quiet = new THREE.Color(sceneTokens.particles.quietColor).multiplyScalar(sceneTokens.particles.luminance.quiet);
   const palette = sceneTokens.particles.palette.map((color) => (
     new THREE.Color(color).multiplyScalar(sceneTokens.particles.luminance.active)
   ));
+  const ringSampler = haloMesh ? makeSurfaceSampler(haloMesh, 3.17) : null;
+  const ringSample = new THREE.Vector3();
+  const surfaceSample = new THREE.Vector3();
+  const surfaceNormal = new THREE.Vector3();
+  const surfaceSize = new THREE.Vector3();
+  const fallbackRadius = Math.max(sceneSize.x, sceneSize.z) * 0.2;
+
   for (let index = 0; index < count; index += 1) {
     const offset = index * 3;
     const seedA = seededNoise(index * 3.17 + 1.3);
     const seedB = seededNoise(index * 7.91 + 4.7);
     const seedC = seededNoise(index * 13.37 + 9.2);
+    seeds[index] = seededNoise(index * 17.17 + 5.9);
     const distribution = index % 20;
-    if (distribution < 11) {
-      // A low, irregular floor constellation creates depth without a visible lattice.
-      ambient[offset] = (seedA * 2 - 1) * 12.5;
-      ambient[offset + 1] = 0.035 + Math.pow(seedB, 2.4) * 0.32;
-      ambient[offset + 2] = seedC * 14 - 6.2;
+    if (distribution < 5) {
+      // Ground dust creates contact and scale without turning into a visible grid.
+      ambient[offset] = sceneCenter.x + (seedA * 2 - 1) * sceneSize.x * 0.5;
+      ambient[offset + 1] = floorY + 0.035 + Math.pow(seedB, 2.4) * 0.32;
+      ambient[offset + 2] = sceneCenter.z + (seedC * 2 - 1) * sceneSize.z * 0.52;
+    } else if (distribution < 12) {
+      // A true volume layer provides foreground/background parallax and depth.
+      ambient[offset] = sceneCenter.x + (seedA * 2 - 1) * sceneSize.x * 0.46;
+      ambient[offset + 1] = floorY + 0.18 + Math.pow(seedB, 1.25) * sceneSize.y * 0.78;
+      ambient[offset + 2] = sceneCenter.z + (seedC * 2 - 1) * sceneSize.z * 0.46;
     } else if (distribution < 17) {
-      // The far wall carries a loose atmospheric point field like the keyframes.
-      ambient[offset] = (seedA * 2 - 1) * 12.8;
-      ambient[offset + 1] = 0.3 + seedB * 8.3;
-      ambient[offset + 2] = -5.75 + (seedC - 0.5) * 0.72;
+      // A restrained far-wall layer supports the concept-art atmosphere.
+      ambient[offset] = sceneCenter.x + (seedA * 2 - 1) * sceneSize.x * 0.51;
+      ambient[offset + 1] = floorY + 0.3 + seedB * sceneSize.y * 0.88;
+      ambient[offset + 2] = sceneBounds.min.z + sceneSize.z * (0.015 + seedC * 0.045);
     } else {
       // Sparse side-volume particles keep the field from reading as flat planes.
-      ambient[offset] = (distribution % 2 === 0 ? -1 : 1) * (8.8 + seedA * 3.8);
-      ambient[offset + 1] = 0.25 + seedB * 7.5;
-      ambient[offset + 2] = seedC * 11 - 5.4;
+      ambient[offset] = distribution % 2 === 0
+        ? THREE.MathUtils.lerp(sceneBounds.min.x, sceneCenter.x, seedA * 0.18)
+        : THREE.MathUtils.lerp(sceneBounds.max.x, sceneCenter.x, seedA * 0.18);
+      ambient[offset + 1] = floorY + 0.25 + seedB * sceneSize.y * 0.82;
+      ambient[offset + 2] = sceneCenter.z + (seedC * 2 - 1) * sceneSize.z * 0.45;
     }
 
-    const segment = index % (networkHubs.length - 1);
-    const from = networkHubs[segment];
-    const to = networkHubs[segment + 1];
-    const along = seededNoise(index * 5.73 + 2.1);
-    const jitter = (seededNoise(index * 11.9 + 0.7) - 0.5) * 0.11;
-    network[offset] = THREE.MathUtils.lerp(from[0], to[0], along) + jitter;
-    network[offset + 1] = THREE.MathUtils.lerp(from[1], to[1], along) + (seedB - 0.5) * 0.14;
-    network[offset + 2] = THREE.MathUtils.lerp(from[2], to[2], along) + (seedC - 0.5) * 0.12;
+    surfaceTargets.set(ambient.subarray(offset, offset + 3), offset);
+    pathFrom.set(ambient.subarray(offset, offset + 3), offset);
+    pathControl.set(ambient.subarray(offset, offset + 3), offset);
+    pathTo.set(ambient.subarray(offset, offset + 3), offset);
+    ring.set(ambient.subarray(offset, offset + 3), offset);
 
-    const angle = index * 2.399963;
-    const radius = 5.18 + (seedA - 0.5) * 0.22;
-    ring[offset] = Math.cos(angle) * radius;
-    ring[offset + 1] = 5.85 + (seedB - 0.5) * 0.16;
-    ring[offset + 2] = Math.sin(angle) * radius;
-
+    let layer = index < atmosphereCount ? 0 : index < surfaceEnd ? 1 : 2;
+    if (layer === 1 && surfaceWeight > 0) {
+      const selection = seededNoise((index - atmosphereCount) * 5.17 + 1.9) * surfaceWeight;
+      const binding = surfaceBindings.find((candidate) => selection <= candidate.cumulativeWeight) ?? surfaceBindings.at(-1);
+      if (binding) {
+        binding.sampler.sample(surfaceSample, surfaceNormal);
+        surfaceSample.applyMatrix4(binding.mesh.matrixWorld);
+        surfaceNormal.applyMatrix3(binding.normalMatrix).normalize();
+        surfaceSample.addScaledVector(surfaceNormal, sceneTokens.particles.motion.surfaceOffset);
+        surfaceSample.toArray(surfaceTargets, offset);
+        const height = Math.max(0.001, binding.bounds.getSize(surfaceSize).y);
+        const verticalOrder = THREE.MathUtils.clamp((surfaceSample.y - binding.bounds.min.y) / height, 0, 1);
+        wakes[index] = binding.wake + verticalOrder * 0.035;
+        binding.color.toArray(energyColors, offset);
+      }
+      pointScales[index] = 0.75 + seedB * 0.45;
+    } else if (layer === 2) {
+      const signalIndex = index - surfaceEnd;
+      const route = signalRoutes[signalIndex % signalRoutes.length];
+      route.from.toArray(pathFrom, offset);
+      route.control.toArray(pathControl, offset);
+      route.to.toArray(pathTo, offset);
+      if (ringSampler && haloMesh) {
+        ringSampler.sample(ringSample);
+        ringSample.applyMatrix4(haloMesh.matrixWorld).toArray(ring, offset);
+      } else {
+        const angle = signalIndex * 2.399963;
+        ring[offset] = haloCenter.x + Math.cos(angle) * fallbackRadius;
+        ring[offset + 1] = haloCenter.y + (seedB - 0.5) * 0.16;
+        ring[offset + 2] = haloCenter.z + Math.sin(angle) * fallbackRadius;
+      }
+      const signalColor = palette[(signalIndex + 1) % palette.length];
+      signalColor.toArray(energyColors, offset);
+      pointScales[index] = 0.8 + seedB * 0.5;
+    } else {
+      layer = 0;
+      const dustColor = palette[index % palette.length];
+      dustColor.toArray(energyColors, offset);
+      pointScales[index] = 0.55 + seedB * 0.7;
+    }
+    layers[index] = layer;
     const energy = palette[index % palette.length];
-    energyColors[offset] = energy.r;
-    energyColors[offset + 1] = energy.g;
-    energyColors[offset + 2] = energy.b;
+    if (energyColors[offset] === 0 && energyColors[offset + 1] === 0 && energyColors[offset + 2] === 0) {
+      energy.toArray(energyColors, offset);
+    }
   }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(ambient.slice(), 3));
+  geometry.setAttribute("position", new THREE.BufferAttribute(ambient, 3));
+  geometry.setAttribute("aSurface", new THREE.BufferAttribute(surfaceTargets, 3));
+  geometry.setAttribute("aPathFrom", new THREE.BufferAttribute(pathFrom, 3));
+  geometry.setAttribute("aPathControl", new THREE.BufferAttribute(pathControl, 3));
+  geometry.setAttribute("aPathTo", new THREE.BufferAttribute(pathTo, 3));
+  geometry.setAttribute("aRing", new THREE.BufferAttribute(ring, 3));
+  geometry.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
+  geometry.setAttribute("aLayer", new THREE.BufferAttribute(layers, 1));
+  geometry.setAttribute("aWake", new THREE.BufferAttribute(wakes, 1));
+  geometry.setAttribute("aPointScale", new THREE.BufferAttribute(pointScales, 1));
+  geometry.setAttribute("aEnergyColor", new THREE.BufferAttribute(energyColors, 3));
   const quietColors = new Float32Array(count * 3);
   for (let index = 0; index < quietColors.length; index += 3) {
     quietColors[index] = quiet.r;
@@ -643,121 +812,218 @@ function makeSignalField(count: number): SignalFieldData {
     quietColors[index + 2] = quiet.b;
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(quietColors, 3));
-  return { geometry, ambient, network, ring, energyColors };
+  geometry.computeBoundingSphere();
+  return { geometry, focus };
 }
 
 function SignalField({ quality }: { quality: SceneQuality }) {
-  const field = useRef<THREE.Group>(null);
-  const material = useRef<THREE.PointsMaterial>(null);
-  const glowMaterial = useRef<THREE.PointsMaterial>(null);
-  const data = useMemo(() => makeSignalField(sceneTokens.particles.count[quality]), [quality]);
-  const quietColor = useMemo(() => (
-    new THREE.Color(sceneTokens.particles.quietColor).multiplyScalar(sceneTokens.particles.luminance.quiet)
-  ), []);
-  const particleSize = sceneTokens.particles.size[quality];
+  const gltf = useLoader(GLTFLoader, assetSlots.assembled);
+  const { camera, gl, size } = useThree();
+  const data = useMemo(() => makeSignalField(sceneTokens.particles.count[quality], gltf.scene), [gltf.scene, quality]);
+  const pointerNdc = useRef(new THREE.Vector2());
+  const pointerWorld = useRef(data.focus.clone());
+  const focusWorld = useRef(data.focus.clone());
+  const pointerPlane = useRef(new THREE.Plane());
+  const pointerNormal = useRef(new THREE.Vector3());
+  const raycaster = useRef(new THREE.Raycaster());
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uReset: { value: 0 },
+      uSignalAmount: { value: 0 },
+      uRingAmount: { value: 0 },
+      uActivation: { value: 0 },
+      uEnergyAmount: { value: 0 },
+      uResponse: { value: 0.26 },
+      uPointer: { value: data.focus.clone() },
+      uPointerNormal: { value: new THREE.Vector3(0, 0, 1) },
+      uPointerPulse: { value: 0 },
+      uModelScale: { value: 1 },
+      uModelYOffset: { value: 0 },
+      uPointSize: { value: sceneTokens.particles.size[quality].glow },
+      uCoreRatio: { value: sceneTokens.particles.size[quality].core / sceneTokens.particles.size[quality].glow },
+      uMaximumPointSize: { value: sceneTokens.particles.screenSize.maximum[quality] },
+      uViewportHeight: { value: size.height },
+      uPixelRatio: { value: gl.getPixelRatio() },
+      uCoreOpacityIdle: { value: sceneTokens.particles.opacity.core.idle },
+      uCoreOpacityActive: { value: sceneTokens.particles.opacity.core.active },
+      uGlowOpacityIdle: { value: sceneTokens.particles.opacity.glow.idle },
+      uGlowOpacityActive: { value: sceneTokens.particles.opacity.glow.active },
+    },
+    vertexShader: `
+      attribute vec3 color;
+      attribute vec3 aSurface;
+      attribute vec3 aPathFrom;
+      attribute vec3 aPathControl;
+      attribute vec3 aPathTo;
+      attribute vec3 aRing;
+      attribute vec3 aEnergyColor;
+      attribute float aSeed;
+      attribute float aLayer;
+      attribute float aWake;
+      attribute float aPointScale;
+      uniform float uTime;
+      uniform float uProgress;
+      uniform float uReset;
+      uniform float uSignalAmount;
+      uniform float uRingAmount;
+      uniform float uActivation;
+      uniform float uEnergyAmount;
+      uniform float uResponse;
+      uniform vec3 uPointer;
+      uniform vec3 uPointerNormal;
+      uniform float uPointerPulse;
+      uniform float uModelScale;
+      uniform float uModelYOffset;
+      uniform float uPointSize;
+      uniform float uMaximumPointSize;
+      uniform float uViewportHeight;
+      uniform float uPixelRatio;
+      varying vec3 vColor;
+      varying float vActivity;
+      varying float vVisibility;
+      varying float vBreath;
 
-  useEffect(() => () => data.geometry.dispose(), [data]);
+      void main() {
+        float phase = aSeed * 31.4159;
+        float dustMask = 1.0 - step(0.5, aLayer);
+        float surfaceMask = step(0.5, aLayer) * (1.0 - step(1.5, aLayer));
+        float signalMask = step(1.5, aLayer);
+        float driftAmount = ${sceneTokens.particles.motion.drift.toFixed(4)};
+        vec3 drift = vec3(
+          sin(uTime * 0.31 + phase),
+          cos(uTime * 0.27 + phase * 1.37),
+          sin(uTime * 0.23 + phase * 0.73)
+        ) * driftAmount;
+        vec3 modelOffset = vec3(0.0, uModelYOffset, 0.0);
+        vec3 surfaceTarget = aSurface * uModelScale + modelOffset + drift * 0.1;
+        vec3 routeFrom = aPathFrom * uModelScale + modelOffset;
+        vec3 routeControl = aPathControl * uModelScale + modelOffset;
+        vec3 routeTo = aPathTo * uModelScale + modelOffset;
+        vec3 ringTarget = aRing * uModelScale + modelOffset;
+        float travel = fract(aSeed + uTime * ${sceneTokens.particles.motion.signalSpeed.toFixed(4)});
+        vec3 routeA = mix(routeFrom, routeControl, travel);
+        vec3 routeB = mix(routeControl, routeTo, travel);
+        vec3 signalTarget = mix(routeA, routeB, travel);
+        signalTarget += vec3(
+          sin(phase + travel * 6.2831),
+          cos(phase * 0.7 + travel * 6.2831) * 0.3,
+          cos(phase + travel * 6.2831)
+        ) * 0.028;
+        signalTarget = mix(signalTarget, ringTarget + drift * 0.08, uRingAmount);
+        vec3 dustPosition = position + drift * (0.72 + aPointScale * 0.28);
+        vec3 worldPosition = dustPosition * dustMask + surfaceTarget * surfaceMask + signalTarget * signalMask;
+
+        float surfaceReveal = smoothstep(aWake, aWake + 0.06, uProgress) * (1.0 - uReset);
+        float signalVisibility = uActivation * (0.24 + uSignalAmount * 0.76) * (1.0 - uReset);
+        vVisibility = dustMask
+          + surfaceMask * surfaceReveal * (0.4 + uEnergyAmount * 0.6)
+          + signalMask * signalVisibility;
+
+        vec3 pointerDelta = worldPosition - uPointer;
+        float pointerDistance = max(length(pointerDelta), 0.001);
+        float pointerLayerScale = dustMask + surfaceMask * 0.08 + signalMask * 0.35;
+        float influence = (1.0 - smoothstep(0.0, ${sceneTokens.particles.motion.pointerRadius.toFixed(4)}, pointerDistance)) * uResponse * pointerLayerScale;
+        vec3 radial = pointerDelta / pointerDistance;
+        vec3 curl = normalize(cross(uPointerNormal, radial) + vec3(0.0001));
+        worldPosition += curl * influence * ${sceneTokens.particles.motion.pointerCurl.toFixed(4)};
+        worldPosition += radial * influence * ${sceneTokens.particles.motion.pointerPush.toFixed(4)};
+        float ripple = sin(pointerDistance * 5.2 - (1.0 - uPointerPulse) * 16.0)
+          * uPointerPulse * exp(-pointerDistance * 0.42);
+        worldPosition += radial * ripple * ${sceneTokens.particles.motion.pressRipple.toFixed(4)};
+
+        vec4 viewPosition = modelViewMatrix * vec4(worldPosition, 1.0);
+        gl_Position = projectionMatrix * viewPosition;
+        float pulseSize = 1.0 + uPointerPulse * 0.45;
+        float layerSize = aPointScale * (dustMask * 0.78 + surfaceMask * 0.96 + signalMask * 1.06);
+        gl_PointSize = clamp(
+          uPointSize * layerSize * pulseSize * uViewportHeight * uPixelRatio * 0.5 / max(1.0, -viewPosition.z),
+          ${sceneTokens.particles.screenSize.minimum.toFixed(2)},
+          uMaximumPointSize
+        );
+        vActivity = dustMask * (0.08 + uActivation * 0.12)
+          + surfaceMask * surfaceReveal * (0.55 + uEnergyAmount * 0.45)
+          + signalMask * signalVisibility * (0.72 + uSignalAmount * 0.28);
+        float colorMix = dustMask * (0.035 + uActivation * 0.08)
+          + surfaceMask * surfaceReveal * (0.5 + uEnergyAmount * 0.5)
+          + signalMask * (0.68 + uSignalAmount * 0.32);
+        vColor = mix(color, aEnergyColor, colorMix);
+        vBreath = 0.86 + sin(uTime * (0.8 + aSeed * 0.5) + phase) * 0.14;
+      }
+    `,
+    fragmentShader: `
+      uniform float uCoreRatio;
+      uniform float uCoreOpacityIdle;
+      uniform float uCoreOpacityActive;
+      uniform float uGlowOpacityIdle;
+      uniform float uGlowOpacityActive;
+      varying vec3 vColor;
+      varying float vActivity;
+      varying float vVisibility;
+      varying float vBreath;
+
+      void main() {
+        vec2 centered = gl_PointCoord * 2.0 - 1.0;
+        float radius = length(centered);
+        if (radius > 1.0) discard;
+        float core = 1.0 - smoothstep(uCoreRatio * 0.12, uCoreRatio, radius);
+        float glow = pow(1.0 - radius, 2.6);
+        float coreOpacity = mix(uCoreOpacityIdle, uCoreOpacityActive, vActivity);
+        float glowOpacity = mix(uGlowOpacityIdle, uGlowOpacityActive, vActivity);
+        float alpha = (core * coreOpacity + glow * glowOpacity) * vBreath * vVisibility;
+        gl_FragColor = vec4(vColor * (0.72 + core * 0.58), alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  }), [data.focus, gl, quality, size.height]);
+
+  useEffect(() => () => {
+    data.geometry.dispose();
+    material.dispose();
+  }, [data, material]);
   useFrame(({ clock }, delta) => {
     const progress = experienceState.progress;
     const reset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
-    const loopSettled = reset > 0.98;
-    const networkAmount = loopSettled ? 0 : smoothstep(phaseProgress(progress, activationSequence.intelligence)) * (1 - reset);
-    const ringAmount = loopSettled ? 0 : smoothstep(phaseProgress(progress, activationSequence.haloCondense)) * (1 - reset);
-    const activation = loopSettled ? 0 : smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
-    const energyAmount = loopSettled ? 0 : smoothstep(phaseProgress(progress, activationSequence.totalReveal)) * (1 - reset);
-    const positions = data.geometry.getAttribute("position") as THREE.BufferAttribute;
-    const array = positions.array as Float32Array;
-    const colors = data.geometry.getAttribute("color") as THREE.BufferAttribute;
-    const colorArray = colors.array as Float32Array;
-    const pointerX = experienceState.pointerX * 7.5;
-    const pointerY = 3.7 - experienceState.pointerY * 3.4;
+    const signalAmount = smoothstep(phaseProgress(progress, activationSequence.intelligence)) * (1 - reset);
+    const ringAmount = smoothstep(phaseProgress(progress, activationSequence.haloCondense)) * (1 - reset);
+    const activation = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
+    const energyAmount = smoothstep(phaseProgress(progress, activationSequence.totalReveal)) * (1 - reset);
     const pulse = experienceState.pointerPulse;
     const response = 0.26 + activation * 0.74;
-
-    for (let index = 0; index < array.length; index += 3) {
-      const ambientX = data.ambient[index] + Math.sin(clock.elapsedTime * 0.42 + index) * 0.065;
-      const ambientY = data.ambient[index + 1] + Math.cos(clock.elapsedTime * 0.36 + index * 0.7) * 0.055;
-      let x = THREE.MathUtils.lerp(ambientX, data.network[index], networkAmount);
-      let y = THREE.MathUtils.lerp(ambientY, data.network[index + 1], networkAmount);
-      let z = THREE.MathUtils.lerp(data.ambient[index + 2] + Math.sin(clock.elapsedTime * 0.3 + index * 0.4) * 0.05, data.network[index + 2], networkAmount);
-      x = THREE.MathUtils.lerp(x, data.ring[index], ringAmount);
-      y = THREE.MathUtils.lerp(y, data.ring[index + 1], ringAmount);
-      z = THREE.MathUtils.lerp(z, data.ring[index + 2], ringAmount);
-
-      const dx = x - pointerX;
-      const dy = y - pointerY;
-      const distance = Math.sqrt(dx * dx + dy * dy) + 0.001;
-      const influence = Math.max(0, 1 - distance / 2.4) * response;
-      const ripple = Math.sin(distance * 5.2 - (1 - pulse) * 16) * pulse * Math.exp(-distance * 0.42) * 0.38;
-      x += dx / distance * (influence * 0.24 + ripple);
-      y += dy / distance * (influence * 0.18 + ripple);
-
-      const settle = loopSettled ? 1 : Math.min(1, delta * 7.5);
-      array[index] += (x - array[index]) * settle;
-      array[index + 1] += (y - array[index + 1]) * settle;
-      array[index + 2] += (z - array[index + 2]) * settle;
-      const colorAmount = 0.06 + energyAmount * 0.94;
-      colorArray[index] = THREE.MathUtils.lerp(quietColor.r, data.energyColors[index], colorAmount);
-      colorArray[index + 1] = THREE.MathUtils.lerp(quietColor.g, data.energyColors[index + 1], colorAmount);
-      colorArray[index + 2] = THREE.MathUtils.lerp(quietColor.b, data.energyColors[index + 2], colorAmount);
-    }
-    positions.needsUpdate = true;
-    colors.needsUpdate = true;
+    const modelScale = 0.965 + experienceState.assemblyProgress * 0.035;
+    const modelYOffset = -0.16 * (1 - experienceState.assemblyProgress);
+    pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
+    camera.getWorldDirection(pointerNormal.current);
+    focusWorld.current.copy(data.focus).multiplyScalar(modelScale);
+    focusWorld.current.y += modelYOffset;
+    pointerPlane.current.setFromNormalAndCoplanarPoint(pointerNormal.current, focusWorld.current);
+    raycaster.current.setFromCamera(pointerNdc.current, camera);
+    raycaster.current.ray.intersectPlane(pointerPlane.current, pointerWorld.current);
+    material.uniforms.uTime.value = clock.elapsedTime;
+    material.uniforms.uProgress.value = progress;
+    material.uniforms.uReset.value = reset;
+    material.uniforms.uSignalAmount.value = signalAmount;
+    material.uniforms.uRingAmount.value = ringAmount;
+    material.uniforms.uActivation.value = activation;
+    material.uniforms.uEnergyAmount.value = energyAmount;
+    material.uniforms.uResponse.value = response;
+    material.uniforms.uPointer.value.copy(pointerWorld.current);
+    material.uniforms.uPointerNormal.value.copy(pointerNormal.current);
+    material.uniforms.uPointerPulse.value = pulse;
+    material.uniforms.uModelScale.value = modelScale;
+    material.uniforms.uModelYOffset.value = modelYOffset;
+    material.uniforms.uViewportHeight.value = size.height;
+    material.uniforms.uPixelRatio.value = gl.getPixelRatio();
     experienceState.pointerPulse = Math.max(0, pulse - delta * 0.52);
-    if (field.current) {
-      field.current.rotation.y = Math.sin(clock.elapsedTime * 0.16) * 0.022 * (1 - ringAmount);
-    }
-    const breath = 0.88 + Math.sin(clock.elapsedTime * 1.35) * 0.12;
-    const activity = Math.max(activation, networkAmount, ringAmount);
-    if (material.current) {
-      const visibility = THREE.MathUtils.lerp(
-        sceneTokens.particles.opacity.core.idle,
-        sceneTokens.particles.opacity.core.active,
-        activity,
-      );
-      material.current.opacity = visibility * breath;
-      material.current.size = particleSize.core + pulse * 0.009;
-    }
-    if (glowMaterial.current) {
-      glowMaterial.current.opacity = THREE.MathUtils.lerp(
-        sceneTokens.particles.opacity.glow.idle,
-        sceneTokens.particles.opacity.glow.active,
-        activity,
-      ) * breath;
-      glowMaterial.current.size = particleSize.glow + pulse * 0.018;
-    }
   });
 
   return (
-    <group ref={field}>
-      <points geometry={data.geometry}>
-        <pointsMaterial ref={glowMaterial} color="#ffffff" vertexColors size={particleSize.glow} toneMapped={false} transparent opacity={sceneTokens.particles.opacity.glow.idle} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
-      </points>
-      <points geometry={data.geometry}>
-        <pointsMaterial ref={material} color="#ffffff" vertexColors size={particleSize.core} toneMapped={false} transparent opacity={sceneTokens.particles.opacity.core.idle} blending={THREE.AdditiveBlending} depthWrite={false} sizeAttenuation />
-      </points>
-    </group>
+    <points geometry={data.geometry} material={material} frustumCulled={false} />
   );
-}
-
-function IntelligenceNetwork() {
-  const material = useRef<THREE.LineBasicMaterial>(null);
-  const geometry = useMemo(() => {
-    const positions: number[] = [];
-    for (let index = 1; index < networkHubs.length; index += 1) positions.push(...networkHubs[index - 1], ...networkHubs[index]);
-    positions.push(...networkHubs[0], ...networkHubs[3], ...networkHubs[3], ...networkHubs[6], ...networkHubs[1], ...networkHubs[4], ...networkHubs[2], ...networkHubs[5]);
-    const result = new THREE.BufferGeometry();
-    result.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    return result;
-  }, []);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  useFrame(() => {
-    const rawReset = smoothstep(phaseProgress(experienceState.progress, activationSequence.loopReset));
-    const reset = rawReset > 0.98 ? 1 : rawReset;
-    const amount = smoothstep(phaseProgress(experienceState.progress, activationSequence.intelligence)) * (1 - reset);
-    if (material.current) material.current.opacity = amount * 0.46;
-  });
-  return <lineSegments geometry={geometry}><lineBasicMaterial ref={material} color={sceneTokens.colors.cobalt} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} /></lineSegments>;
 }
 
 function Audience({ quality }: { quality: SceneQuality }) {
@@ -792,27 +1058,30 @@ function Audience({ quality }: { quality: SceneQuality }) {
 
 function PostProcessing({ quality }: { quality: SceneQuality }) {
   const { gl, scene, camera, size } = useThree();
+  const postprocessing = sceneTokens.environment.postprocessing[quality];
   const pipeline = useMemo(() => {
     const composer = new EffectComposer(gl);
     const renderPass = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(size.width, size.height),
-      quality === "full" ? 0.72 : 0.48,
-      quality === "full" ? 0.52 : 0.36,
-      1.5,
+      postprocessing.bloomStrength,
+      postprocessing.bloomRadius,
+      postprocessing.bloomThreshold,
     );
     const bokehPass = new BokehPass(scene, camera, {
       focus: experienceState.focusDistance,
-      aperture: quality === "full" ? 0.00022 : 0.00012,
-      maxblur: quality === "full" ? 0.018 : 0.01,
+      aperture: postprocessing.aperture,
+      maxblur: postprocessing.maxBlur,
     });
     const outputPass = new OutputPass();
+    bloomPass.enabled = postprocessing.bloom;
+    bokehPass.enabled = postprocessing.depthOfField;
     composer.addPass(renderPass);
-    composer.addPass(bloomPass);
     composer.addPass(bokehPass);
+    composer.addPass(bloomPass);
     composer.addPass(outputPass);
     return { composer, renderPass, bloomPass, bokehPass, outputPass };
-  }, [camera, gl, quality, scene, size.height, size.width]);
+  }, [camera, gl, postprocessing, scene, size.height, size.width]);
 
   useEffect(() => {
     pipeline.composer.setPixelRatio(gl.getPixelRatio());
@@ -830,9 +1099,13 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
   useFrame((_, delta) => {
     const focusUniform = pipeline.bokehPass.materialBokeh.uniforms.focus;
     focusUniform.value = THREE.MathUtils.lerp(focusUniform.value as number, experienceState.focusDistance, 0.08);
-    const revealEnergy = smoothstep(phaseProgress(experienceState.progress, activationSequence.totalReveal));
+    const reset = smoothstep(phaseProgress(experienceState.progress, activationSequence.loopReset));
+    const revealEnergy = smoothstep(phaseProgress(experienceState.progress, activationSequence.totalReveal)) * (1 - reset);
     const assemblyEnergy = 1 - Math.abs(experienceState.assemblyProgress * 2 - 1);
-    pipeline.bloomPass.strength = (quality === "full" ? 0.58 : 0.38) + Math.max(revealEnergy * 0.28, assemblyEnergy * 0.42);
+    pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
+      revealEnergy * postprocessing.bloomRevealBoost,
+      assemblyEnergy * postprocessing.bloomAssemblyBoost,
+    );
     pipeline.composer.render(delta);
   }, 1);
 
@@ -848,8 +1121,8 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
   const amberLight = useRef<THREE.PointLight>(null);
   const interactionLight = useRef<THREE.PointLight>(null);
   const pointer = useRef(new THREE.Vector2());
-  const quietBackground = useMemo(() => new THREE.Color("#e1e4e4"), []);
-  const activeBackground = useMemo(() => new THREE.Color("#cfd9e7"), []);
+  const quietBackground = useMemo(() => new THREE.Color(sceneTokens.environment.background.quiet), []);
+  const activeBackground = useMemo(() => new THREE.Color(sceneTokens.environment.background.active), []);
   const background = useMemo(() => new THREE.Color(), []);
   const trails = useMemo(() => [
     makeTrail([[-7, 0.025, 5.8], [-4.2, 0.03, 3.4], [-2.2, 0.035, 1.9], [0, 0.04, 1.1]]),
@@ -886,11 +1159,11 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
 
   return (
     <>
-      <fog attach="fog" args={[sceneTokens.colors.fog, 13, 40]} />
-      <ambientLight intensity={0.58} color="#fffdf8" />
-      <hemisphereLight args={["#ffffff", "#8895a4", 0.9]} />
-      <directionalLight castShadow position={[4, 10, 7]} intensity={2.35} color="#fff8ea" shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-      <directionalLight position={[-7, 4, 4]} intensity={0.65} color="#b8dfff" />
+      <fog attach="fog" args={[sceneTokens.colors.fog, sceneTokens.environment.fog.near, sceneTokens.environment.fog.far]} />
+      <ambientLight intensity={sceneTokens.environment.lights.ambient} color="#fffdf8" />
+      <hemisphereLight args={["#f7f9fa", "#778592", sceneTokens.environment.lights.hemisphere]} />
+      <directionalLight castShadow position={[4, 10, 7]} intensity={sceneTokens.environment.lights.key} color="#fff8ea" shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
+      <directionalLight position={[-7, 4, 4]} intensity={sceneTokens.environment.lights.fill} color="#b8dfff" />
       <pointLight ref={revealLight} position={[0, 4.2, 1]} intensity={0.15} distance={18} color={sceneTokens.colors.cyan} />
       <pointLight ref={magentaLight} position={[-5.5, 3.1, 1.8]} intensity={0} distance={13} color={sceneTokens.colors.magenta} />
       <pointLight ref={amberLight} position={[5.8, 2.4, 2.6]} intensity={0} distance={12} color={sceneTokens.colors.amber} />
@@ -898,9 +1171,8 @@ function ExhibitionWorld({ quality, projects, onFirstFrame, onProjectSelect }: {
 
       <Suspense fallback={null}>
         <MandegarModel projects={projects} onFirstFrame={onFirstFrame} onProjectSelect={onProjectSelect} />
+        <SignalField quality={quality} />
       </Suspense>
-      <SignalField quality={quality} />
-      <IntelligenceNetwork />
       {trails.map((geometry, index) => (
         <lineSegments key={index} ref={(value) => { trailObjects.current[index] = value; }} geometry={geometry}>
           <lineBasicMaterial ref={(value) => { trailMaterials.current[index] = value; }} color={index === 1 ? sceneTokens.colors.cyan : sceneTokens.colors.cobalt} transparent opacity={0} depthWrite={false} />
@@ -974,7 +1246,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
         data-particle-system="signal-network"
         data-interaction-system="pointer-touch"
         data-color-mode="aces"
-        data-postprocessing="bloom-dof"
+        data-postprocessing={runtime === "full" ? "bloom-dof" : "performance"}
         aria-hidden="true"
         dpr={[profile.dpr[0], profile.dpr[1]]}
         frameloop={pageVisible ? "always" : "never"}
@@ -984,7 +1256,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
         onPointerDown={() => { experienceState.pointerPulse = 1; }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.04;
+          gl.toneMappingExposure = sceneTokens.environment.exposure;
           gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
       >
