@@ -33,7 +33,8 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Wireframe/reveal | `ExperienceCanvas.tsx` → `revealBindings` / `beaconVisibility` | Per-object bottom-to-top reveal, lift distance, wire opacity and reveal-light visibility |
 | Authored 3D camera | `scene-config.ts` → `sceneTokens.authoredCamera` | Enable/disable the GLB camera, mobile use, node/clip names and depth-of-field focus target |
 | Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
-| Pointer movement | `scene-config.ts` → `pointerParallax` | Desktop camera response; mobile is intentionally zero |
+| Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Local position/rotation amplitudes, three low frequencies and mobile scale |
+| Pointer camera response | `scene-config.ts` → `cameraMotion.pointer` | Local position/rotation range plus frame-rate-independent spring stiffness and damping |
 | Total scroll speed | `MandegarExperience.module.css` → `.root` | Smaller than `1450svh`/`1300svh` makes the story advance faster; larger makes it slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
 | Phase timing | `scene-config.ts` → `scenePhases` | Start/end/preview point for each narrative phase |

@@ -132,8 +132,23 @@ export const sceneTokens = {
     clip: "camera_master_loop",
     focusTarget: [0, 2.4, 0] as const,
   },
+  cameraMotion: {
+    breathing: {
+      position: [0.045, 0.028, 0.02] as const,
+      rotation: [0.0022, 0.003, 0.0014] as const,
+      frequency: [0.11, 0.083, 0.067] as const,
+      mobileScale: 0.45,
+    },
+    pointer: {
+      position: [0.34, 0.17] as const,
+      rotation: [0.015, 0.024] as const,
+      mobileScale: 0,
+      stiffness: 70,
+      damping: 16,
+      maximumDelta: 0.04,
+    },
+  },
   scrollLengthVh: { desktop: 1450, mobile: 1300 },
-  pointerParallax: { desktop: 0.085, mobile: 0 },
   featureFlags: {
     audience: true,
     screenShader: true,

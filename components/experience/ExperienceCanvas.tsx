@@ -167,11 +167,16 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
   const firstFrame = useRef(false);
   const cameraPointer = useRef(new THREE.Vector2());
   const cameraPointerInput = useRef(new THREE.Vector2());
+  const cameraPointerVelocity = useRef(new THREE.Vector2());
   const cameraTarget = useRef(new THREE.Vector3());
   const authoredPosition = useRef(new THREE.Vector3());
   const authoredQuaternion = useRef(new THREE.Quaternion());
-  const authoredRight = useRef(new THREE.Vector3());
-  const authoredUp = useRef(new THREE.Vector3());
+  const cameraRight = useRef(new THREE.Vector3());
+  const cameraUp = useRef(new THREE.Vector3());
+  const cameraForward = useRef(new THREE.Vector3());
+  const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
+  const cameraLifeQuaternion = useRef(new THREE.Quaternion());
+  const cameraLifeTime = useRef(0);
   const revealBeacon = useRef<THREE.Group>(null);
   const revealBeaconLight = useRef<THREE.PointLight>(null);
   const revealBeaconMaterial = useRef<THREE.MeshBasicMaterial>(null);
@@ -352,7 +357,7 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
     }
   }, [gltf.animations, runtime]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!firstFrame.current) {
       firstFrame.current = true;
       onFirstFrame?.();
@@ -360,9 +365,20 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
     const progress = experienceState.progress;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
     const cameraSample = sampleCamera(progress, mobile);
-    cameraPointerInput.current.set(experienceState.pointerX, experienceState.pointerY);
-    cameraPointer.current.lerp(cameraPointerInput.current, 0.045);
-    const parallax = mobile ? sceneTokens.pointerParallax.mobile : sceneTokens.pointerParallax.desktop;
+    const pointerMotion = sceneTokens.cameraMotion.pointer;
+    const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
+    cameraPointerInput.current.set(
+      experienceState.pointerX * pointerInputScale,
+      experienceState.pointerY * pointerInputScale,
+    );
+    const springDelta = Math.min(delta, pointerMotion.maximumDelta);
+    const springDamping = Math.exp(-pointerMotion.damping * springDelta);
+    cameraPointerVelocity.current.x += (cameraPointerInput.current.x - cameraPointer.current.x) * pointerMotion.stiffness * springDelta;
+    cameraPointerVelocity.current.y += (cameraPointerInput.current.y - cameraPointer.current.y) * pointerMotion.stiffness * springDelta;
+    cameraPointerVelocity.current.multiplyScalar(springDamping);
+    cameraPointer.current.addScaledVector(cameraPointerVelocity.current, springDelta);
+    cameraPointer.current.x = THREE.MathUtils.clamp(cameraPointer.current.x, -1.05, 1.05);
+    cameraPointer.current.y = THREE.MathUtils.clamp(cameraPointer.current.y, -1.05, 1.05);
     const authoredCamera = runtime.authoredCamera;
     const authoredCameraClip = runtime.authoredCameraClip;
     const authoredCameraMixer = runtime.authoredCameraMixer;
@@ -379,12 +395,7 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       authoredCamera.getWorldQuaternion(authoredQuaternion.current);
       camera.position.copy(authoredPosition.current);
       camera.quaternion.copy(authoredQuaternion.current);
-      authoredRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
-      authoredUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
-      camera.position.addScaledVector(authoredRight.current, cameraPointer.current.x * parallax);
-      camera.position.addScaledVector(authoredUp.current, -cameraPointer.current.y * parallax * 0.45);
       cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
-      experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
       const perspectiveCamera = camera as THREE.PerspectiveCamera;
       if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - authoredCamera.fov) > 0.01) {
         perspectiveCamera.fov = authoredCamera.fov;
@@ -392,11 +403,7 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
       }
     } else {
       camera.position.copy(cameraSample.position);
-      camera.position.x += cameraPointer.current.x * parallax;
-      camera.position.y -= cameraPointer.current.y * parallax * 0.45;
       cameraTarget.current.copy(cameraSample.target);
-      cameraTarget.current.x += cameraPointer.current.x * parallax * 0.2;
-      experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
       camera.lookAt(cameraTarget.current);
       camera.rotateZ(cameraSample.roll);
       const perspectiveCamera = camera as THREE.PerspectiveCamera;
@@ -405,6 +412,42 @@ function MandegarModel({ projects, onFirstFrame, onProjectSelect }: { projects: 
         perspectiveCamera.updateProjectionMatrix();
       }
     }
+
+    const breathing = sceneTokens.cameraMotion.breathing;
+    const breathingScale = mobile ? breathing.mobileScale : 1;
+    cameraLifeTime.current += springDelta;
+    const elapsed = cameraLifeTime.current;
+    const turn = Math.PI * 2;
+    const breathX = (
+      Math.sin(elapsed * breathing.frequency[0] * turn)
+      + Math.sin(elapsed * breathing.frequency[2] * turn + 1.7) * 0.35
+    ) * breathing.position[0] * breathingScale;
+    const breathY = (
+      Math.cos(elapsed * breathing.frequency[1] * turn + 0.8)
+      + Math.sin(elapsed * breathing.frequency[0] * turn * 0.47 + 2.1) * 0.25
+    ) * breathing.position[1] * breathingScale;
+    const breathZ = Math.sin(elapsed * breathing.frequency[2] * turn + 1.4) * breathing.position[2] * breathingScale;
+    cameraRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0]);
+    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1]);
+    camera.position.addScaledVector(cameraForward.current, breathZ);
+    const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + 0.35) * breathing.rotation[0] * breathingScale;
+    const breathYaw = (
+      Math.sin(elapsed * breathing.frequency[0] * turn + 1.1)
+      + Math.sin(elapsed * breathing.frequency[2] * turn + 2.4) * 0.28
+    ) * breathing.rotation[1] * breathingScale;
+    const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + 0.6) * breathing.rotation[2] * breathingScale;
+    cameraLifeEuler.current.set(
+      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0],
+      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1],
+      breathRoll,
+      "YXZ",
+    );
+    cameraLifeQuaternion.current.setFromEuler(cameraLifeEuler.current);
+    camera.quaternion.multiply(cameraLifeQuaternion.current);
+    experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
 
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
@@ -1218,12 +1261,20 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
       experienceState.pointerX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 2;
       experienceState.pointerY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 2;
     };
+    const resetPointer = () => {
+      experienceState.pointerX = 0;
+      experienceState.pointerY = 0;
+    };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("blur", resetPointer);
+    document.documentElement.addEventListener("pointerleave", resetPointer);
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("blur", resetPointer);
+      document.documentElement.removeEventListener("pointerleave", resetPointer);
       experienceState.progress = 0;
       experienceState.pointerX = 0;
       experienceState.pointerY = 0;
