@@ -1,5 +1,5 @@
 const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const basePath = configuredBasePath === "/"
+const basePath = !configuredBasePath || configuredBasePath === "/"
   ? ""
   : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`;
 
