@@ -25,6 +25,14 @@ try {
     if (Test-Path -LiteralPath $routeHoldingDirectory) {
       throw "Temporary route folder already exists: $routeHoldingDirectory"
     }
+    if (Test-Path -LiteralPath $generatedExportDirectory) {
+      $resolvedGeneratedExport = (Resolve-Path $generatedExportDirectory).Path
+      $expectedGeneratedExport = Join-Path $projectRoot ".next-static"
+      if ($resolvedGeneratedExport -ne $expectedGeneratedExport) {
+        throw "Refusing to clean an unexpected static-build cache: $resolvedGeneratedExport"
+      }
+      Remove-Item -LiteralPath $resolvedGeneratedExport -Recurse -Force
+    }
     New-Item -ItemType Directory -Path $routeHoldingDirectory | Out-Null
     try {
       foreach ($routeName in @("api", "studio")) {
