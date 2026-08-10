@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import type { Locale } from "@/lib/i18n";
 import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
-import { scenePhases, type ScenePhaseId } from "./scene-config";
+import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -121,7 +121,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   }, []);
 
   const scrollToPhase = useCallback((phase: ScenePhaseId) => {
-    const checkpoint = scenePhases.find((item) => item.id === phase);
+    const checkpoint = narrativeScore.find((item) => item.id === phase);
     if (checkpoint) scrollToProgress(checkpoint.preview);
   }, [scrollToProgress]);
 
@@ -297,7 +297,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
               <i />
             </span>
             <div className={styles.phaseButtons}>
-              {scenePhases.map((phase, index) => (
+              {narrativeScore.map((phase, index) => (
                 <button key={phase.id} type="button" data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
                   <small>0{index + 1}</small><span>{copy.phases[phase.id]}</span>
                 </button>

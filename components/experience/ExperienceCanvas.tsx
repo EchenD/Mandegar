@@ -12,7 +12,12 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
-import { activationSequence, assetSlots, cameraKeyframes, getVisualStoryState, phaseProgress, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
+import {
+  getNarrativeFrame,
+  narrativeCueRanges as activationSequence,
+  rangeProgress as phaseProgress,
+} from "./narrative-score";
+import { assetSlots, cameraKeyframes, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
 import spatialStyles from "./SpatialLabels.module.css";
 
@@ -727,7 +732,7 @@ function MandegarModel({
 
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
-    const story = getVisualStoryState(progress);
+    const story = getNarrativeFrame(progress);
     const scrolledAssembly = smoothstep(phaseProgress(progress, activationSequence.objectAssembly));
     const assembly = scrolledAssembly * (1 - reset);
     const trails = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
@@ -1367,7 +1372,7 @@ function SignalField({ quality }: { quality: SceneQuality }) {
   }, [data, material]);
   useFrame(({ clock }, delta) => {
     const progress = experienceState.progress;
-    const story = getVisualStoryState(progress);
+    const story = getNarrativeFrame(progress);
     const reset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const signalAmount = smoothstep(phaseProgress(progress, activationSequence.intelligence)) * (1 - reset);
     const ringAmount = smoothstep(phaseProgress(progress, activationSequence.haloCondense)) * (1 - reset);
@@ -1466,7 +1471,7 @@ function Audience({ quality }: { quality: SceneQuality }) {
   }, [figures]);
   useEffect(() => () => auraGeometry.dispose(), [auraGeometry]);
   useFrame(({ clock }) => {
-    const story = getVisualStoryState(experienceState.progress);
+    const story = getNarrativeFrame(experienceState.progress);
     const audienceConfig = sceneTokens.visualStory.audience;
     const enter = smoothstep(phaseProgress(experienceState.progress, audienceConfig.enter));
     const exit = smoothstep(phaseProgress(experienceState.progress, audienceConfig.exit));
@@ -1574,7 +1579,7 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
   useFrame((_, delta) => {
     const focusUniform = pipeline.bokehPass.materialBokeh.uniforms.focus;
     focusUniform.value = THREE.MathUtils.lerp(focusUniform.value as number, experienceState.focusDistance, 0.08);
-    const story = getVisualStoryState(experienceState.progress);
+    const story = getNarrativeFrame(experienceState.progress);
     const assemblyEnergy = 1 - Math.abs(experienceState.assemblyProgress * 2 - 1);
     pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
       story.energy * postprocessing.bloomRevealBoost + story.peak * postprocessing.bloomPeakBoost,
@@ -1627,7 +1632,7 @@ function ExhibitionWorld({
 
   useFrame(({ clock }) => {
     const progress = experienceState.progress;
-    const story = getVisualStoryState(progress);
+    const story = getNarrativeFrame(progress);
     pointer.current.lerp(new THREE.Vector2(experienceState.pointerX, experienceState.pointerY), 0.045);
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;

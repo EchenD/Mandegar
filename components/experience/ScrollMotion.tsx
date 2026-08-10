@@ -6,7 +6,12 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
-import { getPreviewProgress, getScenePhase, scenePhases, type ScenePhaseId } from "./scene-config";
+import {
+  getNarrativeBeat,
+  getNarrativePreview,
+  narrativeScore,
+  type ScenePhaseId,
+} from "./narrative-score";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,7 +35,7 @@ function rangeProgress(progress: number, start: number, end: number) {
 }
 
 function renderCopyState(state: CopyState, progress: number) {
-  const phase = scenePhases.find((item) => item.id === state.phase);
+  const phase = narrativeScore.find((item) => item.id === state.phase);
   if (!phase) return;
   const span = phase.end - phase.start;
   const enterStart = phase.start + span * 0.04;
@@ -85,7 +90,7 @@ export function ScrollMotion({
     const supportsSmooth = window.matchMedia("(pointer: fine)").matches;
     const previousRestoration = window.history.scrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
-    const preview = getPreviewProgress(new URLSearchParams(window.location.search).get("phase"));
+    const preview = getNarrativePreview(new URLSearchParams(window.location.search).get("phase"));
     const arrivalSignal = root.querySelector<HTMLElement>("[data-arrival-signal]");
     const phaseRail = root.querySelector<HTMLElement>("[data-phase-rail]");
     const copyStates: CopyState[] = Array.from(root.querySelectorAll<HTMLElement>("[data-scene-copy]")).map((copy) => ({
@@ -110,7 +115,7 @@ export function ScrollMotion({
 
     const syncExperience = (progress: number) => {
       const safeProgress = clamp01(progress);
-      const phase = getScenePhase(safeProgress);
+      const phase = getNarrativeBeat(safeProgress).id;
       experienceState.progress = safeProgress;
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.dataset.storyStage = phase;
@@ -128,7 +133,7 @@ export function ScrollMotion({
 
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
-      syncExperience(scenePhases.find((phase) => phase.id === "reveal")?.preview ?? 0.455);
+      syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.455);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
         window.history.scrollRestoration = previousRestoration;
@@ -198,12 +203,12 @@ export function ScrollMotion({
     const projectForwardLoop = (deltaPixels = 0) => {
       const effectiveProgress = Math.max(experienceState.progress, getNativeProgress());
       const projectedProgress = effectiveProgress + Math.max(0, deltaPixels) / getScrollDistance();
-      return getScenePhase(effectiveProgress) === "loop" && projectedProgress >= 1 ? projectedProgress : null;
+      return getNarrativeBeat(effectiveProgress).id === "loop" && projectedProgress >= 1 ? projectedProgress : null;
     };
     const projectBackwardLoop = (deltaPixels = 0) => {
       const effectiveProgress = Math.min(experienceState.progress, getNativeProgress());
       const projectedProgress = effectiveProgress + Math.min(0, deltaPixels) / getScrollDistance();
-      return getScenePhase(effectiveProgress) === "arrival" && projectedProgress <= 0 ? projectedProgress : null;
+      return getNarrativeBeat(effectiveProgress).id === "arrival" && projectedProgress <= 0 ? projectedProgress : null;
     };
     const settleWrap = (progress: number) => {
       if (wrapSettleFrame !== undefined) window.cancelAnimationFrame(wrapSettleFrame);
@@ -312,9 +317,9 @@ export function ScrollMotion({
       if (wrapping || direction === 0) return;
       const followsRecentIntent = direction === lastIntentDirection && performance.now() - lastIntentAt < 2000;
       if (!followsRecentIntent) return;
-      if (direction > 0 && currentProgress >= 0.9999 && getScenePhase(currentProgress) === "loop") {
+      if (direction > 0 && currentProgress >= 0.9999 && getNarrativeBeat(currentProgress).id === "loop") {
         wrapToArrival();
-      } else if (direction < 0 && currentProgress <= 0.0001 && getScenePhase(currentProgress) === "arrival") {
+      } else if (direction < 0 && currentProgress <= 0.0001 && getNarrativeBeat(currentProgress).id === "arrival") {
         wrapToLoop();
       }
     };

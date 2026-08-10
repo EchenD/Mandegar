@@ -1,13 +1,16 @@
-export type ScenePhaseId =
-  | "arrival"
-  | "discovery"
-  | "activation"
-  | "reveal"
-  | "experiences"
-  | "proof"
-  | "intelligence"
-  | "invitation"
-  | "loop";
+import {
+  clampNarrativeProgress,
+  getNarrativeBeat,
+  getNarrativeFrame,
+  getNarrativePreview,
+  narrativeCueRanges,
+  narrativeMoments,
+  narrativeScore,
+  rangeProgress,
+  type ScenePhaseId,
+} from "./narrative-score";
+
+export type { ScenePhaseId } from "./narrative-score";
 export type SceneQuality = "full" | "adaptive";
 export type CameraKeyframe = {
   progress: number;
@@ -88,14 +91,8 @@ export const sceneTokens = {
     },
   },
   visualStory: {
-    livingWorld: {
-      enter: [0.36, 0.5] as const,
-      exit: [0.84, 0.93] as const,
-    },
-    peakReveal: {
-      enter: [0.405, 0.465] as const,
-      exit: [0.505, 0.57] as const,
-    },
+    livingWorld: narrativeMoments.livingWorld,
+    peakReveal: narrativeMoments.peakReveal,
     particles: {
       quietPopulation: 0.58,
       livingPopulation: 0.86,
@@ -222,40 +219,9 @@ export const sceneTokens = {
   },
 } as const;
 
-export const scenePhases: ReadonlyArray<{
-  id: ScenePhaseId;
-  start: number;
-  end: number;
-  preview: number;
-}> = [
-  { id: "arrival", start: 0, end: 0.12, preview: 0.05 },
-  { id: "discovery", start: 0.12, end: 0.23, preview: 0.175 },
-  { id: "activation", start: 0.23, end: 0.39, preview: 0.31 },
-  { id: "reveal", start: 0.39, end: 0.52, preview: 0.455 },
-  { id: "experiences", start: 0.52, end: 0.64, preview: 0.58 },
-  { id: "proof", start: 0.64, end: 0.76, preview: 0.7 },
-  { id: "intelligence", start: 0.76, end: 0.84, preview: 0.8 },
-  { id: "invitation", start: 0.84, end: 0.93, preview: 0.885 },
-  { id: "loop", start: 0.93, end: 1, preview: 0.965 },
-] as const;
+export const scenePhases = narrativeScore;
 
-export const activationSequence = {
-  objectAssembly: [0.015, 0.18],
-  lightTrails: [0.1, 0.22],
-  screens: [
-    [0.2, 0.28],
-    [0.25, 0.33],
-    [0.29, 0.37],
-  ],
-  mediaWall: [0.29, 0.38],
-  booths: [0.34, 0.43],
-  branding: [0.38, 0.47],
-  audience: [0.41, 0.51],
-  totalReveal: [0.4, 0.52],
-  intelligence: [0.73, 0.82],
-  haloCondense: [0.82, 0.91],
-  loopReset: [0.93, 1],
-} as const;
+export const activationSequence = narrativeCueRanges;
 
 export const cameraKeyframes: readonly CameraKeyframe[] = [
   { progress: 0, position: [0, 4, 27], mobilePosition: [0, 4.8, 32], target: [0, 2.4, 0], roll: 0, mobileRoll: 0, fov: 48, ease: "loop" },
@@ -287,38 +253,22 @@ export const assetSlots = {
 } as const;
 
 export function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value));
+  return clampNarrativeProgress(value);
 }
 
 export function phaseProgress(progress: number, range: readonly [number, number]) {
-  return clamp01((progress - range[0]) / (range[1] - range[0]));
-}
-
-function smoothPhase(progress: number, range: readonly [number, number]) {
-  const value = phaseProgress(progress, range);
-  return value * value * (3 - 2 * value);
+  return rangeProgress(progress, range);
 }
 
 export function getVisualStoryState(progress: number) {
-  const reset = smoothPhase(progress, activationSequence.loopReset);
-  const living = smoothPhase(progress, sceneTokens.visualStory.livingWorld.enter)
-    * (1 - smoothPhase(progress, sceneTokens.visualStory.livingWorld.exit))
-    * (1 - reset);
-  const peak = smoothPhase(progress, sceneTokens.visualStory.peakReveal.enter)
-    * (1 - smoothPhase(progress, sceneTokens.visualStory.peakReveal.exit))
-    * (1 - reset);
-  return {
-    living,
-    peak,
-    energy: Math.min(1, Math.max(living * 0.72, peak)),
-    reset,
-  };
+  const { living, peak, energy, reset } = getNarrativeFrame(progress);
+  return { living, peak, energy, reset };
 }
 
 export function getScenePhase(progress: number): ScenePhaseId {
-  return scenePhases.reduce<ScenePhaseId>((active, phase) => progress >= phase.start ? phase.id : active, "arrival");
+  return getNarrativeBeat(progress).id;
 }
 
 export function getPreviewProgress(value: string | null) {
-  return scenePhases.find((phase) => phase.id === value)?.preview;
+  return getNarrativePreview(value);
 }
