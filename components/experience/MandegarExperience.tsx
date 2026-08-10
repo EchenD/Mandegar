@@ -17,6 +17,10 @@ const ExperienceCanvas = dynamic(
   { ssr: false },
 );
 
+const CreativePanel = process.env.NODE_ENV === "development"
+  ? dynamic(() => import("./CreativePanel").then((module) => module.CreativePanel), { ssr: false })
+  : null;
+
 type ExperienceCopy = {
   arrivalLabel: string;
   discoveryEyebrow: string;
@@ -90,7 +94,12 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   const audioNodes = useRef<AudioNode[]>([]);
 
   useEffect(() => {
-    const hydrationFrame = window.requestAnimationFrame(() => setLoadProgress(38));
+    const hydrationFrame = window.requestAnimationFrame(() => {
+      setLoadProgress(38);
+      const requestedPhase = new URLSearchParams(window.location.search).get("phase");
+      const directPhase = narrativeScore.find((phase) => phase.id === requestedPhase)?.id;
+      if (directPhase) setActivePhase(directPhase);
+    });
     return () => {
       window.cancelAnimationFrame(hydrationFrame);
       audioNodes.current.forEach((node) => {
@@ -317,6 +326,8 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           <div className={styles.scrollCue} data-scroll-cue>
             <span>{copy.scroll}</span><i />
           </div>
+
+          {CreativePanel ? <CreativePanel activePhase={activePhase} onSeek={scrollToPhase} /> : null}
         </div>
       </div>
 

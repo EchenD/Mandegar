@@ -100,3 +100,24 @@ These three stages form one sentence: **silence → discovery → coordinated ac
 - Stage 03 reads as a coordinated system, not a collection of blinking parts.
 - Each resting frame leaves the active copy readable at desktop, portrait and mobile aspect ratios.
 - The transition into stage 04 has visibly more energy available; stage 03 must not spend the reveal climax early.
+
+## Artist action checklist
+
+You can begin 3D production now. Work in this order so code reviews can use meaningful geometry before surface polish:
+
+1. **Lock the shared silhouette.** Finalize the low-poly floor, canopy, rear veil, both wings and `hero_core_shell`. Do not add small props yet.
+2. **Place production anchors.** Add `fxAnchor_camera_focus`, `fxAnchor_left_interaction` and `fxAnchor_right_interaction` at their visual targets. Keep transforms clean and scales applied.
+3. **Prepare the signal route.** Make `stage_signal_edge` continuous and clean enough for stable surface or edge sampling. It should visually connect the dormant space to the core and then the two interaction systems.
+4. **Separate controllable materials.** Signal edges, the core seam and each screen group need independent low-cost emissive materials. Avoid baking their active glow into the architectural base.
+5. **Validate screen UVs and names.** Preserve every node name listed under stage 03 and give the three media surfaces clean, replaceable UV layouts.
+6. **Export one review GLB.** Use the current compression/export settings and verify the three exact resting views before creating texture detail or LOD variants.
+
+Review these URLs while working:
+
+```text
+http://localhost:3000/fa?intro=0&phase=arrival&creative=1
+http://localhost:3000/fa?intro=0&phase=discovery&creative=1
+http://localhost:3000/fa?intro=0&phase=activation&creative=1
+```
+
+For now, do not spend time on detailed audience assets, decorative orbiting geometry, dense booth props or final screen media. Those do not help us prove the silence-to-discovery-to-activation sentence and may need to change after the first three compositions are locked.

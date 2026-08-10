@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { experienceState } from "./experience-state";
 import { assetSlots, cameraKeyframes, sceneTokens } from "./scene-config";
+import { getCameraLoopSampleProgress } from "./stage-presets";
 
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
@@ -112,6 +113,7 @@ export function CameraRig() {
 
   useFrame((_, delta) => {
     const progress = experienceState.progress;
+    const cameraProgress = getCameraLoopSampleProgress(progress);
     const introActive = experienceState.sequence === "intro";
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
@@ -138,7 +140,7 @@ export function CameraRig() {
       && authored.clip
       && authored.mixer
     ) {
-      authored.mixer.setTime(progress * authored.clip.duration);
+      authored.mixer.setTime(cameraProgress * authored.clip.duration);
       authored.root.updateMatrixWorld(true);
       authored.camera.getWorldPosition(authoredPosition.current);
       authored.camera.getWorldQuaternion(authoredQuaternion.current);
@@ -147,7 +149,7 @@ export function CameraRig() {
       cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
       baseFov = authored.camera.fov;
     } else {
-      const sample = sampleCamera(progress, mobile, sampledPosition.current, sampledTarget.current);
+      const sample = sampleCamera(cameraProgress, mobile, sampledPosition.current, sampledTarget.current);
       camera.position.copy(sampledPosition.current);
       cameraTarget.current.copy(sampledTarget.current);
       camera.lookAt(cameraTarget.current);

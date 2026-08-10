@@ -1,0 +1,11 @@
+npm run build:pages
+This creates the static site at:
+
+[out/](D:/Projects/Navid/Mandegar/out)
+
+To build and push only the exported contents to git@github-echend:EchenD/Mandegar.git:
+npm run deploy:pages
+
+
+For a future custom domain, run:
+npm run deploy:pages -- -BasePath "/" -SiteUrl "https://example.com"

@@ -16,6 +16,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Slow-at-stage / fast-between-stage scroll curve | `components/experience/narrative-progress-curve.ts` |
 | Shared text breathing and per-stage text animation | `components/experience/narrative-copy-timing.ts` |
 | Per-stage camera, particles, lighting, labels and effects | `components/experience/stage-presets.ts` |
+| Development creative controls | `components/experience/CreativePanel.tsx` and `CreativePanel.module.css` |
 | Intro duration and camera/reveal handoff | `components/experience/ExperienceIntro.tsx` and `components/experience/intro-score.ts` |
 | Shared header position and responsive navigation | `components/layout/Header.module.css` |
 
@@ -44,6 +45,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
 | Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Local position/rotation amplitudes, three low frequencies and mobile scale |
 | Pointer camera response | `scene-config.ts` → `cameraMotion.pointer` | Local position/rotation range plus frame-rate-independent spring stiffness and damping |
+| Camera loop seam | `stage-presets.ts` → `cameraLoopSeam` | Final crossfade to Arrival camera-life values and exact GLB endpoint lock around the atomic wrap |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `2175`/`1950`; smaller advances faster, larger advances slower |
@@ -66,6 +68,28 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Header geometry | `Header.module.css` → `.header` and desktop media query | One fixed width, top padding and exactly centered navigation shared by every localized page |
 | Scroll cue and timeline | `MandegarExperience.module.css` → `.scrollCue`, `.phaseRail`, `.phaseTrack` | Initial animated hint, handoff animation, rail width and physical-scroll fill styling |
 | Responsive overrides | Both CSS files → `@media` | Mobile sizes/positions are near the bottom of each file |
+
+## Browser creative panel
+
+Run the development server and open a stage with the creative flag:
+
+```text
+http://localhost:3000/fa?intro=0&phase=discovery&creative=1
+```
+
+The panel is deliberately excluded from production builds. It can:
+
+- jump to any of the nine review stages;
+- tune camera breathing and pointer response;
+- tune particle presence, response, routed signal and halo strength;
+- tune lighting energy, contrast and spatial-HUD prominence;
+- preserve experiments in browser local storage;
+- copy the current override set as JSON; and
+- reset one stage or the entire experiment without changing authored defaults.
+
+Use **Copy JSON** when a review is approved, then transfer those values into the matching entry in `stage-presets.ts`. Browser values are exploratory overrides, not production source of truth. Use **Reset all** after promoting values to confirm that the authored file reproduces the approved result.
+
+The panel intentionally does not expose controls that are not yet production-wired. Reveal-boundary turbulence, edge width, convergence and palette controls should be added with the boundary particle-network step.
 
 ## Controls that should stay synchronized
 

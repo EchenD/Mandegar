@@ -70,6 +70,29 @@ export type StageFrame = {
   spatialProminence: number;
 };
 
+export type StageTuning = {
+  cameraLife: number;
+  cameraPointer: number;
+  particlePresence: number;
+  particleResponse: number;
+  particleSignal: number;
+  particleHalo: number;
+  lightEnergy: number;
+  lightContrast: number;
+  spatialProminence: number;
+};
+
+export type CreativeStagePresetSnapshot = {
+  version: 1;
+  stages: Partial<Record<ScenePhaseId, Partial<StageTuning>>>;
+};
+
+export const cameraLoopSeam = {
+  entryLockEnd: 0.002,
+  exitBlendStart: narrativeScore[narrativeScore.length - 1].preview,
+  exitLockStart: 0.998,
+} as const;
+
 /**
  * The nine creative review states. Values are normalized art-direction
  * controls; render systems interpolate between them through narrative progress.
@@ -158,12 +181,120 @@ export const stagePresets = {
   },
 } as const satisfies Record<ScenePhaseId, StagePreset>;
 
+const creativeStageOverrides: Partial<Record<ScenePhaseId, Partial<StageTuning>>> = {};
+
+const tuningKeys: readonly (keyof StageTuning)[] = [
+  "cameraLife",
+  "cameraPointer",
+  "particlePresence",
+  "particleResponse",
+  "particleSignal",
+  "particleHalo",
+  "lightEnergy",
+  "lightContrast",
+  "spatialProminence",
+];
+
+function clampTuning(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function getBaseStageTuning(phase: ScenePhaseId): StageTuning {
+  const preset = stagePresets[phase];
+  return {
+    cameraLife: preset.camera.life,
+    cameraPointer: preset.camera.pointer,
+    particlePresence: preset.particles.presence,
+    particleResponse: preset.particles.response,
+    particleSignal: preset.particles.signal,
+    particleHalo: preset.particles.halo,
+    lightEnergy: preset.lighting.energy,
+    lightContrast: preset.lighting.contrast,
+    spatialProminence: preset.spatialInfo.prominence,
+  };
+}
+
+export function getStageTuning(phase: ScenePhaseId): StageTuning {
+  return { ...getBaseStageTuning(phase), ...creativeStageOverrides[phase] };
+}
+
+export function setCreativeStageTuning(phase: ScenePhaseId, key: keyof StageTuning, value: number) {
+  if (!Number.isFinite(value)) return;
+  creativeStageOverrides[phase] = {
+    ...creativeStageOverrides[phase],
+    [key]: clampTuning(value),
+  };
+}
+
+export function resetCreativeStageTuning(phase?: ScenePhaseId) {
+  if (phase) {
+    delete creativeStageOverrides[phase];
+    return;
+  }
+  Object.keys(creativeStageOverrides).forEach((key) => {
+    delete creativeStageOverrides[key as ScenePhaseId];
+  });
+}
+
+export function getCreativeStagePresetSnapshot(): CreativeStagePresetSnapshot {
+  return {
+    version: 1,
+    stages: Object.fromEntries(
+      Object.entries(creativeStageOverrides).map(([phase, values]) => [phase, { ...values }]),
+    ) as CreativeStagePresetSnapshot["stages"],
+  };
+}
+
+export function applyCreativeStagePresetSnapshot(snapshot: unknown) {
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const candidate = snapshot as Partial<CreativeStagePresetSnapshot>;
+  if (candidate.version !== 1 || !candidate.stages || typeof candidate.stages !== "object") return false;
+  resetCreativeStageTuning();
+  narrativeScore.forEach(({ id }) => {
+    const stage = candidate.stages?.[id];
+    if (!stage || typeof stage !== "object") return;
+    tuningKeys.forEach((key) => {
+      const value = stage[key];
+      if (typeof value === "number") setCreativeStageTuning(id, key, value);
+    });
+  });
+  return true;
+}
+
 export function getStagePreset(phase: ScenePhaseId): StagePreset {
-  return stagePresets[phase];
+  const preset = stagePresets[phase];
+  if (process.env.NODE_ENV === "production") return preset;
+  const tuning = getStageTuning(phase);
+  return {
+    ...preset,
+    camera: { ...preset.camera, life: tuning.cameraLife, pointer: tuning.cameraPointer },
+    particles: {
+      ...preset.particles,
+      presence: tuning.particlePresence,
+      response: tuning.particleResponse,
+      signal: tuning.particleSignal,
+      halo: tuning.particleHalo,
+    },
+    lighting: { ...preset.lighting, energy: tuning.lightEnergy, contrast: tuning.lightContrast },
+    spatialInfo: { ...preset.spatialInfo, prominence: tuning.spatialProminence },
+  };
 }
 
 function mixValue(from: number, to: number, amount: number) {
   return from + (to - from) * amount;
+}
+
+function smoothstepValue(value: number) {
+  const safe = Math.min(1, Math.max(0, value));
+  return safe * safe * (3 - 2 * safe);
+}
+
+/** Holds the authored camera on its exact endpoint during the atomic scroll wrap. */
+export function getCameraLoopSampleProgress(progress: number) {
+  const safeProgress = Math.min(1, Math.max(0, progress));
+  if (safeProgress <= cameraLoopSeam.entryLockEnd) return 0;
+  if (safeProgress >= cameraLoopSeam.exitLockStart) return 1;
+  return safeProgress;
 }
 
 /** Interpolates renderer controls between the nine authored preview anchors. */
@@ -176,16 +307,23 @@ export function getStageFrame(progress: number): StageFrame {
   const fromBeat = narrativeScore[fromIndex];
   const span = Math.max(0.0001, toBeat.preview - fromBeat.preview);
   const linearMix = fromIndex === toIndex ? 0 : Math.min(1, Math.max(0, (safeProgress - fromBeat.preview) / span));
-  const mix = linearMix * linearMix * (3 - 2 * linearMix);
-  const current = stagePresets[fromBeat.id];
-  const next = stagePresets[toBeat.id];
+  const mix = smoothstepValue(linearMix);
+  const current = getStagePreset(fromBeat.id);
+  const next = getStagePreset(toBeat.id);
+  const cameraLife = mixValue(current.camera.life, next.camera.life, mix);
+  const cameraPointer = mixValue(current.camera.pointer, next.camera.pointer, mix);
+  const cameraSeamMix = smoothstepValue(
+    (safeProgress - cameraLoopSeam.exitBlendStart)
+      / Math.max(0.0001, cameraLoopSeam.exitLockStart - cameraLoopSeam.exitBlendStart),
+  );
+  const arrivalCamera = getStagePreset("arrival").camera;
 
   return {
     current,
     next,
     mix,
-    cameraLife: mixValue(current.camera.life, next.camera.life, mix),
-    cameraPointer: mixValue(current.camera.pointer, next.camera.pointer, mix),
+    cameraLife: mixValue(cameraLife, arrivalCamera.life, cameraSeamMix),
+    cameraPointer: mixValue(cameraPointer, arrivalCamera.pointer, cameraSeamMix),
     particlePresence: mixValue(current.particles.presence, next.particles.presence, mix),
     particleResponse: mixValue(current.particles.response, next.particles.response, mix),
     particleSignal: mixValue(current.particles.signal, next.particles.signal, mix),

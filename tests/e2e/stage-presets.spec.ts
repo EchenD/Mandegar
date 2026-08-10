@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { getStageFrame, getStagePreset, stagePresets, validateStagePresets } from "../../components/experience/stage-presets";
+import {
+  applyCreativeStagePresetSnapshot,
+  getCameraLoopSampleProgress,
+  getCreativeStagePresetSnapshot,
+  getStageFrame,
+  getStagePreset,
+  resetCreativeStageTuning,
+  setCreativeStageTuning,
+  stagePresets,
+  validateStagePresets,
+} from "../../components/experience/stage-presets";
 
 test.describe("creative stage presets", () => {
   test("define one valid renderer preset for every narrative stage", () => {
@@ -45,5 +55,37 @@ test.describe("creative stage presets", () => {
       (stagePresets.discovery.lighting.energy + stagePresets.activation.lighting.energy) / 2,
       5,
     );
+  });
+
+  test("applies, exports and resets non-destructive creative overrides", () => {
+    setCreativeStageTuning("discovery", "particleSignal", 0.73);
+    setCreativeStageTuning("discovery", "lightEnergy", 2);
+
+    expect(getStagePreset("discovery").particles.signal).toBe(0.73);
+    expect(getStagePreset("discovery").lighting.energy).toBe(1);
+    expect(stagePresets.discovery.particles.signal).toBe(0.12);
+    expect(getCreativeStagePresetSnapshot().stages.discovery?.particleSignal).toBe(0.73);
+
+    resetCreativeStageTuning();
+    expect(getStagePreset("discovery").particles.signal).toBe(0.12);
+    expect(applyCreativeStagePresetSnapshot({
+      version: 1,
+      stages: { discovery: { particleSignal: 0.41 } },
+    })).toBe(true);
+    expect(getStagePreset("discovery").particles.signal).toBe(0.41);
+    resetCreativeStageTuning();
+  });
+
+  test("matches procedural and authored camera channels across the loop seam", () => {
+    const arrival = getStageFrame(0.0005);
+    const loopEnd = getStageFrame(0.9995);
+    const loopRest = getStageFrame(narrativeScore[8].preview);
+
+    expect(loopEnd.cameraLife).toBeCloseTo(arrival.cameraLife, 8);
+    expect(loopEnd.cameraPointer).toBeCloseTo(arrival.cameraPointer, 8);
+    expect(loopRest.cameraLife).toBe(stagePresets.loop.camera.life);
+    expect(loopRest.cameraPointer).toBe(stagePresets.loop.camera.pointer);
+    expect(getCameraLoopSampleProgress(0.0005)).toBe(0);
+    expect(getCameraLoopSampleProgress(0.9995)).toBe(1);
   });
 });
