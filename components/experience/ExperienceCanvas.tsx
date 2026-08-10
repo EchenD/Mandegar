@@ -6,17 +6,14 @@ import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from "@react-t
 import { Component, Suspense, type CSSProperties, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
+import { AudienceSystem } from "./AudienceSystem";
 import {
   narrativeCueRanges as activationSequence,
   rangeProgress as phaseProgress,
 } from "./narrative-score";
 import { CameraRig } from "./CameraRig";
+import { ExperiencePostProcessing } from "./ExperiencePostProcessing";
 import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
 import spatialStyles from "./SpatialLabels.module.css";
@@ -1251,183 +1248,6 @@ function SignalField({ quality }: { quality: SceneQuality }) {
   );
 }
 
-function Audience({ quality }: { quality: SceneQuality }) {
-  const bodies = useRef<THREE.InstancedMesh>(null);
-  const heads = useRef<THREE.InstancedMesh>(null);
-  const bodyMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const headMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const aura = useRef<THREE.Points>(null);
-  const auraMaterial = useRef<THREE.PointsMaterial>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const figures = useMemo(() => {
-    const count = qualityProfiles[quality].audiencePoints;
-    return Array.from({ length: count }, (_, index) => {
-      const lane = index % 3;
-      const angle = (index / count) * Math.PI * 2 + 0.19;
-      const radius = 4.35 + lane * 0.72 + Math.sin(index * 4.73) * 0.3;
-      let x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius * 0.68 + 0.42;
-      if (z > 2.45 && Math.abs(x) < 1.35) x += x < 0 ? -1.5 : 1.5;
-      return {
-        angle,
-        radius,
-        x,
-        z,
-        height: 1.46 + (index % 5) * 0.055 + seededNoise(index * 8.17) * 0.08,
-        width: 0.86 + seededNoise(index * 5.31) * 0.2,
-        phase: seededNoise(index * 11.73) * Math.PI * 2,
-        color: new THREE.Color(sceneTokens.visualStory.audience.palette[index % sceneTokens.visualStory.audience.palette.length]),
-      };
-    });
-  }, [quality]);
-  const auraGeometry = useMemo(() => {
-    const buffer = new THREE.BufferGeometry();
-    const positions = new Float32Array(figures.length * 3);
-    figures.forEach((figure, index) => {
-      positions[index * 3] = figure.x;
-      positions[index * 3 + 1] = figure.height * 0.86;
-      positions[index * 3 + 2] = figure.z;
-    });
-    const attribute = new THREE.BufferAttribute(positions, 3);
-    attribute.setUsage(THREE.DynamicDrawUsage);
-    buffer.setAttribute("position", attribute);
-    return buffer;
-  }, [figures]);
-  useEffect(() => {
-    const bodyMesh = bodies.current;
-    const headMesh = heads.current;
-    if (!bodyMesh || !headMesh) return;
-    bodyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    headMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    figures.forEach((figure, index) => {
-      bodyMesh.setColorAt(index, figure.color);
-      headMesh.setColorAt(index, figure.color.clone().offsetHSL(0, -0.08, 0.07));
-    });
-    if (bodyMesh.instanceColor) bodyMesh.instanceColor.needsUpdate = true;
-    if (headMesh.instanceColor) headMesh.instanceColor.needsUpdate = true;
-  }, [figures]);
-  useEffect(() => () => auraGeometry.dispose(), [auraGeometry]);
-  useFrame(({ clock }) => {
-    const story = experienceState.narrative;
-    const audienceConfig = sceneTokens.visualStory.audience;
-    const enter = smoothstep(phaseProgress(experienceState.progress, audienceConfig.enter));
-    const exit = smoothstep(phaseProgress(experienceState.progress, audienceConfig.exit));
-    const amount = enter * (1 - exit) * (1 - story.reset);
-    const opacity = amount * (audienceConfig.opacity[quality] + story.peak * audienceConfig.peakBoost);
-    if (bodyMaterial.current) bodyMaterial.current.opacity = opacity;
-    if (headMaterial.current) headMaterial.current.opacity = opacity * 0.94;
-    if (auraMaterial.current) auraMaterial.current.opacity = amount * (0.16 + story.energy * 0.16 + story.peak * 0.18);
-    if (bodies.current) bodies.current.visible = amount > 0.002;
-    if (heads.current) heads.current.visible = amount > 0.002;
-    if (aura.current) aura.current.visible = amount > 0.002;
-    const auraPositions = auraGeometry.getAttribute("position") as THREE.BufferAttribute;
-    figures.forEach((figure, index) => {
-      const scale = figure.height / 1.62;
-      const gatherOffset = (1 - amount) * audienceConfig.gatherDistance / Math.max(figure.radius, 0.001);
-      const lateralMotion = Math.sin(clock.elapsedTime * 0.34 + figure.phase) * audienceConfig.motion * amount;
-      const x = figure.x * (1 + gatherOffset) - Math.sin(figure.angle) * lateralMotion;
-      const z = figure.z * (1 + gatherOffset) + Math.cos(figure.angle) * lateralMotion;
-      const step = Math.abs(Math.sin(clock.elapsedTime * 0.48 + figure.phase)) * 0.012 * amount;
-
-      dummy.position.set(x, 0.68 * scale + step, z);
-      dummy.rotation.set(0, -figure.angle + Math.PI * 0.5, 0);
-      dummy.scale.set(scale * figure.width, scale, scale * 0.64);
-      dummy.updateMatrix();
-      bodies.current?.setMatrixAt(index, dummy.matrix);
-
-      dummy.position.set(x, 1.36 * scale + step, z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.setScalar(scale * (0.92 + (index % 3) * 0.035));
-      dummy.updateMatrix();
-      heads.current?.setMatrixAt(index, dummy.matrix);
-      auraPositions.setXYZ(index, x, 1.42 * scale + step, z);
-    });
-    if (bodies.current) bodies.current.instanceMatrix.needsUpdate = true;
-    if (heads.current) heads.current.instanceMatrix.needsUpdate = true;
-    auraPositions.needsUpdate = true;
-  });
-  return (
-    <group>
-      <instancedMesh ref={bodies} args={[undefined, undefined, figures.length]} frustumCulled={false} renderOrder={2}>
-        <capsuleGeometry args={[0.12, 0.7, 2, 6]} />
-        <meshBasicMaterial ref={bodyMaterial} vertexColors transparent opacity={0} depthWrite={false} toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={heads} args={[undefined, undefined, figures.length]} frustumCulled={false} renderOrder={2}>
-        <sphereGeometry args={[0.13, 8, 6]} />
-        <meshBasicMaterial ref={headMaterial} vertexColors transparent opacity={0} depthWrite={false} toneMapped={false} />
-      </instancedMesh>
-      <points ref={aura} geometry={auraGeometry} frustumCulled={false} renderOrder={3}>
-        <pointsMaterial
-          ref={auraMaterial}
-          color={sceneTokens.colors.cyan}
-          size={quality === "full" ? 0.105 : 0.13}
-          transparent
-          opacity={0}
-          sizeAttenuation
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </points>
-    </group>
-  );
-}
-
-function PostProcessing({ quality }: { quality: SceneQuality }) {
-  const { gl, scene, camera, size } = useThree();
-  const postprocessing = sceneTokens.environment.postprocessing[quality];
-  const pipeline = useMemo(() => {
-    const composer = new EffectComposer(gl);
-    const renderPass = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(size.width, size.height),
-      postprocessing.bloomStrength,
-      postprocessing.bloomRadius,
-      postprocessing.bloomThreshold,
-    );
-    const bokehPass = new BokehPass(scene, camera, {
-      focus: experienceState.focusDistance,
-      aperture: postprocessing.aperture,
-      maxblur: postprocessing.maxBlur,
-    });
-    const outputPass = new OutputPass();
-    bloomPass.enabled = postprocessing.bloom;
-    bokehPass.enabled = postprocessing.depthOfField;
-    composer.addPass(renderPass);
-    composer.addPass(bokehPass);
-    composer.addPass(bloomPass);
-    composer.addPass(outputPass);
-    return { composer, renderPass, bloomPass, bokehPass, outputPass };
-  }, [camera, gl, postprocessing, scene, size.height, size.width]);
-
-  useEffect(() => {
-    pipeline.composer.setPixelRatio(gl.getPixelRatio());
-    pipeline.composer.setSize(size.width, size.height);
-  }, [gl, pipeline, size.height, size.width]);
-
-  useEffect(() => () => {
-    pipeline.renderPass.dispose();
-    pipeline.bloomPass.dispose();
-    pipeline.bokehPass.dispose();
-    pipeline.outputPass.dispose();
-    pipeline.composer.dispose();
-  }, [pipeline]);
-
-  useFrame((_, delta) => {
-    const focusUniform = pipeline.bokehPass.materialBokeh.uniforms.focus;
-    focusUniform.value = THREE.MathUtils.lerp(focusUniform.value as number, experienceState.focusDistance, 0.08);
-    const story = experienceState.narrative;
-    const assemblyEnergy = 1 - Math.abs(experienceState.assemblyProgress * 2 - 1);
-    pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
-      story.energy * postprocessing.bloomRevealBoost + story.peak * postprocessing.bloomPeakBoost,
-      assemblyEnergy * postprocessing.bloomAssemblyBoost,
-    );
-    pipeline.composer.render(delta);
-  }, 1);
-
-  return null;
-}
-
 function ExhibitionWorld({
   quality,
   projects,
@@ -1534,7 +1354,7 @@ function ExhibitionWorld({
           <lineBasicMaterial ref={(value) => { trailMaterials.current[index] = value; }} color={sceneTokens.visualStory.trails.colors[index]} transparent opacity={0} depthWrite={false} />
         </lineSegments>
       ))}
-      {sceneTokens.featureFlags.audience ? <Audience quality={quality} /> : null}
+      {sceneTokens.featureFlags.audience ? <AudienceSystem quality={quality} /> : null}
     </>
   );
 }
@@ -1768,7 +1588,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
             onProjectSelect={onProjectSelect}
             onSpatialFrame={renderSpatialHud}
           />
-          <PostProcessing quality={runtime} />
+          <ExperiencePostProcessing quality={runtime} />
         </Canvas>
       </CanvasErrorBoundary>
       <div
