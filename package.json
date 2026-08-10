@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "build:pages": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-static.ps1 -BuildOnly",
+    "deploy:pages": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-static.ps1",
     "creative:animatic": "node scripts/build-creative-animatic.mjs"
   },
   "dependencies": {

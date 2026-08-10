@@ -1,0 +1,9 @@
+const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const basePath = configuredBasePath === "/"
+  ? ""
+  : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`;
+
+export function publicAssetPath(path: string) {
+  if (!path.startsWith("/") || path.startsWith("//")) return path;
+  return `${basePath}${path}`;
+}

@@ -1,3 +1,4 @@
+import { publicAssetPath } from "@/lib/public-asset-path";
 import {
   clampNarrativeProgress,
   getNarrativeBeat,
@@ -247,7 +248,7 @@ export const qualityProfiles: Record<SceneQuality, {
 };
 
 export const assetSlots = {
-  assembled: "/models/mandegar/mandegar_hero.glb?revision=camera-v2",
+  assembled: `${publicAssetPath("/models/mandegar/mandegar_hero.glb")}?revision=camera-v2`,
 } as const;
 
 export function clamp01(value: number) {

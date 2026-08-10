@@ -6,6 +6,7 @@ import { useFrame, useLoader, useThree, type ThreeEvent } from "@react-three/fib
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { publicAssetPath } from "@/lib/public-asset-path";
 import { experienceState } from "./experience-state";
 import {
   narrativeCueRanges as activationSequence,
@@ -54,9 +55,9 @@ type SpatialHudMode = {
 };
 
 const defaultProjectMedia = [
-  "/media/placeholders/exhibition-space.webp",
-  "/media/placeholders/stage-production.webp",
-  "/media/placeholders/interactive-wall.webp",
+  publicAssetPath("/media/placeholders/exhibition-space.webp"),
+  publicAssetPath("/media/placeholders/stage-production.webp"),
+  publicAssetPath("/media/placeholders/interactive-wall.webp"),
 ] as const;
 
 const vertexShader = `

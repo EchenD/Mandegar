@@ -1,4 +1,5 @@
 import type { Locale } from "./i18n";
+import { publicAssetPath } from "./public-asset-path";
 
 export type Localized = Record<Locale, string>;
 
@@ -57,7 +58,7 @@ export type Service = {
 };
 
 const placeholder = (src: string, alt: Localized, kind: MediaAsset["kind"] = "image"): MediaAsset => ({
-  src,
+  src: publicAssetPath(src),
   alt,
   kind,
   isPlaceholder: true,

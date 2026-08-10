@@ -16,6 +16,9 @@ export const sanityClient = projectId
 
 export async function sanityFetch<T>(query: string, params: Record<string, unknown> = {}) {
   if (!sanityClient) return null;
+  if (process.env.MANDEGAR_STATIC_EXPORT === "1") {
+    return sanityClient.fetch<T>(query, params, { cache: "force-cache" });
+  }
   const preview = (await draftMode()).isEnabled;
   const token = preview ? process.env.SANITY_API_READ_TOKEN : undefined;
   const client = sanityClient.withConfig({

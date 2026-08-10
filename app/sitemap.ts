@@ -3,6 +3,8 @@ import { getProjects, getServices } from "@/lib/content-source";
 import { locales } from "@/lib/i18n";
 import { absoluteUrl } from "@/lib/seo";
 
+export const dynamic = "force-static";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const content = await Promise.all(locales.map(async (locale) => ({ locale, projects: await getProjects(locale), services: await getServices(locale) })));
   return content.flatMap(({ locale, projects, services }) => {

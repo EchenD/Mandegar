@@ -37,7 +37,10 @@ export const pageSeo = {
 } satisfies Record<Locale, Record<string, readonly [string, string]>>;
 
 export function absoluteUrl(path: string) {
-  return new URL(path, siteUrl).toString();
+  if (/^https?:\/\//i.test(path)) return path;
+  const siteBasePath = siteUrl.pathname.replace(/\/$/, "");
+  const relativePath = path.startsWith("/") ? path : `/${path}`;
+  return new URL(`${siteBasePath}${relativePath}`, `${siteUrl.origin}/`).toString();
 }
 
 export function buildMetadata({ locale, title, description, path = "" }: { locale: Locale; title: string; description: string; path?: string }): Metadata {
