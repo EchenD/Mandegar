@@ -99,6 +99,7 @@ export function ScrollMotion({
     const previousBehavior = document.documentElement.style.scrollBehavior;
     const preview = getNarrativePreview(new URLSearchParams(window.location.search).get("phase"));
     const phaseRail = root.querySelector<HTMLElement>("[data-phase-rail]");
+    const scrollCue = root.querySelector<HTMLElement>("[data-scroll-cue]");
     const copyStates: CopyState[] = Array.from(root.querySelectorAll<HTMLElement>("[data-scene-copy]")).map((copy) => ({
       copy,
       lines: Array.from(copy.querySelectorAll<HTMLElement>("[data-copy-line]")),
@@ -123,22 +124,46 @@ export function ScrollMotion({
     let snapReady = false;
     let loopEndEnteredAt = 0;
 
+    const showPhaseRail = () => {
+      if (root.dataset.scrollEngaged === "true") return;
+      root.dataset.scrollEngaged = "true";
+      phaseRail?.removeAttribute("inert");
+      phaseRail?.setAttribute("aria-hidden", "false");
+      scrollCue?.setAttribute("aria-hidden", "true");
+    };
+
+    root.dataset.scrollEngaged = "false";
+    phaseRail?.setAttribute("inert", "");
+    phaseRail?.setAttribute("aria-hidden", "true");
+    scrollCue?.setAttribute("aria-hidden", "false");
+    if (preview !== undefined) showPhaseRail();
+
     window.history.scrollRestoration = "manual";
     document.documentElement.style.scrollBehavior = "auto";
     if (preview === undefined) window.scrollTo({ top: root.offsetTop, left: 0, behavior: "auto" });
 
+    const getScrollDistance = () => Math.max(1, root.offsetHeight - window.innerHeight);
+    const getNativeProgress = () => {
+      return clamp01((window.scrollY - root.offsetTop) / getScrollDistance());
+    };
+
+    const syncNativePresentation = (nativeProgress: number) => {
+      root.dataset.nativeProgress = nativeProgress.toFixed(4);
+      root.dataset.copyProgress = nativeProgress.toFixed(4);
+      root.style.setProperty("--scroll-progress", nativeProgress.toFixed(4));
+      copyStates.forEach((state) => renderCopyState(state, nativeProgress));
+    };
+
     const syncExperience = (progress: number) => {
-      const nativeProgress = clamp01(progress);
-      const safeProgress = reduced ? nativeProgress : warpNarrativeProgress(nativeProgress);
+      const timelineProgress = clamp01(progress);
+      const nativeProgress = reduced || saveData ? timelineProgress : getNativeProgress();
+      const safeProgress = reduced ? timelineProgress : warpNarrativeProgress(timelineProgress);
       const narrative = directNarrative(safeProgress);
       const phase = narrative.phase;
-      root.dataset.nativeProgress = nativeProgress.toFixed(4);
       root.dataset.narrativeProgress = safeProgress.toFixed(4);
-      root.dataset.copyProgress = nativeProgress.toFixed(4);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.dataset.storyStage = phase;
-      copyStates.forEach((state) => renderCopyState(state, nativeProgress));
-      if (phaseRail) phaseRail.style.opacity = "1";
+      syncNativePresentation(nativeProgress);
       if (phase !== activePhase) {
         activePhase = phase;
         onPhaseChange?.(phase);
@@ -155,6 +180,7 @@ export function ScrollMotion({
 
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
+      showPhaseRail();
       syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.455);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
@@ -281,10 +307,6 @@ export function ScrollMotion({
     };
     root.addEventListener("mandegar:seek", seekExperience);
 
-    const getScrollDistance = () => Math.max(1, root.offsetHeight - window.innerHeight);
-    const getNativeProgress = () => {
-      return clamp01((window.scrollY - root.offsetTop) / getScrollDistance());
-    };
     const projectForwardLoop = (deltaPixels = 0) => {
       const effectiveProgress = Math.max(experienceState.progress, getNativeProgress());
       const projectedProgress = effectiveProgress + Math.max(0, deltaPixels) / getScrollDistance();
@@ -343,6 +365,7 @@ export function ScrollMotion({
         ? 16
         : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight : 1);
       if (deltaPixels !== 0) {
+        showPhaseRail();
         lastIntentDirection = Math.sign(deltaPixels);
         lastIntentAt = performance.now();
       }
@@ -372,6 +395,7 @@ export function ScrollMotion({
       const currentY = event.touches[0]?.clientY ?? touchStartY;
       const delta = touchStartY - currentY;
       if (Math.abs(delta) >= 4) {
+        showPhaseRail();
         lastIntentDirection = Math.sign(delta);
         lastIntentAt = performance.now();
         scheduleSnap();
@@ -398,6 +422,7 @@ export function ScrollMotion({
       const forwardDelta = event.key === "ArrowDown" ? 48 : window.innerHeight * 0.9;
       const backwardDelta = event.key === "ArrowUp" ? -48 : -window.innerHeight * 0.9;
       if (isForwardKey || isBackwardKey) {
+        showPhaseRail();
         cancelSnap();
         lastIntentDirection = isForwardKey ? 1 : -1;
         lastIntentAt = performance.now();
@@ -417,6 +442,8 @@ export function ScrollMotion({
     };
     const onNativeScroll = () => {
       const currentProgress = getNativeProgress();
+      syncNativePresentation(currentProgress);
+      if (currentProgress > 0.0008) showPhaseRail();
       const direction = Math.sign(currentProgress - lastNativeProgress);
       lastNativeProgress = currentProgress;
       if (snapping) return;
@@ -477,7 +504,10 @@ export function ScrollMotion({
         copy.removeAttribute("style");
         lines.forEach((line) => line.removeAttribute("style"));
       });
-      phaseRail?.removeAttribute("style");
+      root.removeAttribute("data-scroll-engaged");
+      phaseRail?.removeAttribute("inert");
+      phaseRail?.removeAttribute("aria-hidden");
+      scrollCue?.removeAttribute("aria-hidden");
       window.history.scrollRestoration = previousRestoration;
       document.documentElement.style.scrollBehavior = previousBehavior;
       resetNarrative();
@@ -498,6 +528,7 @@ export function ScrollMotion({
       data-story-stage="arrival"
       style={{
         "--scene-progress": 0,
+        "--scroll-progress": 0,
         "--experience-scroll-height-desktop": `${sceneTokens.scrollLengthVh.desktop}svh`,
         "--experience-scroll-height-mobile": `${sceneTokens.scrollLengthVh.mobile}svh`,
       } as CSSProperties}

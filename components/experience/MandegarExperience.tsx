@@ -311,14 +311,14 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             </span>
             <div className={styles.phaseButtons}>
               {narrativeScore.map((phase, index) => (
-                <button key={phase.id} type="button" data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
+                <button key={phase.id} type="button" style={{ "--phase-position": `${phase.preview * 100}%` } as CSSProperties} data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
                   <small>0{index + 1}</small><span>{copy.phases[phase.id]}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className={styles.scrollCue}>
+          <div className={styles.scrollCue} data-scroll-cue>
             <span>{copy.scroll}</span><i />
           </div>
         </div>

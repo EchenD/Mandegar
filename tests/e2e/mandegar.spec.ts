@@ -162,6 +162,51 @@ test.describe("Mandegar responsive layout", () => {
     expect(shaderErrors).toEqual([]);
   });
 
+  test("scroll guidance hands off to an accurate phase rail after user input", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+
+    const root = page.locator("[data-experience-root]");
+    const cue = page.locator("[data-scroll-cue]");
+    const rail = page.locator("[data-phase-rail]");
+
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute(
+      "data-complete",
+      "true",
+      { timeout: 30_000 },
+    );
+    await expect(root).not.toHaveAttribute("data-intro-active", "true", {
+      timeout: 10_000,
+    });
+    await expect(page.locator("html")).not.toHaveAttribute(
+      "data-experience-scroll-lock",
+      "",
+    );
+    await expect(cue).toBeVisible();
+    await expect(rail).toBeHidden();
+
+    await page.mouse.wheel(0, 120);
+    await expect(root).toHaveAttribute("data-scroll-engaged", "true");
+    await expect(cue).toBeHidden();
+    await expect(rail).toBeVisible();
+
+    const activation = page.locator("[data-phase-target='activation']");
+    const { nativeProgress, railProgress } = await root.evaluate((element) => ({
+      nativeProgress: Number((element as HTMLElement).dataset.nativeProgress),
+      railProgress: Number(
+        getComputedStyle(element).getPropertyValue("--scroll-progress").trim(),
+      ),
+    }));
+    expect(nativeProgress).toBeGreaterThan(0);
+    expect(railProgress).toBeCloseTo(nativeProgress, 4);
+    expect(
+      await activation.evaluate((element) =>
+        element.style.getPropertyValue("--phase-position"),
+      ),
+    ).toBe("31%");
+  });
+
   test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
