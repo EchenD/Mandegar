@@ -1,7 +1,7 @@
 .root {
   --scene-progress: 0;
   position: relative;
-  height: 1450svh;
+  height: var(--experience-scroll-height-desktop, 2175svh);
   color: #16191d;
   background: #e8ebea;
   isolation: isolate;
@@ -424,7 +424,7 @@
 }
 
 @media (max-width: 760px) {
-  .root { height: 1300svh; }
+  .root { height: var(--experience-scroll-height-mobile, 1950svh); }
   .loaderMark { width: 2.4rem; }
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }

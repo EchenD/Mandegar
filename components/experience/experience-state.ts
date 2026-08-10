@@ -1,6 +1,7 @@
 import type { SceneQuality } from "./scene-config";
 import { getIntroFrame, type IntroFrame } from "./intro-score";
 import { getNarrativeFrame, type NarrativeFrame } from "./narrative-score";
+import { getStageFrame, type StageFrame } from "./stage-presets";
 
 /**
  * A tiny mutable bridge keeps the scroll timeline and the WebGL renderer in
@@ -11,6 +12,7 @@ export const experienceState: {
   intro: IntroFrame;
   progress: number;
   narrative: NarrativeFrame;
+  stage: StageFrame;
   quality: SceneQuality;
   pointerX: number;
   pointerY: number;
@@ -25,6 +27,7 @@ export const experienceState: {
   intro: getIntroFrame(0),
   progress: 0,
   narrative: getNarrativeFrame(0),
+  stage: getStageFrame(0),
   quality: "full",
   pointerX: 0,
   pointerY: 0,

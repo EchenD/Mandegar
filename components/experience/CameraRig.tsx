@@ -68,6 +68,7 @@ export function CameraRig() {
   const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const cameraLifeQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
+  const cameraLifeBlend = useRef(0);
 
   const authored = useMemo(() => {
     const source = gltf.scene.getObjectByName(sceneTokens.authoredCamera.node);
@@ -164,7 +165,11 @@ export function CameraRig() {
     }
 
     const breathing = sceneTokens.cameraMotion.breathing;
-    const breathingScale = introActive ? 0 : mobile ? breathing.mobileScale : 1;
+    cameraLifeBlend.current = introActive
+      ? 0
+      : THREE.MathUtils.damp(cameraLifeBlend.current, 1, 1, springDelta);
+    const lifeBlend = cameraLifeBlend.current;
+    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend;
     cameraLifeTime.current += springDelta;
     const elapsed = cameraLifeTime.current;
     const turn = Math.PI * 2;
@@ -180,8 +185,8 @@ export function CameraRig() {
     cameraRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
     cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
     cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0]);
-    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1]);
+    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0] * lifeBlend);
+    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1] * lifeBlend);
     camera.position.addScaledVector(cameraForward.current, breathZ);
     const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + 0.35) * breathing.rotation[0] * breathingScale;
     const breathYaw = (
@@ -190,8 +195,8 @@ export function CameraRig() {
     ) * breathing.rotation[1] * breathingScale;
     const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + 0.6) * breathing.rotation[2] * breathingScale;
     cameraLifeEuler.current.set(
-      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0],
-      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1],
+      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0] * lifeBlend,
+      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1] * lifeBlend,
       breathRoll,
       "YXZ",
     );

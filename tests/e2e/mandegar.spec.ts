@@ -177,6 +177,31 @@ test.describe("Mandegar responsive layout", () => {
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("activation");
   });
 
+  test("idle scrolling settles softly on the nearest authored stage", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    const root = page.locator("[data-experience-root]");
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    await page.waitForTimeout(1_100);
+    await root.evaluate((element) => {
+      const rootElement = element as HTMLElement;
+      const progress = 0.27;
+      window.scrollTo({
+        top: rootElement.offsetTop + (rootElement.offsetHeight - innerHeight) * progress,
+        left: 0,
+        behavior: "auto",
+      });
+    });
+    await expect(root).toHaveAttribute("data-scroll-snap", "activation", { timeout: 7_000 });
+    await expect(root).not.toHaveAttribute("data-scroll-snap", "activation", { timeout: 3_000 });
+    const settledProgress = await root.evaluate((element) => {
+      const rootElement = element as HTMLElement;
+      return (window.scrollY - rootElement.offsetTop) / Math.max(1, rootElement.offsetHeight - innerHeight);
+    });
+    expect(settledProgress).toBeCloseTo(0.31, 2);
+  });
+
   test("nine-state scene stays aligned with named checkpoints", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
