@@ -1,4 +1,5 @@
 import type { SceneQuality } from "./scene-config";
+import { getNarrativeFrame, type NarrativeFrame } from "./narrative-score";
 
 /**
  * A tiny mutable bridge keeps the scroll timeline and the WebGL renderer in
@@ -6,6 +7,7 @@ import type { SceneQuality } from "./scene-config";
  */
 export const experienceState: {
   progress: number;
+  narrative: NarrativeFrame;
   quality: SceneQuality;
   pointerX: number;
   pointerY: number;
@@ -17,6 +19,7 @@ export const experienceState: {
   focusProject: number | null;
 } = {
   progress: 0,
+  narrative: getNarrativeFrame(0),
   quality: "full",
   pointerX: 0,
   pointerY: 0,

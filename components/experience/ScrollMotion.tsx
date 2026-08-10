@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
+import { directNarrative, resetNarrative } from "./narrative-director";
 import {
   getNarrativeBeat,
   getNarrativePreview,
@@ -115,8 +116,8 @@ export function ScrollMotion({
 
     const syncExperience = (progress: number) => {
       const safeProgress = clamp01(progress);
-      const phase = getNarrativeBeat(safeProgress).id;
-      experienceState.progress = safeProgress;
+      const narrative = directNarrative(safeProgress);
+      const phase = narrative.phase;
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.dataset.storyStage = phase;
       copyStates.forEach((state) => renderCopyState(state, safeProgress));
@@ -137,7 +138,7 @@ export function ScrollMotion({
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
         window.history.scrollRestoration = previousRestoration;
-        experienceState.progress = 0;
+        resetNarrative();
         root.removeAttribute("data-story-stage");
       };
     }
@@ -368,7 +369,7 @@ export function ScrollMotion({
       phaseRail?.removeAttribute("style");
       window.history.scrollRestoration = previousRestoration;
       document.documentElement.style.scrollBehavior = previousBehavior;
-      experienceState.progress = 0;
+      resetNarrative();
       root.removeAttribute("data-story-stage");
     };
   }, { scope, dependencies: [lenisEnabled, onPhaseChange] });

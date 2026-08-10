@@ -13,11 +13,11 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
 import {
-  getNarrativeFrame,
   narrativeCueRanges as activationSequence,
   rangeProgress as phaseProgress,
 } from "./narrative-score";
-import { assetSlots, cameraKeyframes, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
+import { CameraRig } from "./CameraRig";
+import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
 import spatialStyles from "./SpatialLabels.module.css";
 
@@ -243,31 +243,6 @@ function getSpatialMomentOpacity(progress: number, range: readonly [number, numb
   return enter * (1 - exit);
 }
 
-function sampleCamera(progress: number, mobile: boolean) {
-  let left = cameraKeyframes[0];
-  let right = cameraKeyframes[cameraKeyframes.length - 1];
-  for (let index = 1; index < cameraKeyframes.length; index += 1) {
-    if (progress <= cameraKeyframes[index].progress) {
-      left = cameraKeyframes[index - 1];
-      right = cameraKeyframes[index];
-      break;
-    }
-  }
-  const span = Math.max(0.0001, right.progress - left.progress);
-  let mix = Math.min(1, Math.max(0, (progress - left.progress) / span));
-  mix = right.ease === "reveal" ? 1 - Math.pow(1 - mix, 3) : right.ease === "loop" ? mix : smoothstep(mix);
-  const from = mobile ? left.mobilePosition : left.position;
-  const to = mobile ? right.mobilePosition : right.position;
-  const fromRoll = mobile ? left.mobileRoll : left.roll;
-  const toRoll = mobile ? right.mobileRoll : right.roll;
-  return {
-    position: new THREE.Vector3(...from).lerp(new THREE.Vector3(...to), mix),
-    target: new THREE.Vector3(...left.target).lerp(new THREE.Vector3(...right.target), mix),
-    roll: THREE.MathUtils.lerp(fromRoll, toRoll, mix),
-    fov: THREE.MathUtils.lerp(left.fov, right.fov, mix),
-  };
-}
-
 function makeTrail(points: Array<[number, number, number]>) {
   const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point)));
   const samples = curve.getPoints(80);
@@ -342,18 +317,6 @@ function MandegarModel({
   const projectSources = useMemo(() => defaultProjectMedia.map((fallback, index) => projects[index]?.src || fallback), [projects]);
   const textures = useLoader(THREE.TextureLoader, projectSources);
   const firstFrame = useRef(false);
-  const cameraPointer = useRef(new THREE.Vector2());
-  const cameraPointerInput = useRef(new THREE.Vector2());
-  const cameraPointerVelocity = useRef(new THREE.Vector2());
-  const cameraTarget = useRef(new THREE.Vector3());
-  const authoredPosition = useRef(new THREE.Vector3());
-  const authoredQuaternion = useRef(new THREE.Quaternion());
-  const cameraRight = useRef(new THREE.Vector3());
-  const cameraUp = useRef(new THREE.Vector3());
-  const cameraForward = useRef(new THREE.Vector3());
-  const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
-  const cameraLifeQuaternion = useRef(new THREE.Quaternion());
-  const cameraLifeTime = useRef(0);
   const spatialProjection = useRef({
     world: Array.from({ length: 4 }, () => new THREE.Vector3()),
     projected: Array.from({ length: 4 }, () => new THREE.Vector3()),
@@ -397,18 +360,6 @@ function MandegarModel({
   const runtime = useMemo(() => {
     const scene = gltf.scene.clone(true);
     const wireScene = gltf.scene.clone(true);
-    const authoredCameraRoot = gltf.scene.clone(true);
-    const authoredCameraObject = authoredCameraRoot.getObjectByName(sceneTokens.authoredCamera.node);
-    const authoredCamera = authoredCameraObject?.type === "PerspectiveCamera"
-      ? authoredCameraObject as THREE.PerspectiveCamera
-      : null;
-    const authoredCameraClip = THREE.AnimationClip.findByName(gltf.animations, sceneTokens.authoredCamera.clip) ?? null;
-    const authoredCameraMixer = authoredCamera && authoredCameraClip
-      ? new THREE.AnimationMixer(authoredCameraRoot)
-      : null;
-    const authoredCameraAction = authoredCameraMixer && authoredCameraClip
-      ? authoredCameraMixer.clipAction(authoredCameraClip)
-      : null;
     const ownedMaterials: THREE.Material[] = [];
     const sceneMeshes: THREE.Mesh[] = [];
     const wireMeshes = new Map<string, THREE.Mesh>();
@@ -592,45 +543,15 @@ function MandegarModel({
       standardMaterials,
       revealBindings,
       revealByName,
-      authoredCameraRoot,
-      authoredCamera,
-      authoredCameraClip,
-      authoredCameraMixer,
-      authoredCameraAction,
       spatialModes,
     };
-  }, [gltf.animations, gltf.scene, textures]);
+  }, [gltf.scene, textures]);
 
   useEffect(() => {
-    const action = runtime.authoredCameraAction;
-    const mixer = runtime.authoredCameraMixer;
-    if (action && mixer) {
-      action.reset();
-      action.setLoop(THREE.LoopRepeat, Infinity);
-      action.play();
-      mixer.setTime(0);
-      runtime.authoredCameraRoot.updateMatrixWorld(true);
-    }
     return () => {
-      action?.stop();
-      mixer?.stopAllAction();
       runtime.ownedMaterials.forEach((material) => material.dispose());
     };
   }, [runtime]);
-
-  useEffect(() => {
-    if (
-      process.env.NODE_ENV !== "production"
-      && sceneTokens.authoredCamera.enabled
-      && (!runtime.authoredCamera || !runtime.authoredCameraClip || !runtime.authoredCameraMixer)
-    ) {
-      console.warn("Mandegar authored camera unavailable; using procedural fallback", {
-        cameraFound: Boolean(runtime.authoredCamera),
-        clipFound: Boolean(runtime.authoredCameraClip),
-        clipNames: gltf.animations.map((clip) => clip.name),
-      });
-    }
-  }, [gltf.animations, runtime]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" && runtime.spatialModes.length < 7) {
@@ -638,101 +559,17 @@ function MandegarModel({
     }
   }, [runtime.spatialModes.length]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock }) => {
     if (!firstFrame.current) {
       firstFrame.current = true;
       onFirstFrame?.();
     }
     const progress = experienceState.progress;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
-    const cameraSample = sampleCamera(progress, mobile);
-    const pointerMotion = sceneTokens.cameraMotion.pointer;
-    const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
-    cameraPointerInput.current.set(
-      experienceState.pointerX * pointerInputScale,
-      experienceState.pointerY * pointerInputScale,
-    );
-    const springDelta = Math.min(delta, pointerMotion.maximumDelta);
-    const springDamping = Math.exp(-pointerMotion.damping * springDelta);
-    cameraPointerVelocity.current.x += (cameraPointerInput.current.x - cameraPointer.current.x) * pointerMotion.stiffness * springDelta;
-    cameraPointerVelocity.current.y += (cameraPointerInput.current.y - cameraPointer.current.y) * pointerMotion.stiffness * springDelta;
-    cameraPointerVelocity.current.multiplyScalar(springDamping);
-    cameraPointer.current.addScaledVector(cameraPointerVelocity.current, springDelta);
-    cameraPointer.current.x = THREE.MathUtils.clamp(cameraPointer.current.x, -1.05, 1.05);
-    cameraPointer.current.y = THREE.MathUtils.clamp(cameraPointer.current.y, -1.05, 1.05);
-    const authoredCamera = runtime.authoredCamera;
-    const authoredCameraClip = runtime.authoredCameraClip;
-    const authoredCameraMixer = runtime.authoredCameraMixer;
-    if (
-      sceneTokens.authoredCamera.enabled
-      && (!mobile || sceneTokens.authoredCamera.enabledOnMobile)
-      && authoredCamera
-      && authoredCameraClip
-      && authoredCameraMixer
-    ) {
-      authoredCameraMixer.setTime(progress * authoredCameraClip.duration);
-      runtime.authoredCameraRoot.updateMatrixWorld(true);
-      authoredCamera.getWorldPosition(authoredPosition.current);
-      authoredCamera.getWorldQuaternion(authoredQuaternion.current);
-      camera.position.copy(authoredPosition.current);
-      camera.quaternion.copy(authoredQuaternion.current);
-      cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
-      const perspectiveCamera = camera as THREE.PerspectiveCamera;
-      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - authoredCamera.fov) > 0.01) {
-        perspectiveCamera.fov = authoredCamera.fov;
-        perspectiveCamera.updateProjectionMatrix();
-      }
-    } else {
-      camera.position.copy(cameraSample.position);
-      cameraTarget.current.copy(cameraSample.target);
-      camera.lookAt(cameraTarget.current);
-      camera.rotateZ(cameraSample.roll);
-      const perspectiveCamera = camera as THREE.PerspectiveCamera;
-      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - cameraSample.fov) > 0.01) {
-        perspectiveCamera.fov = cameraSample.fov;
-        perspectiveCamera.updateProjectionMatrix();
-      }
-    }
-
-    const breathing = sceneTokens.cameraMotion.breathing;
-    const breathingScale = mobile ? breathing.mobileScale : 1;
-    cameraLifeTime.current += springDelta;
-    const elapsed = cameraLifeTime.current;
-    const turn = Math.PI * 2;
-    const breathX = (
-      Math.sin(elapsed * breathing.frequency[0] * turn)
-      + Math.sin(elapsed * breathing.frequency[2] * turn + 1.7) * 0.35
-    ) * breathing.position[0] * breathingScale;
-    const breathY = (
-      Math.cos(elapsed * breathing.frequency[1] * turn + 0.8)
-      + Math.sin(elapsed * breathing.frequency[0] * turn * 0.47 + 2.1) * 0.25
-    ) * breathing.position[1] * breathingScale;
-    const breathZ = Math.sin(elapsed * breathing.frequency[2] * turn + 1.4) * breathing.position[2] * breathingScale;
-    cameraRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
-    cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0]);
-    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1]);
-    camera.position.addScaledVector(cameraForward.current, breathZ);
-    const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + 0.35) * breathing.rotation[0] * breathingScale;
-    const breathYaw = (
-      Math.sin(elapsed * breathing.frequency[0] * turn + 1.1)
-      + Math.sin(elapsed * breathing.frequency[2] * turn + 2.4) * 0.28
-    ) * breathing.rotation[1] * breathingScale;
-    const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + 0.6) * breathing.rotation[2] * breathingScale;
-    cameraLifeEuler.current.set(
-      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0],
-      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1],
-      breathRoll,
-      "YXZ",
-    );
-    cameraLifeQuaternion.current.setFromEuler(cameraLifeEuler.current);
-    camera.quaternion.multiply(cameraLifeQuaternion.current);
-    experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
 
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
-    const story = getNarrativeFrame(progress);
+    const story = experienceState.narrative;
     const scrolledAssembly = smoothstep(phaseProgress(progress, activationSequence.objectAssembly));
     const assembly = scrolledAssembly * (1 - reset);
     const trails = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
@@ -1372,7 +1209,7 @@ function SignalField({ quality }: { quality: SceneQuality }) {
   }, [data, material]);
   useFrame(({ clock }, delta) => {
     const progress = experienceState.progress;
-    const story = getNarrativeFrame(progress);
+    const story = experienceState.narrative;
     const reset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const signalAmount = smoothstep(phaseProgress(progress, activationSequence.intelligence)) * (1 - reset);
     const ringAmount = smoothstep(phaseProgress(progress, activationSequence.haloCondense)) * (1 - reset);
@@ -1471,7 +1308,7 @@ function Audience({ quality }: { quality: SceneQuality }) {
   }, [figures]);
   useEffect(() => () => auraGeometry.dispose(), [auraGeometry]);
   useFrame(({ clock }) => {
-    const story = getNarrativeFrame(experienceState.progress);
+    const story = experienceState.narrative;
     const audienceConfig = sceneTokens.visualStory.audience;
     const enter = smoothstep(phaseProgress(experienceState.progress, audienceConfig.enter));
     const exit = smoothstep(phaseProgress(experienceState.progress, audienceConfig.exit));
@@ -1579,7 +1416,7 @@ function PostProcessing({ quality }: { quality: SceneQuality }) {
   useFrame((_, delta) => {
     const focusUniform = pipeline.bokehPass.materialBokeh.uniforms.focus;
     focusUniform.value = THREE.MathUtils.lerp(focusUniform.value as number, experienceState.focusDistance, 0.08);
-    const story = getNarrativeFrame(experienceState.progress);
+    const story = experienceState.narrative;
     const assemblyEnergy = 1 - Math.abs(experienceState.assemblyProgress * 2 - 1);
     pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
       story.energy * postprocessing.bloomRevealBoost + story.peak * postprocessing.bloomPeakBoost,
@@ -1632,7 +1469,7 @@ function ExhibitionWorld({
 
   useFrame(({ clock }) => {
     const progress = experienceState.progress;
-    const story = getNarrativeFrame(progress);
+    const story = experienceState.narrative;
     pointer.current.lerp(new THREE.Vector2(experienceState.pointerX, experienceState.pointerY), 0.045);
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
@@ -1683,6 +1520,7 @@ function ExhibitionWorld({
       <pointLight ref={interactionLight} position={[0, 3.7, 4.5]} intensity={0.18} distance={8} color={sceneTokens.colors.cyan} />
 
       <Suspense fallback={null}>
+        <CameraRig />
         <MandegarModel
           projects={projects}
           onFirstFrame={onFirstFrame}
