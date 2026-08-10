@@ -275,22 +275,6 @@
   pointer-events: none;
 }
 
-.arrivalSignal {
-  position: absolute;
-  left: clamp(1.3rem, 5vw, 5.5rem);
-  inset-block-end: clamp(5.8rem, 12vh, 8.6rem);
-  display: flex;
-  align-items: center;
-  gap: .85rem;
-  max-width: 18rem;
-  color: rgba(22, 25, 29, .58);
-  opacity: 0;
-  transition: opacity .7s ease;
-}
-
-.arrivalSignal span { display: grid; place-items: center; width: 2.1rem; aspect-ratio: 1; border: 1px solid rgba(22,25,29,.2); border-radius: 50%; color: #225cff; font-size: .52rem; }
-.arrivalSignal p { margin: 0; font-size: clamp(.68rem, .8vw, .78rem); line-height: 1.55; }
-
 .sceneCopy {
   position: absolute;
   left: clamp(1.5rem, 6vw, 7rem);
@@ -346,6 +330,23 @@
   text-align: center !important;
   transform: translate(-50%, -50%);
 }
+
+.sceneCopy.arrivalCopy {
+  inset-inline: auto;
+  left: 50%;
+  width: min(44rem, 66vw);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+:global([dir="rtl"]) .sceneCopy.arrivalCopy {
+  right: auto;
+  left: 50%;
+  text-align: center;
+}
+
+.sceneCopy.arrivalCopy h2 { max-width: 15ch; margin-inline: auto; }
+.sceneCopy.arrivalCopy > span { justify-content: center; }
 
 .invitationCopy > span,
 .loopCopy > span { justify-content: center; }
@@ -429,13 +430,13 @@
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }
   .fallbackHalo { width: 82vw; inset-block-start: 27%; }
-  .arrivalSignal { left: 1.15rem; inset-block-end: 5.8rem; max-width: 15rem; }
   .sceneCopy { left: 1.2rem; inset-block: 50% auto; width: calc(100% - 2.4rem); transform: translateY(-50%); }
   :global([dir="rtl"]) .sceneCopy { right: 1.2rem; left: auto; }
   .sceneCopy::before { inset: -1.2rem -1.5rem; -webkit-backdrop-filter: blur(14px) saturate(.9); backdrop-filter: blur(14px) saturate(.9); }
   .sceneCopy h2 { max-width: 13ch; font-size: clamp(1.9rem, 9.2vw, 3.2rem); }
   .sceneCopy p { max-width: 28rem; margin-block-start: .75rem; font-size: .8rem; line-height: 1.65; }
   .sceneCopy > span { margin-block-end: .65rem; }
+  .sceneCopy.arrivalCopy,
   .sceneCopy.invitationCopy,
   .sceneCopy.loopCopy { inset-inline: auto; left: 50%; inset-block: 50% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
   .ctaRow { margin-block-start: 1.1rem; }
@@ -453,8 +454,7 @@
 @media (prefers-reduced-motion: reduce) {
   .loader,
   .primaryCta,
-  .phaseTrack i,
-  .arrivalSignal { transition: none !important; }
+  .phaseTrack i { transition: none !important; }
   .loaderMark span,
   .loaderMark i { animation: none !important; }
 }

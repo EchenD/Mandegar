@@ -202,6 +202,32 @@ test.describe("Mandegar responsive layout", () => {
     expect(settledProgress).toBeCloseTo(0.31, 2);
   });
 
+  test("opening copy breath follows physical scroll rather than sinus progress", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    const root = page.locator("[data-experience-root]");
+    const arrival = page.locator("[data-scene-copy='arrival']");
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    await expect(root).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
+    const enterProgress = Number(await root.getAttribute("data-arrival-enter-progress"));
+    const scrollToProgress = (progress: number) => root.evaluate((element, nextProgress) => {
+      const rootElement = element as HTMLElement;
+      window.scrollTo({
+        top: rootElement.offsetTop + (rootElement.offsetHeight - innerHeight) * nextProgress,
+        left: 0,
+        behavior: "auto",
+      });
+    }, progress);
+
+    await scrollToProgress(Math.max(0, enterProgress - 0.004));
+    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeLessThan(enterProgress);
+    await expect(arrival).toBeHidden();
+    await scrollToProgress(enterProgress + 0.01);
+    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeGreaterThan(enterProgress);
+    await expect(arrival).toBeVisible();
+  });
+
   test("nine-state scene stays aligned with named checkpoints", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -216,7 +242,7 @@ test.describe("Mandegar responsive layout", () => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
-    for (const stage of ["discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
+    for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
       await page.locator(`[data-phase-target='${stage}']`).click();
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
       await page.waitForTimeout(550);
@@ -256,12 +282,15 @@ test.describe("Mandegar responsive layout", () => {
     await assertNoHorizontalOverflow(page);
   });
 
-  test("homepage hides the footer and forward scroll wraps from loop to arrival", async ({ page }) => {
+  test("homepage hides the footer and forward scroll uses a spatial breath before wrapping to arrival", async ({ page }) => {
+    test.setTimeout(120_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
     await expect(page.locator(".footer")).toBeHidden();
     await page.evaluate(() => {
-      document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .995 } }));
+      document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .999 } }));
     });
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("loop");
     await page.mouse.wheel(0, 900);

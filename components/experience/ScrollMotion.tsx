@@ -7,6 +7,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
 import { directNarrative, resetNarrative } from "./narrative-director";
+import { getNarrativeCopyTiming, narrativeLoopSeam } from "./narrative-copy-timing";
+import { warpNarrativeProgress } from "./narrative-progress-curve";
 import {
   getNarrativeBeat,
   getNarrativePreview,
@@ -25,7 +27,7 @@ gsap.registerPlugin(ScrollTrigger);
 type CopyState = {
   copy: HTMLElement;
   lines: HTMLElement[];
-  phase: Exclude<ScenePhaseId, "arrival">;
+  phase: ScenePhaseId;
 };
 
 function clamp01(value: number) {
@@ -44,19 +46,15 @@ function rangeProgress(progress: number, start: number, end: number) {
 function renderCopyState(state: CopyState, progress: number) {
   const phase = narrativeScore.find((item) => item.id === state.phase);
   if (!phase) return;
-  const span = phase.end - phase.start;
-  const enterStart = phase.start + span * 0.04;
-  const enterEnd = phase.start + span * 0.38;
-  const exitStart = phase.end - span * 0.36;
-  const exitEnd = phase.end;
+  const timing = getNarrativeCopyTiming(phase.id);
   let highestOpacity = 0;
 
   state.lines.forEach((line, index) => {
     const sequence = state.lines.length > 1 ? index / (state.lines.length - 1) : 0;
-    const enterOffset = sequence * span * 0.075;
-    const exitOffset = sequence * span * 0.055;
-    const entered = ease(rangeProgress(progress, enterStart + enterOffset, enterEnd));
-    const exited = ease(rangeProgress(progress, exitStart + exitOffset, exitEnd));
+    const enterOffset = sequence * timing.enterStagger;
+    const exitOffset = sequence * timing.exitStagger;
+    const entered = ease(rangeProgress(progress, timing.enterStart + enterOffset, timing.enterEnd));
+    const exited = ease(rangeProgress(progress, timing.exitStart + exitOffset, timing.exitEnd));
     const opacity = entered * (1 - exited);
     const y = (1 - entered) * 24 - exited * 15;
     const z = (1 - entered) * -78 + exited * 48;
@@ -100,13 +98,13 @@ export function ScrollMotion({
     const previousRestoration = window.history.scrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
     const preview = getNarrativePreview(new URLSearchParams(window.location.search).get("phase"));
-    const arrivalSignal = root.querySelector<HTMLElement>("[data-arrival-signal]");
     const phaseRail = root.querySelector<HTMLElement>("[data-phase-rail]");
     const copyStates: CopyState[] = Array.from(root.querySelectorAll<HTMLElement>("[data-scene-copy]")).map((copy) => ({
       copy,
       lines: Array.from(copy.querySelectorAll<HTMLElement>("[data-copy-line]")),
-      phase: copy.dataset.sceneCopy as Exclude<ScenePhaseId, "arrival">,
+      phase: copy.dataset.sceneCopy as ScenePhaseId,
     }));
+    root.dataset.arrivalEnterProgress = getNarrativeCopyTiming("arrival").enterStart.toFixed(4);
     let smooth: Lenis | undefined;
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
@@ -123,22 +121,23 @@ export function ScrollMotion({
     let snapTween: gsap.core.Tween | undefined;
     let snapping = false;
     let snapReady = false;
+    let loopEndEnteredAt = 0;
 
     window.history.scrollRestoration = "manual";
     document.documentElement.style.scrollBehavior = "auto";
     if (preview === undefined) window.scrollTo({ top: root.offsetTop, left: 0, behavior: "auto" });
 
     const syncExperience = (progress: number) => {
-      const safeProgress = clamp01(progress);
+      const nativeProgress = clamp01(progress);
+      const safeProgress = reduced ? nativeProgress : warpNarrativeProgress(nativeProgress);
       const narrative = directNarrative(safeProgress);
       const phase = narrative.phase;
+      root.dataset.nativeProgress = nativeProgress.toFixed(4);
+      root.dataset.narrativeProgress = safeProgress.toFixed(4);
+      root.dataset.copyProgress = nativeProgress.toFixed(4);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.dataset.storyStage = phase;
-      copyStates.forEach((state) => renderCopyState(state, safeProgress));
-      const arrivalVisibility = safeProgress <= 0.12
-        ? 1 - ease(rangeProgress(safeProgress, 0.055, 0.12))
-        : ease(rangeProgress(safeProgress, 0.985, 1));
-      if (arrivalSignal) arrivalSignal.style.opacity = arrivalVisibility.toFixed(4);
+      copyStates.forEach((state) => renderCopyState(state, nativeProgress));
       if (phaseRail) phaseRail.style.opacity = "1";
       if (phase !== activePhase) {
         activePhase = phase;
@@ -239,6 +238,7 @@ export function ScrollMotion({
       const activeElement = document.activeElement as HTMLElement | null;
       if (activeElement?.closest("a, button, input, textarea, select, [contenteditable='true']")) return;
       const progress = getNativeProgress();
+      if (progress >= narrativeLoopSeam.terminalProgress) return;
       const target = getNearestNarrativeSnap(progress, lastIntentDirection);
       if (!shouldSnapNarrative(progress, target.preview)) return;
       const distance = getScrollDistance();
@@ -288,7 +288,19 @@ export function ScrollMotion({
     const projectForwardLoop = (deltaPixels = 0) => {
       const effectiveProgress = Math.max(experienceState.progress, getNativeProgress());
       const projectedProgress = effectiveProgress + Math.max(0, deltaPixels) / getScrollDistance();
-      return getNarrativeBeat(effectiveProgress).id === "loop" && projectedProgress >= 1 ? projectedProgress : null;
+      if (effectiveProgress < narrativeLoopSeam.wrapReadyProgress) {
+        loopEndEnteredAt = 0;
+        return null;
+      }
+      if (getNarrativeBeat(effectiveProgress).id !== "loop" || projectedProgress < 1) return null;
+      if (narrativeLoopSeam.minimumHoldMs <= 0) return projectedProgress;
+      if (loopEndEnteredAt === 0) {
+        loopEndEnteredAt = performance.now();
+        return null;
+      }
+      return performance.now() - loopEndEnteredAt >= narrativeLoopSeam.minimumHoldMs
+        ? projectedProgress
+        : null;
     };
     const projectBackwardLoop = (deltaPixels = 0) => {
       const effectiveProgress = Math.min(experienceState.progress, getNativeProgress());
@@ -310,6 +322,7 @@ export function ScrollMotion({
     const wrapToArrival = () => {
       if (wrapping) return;
       wrapping = true;
+      loopEndEnteredAt = 0;
       const targetProgress = 0.0005;
       lastNativeProgress = targetProgress;
       goToProgress(targetProgress, true);
@@ -411,7 +424,7 @@ export function ScrollMotion({
       if (wrapping || direction === 0) return;
       const followsRecentIntent = direction === lastIntentDirection && performance.now() - lastIntentAt < 2000;
       if (!followsRecentIntent) return;
-      if (direction > 0 && currentProgress >= 0.9999 && getNarrativeBeat(currentProgress).id === "loop") {
+      if (direction > 0 && projectForwardLoop() !== null) {
         wrapToArrival();
       } else if (direction < 0 && currentProgress <= 0.0001 && getNarrativeBeat(currentProgress).id === "arrival") {
         wrapToLoop();
@@ -464,12 +477,15 @@ export function ScrollMotion({
         copy.removeAttribute("style");
         lines.forEach((line) => line.removeAttribute("style"));
       });
-      arrivalSignal?.removeAttribute("style");
       phaseRail?.removeAttribute("style");
       window.history.scrollRestoration = previousRestoration;
       document.documentElement.style.scrollBehavior = previousBehavior;
       resetNarrative();
       root.removeAttribute("data-story-stage");
+      root.removeAttribute("data-native-progress");
+      root.removeAttribute("data-narrative-progress");
+      root.removeAttribute("data-copy-progress");
+      root.removeAttribute("data-arrival-enter-progress");
     };
   }, { scope, dependencies: [enabled, lenisEnabled, onPhaseChange] });
 

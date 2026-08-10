@@ -227,10 +227,10 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           </div>
 
           <div className={styles.copyLayer}>
-            <div className={styles.arrivalSignal} data-arrival-signal>
-              <span>01</span>
-              <p>{copy.arrivalLabel}</p>
-            </div>
+            <section className={`${styles.sceneCopy} ${styles.arrivalCopy}`} data-scene-copy="arrival" data-cinematic-beat>
+              <span data-copy-line>01 / {copy.phases.arrival}</span>
+              <h2 data-copy-line>{copy.arrivalLabel}</h2>
+            </section>
 
             <section className={`${styles.sceneCopy} ${styles.discoveryCopy}`} data-scene-copy="discovery" data-cinematic-beat>
               <span data-copy-line>{copy.discoveryEyebrow}</span>
@@ -326,6 +326,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
 
       <div className={styles.semanticFallback} data-semantic-fallback data-cinematic-beat>
         {[
+          [`01 / ${copy.phases.arrival}`, copy.arrivalLabel, ""],
           [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody],
           [copy.activationEyebrow, copy.activationTitle, copy.activationBody],
           [copy.revealEyebrow, copy.revealTitle, copy.revealBody],
@@ -337,7 +338,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
         ].map((content, index) => (
           <section key={content[0]}>
             <span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>
-            {index >= 6 ? <Link href={ctaHref}>{copy.startProject}</Link> : null}
+            {index >= 7 ? <Link href={ctaHref}>{copy.startProject}</Link> : null}
           </section>
         ))}
       </div>
