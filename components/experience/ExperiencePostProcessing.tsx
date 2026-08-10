@@ -57,8 +57,11 @@ export function ExperiencePostProcessing({ quality }: { quality: SceneQuality })
     const focusUniform = pipeline.bokehPass.materialBokeh.uniforms.focus;
     focusUniform.value = THREE.MathUtils.lerp(focusUniform.value as number, experienceState.focusDistance, 0.08);
     const story = experienceState.narrative;
+    const stage = experienceState.stage;
     pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
-      story.energy * postprocessing.bloomRevealBoost + story.peak * postprocessing.bloomPeakBoost,
+      stage.lightEnergy * postprocessing.bloomRevealBoost * 0.28
+        + story.energy * postprocessing.bloomRevealBoost
+        + story.peak * postprocessing.bloomPeakBoost,
       0,
     );
     pipeline.composer.render(delta);

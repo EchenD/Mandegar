@@ -165,11 +165,13 @@ export function CameraRig() {
     }
 
     const breathing = sceneTokens.cameraMotion.breathing;
+    const stage = experienceState.stage;
     cameraLifeBlend.current = introActive
       ? 0
       : THREE.MathUtils.damp(cameraLifeBlend.current, 1, 1, springDelta);
     const lifeBlend = cameraLifeBlend.current;
-    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend;
+    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife;
+    const pointerScale = lifeBlend * stage.cameraPointer;
     cameraLifeTime.current += springDelta;
     const elapsed = cameraLifeTime.current;
     const turn = Math.PI * 2;
@@ -185,8 +187,8 @@ export function CameraRig() {
     cameraRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
     cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
     cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0] * lifeBlend);
-    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1] * lifeBlend);
+    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0] * pointerScale);
+    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1] * pointerScale);
     camera.position.addScaledVector(cameraForward.current, breathZ);
     const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + 0.35) * breathing.rotation[0] * breathingScale;
     const breathYaw = (
@@ -195,8 +197,8 @@ export function CameraRig() {
     ) * breathing.rotation[1] * breathingScale;
     const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + 0.6) * breathing.rotation[2] * breathingScale;
     cameraLifeEuler.current.set(
-      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0] * lifeBlend,
-      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1] * lifeBlend,
+      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0] * pointerScale,
+      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1] * pointerScale,
       breathRoll,
       "YXZ",
     );

@@ -41,6 +41,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
       uEnergyAmount: { value: 0 },
       uCelebration: { value: 0 },
       uPeak: { value: 0 },
+      uPresence: { value: 1 },
       uRevealCenter: { value: data.focus.clone() },
       uRevealExtent: { value: data.revealExtent },
       uResponse: { value: 0.26 },
@@ -75,12 +76,26 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
   useFrame(({ clock }, delta) => {
     const progress = experienceState.progress;
     const story = experienceState.narrative;
+    const stage = experienceState.stage;
     const reset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
-    const signalAmount = smoothstep(phaseProgress(progress, activationSequence.intelligence)) * (1 - reset);
-    const ringAmount = smoothstep(phaseProgress(progress, activationSequence.haloCondense)) * (1 - reset);
-    const activation = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
+    const signalAmount = Math.max(
+      smoothstep(phaseProgress(progress, activationSequence.intelligence)),
+      stage.particleSignal,
+    ) * (1 - reset);
+    const ringAmount = Math.max(
+      smoothstep(phaseProgress(progress, activationSequence.haloCondense)),
+      stage.particleHalo,
+    ) * (1 - reset);
+    const activation = Math.max(
+      smoothstep(phaseProgress(progress, activationSequence.lightTrails)),
+      stage.particleSignal,
+    ) * (1 - reset);
     const pulse = experienceState.pointerPulse;
-    const response = 0.26 + activation * 0.74;
+    const response = 0.08 + stage.particleResponse * 0.92;
+    const visualEnergy = Math.max(story.energy, stage.lightEnergy * 0.65);
+    const presence = experienceState.sequence === "intro"
+      ? stage.particlePresence + (1 - experienceState.intro.progress) * 0.3
+      : stage.particlePresence;
     const modelScale = 1;
     const modelYOffset = 0;
     pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
@@ -96,9 +111,10 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     material.uniforms.uSignalAmount.value = signalAmount;
     material.uniforms.uRingAmount.value = ringAmount;
     material.uniforms.uActivation.value = activation;
-    material.uniforms.uEnergyAmount.value = story.energy;
-    material.uniforms.uCelebration.value = story.energy;
+    material.uniforms.uEnergyAmount.value = visualEnergy;
+    material.uniforms.uCelebration.value = visualEnergy;
     material.uniforms.uPeak.value = story.peak;
+    material.uniforms.uPresence.value = presence;
     material.uniforms.uResponse.value = response;
     material.uniforms.uPointer.value.copy(pointerWorld.current);
     material.uniforms.uPointerNormal.value.copy(pointerNormal.current);

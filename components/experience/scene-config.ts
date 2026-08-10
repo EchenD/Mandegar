@@ -182,9 +182,9 @@ export const sceneTokens = {
   },
   spatialLabels: {
     moments: {
-      assembly: [0.055, 0.225] as const,
-      activationLeft: [0.225, 0.305] as const,
-      activationRight: [0.365, 0.455] as const,
+      assembly: [0.115, 0.225] as const,
+      activationLeft: [0.225, 0.34] as const,
+      activationRight: [0.34, 0.455] as const,
       reveal: [0.47, 0.52] as const,
       experiences: [0.52, 0.64] as const,
       proof: [0.64, 0.76] as const,

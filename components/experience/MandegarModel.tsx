@@ -491,6 +491,11 @@ export function MandegarModel({
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
     const story = experienceState.narrative;
+    const stage = experienceState.stage;
+    const visualEnergy = Math.max(
+      story.energy,
+      stage.lightEnergy * stage.particlePresence,
+    );
     const introActive = experienceState.sequence === "intro";
     const assembly = introActive ? experienceState.intro.assemblyProgress : 1;
     const trails = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
@@ -511,7 +516,7 @@ export function MandegarModel({
     }
     runtime.screens.forEach(({ material, wake, projectIndex }) => {
       material.uniforms.uEnergy.value = smoothstep(phaseProgress(progress, wake)) * (1 - reset);
-      material.uniforms.uCelebration.value = story.energy;
+      material.uniforms.uCelebration.value = visualEnergy;
       material.uniforms.uPeak.value = story.peak;
       material.uniforms.uHover.value = THREE.MathUtils.lerp(material.uniforms.uHover.value, experienceState.focusProject === projectIndex ? 1 : 0, 0.12);
       material.uniforms.uOpacity.value = 1;
@@ -522,22 +527,22 @@ export function MandegarModel({
       const localReveal = assembly;
       if (nodeName === "ring_signature_halo") {
         material.emissive.copy(energyCyan).lerp(energyMagenta, story.peak * 0.64 + story.living * 0.12);
-        material.emissiveIntensity = (0.08 + trails * 0.18 + story.energy * 2.35 + story.peak * 1.4) * experienceState.lightScale;
-        material.color.lerpColors(haloQuiet, haloActive, story.energy * 0.72);
+        material.emissiveIntensity = (0.04 + trails * 0.18 + visualEnergy * 2.35 + story.peak * 1.4) * experienceState.lightScale;
+        material.color.lerpColors(haloQuiet, haloActive, visualEnergy * 0.72);
       } else if (nodeName === "ring_signal_surface") {
         material.transparent = true;
-        material.opacity = localReveal * Math.min(1, trails * 0.3 + story.energy * 0.82 + story.peak * 0.18);
-        material.emissive.copy(energyCobalt).lerp(energyMagenta, story.energy * 0.5 + story.peak * 0.4);
-        material.emissiveIntensity = (0.4 + story.energy * 2.8 + story.peak * 1.25) * experienceState.lightScale;
+        material.opacity = localReveal * Math.min(1, trails * 0.3 + visualEnergy * 0.82 + story.peak * 0.18);
+        material.emissive.copy(energyCobalt).lerp(energyMagenta, visualEnergy * 0.5 + story.peak * 0.4);
+        material.emissiveIntensity = (0.2 + visualEnergy * 2.8 + story.peak * 1.25) * experienceState.lightScale;
       } else if (nodeName === "stage_signal_edge") {
-        material.emissive.copy(energyCyan).lerp(energyAmber, story.energy * 0.5 + story.peak * 0.5);
-        material.emissiveIntensity = (trails * 0.3 + story.energy * 1.7 + story.peak * 0.75) * experienceState.lightScale;
+        material.emissive.copy(energyCyan).lerp(energyAmber, visualEnergy * 0.5 + story.peak * 0.5);
+        material.emissiveIntensity = (trails * 0.3 + visualEnergy * 1.7 + story.peak * 0.75) * experienceState.lightScale;
       } else if (nodeName.startsWith("wing_") && nodeName.endsWith("_signal")) {
         material.emissive.copy(nodeName.includes("left") ? energyMagenta : energyCyan).lerp(energyAmber, story.peak * 0.28);
-        material.emissiveIntensity = (trails * 0.3 + story.energy * 1.6 + story.peak * 0.7) * experienceState.lightScale;
+        material.emissiveIntensity = (trails * 0.3 + visualEnergy * 1.6 + story.peak * 0.7) * experienceState.lightScale;
       } else if (nodeName === "hero_canopy_light") {
         material.emissive.copy(energyCyan).lerp(energyMagenta, story.peak * 0.34);
-        material.emissiveIntensity = (trails * 0.3 + story.energy * 1.4 + story.peak * 0.75) * experienceState.lightScale;
+        material.emissiveIntensity = (trails * 0.3 + visualEnergy * 1.4 + story.peak * 0.75) * experienceState.lightScale;
       } else if (nodeName.startsWith("touch_")) {
         const focused = experienceState.focusZone === "touch";
         material.emissive.set(sceneTokens.colors.cobalt);
@@ -556,7 +561,9 @@ export function MandegarModel({
 
     if (onSpatialFrame) {
       const mode = runtime.spatialModes.find((candidate) => progress >= candidate.range[0] && progress < candidate.range[1]) ?? null;
-      const opacity = mode ? getSpatialMomentOpacity(progress, mode.range) * (1 - reset) : 0;
+      const opacity = mode
+        ? getSpatialMomentOpacity(progress, mode.range) * stage.spatialProminence * (1 - reset)
+        : 0;
       const projection = spatialProjection.current;
       if (mode && opacity > 0.001) {
         runtime.scene.updateMatrixWorld(true);

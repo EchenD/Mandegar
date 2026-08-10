@@ -26,7 +26,7 @@ export type LightingStageMode =
   | "inviting"
   | "reset";
 
-export type SpatialInfoMode = "hidden" | "zones" | "projects" | "metrics" | "invitation";
+export type SpatialInfoMode = "hidden" | "assembly" | "activation" | "zones" | "projects" | "metrics" | "invitation";
 
 export type StagePreset = {
   id: ScenePhaseId;
@@ -77,28 +77,28 @@ export type StageFrame = {
 export const stagePresets = {
   arrival: {
     id: "arrival",
-    camera: { shot: "arrival-wide", life: 0.35, pointer: 0.3 },
-    particles: { mode: "quiet", presence: 0.28, response: 0.18, signal: 0, halo: 0 },
-    lighting: { mode: "neutral", energy: 0.22, contrast: 0.18 },
+    camera: { shot: "arrival-wide", life: 0.18, pointer: 0.08 },
+    particles: { mode: "quiet", presence: 0.18, response: 0.06, signal: 0, halo: 0 },
+    lighting: { mode: "neutral", energy: 0.14, contrast: 0.12 },
     spatialInfo: { mode: "hidden", prominence: 0 },
     interaction: "subtle",
     channels: ["architecture"],
   },
   discovery: {
     id: "discovery",
-    camera: { shot: "discovery-approach", life: 0.48, pointer: 0.45 },
-    particles: { mode: "trace", presence: 0.42, response: 0.35, signal: 0.18, halo: 0 },
-    lighting: { mode: "guided", energy: 0.36, contrast: 0.3 },
-    spatialInfo: { mode: "hidden", prominence: 0 },
+    camera: { shot: "discovery-approach", life: 0.32, pointer: 0.24 },
+    particles: { mode: "trace", presence: 0.38, response: 0.22, signal: 0.12, halo: 0 },
+    lighting: { mode: "guided", energy: 0.32, contrast: 0.28 },
+    spatialInfo: { mode: "assembly", prominence: 0.58 },
     interaction: "subtle",
     channels: ["architecture", "signal", "screens"],
   },
   activation: {
     id: "activation",
-    camera: { shot: "activation-traverse", life: 0.62, pointer: 0.58 },
-    particles: { mode: "wake", presence: 0.64, response: 0.62, signal: 0.38, halo: 0.08 },
-    lighting: { mode: "activated", energy: 0.62, contrast: 0.48 },
-    spatialInfo: { mode: "hidden", prominence: 0 },
+    camera: { shot: "activation-traverse", life: 0.52, pointer: 0.48 },
+    particles: { mode: "wake", presence: 0.62, response: 0.55, signal: 0.44, halo: 0.06 },
+    lighting: { mode: "activated", energy: 0.58, contrast: 0.5 },
+    spatialInfo: { mode: "activation", prominence: 0.82 },
     interaction: "subtle",
     channels: ["architecture", "signal", "screens"],
   },

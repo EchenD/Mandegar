@@ -20,6 +20,7 @@ export const signalFieldVertexShader = `
   uniform float uEnergyAmount;
   uniform float uCelebration;
   uniform float uPeak;
+  uniform float uPresence;
   uniform vec3 uRevealCenter;
   uniform float uRevealExtent;
   uniform float uResponse;
@@ -93,6 +94,7 @@ export const signalFieldVertexShader = `
     vVisibility = dustMask * dustPopulation
       + surfaceMask * surfaceReveal * (0.4 + uEnergyAmount * 0.6)
       + signalMask * signalVisibility;
+    vVisibility *= uPresence;
 
     vec3 pointerDelta = worldPosition - uPointer;
     float pointerDistance = max(length(pointerDelta), 0.001);

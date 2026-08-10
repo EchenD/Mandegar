@@ -62,6 +62,8 @@ export function WorldEnvironment() {
   useFrame(({ clock }) => {
     const progress = experienceState.progress;
     const story = experienceState.narrative;
+    const stage = experienceState.stage;
+    const stageGlow = stage.lightEnergy * stage.particleSignal;
     pointerTarget.current.set(experienceState.pointerX, experienceState.pointerY);
     pointer.current.lerp(pointerTarget.current, 0.045);
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
@@ -80,25 +82,27 @@ export function WorldEnvironment() {
         material.opacity = Math.min(1, (0.22 + storyOpacity) * trailAmount);
       }
     });
-    if (ambientLight.current) ambientLight.current.intensity = sceneTokens.environment.lights.ambient * (1 - story.living * 0.12 - story.peak * 0.24);
-    if (hemisphereLight.current) hemisphereLight.current.intensity = sceneTokens.environment.lights.hemisphere * (1 - story.living * 0.08 - story.peak * 0.18);
-    if (keyLight.current) keyLight.current.intensity = sceneTokens.environment.lights.key * (1 - story.living * 0.1 - story.peak * 0.18);
-    if (fillLight.current) fillLight.current.intensity = sceneTokens.environment.lights.fill * (1 + story.living * 0.24 + story.peak * 0.22);
-    if (revealLight.current) revealLight.current.intensity = (0.15 + story.energy * 6.4 + story.peak * 2.2) * experienceState.lightScale;
-    if (magentaLight.current) magentaLight.current.intensity = (story.energy * 2.4 + story.peak * 2.1 + Math.sin(clock.elapsedTime * 0.72) * story.energy * 0.2) * experienceState.lightScale;
-    if (amberLight.current) amberLight.current.intensity = (story.energy * 1.85 + story.peak * 2.35 + Math.cos(clock.elapsedTime * 0.58) * story.energy * 0.16) * experienceState.lightScale;
+    if (ambientLight.current) ambientLight.current.intensity = sceneTokens.environment.lights.ambient * (1 - stage.lightContrast * 0.24 - story.peak * 0.12);
+    if (hemisphereLight.current) hemisphereLight.current.intensity = sceneTokens.environment.lights.hemisphere * (1 - stage.lightContrast * 0.18 - story.peak * 0.08);
+    if (keyLight.current) keyLight.current.intensity = sceneTokens.environment.lights.key * (0.88 + stage.lightContrast * 0.22 - story.peak * 0.12);
+    if (fillLight.current) fillLight.current.intensity = sceneTokens.environment.lights.fill * (0.82 + stage.lightEnergy * 0.38 + story.peak * 0.22);
+    if (revealLight.current) revealLight.current.intensity = (0.08 + stageGlow * 2.2 + story.energy * 5.8 + story.peak * 2.2) * experienceState.lightScale;
+    if (magentaLight.current) magentaLight.current.intensity = (stageGlow * 0.72 + story.energy * 1.85 + story.peak * 2.1 + Math.sin(clock.elapsedTime * 0.72) * story.energy * 0.2) * experienceState.lightScale;
+    if (amberLight.current) amberLight.current.intensity = (stageGlow * 0.48 + story.energy * 1.4 + story.peak * 2.35 + Math.cos(clock.elapsedTime * 0.58) * story.energy * 0.16) * experienceState.lightScale;
     if (interactionLight.current) {
       interactionLight.current.position.set(pointer.current.x * 7, 3.7 - pointer.current.y * 2.8, 4.5);
-      interactionLight.current.intensity = (0.18 + story.energy * 0.72 + experienceState.pointerPulse * 1.4) * experienceState.lightScale;
+      interactionLight.current.intensity = (0.08 + stage.particleResponse * 0.34 + story.energy * 0.58 + experienceState.pointerPulse * stage.particleResponse * 1.4) * experienceState.lightScale;
     }
+    const backgroundEnergy = Math.max(story.living, stage.lightEnergy * 0.28);
     background.copy(quietBackground)
-      .lerp(activeBackground, story.living * 0.82)
+      .lerp(activeBackground, backgroundEnergy * 0.82)
       .lerp(peakBackground, story.peak * 0.78);
     scene.background = background;
     if (scene.fog instanceof THREE.Fog) {
       scene.fog.color.copy(background);
-      scene.fog.near = sceneTokens.environment.fog.near + story.energy * 3.5;
-      scene.fog.far = sceneTokens.environment.fog.far + story.energy * 12;
+      const fogEnergy = Math.max(story.energy, stage.lightEnergy * 0.5);
+      scene.fog.near = sceneTokens.environment.fog.near + fogEnergy * 3.5;
+      scene.fog.far = sceneTokens.environment.fog.far + fogEnergy * 12;
     }
   });
 
