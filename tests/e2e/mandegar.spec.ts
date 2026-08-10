@@ -111,6 +111,76 @@ test.describe("Mandegar responsive layout", () => {
     await expect(menu).toBeFocused();
   });
 
+  test("header keeps identical geometry across inner pages", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    const measureHeader = () => page.locator("header").evaluate((header) => {
+      const navigation = header.querySelector("#primary-navigation");
+      const headerRect = header.getBoundingClientRect();
+      const navigationRect = navigation?.getBoundingClientRect();
+      return {
+        position: getComputedStyle(header).position,
+        left: Math.round(headerRect.left),
+        top: Math.round(headerRect.top),
+        width: Math.round(headerRect.width),
+        navigationCenter: navigationRect
+          ? Math.round(navigationRect.left + navigationRect.width * 0.5)
+          : null,
+      };
+    });
+
+    await page.goto("/en/about", { waitUntil: "networkidle" });
+    const aboutHeader = await measureHeader();
+    await page.goto("/en/projects", { waitUntil: "networkidle" });
+    const projectsHeader = await measureHeader();
+
+    expect(projectsHeader).toEqual(aboutHeader);
+    expect(aboutHeader.position).toBe("fixed");
+    expect(aboutHeader.navigationCenter).toBe(720);
+  });
+
+  test("opening loader covers the full interface and isolates text blur", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route("**/models/**", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_200));
+      await route.continue();
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=1", { waitUntil: "domcontentloaded" });
+
+    const loader = page.locator("[data-particle-loader]");
+    await expect(loader).toBeVisible();
+    await expect(loader).toHaveAttribute("data-complete", "false");
+
+    const presentation = await page.evaluate(() => {
+      const loaderElement = document.querySelector<HTMLElement>("[data-particle-loader]");
+      const root = document.querySelector<HTMLElement>("[data-experience-root]");
+      const copy = document.querySelector<HTMLElement>("[data-scene-copy]");
+      const loaderRect = loaderElement?.getBoundingClientRect();
+      const copyStyle = copy ? getComputedStyle(copy) : null;
+      const copyBlurStyle = copy ? getComputedStyle(copy, "::before") : null;
+      return {
+        coversViewport: Boolean(
+          loaderRect
+          && loaderRect.left === 0
+          && loaderRect.top === 0
+          && loaderRect.width === innerWidth
+          && loaderRect.height === innerHeight
+        ),
+        ownsTopCorner: Boolean(document.elementFromPoint(4, 4)?.closest("[data-particle-loader]")),
+        rootZIndex: Number(root ? getComputedStyle(root).zIndex : 0),
+        copyIsolation: copyStyle?.isolation,
+        copyBackdrop: copyBlurStyle?.backdropFilter,
+      };
+    });
+
+    expect(presentation.coversViewport).toBe(true);
+    expect(presentation.ownsTopCorner).toBe(true);
+    expect(presentation.rootZIndex).toBeGreaterThan(40);
+    expect(presentation.copyIsolation).toBe("isolate");
+    expect(presentation.copyBackdrop).toContain("blur");
+  });
+
   test("language switcher preserves the current route", async ({ page }) => {
     await page.goto("/fa/projects", { waitUntil: "networkidle" });
     const englishLink = page.locator("a[hreflang='en']:visible").first();

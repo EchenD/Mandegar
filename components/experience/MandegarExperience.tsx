@@ -192,10 +192,6 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           <span />
           {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
         </div>
-        <div className={styles.loaderMeta}>
-          <span>MANDEGAR / EXHIBITION WORLD</span>
-          <b>{String(loadProgress).padStart(3, "0")}</b>
-        </div>
       </div>
 
       <div className={styles.sticky}>

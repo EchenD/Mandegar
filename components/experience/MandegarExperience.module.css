@@ -1,10 +1,17 @@
 .root {
   --scene-progress: 0;
   position: relative;
+  z-index: 0;
   height: var(--experience-scroll-height-desktop, 2175svh);
   color: #16191d;
   background: #e8ebea;
   isolation: isolate;
+  transition: z-index 0s linear .78s;
+}
+
+.root:has(.loader:not([data-complete="true"])) {
+  z-index: 100;
+  transition-delay: 0s;
 }
 
 .sticky {
@@ -182,21 +189,6 @@
   to { transform: rotate(calc(var(--particle-angle) + 1turn)) translateX(var(--particle-radius)) scale(1); opacity: .32; }
 }
 
-.loaderMeta {
-  position: absolute;
-  inset-inline: clamp(1.25rem, 3vw, 3.5rem);
-  inset-block-end: clamp(1.25rem, 3vw, 3rem);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  direction: ltr;
-  font-size: .58rem;
-  font-weight: 700;
-  letter-spacing: .16em;
-}
-
-.loaderMeta b { color: rgba(22,25,29,.58); font-size: .76rem; font-variant-numeric: tabular-nums; }
-
 .fallbackScene {
   position: absolute;
   inset: 0;
@@ -277,6 +269,7 @@
 
 .sceneCopy {
   position: absolute;
+  z-index: 0;
   left: clamp(1.5rem, 6vw, 7rem);
   inset-block-start: 50%;
   width: min(28rem, 32vw);
@@ -285,6 +278,7 @@
   visibility: hidden;
   pointer-events: none;
   transform: translateY(-50%);
+  isolation: isolate;
   will-change: opacity, visibility;
 }
 
