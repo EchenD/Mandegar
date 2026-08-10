@@ -501,6 +501,8 @@ export function MandegarModel({
     const rawReset = smoothstep(phaseProgress(progress, activationSequence.loopReset));
     const reset = rawReset > 0.98 ? 1 : rawReset;
     const story = experienceState.narrative;
+    const introActive = experienceState.sequence === "intro";
+    const wireVisibility = introActive ? experienceState.intro.wireVisibility : 1;
     const scrolledAssembly = smoothstep(phaseProgress(progress, activationSequence.objectAssembly));
     const assembly = scrolledAssembly * (1 - reset);
     const trails = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
@@ -521,15 +523,21 @@ export function MandegarModel({
       binding.material.transparent = localReveal < 0.995 || binding.baseOpacity < 1;
       binding.material.opacity = binding.baseOpacity * localReveal;
       binding.material.depthWrite = localReveal > 0.8;
-      binding.wireMaterial.opacity = (1 - localReveal) * (0.38 + Math.sin(clock.elapsedTime * 0.8 + index * 0.37) * 0.045);
+      binding.wireMaterial.opacity = (1 - localReveal)
+        * (0.38 + Math.sin(clock.elapsedTime * 0.8 + index * 0.37) * 0.045)
+        * wireVisibility;
       binding.wireMaterial.color.lerpColors(wireQuiet, wireActive, Math.max(trails * 0.28, (1 - localReveal) * 0.18));
     });
 
-    const beaconTravel = reset > 0 ? 1 - reset : scrolledAssembly;
-    const beaconVisibility = reset > 0
-      ? Math.sin(reset * Math.PI)
-      : smoothstep(phaseProgress(scrolledAssembly, [0.015, 0.12]))
-        * (1 - smoothstep(phaseProgress(scrolledAssembly, [0.76, 1])));
+    const beaconTravel = introActive
+      ? experienceState.intro.progress
+      : reset > 0 ? 1 - reset : scrolledAssembly;
+    const beaconVisibility = introActive
+      ? experienceState.intro.beacon
+      : reset > 0
+        ? Math.sin(reset * Math.PI)
+        : smoothstep(phaseProgress(scrolledAssembly, [0.015, 0.12]))
+          * (1 - smoothstep(phaseProgress(scrolledAssembly, [0.76, 1])));
     if (revealBeacon.current) {
       const pointerInfluence = 1 - smoothstep(phaseProgress(beaconTravel, [0.06, 0.52]));
       revealBeacon.current.visible = beaconVisibility > 0.002;

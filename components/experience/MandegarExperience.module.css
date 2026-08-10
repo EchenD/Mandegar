@@ -267,6 +267,14 @@
 
 .copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; }
 
+.root[data-intro-active="true"] .copyLayer,
+.root[data-intro-active="true"] .phaseRail,
+.root[data-intro-active="true"] .scrollCue,
+.root[data-intro-active="true"] .soundControl {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .arrivalSignal {
   position: absolute;
   left: clamp(1.3rem, 5vw, 5.5rem);

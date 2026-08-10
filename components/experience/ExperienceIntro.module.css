@@ -1,0 +1,37 @@
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.skip {
+  position: absolute;
+  inset-inline-end: clamp(1.2rem, 3vw, 3rem);
+  inset-block-end: clamp(1.2rem, 3vw, 2.6rem);
+  min-width: 5.5rem;
+  padding: .72rem 1rem;
+  border: 1px solid rgba(255, 255, 255, .34);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, .86);
+  background: rgba(12, 17, 24, .28);
+  backdrop-filter: blur(10px);
+  font: inherit;
+  font-size: .62rem;
+  letter-spacing: .12em;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.skip:hover,
+.skip:focus-visible {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .72);
+  background: rgba(12, 17, 24, .52);
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root { display: none; }
+}

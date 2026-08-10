@@ -61,7 +61,7 @@ export function ExperiencePostProcessing({ quality }: { quality: SceneQuality })
     pipeline.bloomPass.strength = postprocessing.bloomStrength + Math.max(
       story.energy * postprocessing.bloomRevealBoost + story.peak * postprocessing.bloomPeakBoost,
       assemblyEnergy * postprocessing.bloomAssemblyBoost,
-    );
+    ) + (experienceState.sequence === "intro" ? experienceState.intro.bloomBoost : 0);
     pipeline.composer.render(delta);
   }, 1);
 

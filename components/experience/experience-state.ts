@@ -1,4 +1,5 @@
 import type { SceneQuality } from "./scene-config";
+import { getIntroFrame, type IntroFrame } from "./intro-score";
 import { getNarrativeFrame, type NarrativeFrame } from "./narrative-score";
 
 /**
@@ -6,6 +7,8 @@ import { getNarrativeFrame, type NarrativeFrame } from "./narrative-score";
  * sync without turning every animation frame into a React render.
  */
 export const experienceState: {
+  sequence: "loading" | "intro" | "loop";
+  intro: IntroFrame;
   progress: number;
   narrative: NarrativeFrame;
   quality: SceneQuality;
@@ -18,6 +21,8 @@ export const experienceState: {
   focusZone: "photo" | "game" | "touch" | null;
   focusProject: number | null;
 } = {
+  sequence: "loading",
+  intro: getIntroFrame(0),
   progress: 0,
   narrative: getNarrativeFrame(0),
   quality: "full",

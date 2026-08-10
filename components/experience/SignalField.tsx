@@ -41,6 +41,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
       uEnergyAmount: { value: 0 },
       uCelebration: { value: 0 },
       uPeak: { value: 0 },
+      uIntroVisibility: { value: 1 },
       uResponse: { value: 0.26 },
       uPointer: { value: data.focus.clone() },
       uPointerNormal: { value: new THREE.Vector3(0, 0, 1) },
@@ -97,6 +98,9 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     material.uniforms.uEnergyAmount.value = story.energy;
     material.uniforms.uCelebration.value = story.energy;
     material.uniforms.uPeak.value = story.peak;
+    material.uniforms.uIntroVisibility.value = experienceState.sequence === "intro"
+      ? experienceState.intro.particleVisibility
+      : 1;
     material.uniforms.uResponse.value = response;
     material.uniforms.uPointer.value.copy(pointerWorld.current);
     material.uniforms.uPointerNormal.value.copy(pointerNormal.current);

@@ -72,11 +72,13 @@ function renderCopyState(state: CopyState, progress: number) {
 export function ScrollMotion({
   children,
   className,
+  enabled = true,
   lenisEnabled = false,
   onPhaseChange,
 }: {
   children: React.ReactNode;
   className?: string;
+  enabled?: boolean;
   lenisEnabled?: boolean;
   onPhaseChange?: (phase: ScenePhaseId) => void;
 }) {
@@ -131,6 +133,14 @@ export function ScrollMotion({
         onPhaseChange?.(phase);
       }
     };
+
+    if (!enabled) {
+      directNarrative(0);
+      root.style.setProperty("--scene-progress", "0");
+      return () => {
+        resetNarrative();
+      };
+    }
 
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
@@ -372,13 +382,14 @@ export function ScrollMotion({
       resetNarrative();
       root.removeAttribute("data-story-stage");
     };
-  }, { scope, dependencies: [lenisEnabled, onPhaseChange] });
+  }, { scope, dependencies: [enabled, lenisEnabled, onPhaseChange] });
 
   return (
     <div
       ref={scope}
       className={className}
       data-experience-root
+      data-intro-active={enabled ? undefined : "true"}
       data-story-stage="arrival"
       style={{ "--scene-progress": 0 } as CSSProperties}
     >

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/immutability -- R3F render-loop callbacks intentionally mutate the active Three.js camera. */
+
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -59,6 +61,7 @@ export function CameraRig() {
   const sampledTarget = useRef(new THREE.Vector3());
   const authoredPosition = useRef(new THREE.Vector3());
   const authoredQuaternion = useRef(new THREE.Quaternion());
+  const introCameraOffset = useRef(new THREE.Vector3());
   const cameraRight = useRef(new THREE.Vector3());
   const cameraUp = useRef(new THREE.Vector3());
   const cameraForward = useRef(new THREE.Vector3());
@@ -75,22 +78,20 @@ export function CameraRig() {
     if (authoredCamera) root.add(authoredCamera);
     const clip = THREE.AnimationClip.findByName(gltf.animations, sceneTokens.authoredCamera.clip) ?? null;
     const mixer = authoredCamera && clip ? new THREE.AnimationMixer(root) : null;
-    const action = mixer && clip ? mixer.clipAction(clip) : null;
-    return { root, camera: authoredCamera, clip, mixer, action };
+    return { root, camera: authoredCamera, clip, mixer };
   }, [gltf.animations, gltf.scene]);
 
   useEffect(() => {
-    if (authored.action && authored.mixer) {
-      authored.action.reset();
-      authored.action.setLoop(THREE.LoopRepeat, Infinity);
-      authored.action.play();
-      authored.mixer.setTime(0);
-      authored.root.updateMatrixWorld(true);
-    }
+    if (!authored.clip || !authored.mixer) return;
+    const action = authored.mixer.clipAction(authored.clip);
+    action.reset();
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    action.play();
+    authored.mixer.setTime(0);
+    authored.root.updateMatrixWorld(true);
     return () => {
-      authored.action?.stop();
+      action.stop();
       authored.mixer?.stopAllAction();
-      authored.mixer?.uncacheRoot(authored.root);
     };
   }, [authored]);
 
@@ -110,6 +111,8 @@ export function CameraRig() {
 
   useFrame((_, delta) => {
     const progress = experienceState.progress;
+    const perspectiveCamera = camera as THREE.PerspectiveCamera;
+    let baseFov = perspectiveCamera.fov;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
     const pointerMotion = sceneTokens.cameraMotion.pointer;
     const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
@@ -140,22 +143,25 @@ export function CameraRig() {
       camera.position.copy(authoredPosition.current);
       camera.quaternion.copy(authoredQuaternion.current);
       cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
-      const perspectiveCamera = camera as THREE.PerspectiveCamera;
-      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - authored.camera.fov) > 0.01) {
-        perspectiveCamera.fov = authored.camera.fov;
-        perspectiveCamera.updateProjectionMatrix();
-      }
+      baseFov = authored.camera.fov;
     } else {
       const sample = sampleCamera(progress, mobile, sampledPosition.current, sampledTarget.current);
       camera.position.copy(sampledPosition.current);
       cameraTarget.current.copy(sampledTarget.current);
       camera.lookAt(cameraTarget.current);
       camera.rotateZ(sample.roll);
-      const perspectiveCamera = camera as THREE.PerspectiveCamera;
-      if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - sample.fov) > 0.01) {
-        perspectiveCamera.fov = sample.fov;
-        perspectiveCamera.updateProjectionMatrix();
-      }
+      baseFov = sample.fov;
+    }
+
+    if (experienceState.sequence === "intro") {
+      introCameraOffset.current.fromArray(experienceState.intro.cameraLocalOffset).applyQuaternion(camera.quaternion);
+      camera.position.add(introCameraOffset.current);
+    }
+    const introFovOffset = experienceState.sequence === "intro" ? experienceState.intro.cameraFovOffset : 0;
+    const renderedFov = baseFov + introFovOffset;
+    if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - renderedFov) > 0.001) {
+      perspectiveCamera.fov = renderedFov;
+      perspectiveCamera.updateProjectionMatrix();
     }
 
     const breathing = sceneTokens.cameraMotion.breathing;

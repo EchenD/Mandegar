@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Locale } from "@/lib/i18n";
+import { ExperienceIntro } from "./ExperienceIntro";
+import { resetIntro } from "./intro-director";
 import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
@@ -82,6 +84,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
+  const [introComplete, setIntroComplete] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const loader = useRef<HTMLDivElement>(null);
   const audioContext = useRef<AudioContext | undefined>(undefined);
@@ -102,6 +105,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
         node.disconnect();
       });
       audioContext.current?.close();
+      resetIntro();
       experienceState.focusZone = null;
       experienceState.focusProject = null;
     };
@@ -113,6 +117,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   }, []);
 
   const handleFirstFrame = useCallback(() => setLoadProgress(100), []);
+  const handleIntroComplete = useCallback(() => setIntroComplete(true), []);
   const handlePhaseChange = useCallback((phase: ScenePhaseId) => setActivePhase(phase), []);
 
   const scrollToProgress = useCallback((progress: number) => {
@@ -173,7 +178,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   }, [soundEnabled]);
 
   return (
-    <ScrollMotion className={styles.root} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
+    <ScrollMotion className={styles.root} enabled={introComplete} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
       <div
         ref={loader}
         className={styles.loader}
@@ -203,6 +208,12 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             onProjectSelect={selectProject}
             onRuntimeReady={handleRuntimeReady}
             onFirstFrame={handleFirstFrame}
+          />
+          <ExperienceIntro
+            ready={loadProgress === 100}
+            enabled={runtime === "adaptive" || runtime === "full"}
+            skipLabel={locale === "fa" ? "رد شدن" : locale === "ar" ? "تخطي" : "Skip intro"}
+            onComplete={handleIntroComplete}
           />
 
           <div className={styles.fallbackScene} aria-hidden="true">
