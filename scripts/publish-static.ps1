@@ -104,14 +104,18 @@ try {
     $currentBranch = (& git branch --show-current).Trim()
     & git show-ref --verify --quiet "refs/remotes/origin/$Branch"
     $remoteBranchExists = $LASTEXITCODE -eq 0
+    $branchPrepared = $false
     if ($currentBranch -eq $Branch) {
       # An empty repository can already be on an unborn branch with no ref yet.
+      $branchPrepared = $true
     } elseif ($remoteBranchExists) {
       & git checkout $Branch
+      $branchPrepared = $LASTEXITCODE -eq 0
     } else {
       & git checkout --orphan $Branch
+      $branchPrepared = $LASTEXITCODE -eq 0
     }
-    if ($LASTEXITCODE -ne 0) { throw "Could not prepare branch $Branch." }
+    if (-not $branchPrepared) { throw "Could not prepare branch $Branch." }
 
     $resolvedClone = (Resolve-Path $temporaryClone).Path
     $temporaryRoot = (Resolve-Path ([System.IO.Path]::GetTempPath())).Path
