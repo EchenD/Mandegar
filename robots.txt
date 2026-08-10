@@ -1,0 +1,7 @@
+User-Agent: *
+Allow: /
+Disallow: /studio
+Disallow: /api/
+
+Host: https://echend.github.io/Mandegar
+Sitemap: https://echend.github.io/Mandegar/sitemap.xml
