@@ -2,85 +2,76 @@
 
 import { useEffect, useRef, useState } from "react";
 import { completeIntro, directIntro } from "./intro-director";
+import { introCameraHandoffProgress } from "./intro-score";
 import styles from "./ExperienceIntro.module.css";
 
-const INTRO_SESSION_KEY = "mandegar:intro-seen:v1";
-const INTRO_DURATION_MS = 3400;
+const INTRO_DURATION_MS = 4_900;
 
 export function ExperienceIntro({
   ready,
   enabled,
   skipLabel,
+  onInteractive,
   onComplete,
 }: {
   ready: boolean;
   enabled: boolean;
   skipLabel: string;
+  onInteractive: () => void;
   onComplete: () => void;
 }) {
   const [active, setActive] = useState(false);
   const finishRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
-    const previousOverflow = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = "hidden";
     if (!ready) {
-      return () => {
-        document.documentElement.style.overflow = previousOverflow;
-      };
+      return;
     }
 
     const parameters = new URLSearchParams(window.location.search);
     const introPreference = parameters.get("intro");
-    const forceIntro = introPreference === "1";
     const skipIntro = introPreference === "0" || parameters.has("phase");
-    const requestedDuration = Number(parameters.get("introDuration"));
-    const duration = process.env.NODE_ENV !== "production" && Number.isFinite(requestedDuration)
+    const requestedDurationParameter = parameters.get("introDuration");
+    const requestedDuration = requestedDurationParameter === null ? null : Number(requestedDurationParameter);
+    const duration = process.env.NODE_ENV !== "production" && requestedDuration !== null && Number.isFinite(requestedDuration)
       ? Math.min(30_000, Math.max(1_000, requestedDuration))
       : INTRO_DURATION_MS;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
-    let hasSeenIntro = false;
-    try {
-      hasSeenIntro = window.sessionStorage.getItem(INTRO_SESSION_KEY) === "true";
-    } catch {
-      hasSeenIntro = false;
-    }
-    const shouldPlay = enabled && !skipIntro && !reduced && !saveData && (forceIntro || !hasSeenIntro);
+    const shouldPlay = enabled && !skipIntro && !reduced && !saveData;
     let animationFrame: number | undefined;
     let startedAt: number | undefined;
     let finished = false;
+    let interactionReleased = false;
+
+    const releaseInteraction = () => {
+      if (interactionReleased) return;
+      interactionReleased = true;
+      setActive(false);
+      onInteractive();
+    };
 
     const finish = () => {
       if (finished) return;
       finished = true;
       if (animationFrame !== undefined) window.cancelAnimationFrame(animationFrame);
-      if (shouldPlay) {
-        try {
-          window.sessionStorage.setItem(INTRO_SESSION_KEY, "true");
-        } catch {
-          // Storage can be unavailable in privacy-restricted contexts.
-        }
-      }
+      releaseInteraction();
       completeIntro();
-      document.documentElement.style.overflow = previousOverflow;
-      setActive(false);
       onComplete();
     };
     finishRef.current = finish;
 
     if (!shouldPlay) {
       finish();
-      return () => {
-        document.documentElement.style.overflow = previousOverflow;
-      };
+      return;
     }
 
     directIntro(0);
     const tick = (time: number) => {
       startedAt ??= time;
       const progress = Math.min(1, (time - startedAt) / duration);
-      directIntro(progress);
+      if (progress >= introCameraHandoffProgress) releaseInteraction();
+      directIntro(progress, !interactionReleased);
       if (progress >= 1) {
         finish();
         return;
@@ -95,10 +86,9 @@ export function ExperienceIntro({
     return () => {
       finished = true;
       if (animationFrame !== undefined) window.cancelAnimationFrame(animationFrame);
-      document.documentElement.style.overflow = previousOverflow;
       finishRef.current = () => undefined;
     };
-  }, [enabled, onComplete, ready]);
+  }, [enabled, onComplete, onInteractive, ready]);
 
   if (!active) return null;
   return (

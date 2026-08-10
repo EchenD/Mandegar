@@ -12,6 +12,15 @@ import {
   rangeProgress as phaseProgress,
 } from "./narrative-score";
 import { assetSlots, sceneTokens } from "./scene-config";
+import {
+  applyModelRevealShader,
+  createModelRevealUniforms,
+  modelRevealFragmentMask,
+  modelRevealFragmentPars,
+  modelRevealVertexPars,
+  modelRevealVertexPosition,
+  type ModelRevealUniforms,
+} from "./model-reveal-shader";
 import type { SpatialHudFrame, SpatialHudModeId, SpatialScreenPoint } from "./spatial-hud";
 
 export type SceneProject = { src: string; label: string };
@@ -52,8 +61,11 @@ const defaultProjectMedia = [
 
 const vertexShader = `
   varying vec2 vUv;
+  ${modelRevealVertexPars}
   void main() {
     vUv = uv;
+    vec3 transformed = position;
+    ${modelRevealVertexPosition}
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -68,7 +80,9 @@ const fragmentShader = `
   uniform float uOpacity;
   uniform float uTime;
   uniform float uOffset;
+  ${modelRevealFragmentPars}
   void main() {
+    ${modelRevealFragmentMask}
     vec3 quiet = vec3(0.58, 0.61, 0.62);
     vec3 cobalt = vec3(0.13, 0.36, 1.0);
     vec3 cyan = vec3(0.31, 0.78, 1.0);
@@ -92,6 +106,7 @@ const fragmentShader = `
     float edge = smoothstep(0.0, 0.035, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
     color += cyan * (1.0 - edge) * (0.22 + uHover * 1.25);
     float vignette = smoothstep(0.02, 0.16, vUv.x * (1.0 - vUv.x) * vUv.y * (1.0 - vUv.y));
+    color += vec3(0.18, 0.58, 1.0) * mandegarRevealEdgeGlow * 1.65;
     gl_FragColor = vec4(color * (0.72 + vignette * 0.42 + uHover * 0.08 + uPeak * 0.16), uOpacity);
   }
 `;
@@ -203,17 +218,13 @@ type ScreenBinding = {
 };
 
 type RevealBinding = {
-  name: string;
   object: THREE.Mesh;
-  wireObject: THREE.Mesh;
   material: THREE.Material;
-  wireMaterial: THREE.MeshBasicMaterial;
   baseOpacity: number;
-  basePosition: THREE.Vector3;
-  order: number;
+  baseCastShadow: boolean;
 };
 
-function createScreenMaterial(offset: number, texture: THREE.Texture) {
+function createScreenMaterial(offset: number, texture: THREE.Texture, revealUniforms: ModelRevealUniforms) {
   return new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: true,
@@ -228,6 +239,7 @@ function createScreenMaterial(offset: number, texture: THREE.Texture) {
       uOpacity: { value: 0.12 },
       uTime: { value: 0 },
       uOffset: { value: offset },
+      ...revealUniforms,
     },
   });
 }
@@ -276,11 +288,6 @@ export function MandegarModel({
       intersections: [] as THREE.Intersection[],
     },
   });
-  const revealBeacon = useRef<THREE.Group>(null);
-  const revealBeaconLight = useRef<THREE.PointLight>(null);
-  const revealBeaconMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const wireQuiet = useMemo(() => new THREE.Color("#8ca9c8"), []);
-  const wireActive = useMemo(() => new THREE.Color(sceneTokens.colors.cyan), []);
   const energyCobalt = useMemo(() => new THREE.Color(sceneTokens.colors.cobalt), []);
   const energyCyan = useMemo(() => new THREE.Color(sceneTokens.colors.cyan), []);
   const energyMagenta = useMemo(() => new THREE.Color(sceneTokens.colors.magenta), []);
@@ -290,10 +297,23 @@ export function MandegarModel({
 
   const runtime = useMemo(() => {
     const scene = gltf.scene.clone(true);
-    const wireScene = gltf.scene.clone(true);
+    scene.updateMatrixWorld(true);
+    const sceneBounds = new THREE.Box3().setFromObject(scene);
+    const revealSource = scene.getObjectByName("hero_core_shell") ?? scene;
+    const revealCenter = new THREE.Box3().setFromObject(revealSource).getCenter(new THREE.Vector3());
+    const revealExtent = [
+      new THREE.Vector3(sceneBounds.min.x, sceneBounds.min.y, sceneBounds.min.z),
+      new THREE.Vector3(sceneBounds.min.x, sceneBounds.min.y, sceneBounds.max.z),
+      new THREE.Vector3(sceneBounds.min.x, sceneBounds.max.y, sceneBounds.min.z),
+      new THREE.Vector3(sceneBounds.min.x, sceneBounds.max.y, sceneBounds.max.z),
+      new THREE.Vector3(sceneBounds.max.x, sceneBounds.min.y, sceneBounds.min.z),
+      new THREE.Vector3(sceneBounds.max.x, sceneBounds.min.y, sceneBounds.max.z),
+      new THREE.Vector3(sceneBounds.max.x, sceneBounds.max.y, sceneBounds.min.z),
+      new THREE.Vector3(sceneBounds.max.x, sceneBounds.max.y, sceneBounds.max.z),
+    ].reduce((extent, corner) => Math.max(extent, corner.distanceTo(revealCenter)), 1);
+    const revealUniforms = createModelRevealUniforms(revealCenter, revealExtent);
     const ownedMaterials: THREE.Material[] = [];
     const sceneMeshes: THREE.Mesh[] = [];
-    const wireMeshes = new Map<string, THREE.Mesh>();
     const screens: ScreenBinding[] = [];
     const standardMaterials = new Map<string, { material: THREE.MeshStandardMaterial; opacity: number }>();
     const screenConfig: Record<string, { wake: readonly [number, number]; offset: number; projectIndex: number }> = {
@@ -302,23 +322,6 @@ export function MandegarModel({
       led_central_media_21x9: { wake: activationSequence.mediaWall, offset: 0.2, projectIndex: 0 },
     };
 
-    wireScene.traverse((object) => {
-      if (!(object instanceof THREE.Mesh)) return;
-      const material = new THREE.MeshBasicMaterial({
-        color: "#8ca9c8",
-        wireframe: true,
-        transparent: true,
-        opacity: 0.46,
-        depthWrite: false,
-        blending: THREE.NormalBlending,
-      });
-      object.material = material;
-      object.castShadow = false;
-      object.receiveShadow = false;
-      wireMeshes.set(object.name, object);
-      ownedMaterials.push(material);
-    });
-
     scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
       sceneMeshes.push(object);
@@ -326,7 +329,7 @@ export function MandegarModel({
       object.receiveShadow = object.name === "hall_floor" || object.name === "stage_base";
       const screen = screenConfig[object.name];
       if (screen) {
-        const material = createScreenMaterial(screen.offset, textures[screen.projectIndex]);
+        const material = createScreenMaterial(screen.offset, textures[screen.projectIndex], revealUniforms);
         object.material = material;
         object.userData.projectIndex = screen.projectIndex;
         ownedMaterials.push(material);
@@ -341,6 +344,7 @@ export function MandegarModel({
       const material = sourceMaterial.clone();
       object.material = material;
       ownedMaterials.push(material);
+      applyModelRevealShader(material, revealUniforms);
       if (!(material instanceof THREE.MeshStandardMaterial)) return;
       material.envMapIntensity = 0.62;
       if (object.name === "hall_floor") {
@@ -364,29 +368,15 @@ export function MandegarModel({
     const haloSignal = scene.getObjectByName("ring_signal_surface") as THREE.Mesh | undefined;
     if (haloSignal) haloSignal.scale.setScalar(1.018);
     scene.updateMatrixWorld(true);
-    const sortedMeshes = sceneMeshes
-      .map((object) => ({ object, minY: new THREE.Box3().setFromObject(object).min.y }))
-      .sort((left, right) => left.minY - right.minY || left.object.name.localeCompare(right.object.name));
-    const divisor = Math.max(1, sortedMeshes.length - 1);
-    const revealBindings = sortedMeshes.flatMap<RevealBinding>(({ object }, index) => {
-      const wireObject = wireMeshes.get(object.name);
+    const revealBindings = sceneMeshes.map<RevealBinding>((object) => {
       const material = Array.isArray(object.material) ? object.material[0] : object.material;
-      const wireMaterial = wireObject && !Array.isArray(wireObject.material) && wireObject.material instanceof THREE.MeshBasicMaterial
-        ? wireObject.material
-        : null;
-      if (!wireObject || !wireMaterial) return [];
-      return [{
-        name: object.name,
+      return {
         object,
-        wireObject,
         material,
-        wireMaterial,
         baseOpacity: material.opacity,
-        basePosition: object.position.clone(),
-        order: index / divisor,
-      }];
+        baseCastShadow: object.castShadow,
+      };
     });
-    const revealByName = new Map(revealBindings.map((binding) => [binding.name, binding]));
     const makeSpatialMode = (
       id: SpatialHudModeId,
       range: readonly [number, number],
@@ -468,12 +458,11 @@ export function MandegarModel({
     ].filter((mode): mode is SpatialHudMode => mode !== null);
     return {
       scene,
-      wireScene,
+      revealUniforms,
       ownedMaterials,
       screens,
       standardMaterials,
       revealBindings,
-      revealByName,
       spatialModes,
     };
   }, [gltf.scene, textures]);
@@ -502,70 +491,34 @@ export function MandegarModel({
     const reset = rawReset > 0.98 ? 1 : rawReset;
     const story = experienceState.narrative;
     const introActive = experienceState.sequence === "intro";
-    const wireVisibility = introActive ? experienceState.intro.wireVisibility : 1;
-    const scrolledAssembly = smoothstep(phaseProgress(progress, activationSequence.objectAssembly));
-    const assembly = scrolledAssembly * (1 - reset);
+    const assembly = introActive ? experienceState.intro.assemblyProgress : 1;
     const trails = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
     const booths = smoothstep(phaseProgress(progress, activationSequence.booths)) * (1 - reset);
     const media = smoothstep(phaseProgress(progress, activationSequence.mediaWall)) * (1 - reset);
 
     experienceState.assemblyProgress = assembly;
-    runtime.scene.scale.setScalar(0.965 + assembly * 0.035);
-    runtime.scene.position.y = -0.16 * (1 - assembly);
-    runtime.wireScene.scale.copy(runtime.scene.scale);
-    runtime.wireScene.position.copy(runtime.scene.position);
-    runtime.revealBindings.forEach((binding, index) => {
-      const start = binding.order * 0.7;
-      const localReveal = smoothstep(phaseProgress(assembly, [start, Math.min(1, start + 0.3)]));
-      binding.object.userData.assemblyReveal = localReveal;
-      binding.object.position.copy(binding.basePosition);
-      binding.object.position.y -= (1 - localReveal) * 0.22;
-      binding.material.transparent = localReveal < 0.995 || binding.baseOpacity < 1;
-      binding.material.opacity = binding.baseOpacity * localReveal;
-      binding.material.depthWrite = localReveal > 0.8;
-      binding.wireMaterial.opacity = (1 - localReveal)
-        * (0.38 + Math.sin(clock.elapsedTime * 0.8 + index * 0.37) * 0.045)
-        * wireVisibility;
-      binding.wireMaterial.color.lerpColors(wireQuiet, wireActive, Math.max(trails * 0.28, (1 - localReveal) * 0.18));
+    runtime.revealUniforms.uModelRevealProgress.value = assembly;
+    runtime.revealUniforms.uModelRevealTime.value = clock.elapsedTime;
+    runtime.revealBindings.forEach((binding) => {
+      binding.object.userData.assemblyReveal = assembly;
+      binding.object.castShadow = binding.baseCastShadow && assembly >= 0.999;
+      binding.material.opacity = binding.baseOpacity;
     });
-
-    const beaconTravel = introActive
-      ? experienceState.intro.progress
-      : reset > 0 ? 1 - reset : scrolledAssembly;
-    const beaconVisibility = introActive
-      ? experienceState.intro.beacon
-      : reset > 0
-        ? Math.sin(reset * Math.PI)
-        : smoothstep(phaseProgress(scrolledAssembly, [0.015, 0.12]))
-          * (1 - smoothstep(phaseProgress(scrolledAssembly, [0.76, 1])));
-    if (revealBeacon.current) {
-      const pointerInfluence = 1 - smoothstep(phaseProgress(beaconTravel, [0.06, 0.52]));
-      revealBeacon.current.visible = beaconVisibility > 0.002;
-      revealBeacon.current.position.set(
-        experienceState.pointerX * 5.8 * pointerInfluence + Math.sin(beaconTravel * Math.PI * 2.4) * 0.62,
-        THREE.MathUtils.lerp(1.8 - experienceState.pointerY * 2.4, 5.15, beaconTravel),
-        THREE.MathUtils.lerp(7.4, 0.2, beaconTravel),
-      );
-      revealBeacon.current.scale.setScalar(0.72 + beaconVisibility * 0.5);
-    }
-    if (revealBeaconLight.current) revealBeaconLight.current.intensity = beaconVisibility * 7.5 * experienceState.lightScale;
-    if (revealBeaconMaterial.current) revealBeaconMaterial.current.opacity = beaconVisibility;
     if (reset > 0.98) {
       experienceState.focusProject = null;
       experienceState.focusZone = null;
     }
-    runtime.screens.forEach(({ name, material, wake, projectIndex }) => {
-      const localReveal = runtime.revealByName.get(name)?.object.userData.assemblyReveal as number | undefined;
+    runtime.screens.forEach(({ material, wake, projectIndex }) => {
       material.uniforms.uEnergy.value = smoothstep(phaseProgress(progress, wake)) * (1 - reset);
       material.uniforms.uCelebration.value = story.energy;
       material.uniforms.uPeak.value = story.peak;
       material.uniforms.uHover.value = THREE.MathUtils.lerp(material.uniforms.uHover.value, experienceState.focusProject === projectIndex ? 1 : 0, 0.12);
-      material.uniforms.uOpacity.value = localReveal ?? 0;
+      material.uniforms.uOpacity.value = 1;
       material.uniforms.uTime.value = clock.elapsedTime;
     });
 
     runtime.standardMaterials.forEach(({ material }, nodeName) => {
-      const localReveal = (runtime.revealByName.get(nodeName)?.object.userData.assemblyReveal as number | undefined) ?? 0;
+      const localReveal = assembly;
       if (nodeName === "ring_signature_halo") {
         material.emissive.copy(energyCyan).lerp(energyMagenta, story.peak * 0.64 + story.living * 0.12);
         material.emissiveIntensity = (0.08 + trails * 0.18 + story.energy * 2.35 + story.peak * 1.4) * experienceState.lightScale;
@@ -688,28 +641,12 @@ export function MandegarModel({
 
   return (
     <group>
-      <primitive object={runtime.wireScene} />
       <primitive
         object={runtime.scene}
         onPointerMove={handlePointerMove}
         onPointerOut={clearInteraction}
         onClick={handleClick}
       />
-      <group ref={revealBeacon}>
-        <pointLight ref={revealBeaconLight} intensity={0} distance={11} decay={1.7} color={sceneTokens.colors.cyan} />
-        <mesh renderOrder={12}>
-          <sphereGeometry args={[0.105, 20, 20]} />
-          <meshBasicMaterial
-            ref={revealBeaconMaterial}
-            color="#dff8ff"
-            toneMapped={false}
-            transparent
-            opacity={1}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      </group>
     </group>
   );
 }

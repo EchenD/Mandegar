@@ -5,14 +5,13 @@ import { sceneTokens } from "./scene-config";
 export type SignalFieldData = {
   geometry: THREE.BufferGeometry;
   focus: THREE.Vector3;
+  revealExtent: number;
 };
 
 type SurfaceParticleBinding = {
   mesh: THREE.Mesh;
   sampler: MeshSurfaceSampler;
-  bounds: THREE.Box3;
   normalMatrix: THREE.Matrix3;
-  wake: number;
   color: THREE.Color;
   cumulativeWeight: number;
 };
@@ -67,9 +66,7 @@ function getSurfaceParticleBindings(sourceScene: THREE.Object3D) {
     return [{
       mesh,
       sampler: makeSurfaceSampler(mesh, 7.17 + index * 13.1),
-      bounds: new THREE.Box3().setFromObject(mesh),
       normalMatrix: new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld),
-      wake: definition.wake,
       color: new THREE.Color(definition.color).multiplyScalar(sceneTokens.particles.luminance.active),
       cumulativeWeight,
     }];
@@ -122,6 +119,16 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
     ? new THREE.Box3().setFromObject(haloMesh).getCenter(new THREE.Vector3())
     : getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.haloAnchor) ?? new THREE.Vector3(0, sceneCenter.y, 0);
   const focus = getObjectCenter(sourceScene, sceneTokens.particles.modelNodes.focusAnchor) ?? sceneCenter.clone();
+  const revealExtent = [
+    new THREE.Vector3(sceneBounds.min.x, sceneBounds.min.y, sceneBounds.min.z),
+    new THREE.Vector3(sceneBounds.min.x, sceneBounds.min.y, sceneBounds.max.z),
+    new THREE.Vector3(sceneBounds.min.x, sceneBounds.max.y, sceneBounds.min.z),
+    new THREE.Vector3(sceneBounds.min.x, sceneBounds.max.y, sceneBounds.max.z),
+    new THREE.Vector3(sceneBounds.max.x, sceneBounds.min.y, sceneBounds.min.z),
+    new THREE.Vector3(sceneBounds.max.x, sceneBounds.min.y, sceneBounds.max.z),
+    new THREE.Vector3(sceneBounds.max.x, sceneBounds.max.y, sceneBounds.min.z),
+    new THREE.Vector3(sceneBounds.max.x, sceneBounds.max.y, sceneBounds.max.z),
+  ].reduce((extent, corner) => Math.max(extent, corner.distanceTo(focus)), 1);
   const signalRoutes = getSignalRoutes(sourceScene, haloCenter);
   const surfaceBindings = getSurfaceParticleBindings(sourceScene);
   const surfaceWeight = surfaceBindings.at(-1)?.cumulativeWeight ?? 0;
@@ -141,7 +148,6 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
   const energyColors = new Float32Array(count * 3);
   const seeds = new Float32Array(count);
   const layers = new Float32Array(count);
-  const wakes = new Float32Array(count);
   const pointScales = new Float32Array(count);
   const quiet = new THREE.Color(sceneTokens.particles.quietColor).multiplyScalar(sceneTokens.particles.luminance.quiet);
   const palette = sceneTokens.particles.palette.map((color) => (
@@ -151,7 +157,6 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
   const ringSample = new THREE.Vector3();
   const surfaceSample = new THREE.Vector3();
   const surfaceNormal = new THREE.Vector3();
-  const surfaceSize = new THREE.Vector3();
   const fallbackRadius = Math.max(sceneSize.x, sceneSize.z) * 0.2;
 
   for (let index = 0; index < count; index += 1) {
@@ -197,9 +202,6 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
         surfaceNormal.applyMatrix3(binding.normalMatrix).normalize();
         surfaceSample.addScaledVector(surfaceNormal, sceneTokens.particles.motion.surfaceOffset);
         surfaceSample.toArray(surfaceTargets, offset);
-        const height = Math.max(0.001, binding.bounds.getSize(surfaceSize).y);
-        const verticalOrder = THREE.MathUtils.clamp((surfaceSample.y - binding.bounds.min.y) / height, 0, 1);
-        wakes[index] = binding.wake + verticalOrder * 0.035;
         binding.color.toArray(energyColors, offset);
       }
       pointScales[index] = 0.75 + seedB * 0.45;
@@ -243,7 +245,6 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
   geometry.setAttribute("aRing", new THREE.BufferAttribute(ring, 3));
   geometry.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
   geometry.setAttribute("aLayer", new THREE.BufferAttribute(layers, 1));
-  geometry.setAttribute("aWake", new THREE.BufferAttribute(wakes, 1));
   geometry.setAttribute("aPointScale", new THREE.BufferAttribute(pointScales, 1));
   geometry.setAttribute("aEnergyColor", new THREE.BufferAttribute(energyColors, 3));
   const quietColors = new Float32Array(count * 3);
@@ -254,5 +255,5 @@ export function createSignalFieldData(count: number, sourceScene: THREE.Object3D
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(quietColors, 3));
   geometry.computeBoundingSphere();
-  return { geometry, focus };
+  return { geometry, focus, revealExtent };
 }

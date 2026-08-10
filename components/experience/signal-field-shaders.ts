@@ -10,10 +10,9 @@ export const signalFieldVertexShader = `
   attribute vec3 aEnergyColor;
   attribute float aSeed;
   attribute float aLayer;
-  attribute float aWake;
   attribute float aPointScale;
   uniform float uTime;
-  uniform float uProgress;
+  uniform float uAssemblyProgress;
   uniform float uReset;
   uniform float uSignalAmount;
   uniform float uRingAmount;
@@ -21,7 +20,8 @@ export const signalFieldVertexShader = `
   uniform float uEnergyAmount;
   uniform float uCelebration;
   uniform float uPeak;
-  uniform float uIntroVisibility;
+  uniform vec3 uRevealCenter;
+  uniform float uRevealExtent;
   uniform float uResponse;
   uniform vec3 uPointer;
   uniform vec3 uPointerNormal;
@@ -65,9 +65,19 @@ export const signalFieldVertexShader = `
     ) * 0.028;
     signalTarget = mix(signalTarget, ringTarget + drift * 0.08, uRingAmount);
     vec3 dustPosition = position + drift * (0.72 + aPointScale * 0.28);
-    vec3 worldPosition = dustPosition * dustMask + surfaceTarget * surfaceMask + signalTarget * signalMask;
 
-    float surfaceReveal = smoothstep(aWake, aWake + 0.06, uProgress) * (1.0 - uReset);
+    float revealRadius = uAssemblyProgress * (uRevealExtent + 1.0) - 0.42;
+    float revealDistance = length((surfaceTarget - uRevealCenter) * vec3(1.0, 0.82, 1.0));
+    float revealNoise = (
+      sin(dot(surfaceTarget, vec3(1.73, 2.41, 1.19)) + uTime * 1.35 + phase) * 0.58
+      + sin(dot(surfaceTarget, vec3(-3.11, 1.27, 2.63)) - uTime * 1.08 + phase * 0.7) * 0.42
+    ) * smoothstep(0.02, 0.24, uAssemblyProgress) * 0.68;
+    float revealField = revealRadius - revealDistance + revealNoise;
+    float surfaceReveal = smoothstep(-0.42, 0.3, revealField);
+    float revealBoundary = (1.0 - smoothstep(0.0, 0.62, abs(revealField)))
+      * (1.0 - smoothstep(0.94, 1.0, uAssemblyProgress));
+    vec3 surfacePosition = mix(dustPosition, surfaceTarget, surfaceReveal);
+    vec3 worldPosition = dustPosition * dustMask + surfacePosition * surfaceMask + signalTarget * signalMask;
     float signalVisibility = uActivation * (0.24 + uSignalAmount * 0.76) * (1.0 - uReset);
     float particlePopulation = mix(
       ${sceneTokens.visualStory.particles.quietPopulation.toFixed(3)},
@@ -83,7 +93,6 @@ export const signalFieldVertexShader = `
     vVisibility = dustMask * dustPopulation
       + surfaceMask * surfaceReveal * (0.4 + uEnergyAmount * 0.6)
       + signalMask * signalVisibility;
-    vVisibility *= uIntroVisibility;
 
     vec3 pointerDelta = worldPosition - uPointer;
     float pointerDistance = max(length(pointerDelta), 0.001);
@@ -109,10 +118,10 @@ export const signalFieldVertexShader = `
       uMaximumPointSize
     );
     vActivity = dustMask * (0.08 + uActivation * 0.12 + uCelebration * 0.28 + uPeak * 0.24)
-      + surfaceMask * surfaceReveal * (0.55 + uEnergyAmount * 0.45)
+      + surfaceMask * surfaceReveal * (0.55 + uEnergyAmount * 0.45 + revealBoundary * 0.38)
       + signalMask * signalVisibility * (0.72 + uSignalAmount * 0.28);
     float colorMix = dustMask * (0.035 + uActivation * 0.08 + uCelebration * 0.44)
-      + surfaceMask * surfaceReveal * (0.5 + uEnergyAmount * 0.5)
+      + surfaceMask * surfaceReveal * (0.5 + uEnergyAmount * 0.5 + revealBoundary * 0.32)
       + signalMask * (0.68 + uSignalAmount * 0.32);
     vColor = mix(color, aEnergyColor, colorMix);
     vColor *= mix(1.0, ${sceneTokens.visualStory.particles.livingBrightness.toFixed(3)}, uCelebration);

@@ -145,17 +145,21 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.getByRole("link", { name: "شروع یک پروژه" }).last()).toBeVisible();
   });
 
-  test("one-shot intro can hand off immediately to the scroll loop", async ({ page }) => {
+  test("camera completion unlocks the scroll loop before the reveal finishes", async ({ page }) => {
     test.setTimeout(90_000);
+    const shaderErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" && /shader|webgl/i.test(message.text())) shaderErrors.push(message.text());
+    });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/en?intro=1&introDuration=15000", { waitUntil: "domcontentloaded" });
+    await page.goto("/en?intro=1&introDuration=4900", { waitUntil: "domcontentloaded" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Skip intro" })).toBeVisible();
-    await page.getByRole("button", { name: "Skip intro" }).dispatchEvent("click");
-    await expect(page.getByRole("button", { name: "Skip intro" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Skip intro" })).toHaveCount(0, { timeout: 7_000 });
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true");
     await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "arrival");
-    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).not.toBe("hidden");
+    await expect(page.locator("html")).not.toHaveAttribute("data-experience-scroll-lock", "");
+    expect(shaderErrors).toEqual([]);
   });
 
   test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {

@@ -152,7 +152,6 @@ export const narrativeScore = [
 
 /** Existing effect cues, centralized here while their visual values are preserved. */
 export const narrativeCueRanges = {
-  objectAssembly: [0.015, 0.18],
   lightTrails: [0.1, 0.22],
   screens: [
     [0.2, 0.28],

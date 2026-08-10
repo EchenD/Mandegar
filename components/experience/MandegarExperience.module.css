@@ -93,7 +93,7 @@
 
 .loader[data-complete="true"] {
   --loader-x: 50vw;
-  --loader-y: 55vh;
+  --loader-y: 50vh;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -114,7 +114,7 @@
   will-change: left, top, transform;
 }
 
-.loader[data-complete="true"] .loaderMark { left: 50%; top: 55%; transform: translate(-50%, -50%) scale(.56); }
+.loader[data-complete="true"] .loaderMark { left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.56); }
 
 .loaderMark::before,
 .loaderMark::after {

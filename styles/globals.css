@@ -660,3 +660,6 @@ p { max-width: 36rem; color: var(--muted-strong); font-size: 1rem; }
   .storyCopyProduction, .storyCopyEvent, .storyCopyProof, .storyCopyInteractive, .storyCopyIntelligence, .storyCopyTrust, .storyCopyMemory, .storyCopyInvitation { top: auto !important; bottom: 10% !important; }
   .storyCopyInvitation .button { min-height: 2.55rem; }
 }
+html[data-experience-scroll-lock] {
+  overflow: hidden;
+}

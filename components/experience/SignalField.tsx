@@ -33,7 +33,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
   const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uProgress: { value: 0 },
+      uAssemblyProgress: { value: 1 },
       uReset: { value: 0 },
       uSignalAmount: { value: 0 },
       uRingAmount: { value: 0 },
@@ -41,7 +41,8 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
       uEnergyAmount: { value: 0 },
       uCelebration: { value: 0 },
       uPeak: { value: 0 },
-      uIntroVisibility: { value: 1 },
+      uRevealCenter: { value: data.focus.clone() },
+      uRevealExtent: { value: data.revealExtent },
       uResponse: { value: 0.26 },
       uPointer: { value: data.focus.clone() },
       uPointerNormal: { value: new THREE.Vector3(0, 0, 1) },
@@ -64,7 +65,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     toneMapped: false,
-  }), [data.focus, gl, quality, size.height]);
+  }), [data.focus, data.revealExtent, gl, quality, size.height]);
 
   useEffect(() => () => {
     data.geometry.dispose();
@@ -80,8 +81,8 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     const activation = smoothstep(phaseProgress(progress, activationSequence.lightTrails)) * (1 - reset);
     const pulse = experienceState.pointerPulse;
     const response = 0.26 + activation * 0.74;
-    const modelScale = 0.965 + experienceState.assemblyProgress * 0.035;
-    const modelYOffset = -0.16 * (1 - experienceState.assemblyProgress);
+    const modelScale = 1;
+    const modelYOffset = 0;
     pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
     camera.getWorldDirection(pointerNormal.current);
     focusWorld.current.copy(data.focus).multiplyScalar(modelScale);
@@ -90,7 +91,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     raycaster.current.setFromCamera(pointerNdc.current, camera);
     raycaster.current.ray.intersectPlane(pointerPlane.current, pointerWorld.current);
     material.uniforms.uTime.value = clock.elapsedTime;
-    material.uniforms.uProgress.value = progress;
+    material.uniforms.uAssemblyProgress.value = experienceState.assemblyProgress;
     material.uniforms.uReset.value = reset;
     material.uniforms.uSignalAmount.value = signalAmount;
     material.uniforms.uRingAmount.value = ringAmount;
@@ -98,9 +99,6 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
     material.uniforms.uEnergyAmount.value = story.energy;
     material.uniforms.uCelebration.value = story.energy;
     material.uniforms.uPeak.value = story.peak;
-    material.uniforms.uIntroVisibility.value = experienceState.sequence === "intro"
-      ? experienceState.intro.particleVisibility
-      : 1;
     material.uniforms.uResponse.value = response;
     material.uniforms.uPointer.value.copy(pointerWorld.current);
     material.uniforms.uPointerNormal.value.copy(pointerNormal.current);

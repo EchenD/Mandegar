@@ -111,14 +111,15 @@ export function CameraRig() {
 
   useFrame((_, delta) => {
     const progress = experienceState.progress;
+    const introActive = experienceState.sequence === "intro";
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
     const pointerMotion = sceneTokens.cameraMotion.pointer;
     const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
     cameraPointerInput.current.set(
-      experienceState.pointerX * pointerInputScale,
-      experienceState.pointerY * pointerInputScale,
+      introActive ? 0 : experienceState.pointerX * pointerInputScale,
+      introActive ? 0 : experienceState.pointerY * pointerInputScale,
     );
     const springDelta = Math.min(delta, pointerMotion.maximumDelta);
     const springDamping = Math.exp(-pointerMotion.damping * springDelta);
@@ -153,19 +154,17 @@ export function CameraRig() {
       baseFov = sample.fov;
     }
 
-    if (experienceState.sequence === "intro") {
+    if (introActive) {
       introCameraOffset.current.fromArray(experienceState.intro.cameraLocalOffset).applyQuaternion(camera.quaternion);
       camera.position.add(introCameraOffset.current);
     }
-    const introFovOffset = experienceState.sequence === "intro" ? experienceState.intro.cameraFovOffset : 0;
-    const renderedFov = baseFov + introFovOffset;
-    if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - renderedFov) > 0.001) {
-      perspectiveCamera.fov = renderedFov;
+    if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - baseFov) > 0.001) {
+      perspectiveCamera.fov = baseFov;
       perspectiveCamera.updateProjectionMatrix();
     }
 
     const breathing = sceneTokens.cameraMotion.breathing;
-    const breathingScale = mobile ? breathing.mobileScale : 1;
+    const breathingScale = introActive ? 0 : mobile ? breathing.mobileScale : 1;
     cameraLifeTime.current += springDelta;
     const elapsed = cameraLifeTime.current;
     const turn = Math.PI * 2;

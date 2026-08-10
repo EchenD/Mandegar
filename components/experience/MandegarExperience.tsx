@@ -84,22 +84,15 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
-  const [introComplete, setIntroComplete] = useState(false);
+  const [interactionReady, setInteractionReady] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const loader = useRef<HTMLDivElement>(null);
   const audioContext = useRef<AudioContext | undefined>(undefined);
   const audioNodes = useRef<AudioNode[]>([]);
 
   useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => setLoadProgress(38));
-    const onPointerMove = (event: PointerEvent) => {
-      loader.current?.style.setProperty("--loader-x", `${event.clientX}px`);
-      loader.current?.style.setProperty("--loader-y", `${event.clientY}px`);
-    };
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
     return () => {
       window.cancelAnimationFrame(hydrationFrame);
-      window.removeEventListener("pointermove", onPointerMove);
       audioNodes.current.forEach((node) => {
         if ("stop" in node) (node as OscillatorNode).stop();
         node.disconnect();
@@ -111,13 +104,22 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
     };
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.removeProperty("overflow");
+    document.documentElement.toggleAttribute("data-experience-scroll-lock", !interactionReady);
+    return () => {
+      document.documentElement.removeAttribute("data-experience-scroll-lock");
+    };
+  }, [interactionReady]);
+
   const handleRuntimeReady = useCallback((nextRuntime: "pending" | "fallback" | "adaptive" | "full") => {
     setRuntime(nextRuntime);
     setLoadProgress(72);
   }, []);
 
   const handleFirstFrame = useCallback(() => setLoadProgress(100), []);
-  const handleIntroComplete = useCallback(() => setIntroComplete(true), []);
+  const handleIntroInteractive = useCallback(() => setInteractionReady(true), []);
+  const handleIntroComplete = useCallback(() => setInteractionReady(true), []);
   const handlePhaseChange = useCallback((phase: ScenePhaseId) => setActivePhase(phase), []);
 
   const scrollToProgress = useCallback((progress: number) => {
@@ -178,12 +180,11 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   }, [soundEnabled]);
 
   return (
-    <ScrollMotion className={styles.root} enabled={introComplete} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
+    <ScrollMotion className={styles.root} enabled={interactionReady} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
       <div
-        ref={loader}
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
-        data-particle-loader="pointer-spark"
+        data-particle-loader="center-spark"
         aria-live="polite"
         aria-label={`${copy.loading} ${loadProgress}%`}
       >
@@ -213,6 +214,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             ready={loadProgress === 100}
             enabled={runtime === "adaptive" || runtime === "full"}
             skipLabel={locale === "fa" ? "رد شدن" : locale === "ar" ? "تخطي" : "Skip intro"}
+            onInteractive={handleIntroInteractive}
             onComplete={handleIntroComplete}
           />
 
