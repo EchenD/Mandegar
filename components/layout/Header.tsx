@@ -12,10 +12,22 @@ type HeaderProps = { locale: Locale; settings?: SiteSettings };
 
 export function Header({ locale, settings }: HeaderProps) {
   const [open, setOpen] = useState(false);
+  const [mobileNavigation, setMobileNavigation] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const navigation = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const copy = getUi(locale);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const syncNavigationMode = () => {
+      setMobileNavigation(query.matches);
+      if (!query.matches) setOpen(false);
+    };
+    syncNavigationMode();
+    query.addEventListener("change", syncNavigationMode);
+    return () => query.removeEventListener("change", syncNavigationMode);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -49,7 +61,14 @@ export function Header({ locale, settings }: HeaderProps) {
         <span className={styles.logoText}>{settings?.title || "MANDEGAR"}</span>
       </Link>
 
-      <nav ref={navigation} id="primary-navigation" className={`${styles.nav} ${open ? styles.navOpen : ""}`} aria-label={locale === "fa" ? "پیمایش اصلی" : locale === "ar" ? "التنقل الرئيسي" : "Primary navigation"}>
+      <nav
+        ref={navigation}
+        id="primary-navigation"
+        className={`${styles.nav} ${open ? styles.navOpen : ""}`}
+        aria-label={locale === "fa" ? "پیمایش اصلی" : locale === "ar" ? "التنقل الرئيسي" : "Primary navigation"}
+        aria-hidden={mobileNavigation && !open ? true : undefined}
+        inert={mobileNavigation && !open ? true : undefined}
+      >
         {links.map((link) => (
           <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
         ))}

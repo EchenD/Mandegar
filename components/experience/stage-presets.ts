@@ -28,6 +28,28 @@ export type LightingStageMode =
 
 export type SpatialInfoMode = "hidden" | "assembly" | "activation" | "zones" | "projects" | "metrics" | "invitation";
 
+export type ProductionStageControls = {
+  environmentReveal: number;
+  centralReveal: number;
+  leftReveal: number;
+  rightReveal: number;
+  environmentPeak: number;
+  centralPeak: number;
+  leftPeak: number;
+  rightPeak: number;
+  interactiveScreen: number;
+  gameScreen: number;
+  videoWallScreen: number;
+  mainScreen: number;
+  crowdPresence: number;
+  dataFlow: number;
+  transitionParticles: number;
+  transitionParticleSize: number;
+  transitionTurbulence: number;
+  revealEdgeWidth: number;
+  revealTurbulence: number;
+};
+
 export type StagePreset = {
   id: ScenePhaseId;
   camera: {
@@ -51,6 +73,7 @@ export type StagePreset = {
     mode: SpatialInfoMode;
     prominence: number;
   };
+  production: ProductionStageControls;
   interaction: NarrativeInteraction;
   channels: readonly NarrativeChannel[];
 };
@@ -68,9 +91,10 @@ export type StageFrame = {
   lightEnergy: number;
   lightContrast: number;
   spatialProminence: number;
+  production: ProductionStageControls;
 };
 
-export type StageTuning = {
+export type StageTuning = Omit<ProductionStageControls, "environmentReveal"> & {
   cameraLife: number;
   cameraPointer: number;
   particlePresence: number;
@@ -104,6 +128,14 @@ export const stagePresets = {
     particles: { mode: "quiet", presence: 0.18, response: 0.06, signal: 0, halo: 0 },
     lighting: { mode: "neutral", energy: 0.14, contrast: 0.12 },
     spatialInfo: { mode: "hidden", prominence: 0 },
+    production: {
+      environmentReveal: 1, centralReveal: 0, leftReveal: 0, rightReveal: 0,
+      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
+      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 0.78,
+      transitionParticleSize: 0.52, transitionTurbulence: 0.38,
+      revealEdgeWidth: 0.42, revealTurbulence: 0.4,
+    },
     interaction: "subtle",
     channels: ["architecture"],
   },
@@ -113,6 +145,14 @@ export const stagePresets = {
     particles: { mode: "trace", presence: 0.38, response: 0.22, signal: 0.12, halo: 0 },
     lighting: { mode: "guided", energy: 0.32, contrast: 0.28 },
     spatialInfo: { mode: "assembly", prominence: 0.58 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 0, rightReveal: 0,
+      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
+      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 1,
+      transitionParticleSize: 0.62, transitionTurbulence: 0.54,
+      revealEdgeWidth: 0.48, revealTurbulence: 0.56,
+    },
     interaction: "subtle",
     channels: ["architecture", "signal", "screens"],
   },
@@ -122,6 +162,14 @@ export const stagePresets = {
     particles: { mode: "wake", presence: 0.62, response: 0.55, signal: 0.44, halo: 0.06 },
     lighting: { mode: "activated", energy: 0.58, contrast: 0.5 },
     spatialInfo: { mode: "activation", prominence: 0.82 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 0,
+      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
+      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 1,
+      transitionParticleSize: 0.68, transitionTurbulence: 0.62,
+      revealEdgeWidth: 0.46, revealTurbulence: 0.64,
+    },
     interaction: "subtle",
     channels: ["architecture", "signal", "screens"],
   },
@@ -130,7 +178,15 @@ export const stagePresets = {
     camera: { shot: "full-reveal", life: 0.42, pointer: 0.28 },
     particles: { mode: "radiant", presence: 1, response: 0.72, signal: 0.58, halo: 0.35 },
     lighting: { mode: "reveal", energy: 1, contrast: 0.72 },
-    spatialInfo: { mode: "hidden", prominence: 0 },
+    spatialInfo: { mode: "activation", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
+      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 0.84,
+      transitionParticleSize: 0.64, transitionTurbulence: 0.5,
+      revealEdgeWidth: 0.4, revealTurbulence: 0.52,
+    },
     interaction: "none",
     channels: ["architecture", "signal", "screens", "audience", "color"],
   },
@@ -140,6 +196,14 @@ export const stagePresets = {
     particles: { mode: "zones", presence: 0.72, response: 0.82, signal: 0.5, halo: 0.22 },
     lighting: { mode: "focused", energy: 0.68, contrast: 0.58 },
     spatialInfo: { mode: "zones", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 0.7, leftPeak: 0.48, rightPeak: 0.26,
+      interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 0.28,
+      transitionParticleSize: 0.5, transitionTurbulence: 0.32,
+      revealEdgeWidth: 0.34, revealTurbulence: 0.38,
+    },
     interaction: "zones",
     channels: ["architecture", "signal", "screens", "audience", "annotations"],
   },
@@ -149,6 +213,14 @@ export const stagePresets = {
     particles: { mode: "proof", presence: 0.58, response: 0.62, signal: 0.42, halo: 0.16 },
     lighting: { mode: "focused", energy: 0.56, contrast: 0.66 },
     spatialInfo: { mode: "projects", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
+      crowdPresence: 1, dataFlow: 0, transitionParticles: 0.06,
+      transitionParticleSize: 0.46, transitionTurbulence: 0.24,
+      revealEdgeWidth: 0.3, revealTurbulence: 0.3,
+    },
     interaction: "projects",
     channels: ["architecture", "signal", "screens", "audience", "annotations"],
   },
@@ -158,6 +230,14 @@ export const stagePresets = {
     particles: { mode: "data", presence: 0.7, response: 0.52, signal: 1, halo: 0.46 },
     lighting: { mode: "analytical", energy: 0.5, contrast: 0.72 },
     spatialInfo: { mode: "metrics", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 0.86, gameScreen: 0.86, videoWallScreen: 0.86, mainScreen: 1,
+      crowdPresence: 1, dataFlow: 1, transitionParticles: 0.04,
+      transitionParticleSize: 0.48, transitionTurbulence: 0.44,
+      revealEdgeWidth: 0.3, revealTurbulence: 0.34,
+    },
     interaction: "subtle",
     channels: ["architecture", "signal", "intelligence", "annotations"],
   },
@@ -167,6 +247,14 @@ export const stagePresets = {
     particles: { mode: "gather", presence: 0.48, response: 0.38, signal: 0.46, halo: 1 },
     lighting: { mode: "inviting", energy: 0.42, contrast: 0.42 },
     spatialInfo: { mode: "invitation", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
+      crowdPresence: 1, dataFlow: 0, transitionParticles: 0.025,
+      transitionParticleSize: 0.46, transitionTurbulence: 0.2,
+      revealEdgeWidth: 0.28, revealTurbulence: 0.28,
+    },
     interaction: "cta",
     channels: ["architecture", "signal"],
   },
@@ -176,6 +264,14 @@ export const stagePresets = {
     particles: { mode: "resolve", presence: 0.3, response: 0.22, signal: 0.12, halo: 0.16 },
     lighting: { mode: "reset", energy: 0.24, contrast: 0.2 },
     spatialInfo: { mode: "hidden", prominence: 0 },
+    production: {
+      environmentReveal: 1, centralReveal: 0.26, leftReveal: 0.26, rightReveal: 0.26,
+      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
+      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 0, dataFlow: 0, transitionParticles: 0.68,
+      transitionParticleSize: 0.52, transitionTurbulence: 0.4,
+      revealEdgeWidth: 0.4, revealTurbulence: 0.42,
+    },
     interaction: "subtle",
     channels: ["architecture", "signal"],
   },
@@ -193,6 +289,24 @@ const tuningKeys: readonly (keyof StageTuning)[] = [
   "lightEnergy",
   "lightContrast",
   "spatialProminence",
+  "centralReveal",
+  "leftReveal",
+  "rightReveal",
+  "environmentPeak",
+  "centralPeak",
+  "leftPeak",
+  "rightPeak",
+  "interactiveScreen",
+  "gameScreen",
+  "videoWallScreen",
+  "mainScreen",
+  "crowdPresence",
+  "dataFlow",
+  "transitionParticles",
+  "transitionParticleSize",
+  "transitionTurbulence",
+  "revealEdgeWidth",
+  "revealTurbulence",
 ];
 
 function clampTuning(value: number) {
@@ -211,6 +325,24 @@ function getBaseStageTuning(phase: ScenePhaseId): StageTuning {
     lightEnergy: preset.lighting.energy,
     lightContrast: preset.lighting.contrast,
     spatialProminence: preset.spatialInfo.prominence,
+    centralReveal: preset.production.centralReveal,
+    leftReveal: preset.production.leftReveal,
+    rightReveal: preset.production.rightReveal,
+    environmentPeak: preset.production.environmentPeak,
+    centralPeak: preset.production.centralPeak,
+    leftPeak: preset.production.leftPeak,
+    rightPeak: preset.production.rightPeak,
+    interactiveScreen: preset.production.interactiveScreen,
+    gameScreen: preset.production.gameScreen,
+    videoWallScreen: preset.production.videoWallScreen,
+    mainScreen: preset.production.mainScreen,
+    crowdPresence: preset.production.crowdPresence,
+    dataFlow: preset.production.dataFlow,
+    transitionParticles: preset.production.transitionParticles,
+    transitionParticleSize: preset.production.transitionParticleSize,
+    transitionTurbulence: preset.production.transitionTurbulence,
+    revealEdgeWidth: preset.production.revealEdgeWidth,
+    revealTurbulence: preset.production.revealTurbulence,
   };
 }
 
@@ -277,6 +409,27 @@ export function getStagePreset(phase: ScenePhaseId): StagePreset {
     },
     lighting: { ...preset.lighting, energy: tuning.lightEnergy, contrast: tuning.lightContrast },
     spatialInfo: { ...preset.spatialInfo, prominence: tuning.spatialProminence },
+    production: {
+      ...preset.production,
+      centralReveal: tuning.centralReveal,
+      leftReveal: tuning.leftReveal,
+      rightReveal: tuning.rightReveal,
+      environmentPeak: tuning.environmentPeak,
+      centralPeak: tuning.centralPeak,
+      leftPeak: tuning.leftPeak,
+      rightPeak: tuning.rightPeak,
+      interactiveScreen: tuning.interactiveScreen,
+      gameScreen: tuning.gameScreen,
+      videoWallScreen: tuning.videoWallScreen,
+      mainScreen: tuning.mainScreen,
+      crowdPresence: tuning.crowdPresence,
+      dataFlow: tuning.dataFlow,
+      transitionParticles: tuning.transitionParticles,
+      transitionParticleSize: tuning.transitionParticleSize,
+      transitionTurbulence: tuning.transitionTurbulence,
+      revealEdgeWidth: tuning.revealEdgeWidth,
+      revealTurbulence: tuning.revealTurbulence,
+    },
   };
 }
 
@@ -287,6 +440,62 @@ function mixValue(from: number, to: number, amount: number) {
 function smoothstepValue(value: number) {
   const safe = Math.min(1, Math.max(0, value));
   return safe * safe * (3 - 2 * safe);
+}
+
+type ProductionTransitionWindows = Partial<Record<
+  ScenePhaseId,
+  Partial<Record<keyof ProductionStageControls, readonly [number, number]>>
+>>;
+
+/**
+ * Per-channel windows preserve the nine editable resting presets while giving
+ * transitions an authored order. Values are normalized within the interval
+ * between two adjacent preview anchors.
+ */
+const productionTransitionWindows: ProductionTransitionWindows = {
+  discovery: {
+    centralReveal: [0.56, 0.88],
+  },
+  activation: {
+    leftReveal: [0.4, 0.9],
+  },
+  reveal: {
+    rightReveal: [0.55, 0.9],
+  },
+  experiences: {
+    environmentPeak: [0.3, 0.48],
+    centralPeak: [0.52, 0.68],
+    leftPeak: [0.66, 0.8],
+    rightPeak: [0.78, 0.9],
+    videoWallScreen: [0.91, 0.935],
+    interactiveScreen: [0.935, 0.96],
+    gameScreen: [0.96, 0.98],
+    mainScreen: [0.98, 1],
+  },
+  proof: {
+    centralPeak: [0.05, 0.3],
+    leftPeak: [0.22, 0.52],
+    rightPeak: [0.46, 0.78],
+    crowdPresence: [0.55, 0.88],
+  },
+  intelligence: {
+    dataFlow: [0.45, 0.82],
+  },
+  invitation: {
+    dataFlow: [0, 0.55],
+  },
+};
+
+function getProductionTransitionMix(
+  key: keyof ProductionStageControls,
+  destination: ScenePhaseId,
+  linearMix: number,
+) {
+  const range = productionTransitionWindows[destination]?.[key];
+  if (!range) return smoothstepValue(linearMix);
+  return smoothstepValue(
+    (linearMix - range[0]) / Math.max(0.0001, range[1] - range[0]),
+  );
 }
 
 /** Holds the authored camera on its exact endpoint during the atomic scroll wrap. */
@@ -317,6 +526,40 @@ export function getStageFrame(progress: number): StageFrame {
       / Math.max(0.0001, cameraLoopSeam.exitLockStart - cameraLoopSeam.exitBlendStart),
   );
   const arrivalCamera = getStagePreset("arrival").camera;
+  const interpolateProduction = (key: keyof ProductionStageControls) => (
+    mixValue(
+      current.production[key],
+      next.production[key],
+      getProductionTransitionMix(key, toBeat.id, linearMix),
+    )
+  );
+  const production: ProductionStageControls = {
+    environmentReveal: interpolateProduction("environmentReveal"),
+    centralReveal: interpolateProduction("centralReveal"),
+    leftReveal: interpolateProduction("leftReveal"),
+    rightReveal: interpolateProduction("rightReveal"),
+    environmentPeak: interpolateProduction("environmentPeak"),
+    centralPeak: interpolateProduction("centralPeak"),
+    leftPeak: interpolateProduction("leftPeak"),
+    rightPeak: interpolateProduction("rightPeak"),
+    interactiveScreen: interpolateProduction("interactiveScreen"),
+    gameScreen: interpolateProduction("gameScreen"),
+    videoWallScreen: interpolateProduction("videoWallScreen"),
+    mainScreen: interpolateProduction("mainScreen"),
+    crowdPresence: interpolateProduction("crowdPresence"),
+    dataFlow: interpolateProduction("dataFlow"),
+    transitionParticles: interpolateProduction("transitionParticles"),
+    transitionParticleSize: interpolateProduction("transitionParticleSize"),
+    transitionTurbulence: interpolateProduction("transitionTurbulence"),
+    revealEdgeWidth: interpolateProduction("revealEdgeWidth"),
+    revealTurbulence: interpolateProduction("revealTurbulence"),
+  };
+  if (cameraSeamMix > 0) {
+    const arrivalProduction = getStagePreset("arrival").production;
+    (Object.keys(production) as (keyof ProductionStageControls)[]).forEach((key) => {
+      production[key] = mixValue(production[key], arrivalProduction[key], cameraSeamMix);
+    });
+  }
 
   return {
     current,
@@ -331,6 +574,7 @@ export function getStageFrame(progress: number): StageFrame {
     lightEnergy: mixValue(current.lighting.energy, next.lighting.energy, mix),
     lightContrast: mixValue(current.lighting.contrast, next.lighting.contrast, mix),
     spatialProminence: mixValue(current.spatialInfo.prominence, next.spatialInfo.prominence, mix),
+    production,
   };
 }
 

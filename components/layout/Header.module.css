@@ -47,6 +47,32 @@
 :global(body:has([data-mandegar-experience])) .header .actions > .button { color: #fff; background: var(--ink); }
 :global(body:has([data-mandegar-experience])) .header .navOpen a { color: var(--ink); }
 
+:global(body:has([data-story-stage="proof"])) .header .logo,
+:global(body:has([data-story-stage="proof"])) .header .nav:not(.navOpen) a,
+:global(body:has([data-story-stage="proof"])) .header .desktopLanguage a,
+:global(body:has([data-story-stage="intelligence"])) .header .logo,
+:global(body:has([data-story-stage="intelligence"])) .header .nav:not(.navOpen) a,
+:global(body:has([data-story-stage="intelligence"])) .header .desktopLanguage a,
+:global(body:has([data-story-stage="invitation"])) .header .logo,
+:global(body:has([data-story-stage="invitation"])) .header .nav:not(.navOpen) a,
+:global(body:has([data-story-stage="invitation"])) .header .desktopLanguage a { color: rgba(247, 247, 244, .72); }
+
+:global(body:has([data-story-stage="proof"])) .header .logoMark,
+:global(body:has([data-story-stage="intelligence"])) .header .logoMark,
+:global(body:has([data-story-stage="invitation"])) .header .logoMark { border-color: rgba(247, 247, 244, .82); }
+
+:global(body:has([data-story-stage="proof"])) .header .menuButton i,
+:global(body:has([data-story-stage="intelligence"])) .header .menuButton i,
+:global(body:has([data-story-stage="invitation"])) .header .menuButton i { background: #f7f7f4; }
+
+:global(body:has([data-story-stage="proof"])) .header .actions > .button,
+:global(body:has([data-story-stage="intelligence"])) .header .actions > .button,
+:global(body:has([data-story-stage="invitation"])) .header .actions > .button { color: #16191d; background: #f7f7f4; }
+
+.header:has(.navOpen) .logo { color: var(--ink) !important; }
+.header:has(.navOpen) .logoMark { border-color: var(--ink) !important; }
+.header:has(.navOpen) .menuButton i { background: var(--ink) !important; }
+
 @media (min-width: 761px) {
   .header .nav {
     position: absolute;

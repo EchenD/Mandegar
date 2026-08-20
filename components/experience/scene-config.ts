@@ -10,9 +10,11 @@ import {
   rangeProgress,
   type ScenePhaseId,
 } from "./narrative-score";
+import { bakedSceneContract } from "./baked-scene-contract";
 
 export type { ScenePhaseId } from "./narrative-score";
 export type SceneQuality = "full" | "adaptive";
+export type ScenePipeline = "legacy" | "baked-modular";
 export type CameraKeyframe = {
   progress: number;
   position: readonly [number, number, number];
@@ -25,6 +27,13 @@ export type CameraKeyframe = {
 };
 
 export const sceneTokens = {
+  rendering: {
+    pipeline: (
+      process.env.NEXT_PUBLIC_MANDEGAR_BAKED_SCENE === "1"
+        ? "baked-modular"
+        : "legacy"
+    ) as ScenePipeline,
+  },
   colors: {
     warmWhite: "#f7f7f4",
     fog: "#cdd2d4",
@@ -157,6 +166,33 @@ export const sceneTokens = {
       },
     },
   },
+  bakedScene: {
+    background: "#dbdbd8",
+    particleCount: { full: 11200, adaptive: 4400 },
+    particleLeadProgress: 0.012,
+    crowdPreloadProgress: 0.61,
+    crowdFallbackColor: "#31516f",
+    dataFlowRange: [0.748, 0.79] as const,
+    hudMoments: {
+      central: [0.16, 0.23] as const,
+      left: [0.297, 0.39] as const,
+      right: [0.441, 0.477] as const,
+      experiences: [0.54, 0.64] as const,
+      proof: [0.66, 0.76] as const,
+      intelligence: [0.785, 0.837] as const,
+    },
+    material: {
+      edgeColor: "#ffbd73",
+      edgeStrength: 0.2,
+      particleColor: "#ffc78b",
+    },
+    screens: {
+      videoWall: "",
+      interactive: "",
+      game: "",
+      main: "",
+    },
+  },
   authoredCamera: {
     enabled: true,
     enabledOnMobile: true,
@@ -249,6 +285,15 @@ export const qualityProfiles: Record<SceneQuality, {
 
 export const assetSlots = {
   assembled: `${publicAssetPath("/models/mandegar/mandegar_hero.glb")}?revision=camera-v2`,
+  environment: publicAssetPath("/models/mandegar/mandegar_environment.glb"),
+  exhibition: publicAssetPath("/models/mandegar/mandegar_exhibition.glb"),
+  crowd: publicAssetPath("/models/mandegar/mandegar_crowd.glb"),
+  bakedTextures: {
+    environmentQuiet: publicAssetPath(bakedSceneContract.textures.environmentQuiet.runtime),
+    environmentPeak: publicAssetPath(bakedSceneContract.textures.environmentPeak.runtime),
+    exhibitionQuiet: publicAssetPath(bakedSceneContract.textures.exhibitionQuiet.runtime),
+    exhibitionPeak: publicAssetPath(bakedSceneContract.textures.exhibitionPeak.runtime),
+  },
 } as const;
 
 export function clamp01(value: number) {

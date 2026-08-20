@@ -163,6 +163,19 @@ export function ScrollMotion({
       root.dataset.narrativeProgress = safeProgress.toFixed(4);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.dataset.storyStage = phase;
+      const vignettePeak = Math.max(
+        experienceState.stage.production.environmentPeak,
+        experienceState.stage.production.centralPeak,
+        experienceState.stage.production.leftPeak,
+        experienceState.stage.production.rightPeak,
+      );
+      const quietVignette = [219, 219, 216] as const;
+      const peakVignette = [5, 7, 10] as const;
+      const vignetteRgb = quietVignette.map((channel, index) => Math.round(
+        channel + (peakVignette[index] - channel) * vignettePeak,
+      ));
+      root.style.setProperty("--vignette-rgb", vignetteRgb.join(" "));
+      root.style.setProperty("--vignette-opacity", (0.82 + vignettePeak * 0.18).toFixed(3));
       syncNativePresentation(nativeProgress);
       if (phase !== activePhase) {
         activePhase = phase;

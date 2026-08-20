@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Component, Suspense, type CSSProperties, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { AudienceSystem } from "./AudienceSystem";
+import { BakedMandegarScene } from "./BakedMandegarScene";
 import {
   narrativeCueRanges as activationSequence,
   rangeProgress as phaseProgress,
@@ -32,9 +33,10 @@ type ExperienceCanvasProps = {
 type SpatialHudModeCopy = {
   primaryCode: string;
   primaryValue: string;
+  primaryMeta?: string;
   secondaryCode?: string;
   secondaryValue?: string;
-  measurementPrefix?: string;
+  secondaryMeta?: string;
 };
 
 function ExhibitionWorld({
@@ -50,6 +52,23 @@ function ExhibitionWorld({
   onProjectSelect?: (index: number) => void;
   onSpatialFrame?: (frame: SpatialHudFrame) => void;
 }) {
+  if (sceneTokens.rendering.pipeline === "baked-modular") {
+    return (
+      <>
+        <color attach="background" args={[sceneTokens.bakedScene.background]} />
+        <Suspense fallback={null}>
+          <CameraRig source={assetSlots.environment} />
+          <BakedMandegarScene
+            quality={quality}
+            projects={projects}
+            onFirstFrame={onFirstFrame}
+            onProjectSelect={onProjectSelect}
+            onSpatialFrame={onSpatialFrame}
+          />
+        </Suspense>
+      </>
+    );
+  }
   return (
     <>
       <WorldEnvironment />
@@ -87,58 +106,71 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
   const spatialRoot = useRef<HTMLDivElement>(null);
   const primaryLeader = useRef<SVGPathElement>(null);
   const secondaryLeader = useRef<SVGPathElement>(null);
-  const measurementGroup = useRef<SVGGElement>(null);
-  const measurementLine = useRef<SVGPathElement>(null);
   const primaryLabel = useRef<HTMLDivElement>(null);
   const secondaryLabel = useRef<HTMLDivElement>(null);
   const primaryCode = useRef<HTMLSpanElement>(null);
   const primaryValue = useRef<HTMLElement>(null);
+  const primaryMeta = useRef<HTMLElement>(null);
   const secondaryCode = useRef<HTMLSpanElement>(null);
   const secondaryValue = useRef<HTMLElement>(null);
-  const measurementLabel = useRef<HTMLDivElement>(null);
+  const secondaryMeta = useRef<HTMLElement>(null);
   const projectLabel = projects[0]?.label || "PRIMARY DISPLAY";
   const spatialHudCopy = useMemo<Record<SpatialHudModeId, SpatialHudModeCopy>>(() => ({
     assembly: {
-      primaryCode: "FORM / 01",
-      primaryValue: "CORE ASSEMBLY",
-      measurementPrefix: "H",
+      primaryCode: "CORE / MEDIA HUB",
+      primaryValue: "CENTRAL PRESENTATION SYSTEM",
+      primaryMeta: "FUNCTION / LIVE MEDIA + AUDIENCE FOCUS",
+      secondaryCode: "DISPLAY / 21:9",
+      secondaryValue: "SHARED MEDIA CANVAS",
+      secondaryMeta: "INTERACTION / MAIN VIEWING POINT",
     },
     activationLeft: {
-      primaryCode: "SIGNAL / L",
-      primaryValue: "EXPERIENCE POD",
-      secondaryCode: "TOUCH / L",
-      secondaryValue: "INTERACTION SURFACE",
+      primaryCode: "PRODUCT / PHOTO + TOUCH",
+      primaryValue: "CAPTURE + PARTICIPATION ZONE",
+      primaryMeta: "FUNCTION / AUDIENCE-GENERATED CONTENT",
+      secondaryCode: "INTERACTION / TOUCHPOINT",
+      secondaryValue: "RESPONSIVE DISPLAY",
+      secondaryMeta: "MATERIAL / BAKED ARCHITECTURAL SKIN",
     },
     activationRight: {
-      primaryCode: "SIGNAL / R",
-      primaryValue: "EXPERIENCE POD",
-      secondaryCode: "TOUCH / R",
-      secondaryValue: "INTERACTION SURFACE",
+      primaryCode: "PRODUCT / GAME + IMMERSIVE",
+      primaryValue: "ACTIVE PLAY ZONE",
+      primaryMeta: "FUNCTION / PARTICIPATION + DWELL",
+      secondaryCode: "INTERACTION / DUAL MEDIA",
+      secondaryValue: "GAME INPUT + LIVE FEEDBACK",
+      secondaryMeta: "DISPLAY / GAME + MAIN SCREEN",
     },
     reveal: {
-      primaryCode: "LIGHT / 01",
-      primaryValue: "CANOPY SIGNAL",
-      secondaryCode: "CORE / ACTIVE",
-      secondaryValue: "REVEAL COMPLETE",
-      measurementPrefix: "DIA",
+      primaryCode: "SYSTEM / COMPLETE",
+      primaryValue: "THREE CONNECTED EXPERIENCE ZONES",
+      primaryMeta: "ARCHITECTURE / MODULAR EVENT PLATFORM",
+      secondaryCode: "SIGNAL / CANOPY",
+      secondaryValue: "SHARED VISUAL LANDMARK",
+      secondaryMeta: "FUNCTION / ORIENTATION + ATTRACTION",
     },
     experiences: {
-      primaryCode: "ZONE / L",
-      primaryValue: zoneLabels?.photo || "PHOTO EXPERIENCE",
-      secondaryCode: "ZONE / R",
-      secondaryValue: zoneLabels?.game || "GAME EXPERIENCE",
+      primaryCode: "EXPERIENCE NODE / LEFT",
+      primaryValue: zoneLabels?.photo || "PHOTO + TOUCH EXPERIENCE",
+      primaryMeta: "INPUT / CAPTURE, SELECT, SHARE",
+      secondaryCode: "EXPERIENCE NODE / RIGHT",
+      secondaryValue: zoneLabels?.game || "GAME + IMMERSIVE EXPERIENCE",
+      secondaryMeta: "INPUT / PLAY, RESPOND, PARTICIPATE",
     },
     proof: {
-      primaryCode: "MEDIA / 21:9",
+      primaryCode: "CONTENT / HERO DISPLAY",
       primaryValue: projectLabel,
-      measurementPrefix: "W",
+      primaryMeta: "OUTPUT / CAMPAIGN MEDIA AT EVENT SCALE",
+      secondaryCode: "CONTENT / SUPPORT DISPLAY",
+      secondaryValue: "ADAPTIVE EXPERIENCE MEDIA",
+      secondaryMeta: "OUTPUT / ZONE-SPECIFIC VISUAL RESPONSE",
     },
     intelligence: {
-      primaryCode: "FLOW / INPUT",
-      primaryValue: "HUMAN SIGNAL",
-      secondaryCode: "CORE / OUTPUT",
-      secondaryValue: "SOFT INSIGHT",
-      measurementPrefix: "DELTA",
+      primaryCode: "INPUT / AUDIENCE SIGNAL",
+      primaryValue: "PRESENCE + INTERACTION",
+      primaryMeta: "FLOW / HUMAN RESPONSE ENTERS THE SYSTEM",
+      secondaryCode: "OUTPUT / ADAPTIVE RESPONSE",
+      secondaryValue: "ADAPTIVE MEDIA + EVENT INSIGHT",
+      secondaryMeta: "FLOW / EXPERIENCE NODES INFORM THE CORE",
     },
   }), [projectLabel, zoneLabels?.game, zoneLabels?.photo]);
 
@@ -151,16 +183,25 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     root.style.visibility = active ? "visible" : "hidden";
     root.dataset.compact = frame.compact ? "true" : "false";
     root.dataset.mode = frame.mode ?? "none";
-    if (!active || !copy) return;
+    if (!active || !copy) {
+      if (primaryLabel.current) primaryLabel.current.style.opacity = "0";
+      if (secondaryLabel.current) secondaryLabel.current.style.opacity = "0";
+      if (primaryLeader.current) primaryLeader.current.style.opacity = "0";
+      if (secondaryLeader.current) secondaryLeader.current.style.opacity = "0";
+      root.dataset.proximity = "0.000";
+      return;
+    }
 
     if (primaryCode.current?.textContent !== copy.primaryCode) primaryCode.current!.textContent = copy.primaryCode;
     if (primaryValue.current?.textContent !== copy.primaryValue) primaryValue.current!.textContent = copy.primaryValue;
+    if (primaryMeta.current && primaryMeta.current.textContent !== (copy.primaryMeta ?? "")) primaryMeta.current.textContent = copy.primaryMeta ?? "";
     if (secondaryCode.current && secondaryCode.current.textContent !== (copy.secondaryCode ?? "")) secondaryCode.current.textContent = copy.secondaryCode ?? "";
     if (secondaryValue.current && secondaryValue.current.textContent !== (copy.secondaryValue ?? "")) secondaryValue.current.textContent = copy.secondaryValue ?? "";
+    if (secondaryMeta.current && secondaryMeta.current.textContent !== (copy.secondaryMeta ?? "")) secondaryMeta.current.textContent = copy.secondaryMeta ?? "";
 
     const safeArea = frame.compact ? sceneTokens.spatialLabels.safeArea.compact : sceneTokens.spatialLabels.safeArea.desktop;
-    const labelHalfWidth = frame.compact ? 60 : 84;
-    const horizontalOffset = frame.compact ? 82 : 128;
+    const labelHalfWidth = frame.compact ? 62 : 116;
+    const horizontalOffset = frame.compact ? 84 : 150;
     const coreSide = frame.primary.x <= frame.width * 0.52 ? -1 : 1;
     const mediaSide = -coreSide;
     const inlineSafety = Math.min(safeArea.inline, Math.max(12, (frame.width - labelHalfWidth * 2) / 3));
@@ -168,20 +209,35 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     const safeBottom = Math.min(safeArea.bottom, frame.height * 0.35);
     const clampX = (value: number) => THREE.MathUtils.clamp(value, inlineSafety + labelHalfWidth, frame.width - inlineSafety - labelHalfWidth);
     const clampY = (value: number) => THREE.MathUtils.clamp(value, safeTop, frame.height - safeBottom);
+    const pointerX = (experienceState.pointerX * 0.5 + 0.5) * frame.width;
+    const pointerY = (experienceState.pointerY * 0.5 + 0.5) * frame.height;
+    const proximityRadius = frame.compact ? 120 : 230;
+    const proximityCore = frame.compact ? 34 : 54;
+    const getProximity = (point: SpatialScreenPoint) => {
+      if (!experienceState.pointerPresent || !point.visible) return 0;
+      const distance = Math.hypot(pointerX - point.x, pointerY - point.y);
+      return 1 - THREE.MathUtils.smoothstep(distance, proximityCore, proximityRadius);
+    };
+    const primaryProximity = getProximity(frame.primary);
+    const secondaryProximity = getProximity(frame.secondary);
+    root.dataset.proximity = Math.max(primaryProximity, secondaryProximity).toFixed(3);
     const placeAnnotation = (
       point: SpatialScreenPoint,
+      proximity: number,
       side: number,
       verticalOffset: number,
       label: HTMLDivElement | null,
       leader: SVGPathElement | null,
     ) => {
       if (!label || !leader) return;
-      const visible = point.visible;
       label.dataset.side = side < 0 ? "left" : "right";
-      label.style.opacity = visible ? "1" : "0";
-      label.style.visibility = visible ? "visible" : "hidden";
-      leader.style.opacity = visible ? "1" : "0";
-      if (!visible) return;
+      label.style.opacity = proximity.toFixed(3);
+      label.style.filter = `blur(${((1 - proximity) * 3.5).toFixed(2)}px)`;
+      label.style.clipPath = side < 0
+        ? `inset(0 0 0 ${((1 - proximity) * 100).toFixed(2)}%)`
+        : `inset(0 ${((1 - proximity) * 100).toFixed(2)}% 0 0)`;
+      leader.style.opacity = (proximity * 0.9).toFixed(3);
+      if (!point.visible) return;
       const labelX = clampX(point.x + side * horizontalOffset);
       const labelY = clampY(point.y + verticalOffset);
       const edgeX = labelX - side * labelHalfWidth;
@@ -194,31 +250,8 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
       );
     };
 
-    placeAnnotation(frame.primary, coreSide, frame.compact ? -46 : -62, primaryLabel.current, primaryLeader.current);
-    placeAnnotation(frame.secondary, mediaSide, frame.compact ? 38 : 52, secondaryLabel.current, secondaryLeader.current);
-
-    const showMeasurement = frame.measureStart.visible && frame.measureEnd.visible && frame.measureMeters > 0;
-    if (measurementGroup.current) measurementGroup.current.style.opacity = showMeasurement ? "1" : "0";
-    if (measurementLabel.current) {
-      measurementLabel.current.style.opacity = showMeasurement ? "1" : "0";
-      measurementLabel.current.style.visibility = showMeasurement ? "visible" : "hidden";
-    }
-    if (!showMeasurement || !measurementLine.current || !measurementLabel.current) return;
-    const dx = frame.measureEnd.x - frame.measureStart.x;
-    const dy = frame.measureEnd.y - frame.measureStart.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const normalX = -dy / length;
-    const normalY = dx / length;
-    const tick = frame.compact ? 4 : 5;
-    measurementLine.current.setAttribute(
-      "d",
-      `M ${frame.measureStart.x.toFixed(2)} ${frame.measureStart.y.toFixed(2)} L ${frame.measureEnd.x.toFixed(2)} ${frame.measureEnd.y.toFixed(2)} M ${(frame.measureStart.x - normalX * tick).toFixed(2)} ${(frame.measureStart.y - normalY * tick).toFixed(2)} L ${(frame.measureStart.x + normalX * tick).toFixed(2)} ${(frame.measureStart.y + normalY * tick).toFixed(2)} M ${(frame.measureEnd.x - normalX * tick).toFixed(2)} ${(frame.measureEnd.y - normalY * tick).toFixed(2)} L ${(frame.measureEnd.x + normalX * tick).toFixed(2)} ${(frame.measureEnd.y + normalY * tick).toFixed(2)}`,
-    );
-    const measurementX = clampX((frame.measureStart.x + frame.measureEnd.x) * 0.5 + normalX * 14);
-    const measurementY = clampY((frame.measureStart.y + frame.measureEnd.y) * 0.5 + normalY * 14);
-    const measurementText = `${copy.measurementPrefix ? `${copy.measurementPrefix} / ` : ""}${frame.measureMeters.toFixed(2)} M`;
-    if (measurementLabel.current.textContent !== measurementText) measurementLabel.current.textContent = measurementText;
-    measurementLabel.current.style.transform = `translate3d(${measurementX.toFixed(2)}px, ${measurementY.toFixed(2)}px, 0) translate(-50%, -50%)`;
+    placeAnnotation(frame.primary, primaryProximity, coreSide, frame.compact ? -42 : -54, primaryLabel.current, primaryLeader.current);
+    placeAnnotation(frame.secondary, secondaryProximity, mediaSide, frame.compact ? 34 : 44, secondaryLabel.current, secondaryLeader.current);
   }, [spatialHudCopy]);
 
   useEffect(() => {
@@ -238,10 +271,12 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     const onPointerMove = (event: PointerEvent) => {
       experienceState.pointerX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 2;
       experienceState.pointerY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 2;
+      experienceState.pointerPresent = event.pointerType !== "touch";
     };
     const resetPointer = () => {
       experienceState.pointerX = 0;
       experienceState.pointerY = 0;
+      experienceState.pointerPresent = false;
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -256,6 +291,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
       experienceState.progress = 0;
       experienceState.pointerX = 0;
       experienceState.pointerY = 0;
+      experienceState.pointerPresent = false;
       experienceState.pointerPulse = 0;
       experienceState.assemblyProgress = 0;
       experienceState.focusDistance = 18;
@@ -267,26 +303,28 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
 
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback className={className} />;
   const profile = qualityProfiles[runtime];
+  const bakedPipeline = sceneTokens.rendering.pipeline === "baked-modular";
   return (
     <>
       <CanvasErrorBoundary fallback={<CanvasFallback className={className} />}>
         <Canvas
           className={className}
           data-experience-canvas="true"
-          data-particle-system="signal-network"
+          data-particle-system={bakedPipeline ? "transition-boundary" : "signal-network"}
           data-interaction-system="pointer-touch"
-          data-color-mode="aces"
-          data-postprocessing={runtime === "full" ? "bloom-dof" : "performance"}
+          data-color-mode={bakedPipeline ? "baked-srgb" : "aces"}
+          data-postprocessing={bakedPipeline ? "none" : runtime === "full" ? "bloom-dof" : "performance"}
+          data-scene-pipeline={sceneTokens.rendering.pipeline}
           aria-hidden="true"
           dpr={[profile.dpr[0], profile.dpr[1]]}
           frameloop={pageVisible ? "always" : "never"}
           camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
-          shadows={runtime === "full"}
+          shadows={!bakedPipeline && runtime === "full"}
           gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}
           onPointerDown={() => { experienceState.pointerPulse = 1; }}
           onCreated={({ gl }) => {
-            gl.toneMapping = THREE.ACESFilmicToneMapping;
-            gl.toneMappingExposure = sceneTokens.environment.exposure;
+            gl.toneMapping = bakedPipeline ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+            gl.toneMappingExposure = bakedPipeline ? 1 : sceneTokens.environment.exposure;
             gl.outputColorSpace = THREE.SRGBColorSpace;
           }}
         >
@@ -297,7 +335,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
             onProjectSelect={onProjectSelect}
             onSpatialFrame={renderSpatialHud}
           />
-          <ExperiencePostProcessing quality={runtime} />
+          {bakedPipeline ? null : <ExperiencePostProcessing quality={runtime} />}
         </Canvas>
       </CanvasErrorBoundary>
       <div
@@ -313,21 +351,19 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
         aria-hidden="true"
       >
         <svg className={spatialStyles.graphics} aria-hidden="true">
-          <path ref={primaryLeader} className={spatialStyles.leader} />
-          <path ref={secondaryLeader} className={`${spatialStyles.leader} ${spatialStyles.secondaryGraphic}`} />
-          <g ref={measurementGroup} className={spatialStyles.measurementGroup}>
-            <path ref={measurementLine} className={spatialStyles.dimension} />
-          </g>
+          <path ref={primaryLeader} className={spatialStyles.leader} pathLength="1" data-spatial-leader="primary" />
+          <path ref={secondaryLeader} className={`${spatialStyles.leader} ${spatialStyles.secondaryGraphic}`} pathLength="1" data-spatial-leader="secondary" />
         </svg>
-        <div ref={primaryLabel} className={spatialStyles.label} data-side="left">
+        <div ref={primaryLabel} className={spatialStyles.label} data-side="left" data-spatial-annotation="primary">
           <span ref={primaryCode}>FORM / 01</span>
           <strong ref={primaryValue} dir="auto">CORE ASSEMBLY</strong>
+          <small ref={primaryMeta}>FUNCTION / CENTRAL MEDIA HUB</small>
         </div>
-        <div ref={secondaryLabel} className={`${spatialStyles.label} ${spatialStyles.secondaryLabel}`} data-side="right">
+        <div ref={secondaryLabel} className={`${spatialStyles.label} ${spatialStyles.secondaryLabel}`} data-side="right" data-spatial-annotation="secondary">
           <span ref={secondaryCode} />
           <strong ref={secondaryValue} dir="auto" />
+          <small ref={secondaryMeta} />
         </div>
-        <div ref={measurementLabel} className={spatialStyles.measurementLabel}>0.00 M</div>
       </div>
     </>
   );

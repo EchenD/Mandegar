@@ -16,6 +16,7 @@ export const experienceState: {
   quality: SceneQuality;
   pointerX: number;
   pointerY: number;
+  pointerPresent: boolean;
   pointerPulse: number;
   assemblyProgress: number;
   focusDistance: number;
@@ -31,6 +32,7 @@ export const experienceState: {
   quality: "full",
   pointerX: 0,
   pointerY: 0,
+  pointerPresent: false,
   pointerPulse: 0,
   assemblyProgress: 0,
   focusDistance: 18,

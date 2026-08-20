@@ -1,0 +1,147 @@
+import * as THREE from "three";
+
+export type BakedExhibitionSectionId = "central" | "left" | "right";
+export type BakedSectionId = "environment" | BakedExhibitionSectionId;
+export type BakedScreenId = "videoWall" | "interactive" | "game" | "main";
+
+const reportedContractWarnings = new Set<string>();
+
+function reportContractWarning(message: string) {
+  if (process.env.NODE_ENV === "production" || reportedContractWarnings.has(message)) return;
+  reportedContractWarnings.add(message);
+  console.warn(message);
+}
+
+export const bakedSceneContract = {
+  textures: {
+    environmentQuiet: {
+      runtime: "/textures/mandegar/baked/env_quiet.jpg",
+      lossless: "/textures/mandegar/lossless/env_quiet.png",
+    },
+    environmentPeak: {
+      runtime: "/textures/mandegar/baked/env_peak.jpg",
+      lossless: "/textures/mandegar/lossless/env_peak.png",
+    },
+    exhibitionQuiet: {
+      runtime: "/textures/mandegar/baked/exhibit_quiet.jpg",
+      lossless: "/textures/mandegar/lossless/exhibit_quiet.png",
+    },
+    exhibitionPeak: {
+      runtime: "/textures/mandegar/baked/exhibit_peak.jpg",
+      lossless: "/textures/mandegar/lossless/exhibit_peak.png",
+    },
+  },
+  materials: {
+    environment: "MAT_ENV_BAKED",
+    exhibition: "MAT_EXHIBIT_BAKED",
+  },
+  environment: {
+    root: "root_environment",
+    section: "env_shell",
+    revealAnchor: "fxAnchor_reveal_environment",
+    camera: "camera_mandegar_master",
+    cameraClip: "camera_master_loop",
+  },
+  exhibition: {
+    root: "root_exhibition",
+    sections: {
+      central: {
+        root: "section_central",
+        revealAnchor: "fxAnchor_reveal_central",
+        hudAnchor: "fxAnchor_hud_central",
+        signalAnchor: "fxAnchor_signal_central",
+      },
+      left: {
+        root: "section_left",
+        revealAnchor: "fxAnchor_reveal_left",
+        hudAnchor: "fxAnchor_hud_left",
+        signalAnchor: "fxAnchor_signal_left",
+      },
+      right: {
+        root: "section_right",
+        revealAnchor: "fxAnchor_reveal_right",
+        hudAnchor: "fxAnchor_hud_right",
+        signalAnchor: "fxAnchor_signal_right",
+      },
+    },
+    screens: {
+      videoWall: "screen_video_wall_21x9",
+      interactive: "screen_interactive_16x9",
+      game: "screen_game_16x9",
+      main: "screen_main_16x9",
+    },
+    screenSections: {
+      videoWall: "central",
+      interactive: "left",
+      game: "right",
+      main: "right",
+    },
+  },
+  crowd: {
+    root: "root_crowd",
+    groups: ["crowd_table", "crowd_photo", "crowd_game", "crowd_general"],
+    slots: "crowd_slots",
+  },
+} as const;
+
+export function getContractObject(root: THREE.Object3D, name: string) {
+  return root.getObjectByName(name) ?? null;
+}
+
+export function validateContractNodes(
+  root: THREE.Object3D,
+  names: readonly string[],
+  label: string,
+) {
+  const missing = names.filter((name) => !root.getObjectByName(name));
+  if (missing.length > 0) {
+    reportContractWarning(
+      `[Mandegar] ${label} is missing required nodes: ${missing.join(", ")}`,
+    );
+  }
+  return missing;
+}
+
+export function validateContractMaterials(
+  root: THREE.Object3D,
+  names: readonly string[],
+  label: string,
+) {
+  const found = new Set<string>();
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.forEach((material) => found.add(material.name));
+  });
+  const missing = names.filter((name) => !found.has(name));
+  if (missing.length > 0) {
+    reportContractWarning(
+      `[Mandegar] ${label} is missing required source materials: ${missing.join(", ")}`,
+    );
+  }
+  return missing;
+}
+
+export const requiredEnvironmentNodes = [
+  bakedSceneContract.environment.root,
+  bakedSceneContract.environment.section,
+  bakedSceneContract.environment.revealAnchor,
+  bakedSceneContract.environment.camera,
+] as const;
+
+export const requiredExhibitionNodes = [
+  bakedSceneContract.exhibition.root,
+  bakedSceneContract.exhibition.sections.central.root,
+  bakedSceneContract.exhibition.sections.central.revealAnchor,
+  bakedSceneContract.exhibition.sections.central.hudAnchor,
+  bakedSceneContract.exhibition.sections.central.signalAnchor,
+  bakedSceneContract.exhibition.sections.left.root,
+  bakedSceneContract.exhibition.sections.left.revealAnchor,
+  bakedSceneContract.exhibition.sections.left.hudAnchor,
+  bakedSceneContract.exhibition.sections.left.signalAnchor,
+  bakedSceneContract.exhibition.sections.right.root,
+  bakedSceneContract.exhibition.sections.right.revealAnchor,
+  bakedSceneContract.exhibition.sections.right.hudAnchor,
+  bakedSceneContract.exhibition.sections.right.signalAnchor,
+  ...Object.values(bakedSceneContract.exhibition.screens),
+] as const;

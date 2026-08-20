@@ -1,12 +1,32 @@
 .root {
   --scene-progress: 0;
+  --vignette-rgb: 219 219 216;
+  --vignette-opacity: .82;
+  --experience-ink: #16191d;
+  --experience-muted: rgba(22, 25, 29, .66);
+  --experience-faint: rgba(22, 25, 29, .36);
+  --experience-line: rgba(22, 25, 29, .13);
+  --experience-accent: #225cff;
+  --experience-control: rgba(247, 247, 244, .34);
   position: relative;
   z-index: 0;
   height: var(--experience-scroll-height-desktop, 2175svh);
-  color: #16191d;
+  color: var(--experience-ink);
   background: #e8ebea;
   isolation: isolate;
   transition: z-index 0s linear .78s;
+}
+
+.root[data-story-stage="experiences"],
+.root[data-story-stage="proof"],
+.root[data-story-stage="intelligence"],
+.root[data-story-stage="invitation"] {
+  --experience-ink: #f7f7f4;
+  --experience-muted: rgba(247, 247, 244, .76);
+  --experience-faint: rgba(247, 247, 244, .5);
+  --experience-line: rgba(247, 247, 244, .24);
+  --experience-accent: #75d8ff;
+  --experience-control: rgba(8, 11, 15, .42);
 }
 
 .root:has(.loader:not([data-complete="true"])) {
@@ -81,6 +101,22 @@
   inset: 0;
   width: 100% !important;
   height: 100% !important;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 0 34%,
+    rgb(var(--vignette-rgb) / .24) 54%,
+    rgb(var(--vignette-rgb) / .68) 76%,
+    rgb(var(--vignette-rgb)) 100%
+  );
+  opacity: var(--vignette-opacity);
+  pointer-events: none;
+  will-change: background, opacity;
 }
 
 .loader {
@@ -201,6 +237,9 @@
 .sceneShell[data-runtime="fallback"] .fallbackScene,
 .sceneShell[data-runtime="pending"] .fallbackScene { display: block; }
 
+.sceneShell[data-runtime="fallback"] .vignette,
+.sceneShell[data-runtime="pending"] .vignette { display: none; }
+
 .fallbackHall {
   position: absolute;
   inset: 7% -18% 22%;
@@ -270,68 +309,50 @@
 .sceneCopy {
   position: absolute;
   z-index: 0;
-  left: clamp(1.5rem, 6vw, 7rem);
-  inset-block-start: 50%;
-  width: min(28rem, 32vw);
-  color: #16191d;
+  left: 50%;
+  inset-block-start: 70%;
+  width: min(50rem, 72vw);
+  color: var(--experience-ink);
+  text-align: center;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   isolation: isolate;
   will-change: opacity, visibility;
 }
 
 .sceneCopy::before {
-  content: "";
-  position: absolute;
-  inset: -2.2rem -3rem;
-  z-index: -1;
-  background: transparent;
-  -webkit-backdrop-filter: blur(18px) saturate(.86);
-  backdrop-filter: blur(18px) saturate(.86);
-  -webkit-mask-image: radial-gradient(ellipse at 42% 52%, #000 0 36%, rgba(0,0,0,.76) 55%, transparent 76%);
-  mask-image: radial-gradient(ellipse at 42% 52%, #000 0 36%, rgba(0,0,0,.76) 55%, transparent 76%);
-  pointer-events: none;
+  content: none;
 }
 
-:global([dir="rtl"]) .sceneCopy { right: clamp(1.5rem, 6vw, 7rem); left: auto; text-align: right; }
-:global([dir="ltr"]) .sceneCopy { text-align: left; }
+:global([dir="rtl"]) .sceneCopy,
+:global([dir="ltr"]) .sceneCopy { right: auto; left: 50%; text-align: center; }
 
 .sceneCopy > span {
   display: inline-flex;
   align-items: center;
   gap: .65rem;
   margin-block-end: 1rem;
-  color: #225cff;
+  color: var(--experience-accent);
   font-size: .58rem;
   font-weight: 720;
   letter-spacing: .12em;
   text-transform: uppercase;
+  justify-content: center;
 }
 
 .sceneCopy > span::before { content: ""; width: 1.8rem; height: 1px; background: currentColor; }
-.sceneCopy h2 { max-width: 12ch; margin: 0; font-size: clamp(2rem, 3.35vw, 4.35rem); font-weight: 520; line-height: 1.16; letter-spacing: -.025em; }
-.sceneCopy p { max-width: 29rem; margin: 1.05rem 0 0; color: rgba(22,25,29,.66); font-size: clamp(.84rem, 1.05vw, 1.02rem); line-height: 1.8; }
+.sceneCopy h2 { max-width: 18ch; margin: 0 auto; font-size: clamp(1.9rem, 2.8vw, 3.75rem); font-weight: 520; line-height: 1.14; letter-spacing: -.025em; }
+.sceneCopy p { max-width: 34rem; margin: .8rem auto 0; color: var(--experience-muted); font-size: clamp(.8rem, .95vw, .98rem); line-height: 1.72; }
 .sceneCopy [data-copy-line] { will-change: opacity, transform, filter, clip-path; }
 
 .sceneCopy.invitationCopy,
-.sceneCopy.loopCopy {
-  inset-inline: auto;
-  left: 50%;
-  inset-block-start: 50%;
-  width: min(44rem, 66vw);
-  text-align: center !important;
-  transform: translate(-50%, -50%);
-}
+.sceneCopy.loopCopy,
+.sceneCopy.arrivalCopy { width: min(48rem, 72vw); }
 
-.sceneCopy.arrivalCopy {
-  inset-inline: auto;
-  left: 50%;
-  width: min(44rem, 66vw);
-  text-align: center;
-  transform: translate(-50%, -50%);
-}
+.sceneCopy.arrivalCopy,
+.sceneCopy.loopCopy { inset-block-start: 50%; }
 
 :global([dir="rtl"]) .sceneCopy.arrivalCopy {
   right: auto;
@@ -340,19 +361,11 @@
 }
 
 .sceneCopy.arrivalCopy h2 { max-width: 15ch; margin-inline: auto; }
-.sceneCopy.arrivalCopy > span { justify-content: center; }
-
-.invitationCopy > span,
-.loopCopy > span { justify-content: center; }
-.invitationCopy h2,
-.invitationCopy p,
-.loopCopy h2,
-.loopCopy p { margin-inline: auto; }
 
 .ctaRow { display: flex; flex-wrap: wrap; justify-content: center; gap: .65rem; margin-block-start: 1.7rem; pointer-events: auto; }
 .primaryCta { display: inline-flex; align-items: center; justify-content: center; gap: 1.1rem; min-height: 3rem; padding-inline: 1.2rem; border: 1px solid #225cff; border-radius: 999px; color: #fff; background: #225cff; box-shadow: 0 1.3rem 3rem rgba(34,92,255,.25); font-size: .7rem; font-weight: 650; text-decoration: none; transition: transform .25s ease; }
 .primaryCta:hover { transform: translateY(-2px); }
-.primaryCta:focus-visible { outline: 2px solid #16191d; outline-offset: 3px; }
+.primaryCta:focus-visible { outline: 2px solid var(--experience-ink); outline-offset: 3px; }
 
 .soundControl {
   position: absolute;
@@ -365,15 +378,15 @@
   padding: .5rem .7rem;
   border: 0;
   border-radius: 999px;
-  color: rgba(22,25,29,.66);
-  background: rgba(247,247,244,.34);
+  color: var(--experience-muted);
+  background: var(--experience-control);
   backdrop-filter: blur(10px);
   font: inherit;
   font-size: .55rem;
   cursor: pointer;
 }
 
-.soundControl span { color: #225cff; }
+.soundControl span { color: var(--experience-accent); }
 .soundControl:focus-visible { outline: 2px solid #225cff; outline-offset: 2px; }
 
 .phaseRail {
@@ -392,19 +405,27 @@
 
 .root[data-scroll-engaged="true"] .phaseRail { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
 
-.phaseTrack { position: relative; display: block; height: 1px; background: rgba(22,25,29,.13); }
-.phaseTrack i { display: block; width: 100%; height: 100%; background: #225cff; transform: scaleX(var(--scroll-progress)); transform-origin: left center; will-change: transform; }
+.phaseTrack { position: relative; display: block; height: 1px; background: var(--experience-line); }
+.phaseTrack i { display: block; width: 100%; height: 100%; background: var(--experience-accent); transform: scaleX(var(--scroll-progress)); transform-origin: left center; will-change: transform; }
 .phaseButtons { position: relative; height: 1.2rem; margin-block-start: .45rem; }
-.phaseButtons button { position: absolute; left: var(--phase-position); display: flex; align-items: baseline; gap: .3rem; min-width: 0; padding: 0; border: 0; color: rgba(22,25,29,.36); background: none; font: inherit; font-size: .46rem; text-align: start; cursor: pointer; transform: translateX(-50%); transition: color .25s ease; }
-.phaseButtons button[data-active="true"] { color: #16191d; }
-.phaseButtons small { color: #225cff; font-size: .42rem; }
+.phaseButtons button { position: absolute; left: var(--phase-position); display: flex; align-items: baseline; gap: .3rem; min-width: 0; padding: 0; border: 0; color: var(--experience-faint); background: none; font: inherit; font-size: .46rem; text-align: start; cursor: pointer; transform: translateX(-50%); transition: color .25s ease; }
+.phaseButtons button[data-active="true"] { color: var(--experience-ink); }
+.phaseButtons small { color: var(--experience-accent); font-size: .42rem; }
 .phaseButtons span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .phaseButtons button:focus-visible { outline: 1px solid #225cff; outline-offset: 3px; }
 
-.scrollCue { position: absolute; left: 50%; inset-block-end: clamp(1rem, 2vw, 1.8rem); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: .55rem; color: rgba(22,25,29,.58); font-size: .52rem; letter-spacing: .08em; opacity: 1; visibility: visible; transform: translateX(-50%); transition: opacity .4s ease, transform .55s cubic-bezier(.22, 1, .36, 1), visibility 0s linear 0s; }
-.scrollCue i { position: relative; width: 1px; height: 2.4rem; overflow: hidden; background: rgba(22,25,29,.14); }
-.scrollCue i::after { position: absolute; inset: -45% 0 auto; height: 45%; background: #225cff; content: ""; animation: scrollCueTravel 1.65s cubic-bezier(.4, 0, .2, 1) infinite; }
+.scrollCue { position: absolute; left: 50%; inset-block-end: clamp(1rem, 2vw, 1.8rem); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: .55rem; color: var(--experience-muted); font-size: .52rem; letter-spacing: .08em; opacity: 1; visibility: visible; transform: translateX(-50%); transition: opacity .4s ease, transform .55s cubic-bezier(.22, 1, .36, 1), visibility 0s linear 0s; }
+.scrollCue i { position: relative; width: 1px; height: 2.4rem; overflow: hidden; background: var(--experience-line); }
+.scrollCue i::after { position: absolute; inset: -45% 0 auto; height: 45%; background: var(--experience-accent); content: ""; animation: scrollCueTravel 1.65s cubic-bezier(.4, 0, .2, 1) infinite; }
 .root[data-scroll-engaged="true"] .scrollCue { opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, .45rem); transition-delay: 0s, 0s, .45s; }
+
+.root[data-story-stage="experiences"] :global([data-spatial-labels]),
+.root[data-story-stage="proof"] :global([data-spatial-labels]),
+.root[data-story-stage="intelligence"] :global([data-spatial-labels]),
+.root[data-story-stage="invitation"] :global([data-spatial-labels]) {
+  --hud-accent: #75d8ff !important;
+  --hud-ink: #f7f7f4 !important;
+}
 
 @keyframes scrollCueTravel {
   0% { opacity: 0; transform: translateY(0); }
@@ -430,7 +451,7 @@
 
 @media (max-width: 900px) {
   .phaseRail { width: min(38rem, 72vw); }
-  .sceneCopy { width: min(27rem, 43vw); }
+  .sceneCopy { width: min(46rem, 82vw); }
 }
 
 @media (max-width: 760px) {
@@ -439,15 +460,16 @@
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }
   .fallbackHalo { width: 82vw; inset-block-start: 27%; }
-  .sceneCopy { left: 1.2rem; inset-block: 50% auto; width: calc(100% - 2.4rem); transform: translateY(-50%); }
-  :global([dir="rtl"]) .sceneCopy { right: 1.2rem; left: auto; }
-  .sceneCopy::before { inset: -1.2rem -1.5rem; -webkit-backdrop-filter: blur(14px) saturate(.9); backdrop-filter: blur(14px) saturate(.9); }
-  .sceneCopy h2 { max-width: 13ch; font-size: clamp(1.9rem, 9.2vw, 3.2rem); }
-  .sceneCopy p { max-width: 28rem; margin-block-start: .75rem; font-size: .8rem; line-height: 1.65; }
+  .sceneCopy { left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
+  :global([dir="rtl"]) .sceneCopy { right: auto; left: 50%; }
+  .sceneCopy h2 { max-width: 17ch; font-size: clamp(1.7rem, 7.6vw, 2.75rem); }
+  .sceneCopy p { max-width: 30rem; margin-block-start: .65rem; font-size: .76rem; line-height: 1.55; }
   .sceneCopy > span { margin-block-end: .65rem; }
   .sceneCopy.arrivalCopy,
   .sceneCopy.invitationCopy,
-  .sceneCopy.loopCopy { inset-inline: auto; left: 50%; inset-block: 50% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
+  .sceneCopy.loopCopy { inset-inline: auto; left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
+  .sceneCopy.arrivalCopy,
+  .sceneCopy.loopCopy { inset-block-start: 50%; }
   .ctaRow { margin-block-start: 1.1rem; }
   .primaryCta { min-height: 2.7rem; }
   .phaseRail { inset-block-end: 1rem; width: calc(100% - 2rem); }

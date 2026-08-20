@@ -43,6 +43,44 @@ const controlGroups: Array<{
       { key: "spatialProminence", label: "HUD" },
     ],
   },
+  {
+    label: "Section reveal",
+    controls: [
+      { key: "centralReveal", label: "Central" },
+      { key: "leftReveal", label: "Left" },
+      { key: "rightReveal", label: "Right" },
+      { key: "revealEdgeWidth", label: "Edge width" },
+      { key: "revealTurbulence", label: "Edge turbulence" },
+    ],
+  },
+  {
+    label: "Baked texture mix",
+    controls: [
+      { key: "environmentPeak", label: "Environment" },
+      { key: "centralPeak", label: "Central" },
+      { key: "leftPeak", label: "Left" },
+      { key: "rightPeak", label: "Right" },
+    ],
+  },
+  {
+    label: "Screens",
+    controls: [
+      { key: "interactiveScreen", label: "Interactive" },
+      { key: "gameScreen", label: "Game" },
+      { key: "videoWallScreen", label: "Video wall" },
+      { key: "mainScreen", label: "Main" },
+    ],
+  },
+  {
+    label: "Transition FX",
+    controls: [
+      { key: "transitionParticles", label: "Particle strength" },
+      { key: "transitionParticleSize", label: "Particle size" },
+      { key: "transitionTurbulence", label: "Particle motion" },
+      { key: "crowdPresence", label: "Crowd" },
+      { key: "dataFlow", label: "Data flow" },
+    ],
+  },
 ];
 
 function saveSnapshot() {

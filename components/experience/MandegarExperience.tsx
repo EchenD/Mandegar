@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Locale } from "@/lib/i18n";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
@@ -92,6 +92,13 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioContext = useRef<AudioContext | undefined>(undefined);
   const audioNodes = useRef<AudioNode[]>([]);
+  const canvasProjects = useMemo(
+    () => projects.slice(0, 3).map((project) => ({
+      src: project.mediaSrc,
+      label: project.title,
+    })),
+    [projects],
+  );
 
   useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => {
@@ -209,7 +216,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           <ExperienceCanvas
             className={styles.canvas}
             enabledByCms={enabledByCms}
-            projects={projects.slice(0, 3).map((project) => ({ src: project.mediaSrc, label: project.title }))}
+            projects={canvasProjects}
             zoneLabels={{ photo: copy.zones.photo, game: copy.zones.game }}
             onProjectSelect={selectProject}
             onRuntimeReady={handleRuntimeReady}
@@ -222,6 +229,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             onInteractive={handleIntroInteractive}
             onComplete={handleIntroComplete}
           />
+          <div className={styles.vignette} data-scene-vignette aria-hidden="true" />
 
           <div className={styles.fallbackScene} aria-hidden="true">
             <span className={styles.fallbackHall} />
@@ -289,7 +297,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
             </section>
           </div>
 
-          <nav className={styles.sceneA11y} aria-label={copy.experiencesTitle}>
+          <nav className={styles.sceneA11y} data-scene-a11y aria-label={copy.experiencesTitle}>
             {(["photo", "game", "touch"] as const).map((zone) => (
               <button
                 key={zone}

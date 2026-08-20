@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/immutability -- R3F render-loop callbacks intentionally mutate the active Three.js camera. */
-
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -51,9 +49,37 @@ function sampleCamera(
   };
 }
 
-export function CameraRig() {
-  const gltf = useLoader(GLTFLoader, assetSlots.assembled);
+export function syncPerspectiveCameraProjection(
+  camera: THREE.PerspectiveCamera,
+  projection: { fov: number; near: number; far: number },
+) {
+  const nextFov = Number.isFinite(projection.fov) && projection.fov > 0 && projection.fov < 180
+    ? projection.fov
+    : camera.fov;
+  const nextNear = Number.isFinite(projection.near) && projection.near > 0
+    ? projection.near
+    : camera.near;
+  const nextFar = Number.isFinite(projection.far) && projection.far > nextNear
+    ? projection.far
+    : camera.far;
+  const changed = Math.abs(camera.fov - nextFov) > 0.001
+    || Math.abs(camera.near - nextNear) > 0.00001
+    || Math.abs(camera.far - nextFar) > 0.001;
+  if (!changed) return false;
+  camera.fov = nextFov;
+  camera.near = nextNear;
+  camera.far = nextFar;
+  camera.updateProjectionMatrix();
+  return true;
+}
+
+export function CameraRig({ source = assetSlots.assembled }: { source?: string }) {
+  const gltf = useLoader(GLTFLoader, source);
   const { camera, size } = useThree();
+  const fallbackProjection = useRef({
+    near: camera instanceof THREE.PerspectiveCamera ? camera.near : 0.1,
+    far: camera instanceof THREE.PerspectiveCamera ? camera.far : 60,
+  });
   const cameraPointer = useRef(new THREE.Vector2());
   const cameraPointerInput = useRef(new THREE.Vector2());
   const cameraPointerVelocity = useRef(new THREE.Vector2());
@@ -117,6 +143,8 @@ export function CameraRig() {
     const introActive = experienceState.sequence === "intro";
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
+    let baseNear = fallbackProjection.current.near;
+    let baseFar = fallbackProjection.current.far;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
     const pointerMotion = sceneTokens.cameraMotion.pointer;
     const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
@@ -148,6 +176,8 @@ export function CameraRig() {
       camera.quaternion.copy(authoredQuaternion.current);
       cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
       baseFov = authored.camera.fov;
+      baseNear = authored.camera.near;
+      baseFar = authored.camera.far;
     } else {
       const sample = sampleCamera(cameraProgress, mobile, sampledPosition.current, sampledTarget.current);
       camera.position.copy(sampledPosition.current);
@@ -161,9 +191,12 @@ export function CameraRig() {
       introCameraOffset.current.fromArray(experienceState.intro.cameraLocalOffset).applyQuaternion(camera.quaternion);
       camera.position.add(introCameraOffset.current);
     }
-    if (perspectiveCamera.isPerspectiveCamera && Math.abs(perspectiveCamera.fov - baseFov) > 0.001) {
-      perspectiveCamera.fov = baseFov;
-      perspectiveCamera.updateProjectionMatrix();
+    if (perspectiveCamera.isPerspectiveCamera) {
+      syncPerspectiveCameraProjection(perspectiveCamera, {
+        fov: baseFov,
+        near: baseNear,
+        far: baseFar,
+      });
     }
 
     const breathing = sceneTokens.cameraMotion.breathing;
