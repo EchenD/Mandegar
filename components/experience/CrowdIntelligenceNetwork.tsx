@@ -15,24 +15,49 @@ const vertexShader = /* glsl */ `
   uniform float uTime;
   uniform float uStrength;
   uniform float uPixelRatio;
+  uniform vec3 uPointer;
+  uniform float uPointerActive;
+  uniform float uInteractionRadius;
   varying float vAlpha;
   varying float vKind;
   varying float vSeed;
+  varying float vInteraction;
 
   void main() {
-    float travel = fract(aProgress - uTime * 0.17 - aSeed * 0.21);
-    float packet = 1.0 - smoothstep(0.0, 0.12, abs(travel - 0.5));
-    float nodePulse = sin(uTime * 1.8 + aSeed * 12.0) * 0.5 + 0.5;
-    vAlpha = mix(0.34 + packet * 0.66, 0.88 + nodePulse * 0.12, aKind) * uStrength;
+    float signalPhase = fract(uTime * (0.09 + aSeed * 0.035) + aSeed);
+    float signalDistance = abs(aProgress - signalPhase);
+    signalDistance = min(signalDistance, 1.0 - signalDistance);
+    float packet = 1.0 - smoothstep(0.018, 0.095, signalDistance);
+    float echoPhase = fract(signalPhase + 0.52);
+    float echoDistance = abs(aProgress - echoPhase);
+    echoDistance = min(echoDistance, 1.0 - echoDistance);
+    packet = max(packet, (1.0 - smoothstep(0.012, 0.065, echoDistance)) * 0.32);
+
+    float nodePulse = sin(uTime * 0.82 + aSeed * 12.0) * 0.5 + 0.5;
+    float pointerDistance = length(position - uPointer);
+    float interaction = (1.0 - smoothstep(0.0, uInteractionRadius, pointerDistance))
+      * uPointerActive;
+    vAlpha = mix(0.24 + packet * 0.76, 0.76 + nodePulse * 0.24, aKind)
+      * uStrength
+      * (1.0 + interaction * 0.58);
     vKind = aKind;
     vSeed = aSeed;
+    vInteraction = interaction;
 
     vec3 displaced = position;
-    displaced.y += aKind * sin(uTime * 1.35 + aSeed * 16.0) * 0.018;
+    vec3 pointerDirection = (position - uPointer) / max(pointerDistance, 0.001);
+    float interactionRipple = sin(pointerDistance * 9.0 - uTime * 2.1) * 0.5 + 0.5;
+    displaced += pointerDirection * interaction * (0.035 + interactionRipple * 0.055);
+    displaced.y += mix(
+      sin(uTime * 0.46 + aProgress * 6.283 + aSeed * 8.0) * 0.012,
+      sin(uTime * 0.72 + aSeed * 16.0) * 0.018,
+      aKind
+    );
     vec4 viewPosition = modelViewMatrix * vec4(displaced, 1.0);
     gl_Position = projectionMatrix * viewPosition;
-    gl_PointSize = mix(1.0 + packet * 1.35, 4.25 + nodePulse * 1.1, aKind)
-      * uPixelRatio;
+    gl_PointSize = mix(1.05 + packet * 1.9, 4.25 + nodePulse * 1.1, aKind)
+      * uPixelRatio
+      * (1.0 + interaction * 0.42);
   }
 `;
 
@@ -40,6 +65,7 @@ const fragmentShader = /* glsl */ `
   varying float vAlpha;
   varying float vKind;
   varying float vSeed;
+  varying float vInteraction;
 
   void main() {
     vec2 point = gl_PointCoord - 0.5;
@@ -48,6 +74,7 @@ const fragmentShader = /* glsl */ `
     float core = 1.0 - smoothstep(0.04, 0.5, radius);
     vec3 signal = mix(vec3(0.19, 0.58, 1.0), vec3(0.47, 0.91, 1.0), vSeed);
     signal = mix(signal, vec3(0.38, 1.0, 1.0), vKind * 0.9);
+    signal = mix(signal, vec3(0.92, 0.98, 1.0), vInteraction * 0.68);
     gl_FragColor = vec4(signal, core * vAlpha);
     #include <colorspace_fragment>
   }
@@ -139,7 +166,7 @@ function buildCrowdNetwork(crowd: THREE.Object3D) {
       const progress = index / Math.max(1, count - 1);
       point.lerpVectors(start, end, progress);
       point.y += Math.sin(progress * Math.PI) * Math.min(0.22, distance * 0.035);
-      pushPoint(point, 0, progress, ((edgeIndex + 1) * 0.173 + index * 0.031) % 1);
+      pushPoint(point, 0, progress, ((edgeIndex + 1) * 0.173) % 1);
     }
   });
 
@@ -154,13 +181,30 @@ function buildCrowdNetwork(crowd: THREE.Object3D) {
 
 export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
   const points = useRef<THREE.Points>(null);
-  const { gl } = useThree();
+  const { camera, gl } = useThree();
   const geometry = useMemo(() => buildCrowdNetwork(crowd), [crowd]);
+  const networkFocus = useMemo(
+    () => geometry.boundingSphere?.center.clone() ?? new THREE.Vector3(),
+    [geometry],
+  );
+  const interactionRadius = useMemo(
+    () => THREE.MathUtils.clamp((geometry.boundingSphere?.radius ?? 5) * 0.16, 0.75, 1.8),
+    [geometry],
+  );
+  const pointerNdc = useRef(new THREE.Vector2());
+  const pointerWorld = useRef(networkFocus.clone());
+  const pointerPlane = useRef(new THREE.Plane());
+  const pointerNormal = useRef(new THREE.Vector3());
+  const pointerStrength = useRef(0);
+  const raycaster = useRef(new THREE.Raycaster());
   const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uStrength: { value: 0 },
       uPixelRatio: { value: Math.min(gl.getPixelRatio(), 1.5) },
+      uPointer: { value: networkFocus.clone() },
+      uPointerActive: { value: 0 },
+      uInteractionRadius: { value: interactionRadius },
     },
     vertexShader,
     fragmentShader,
@@ -169,14 +213,14 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
-  }), [gl]);
+  }), [gl, interactionRadius, networkFocus]);
 
   useEffect(() => () => {
     geometry.dispose();
     material.dispose();
   }, [geometry, material]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const timing = phaseProgress(
       experienceState.progress,
       sceneTokens.bakedScene.dataFlowRange,
@@ -186,8 +230,23 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
       * experienceState.stage.production.crowdPresence
       * easedTiming
       * 1.35;
+    let pointerTarget = experienceState.pointerPresent && strength > 0.002 ? 1 : 0;
+    if (experienceState.pointerPresent) {
+      pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
+      camera.getWorldDirection(pointerNormal.current);
+      pointerPlane.current.setFromNormalAndCoplanarPoint(pointerNormal.current, networkFocus);
+      raycaster.current.setFromCamera(pointerNdc.current, camera);
+      if (!raycaster.current.ray.intersectPlane(pointerPlane.current, pointerWorld.current)) {
+        pointerTarget = 0;
+      }
+    }
+    const pointerBlend = 1 - Math.exp(-delta * (pointerTarget > pointerStrength.current ? 7 : 4.5));
+    pointerStrength.current = THREE.MathUtils.lerp(pointerStrength.current, pointerTarget, pointerBlend);
     material.uniforms.uTime.value = clock.elapsedTime;
     material.uniforms.uStrength.value = strength;
+    material.uniforms.uPointer.value.copy(pointerWorld.current);
+    material.uniforms.uPointerActive.value = pointerStrength.current;
+    material.uniforms.uPixelRatio.value = Math.min(gl.getPixelRatio(), 1.5);
     if (points.current) points.current.visible = strength > 0.002;
   });
 
