@@ -94,16 +94,7 @@ the exhibition atlas with incompatible placeholder UVs.
 
 ## Four baked textures
 
-Deliver the lossless authoring masters to:
-
-```text
-public/textures/mandegar/lossless/env_quiet.png
-public/textures/mandegar/lossless/env_peak.png
-public/textures/mandegar/lossless/exhibit_quiet.png
-public/textures/mandegar/lossless/exhibit_peak.png
-```
-
-For browser review, export matching lightweight runtime copies to:
+Export the production-ready JPG textures directly to:
 
 ```text
 public/textures/mandegar/baked/env_quiet.jpg
@@ -113,17 +104,17 @@ public/textures/mandegar/baked/exhibit_peak.jpg
 ```
 
 The quiet/peak pair for each atlas must retain identical dimensions and UV
-layout across its lossless and runtime copies. Keep baked direct light, soft
-shadow, reflection and broad highlights in RGB. Avoid view-dependent
-razor-sharp reflections because the website camera moves. The runtime uses no
-Three.js lights, shadows, tone mapping, bloom or depth of field in baked mode.
-The runtime does not add a view-dependent Fresnel. It only gives bright pixels
-in the approved peak bake a restrained lift, so specular and reflection detail
-must remain authored in the V-Ray texture.
+layout. Keep baked direct light, soft shadow, reflection and broad highlights
+in RGB. Avoid view-dependent razor-sharp reflections because the website
+camera moves. The runtime uses no Three.js lights, shadows, tone mapping, bloom
+or depth of field in baked mode. The runtime does not add a view-dependent
+Fresnel. It only gives bright pixels in the approved peak bake a restrained
+lift, so specular and reflection detail must remain authored in the V-Ray
+texture.
 
-After visual approval, replace the JPG runtime copies with GPU-compressed KTX2
-and update only the runtime paths in `bakedSceneContract.textures`. The four
-logical texture slots and their lossless masters remain unchanged.
+Optimize the JPGs before committing them and keep their existing paths stable.
+High-resolution authoring files belong outside the deployed `public/` tree and
+are not part of the repository or production build.
 
 ## Screen media
 
@@ -134,8 +125,7 @@ uses project poster media or a lightweight generated fallback.
 
 ## Activation and verification
 
-1. Copy all three GLBs, four lossless masters and four matching runtime review
-   textures to the paths above.
+1. Copy all three GLBs and four production JPG textures to the paths above.
 2. Set `NEXT_PUBLIC_MANDEGAR_BAKED_SCENE=1` in `.env.local`.
 3. Restart `npm run dev`.
 4. Open `/fa?intro=1&creative=1`.

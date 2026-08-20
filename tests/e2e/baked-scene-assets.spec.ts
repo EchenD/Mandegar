@@ -45,15 +45,12 @@ test.describe("baked scene assets", () => {
     );
   });
 
-  test("checks in every runtime texture and lossless master", () => {
+  test("checks in every production JPG texture", () => {
     Object.entries(bakedSceneContract.textures).forEach(([id, texture]) => {
+      expect(texture.runtime, `${id} must use a JPG texture`).toMatch(/\.jpg$/i);
       expect(
         existsSync(resolvePublicAsset(texture.runtime)),
-        `${id} runtime texture is missing: ${texture.runtime}`,
-      ).toBe(true);
-      expect(
-        existsSync(resolvePublicAsset(texture.lossless)),
-        `${id} lossless texture is missing: ${texture.lossless}`,
+        `${id} production texture is missing: ${texture.runtime}`,
       ).toBe(true);
     });
   });

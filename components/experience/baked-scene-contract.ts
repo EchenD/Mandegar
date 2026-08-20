@@ -16,19 +16,15 @@ export const bakedSceneContract = {
   textures: {
     environmentQuiet: {
       runtime: "/textures/mandegar/baked/env_quiet.jpg",
-      lossless: "/textures/mandegar/lossless/env_quiet.png",
     },
     environmentPeak: {
       runtime: "/textures/mandegar/baked/env_peak.jpg",
-      lossless: "/textures/mandegar/lossless/env_peak.png",
     },
     exhibitionQuiet: {
       runtime: "/textures/mandegar/baked/exhibit_quiet.jpg",
-      lossless: "/textures/mandegar/lossless/exhibit_quiet.png",
     },
     exhibitionPeak: {
       runtime: "/textures/mandegar/baked/exhibit_peak.jpg",
-      lossless: "/textures/mandegar/lossless/exhibit_peak.png",
     },
   },
   materials: {
