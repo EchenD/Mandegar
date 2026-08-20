@@ -1,3 +1,6 @@
+http://localhost:3000/fa?intro=0&phase=discovery&creative=1
+
+
 npm run build:pages
 This creates the static site at:
 
@@ -9,3 +12,28 @@ npm run deploy:pages
 
 For a future custom domain, run:
 npm run deploy:pages -- -BasePath "/" -SiteUrl "https://example.com"
+
+
+
+
+For final production, I recommend deploying the source repository as a normal Node.js Next.js application:
+npm ci
+npm run build
+npm run start
+
+The server will need these environment variables:
+NEXT_PUBLIC_SANITY_PROJECT_ID=
+NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_API_VERSION=2025-01-01
+SANITY_REVALIDATE_SECRET=
+SANITY_API_READ_TOKEN=
+ENABLE_EMBEDDED_STUDIO=false
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+
+Browser
+   ↓ HTTPS
+Nginx / reverse proxy
+   ↓
+Next.js Node server
+   ↓
+Sanity API
