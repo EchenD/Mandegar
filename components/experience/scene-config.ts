@@ -173,6 +173,14 @@ export const sceneTokens = {
     crowdPreloadProgress: 0.61,
     crowdFallbackColor: "#4b372f",
     dataFlowRange: [0.748, 0.79] as const,
+    ambientDust: {
+      count: { full: 220, adaptive: 110 },
+      color: "#d2b99d",
+      opacity: 0.24,
+      size: 0.82,
+      foregroundDepth: 0.95,
+      foregroundBias: 0.62,
+    },
     hudMoments: {
       central: [0.16, 0.23] as const,
       left: [0.297, 0.39] as const,
@@ -209,8 +217,8 @@ export const sceneTokens = {
   },
   cameraMotion: {
     breathing: {
-      position: [0.045, 0.028, 0.02] as const,
-      rotation: [0.0022, 0.003, 0.0014] as const,
+      position: [0.09, 0.056, 0.04] as const,
+      rotation: [0.0044, 0.006, 0.0028] as const,
       frequency: [0.11, 0.083, 0.067] as const,
       mobileScale: 0.45,
     },

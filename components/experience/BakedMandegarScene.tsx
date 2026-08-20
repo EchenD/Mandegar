@@ -25,6 +25,7 @@ import {
   restoreRuntimeMaterial,
   type RuntimeMaterialBinding,
 } from "./baked-material-binding";
+import { AmbientDust } from "./AmbientDust";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { BakedScreenController } from "./BakedScreenController";
 import { DeferredBakedCrowd } from "./BakedCrowd";
@@ -476,6 +477,7 @@ export function BakedMandegarScene({
         exhibition={exhibition}
         quality={quality}
       />
+      <AmbientDust exhibition={exhibition} quality={quality} />
       <DataFlowNetwork exhibition={exhibition} />
       <DeferredBakedCrowd quietMap={textures[2]} peakMap={textures[3]} />
     </group>
