@@ -418,17 +418,17 @@ test.describe("Mandegar responsive layout", () => {
     await page.goto("/en?phase=discovery", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
     const hud = page.locator("[data-spatial-labels]");
-    const leader = page.locator("[data-spatial-leader='primary']");
+    const anchor = page.locator("[data-spatial-anchor='primary']");
     const annotation = page.locator("[data-spatial-annotation='primary']");
     await expect.poll(async () => {
-      const path = await leader.getAttribute("d");
-      const match = path?.match(/^M\s+([\d.-]+)\s+([\d.-]+)/);
-      return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+      const x = await anchor.getAttribute("cx");
+      const y = await anchor.getAttribute("cy");
+      return x !== null && y !== null ? { x: Number(x), y: Number(y) } : null;
     }).not.toBeNull();
-    const path = await leader.getAttribute("d");
-    const match = path!.match(/^M\s+([\d.-]+)\s+([\d.-]+)/)!;
+    const x = Number(await anchor.getAttribute("cx"));
+    const y = Number(await anchor.getAttribute("cy"));
     await expect(annotation).toHaveCSS("opacity", "0");
-    await page.mouse.move(Number(match[1]), Number(match[2]));
+    await page.mouse.move(x, y);
     await expect.poll(async () => Number(await hud.getAttribute("data-proximity"))).toBeGreaterThan(0.9);
     await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.8);
     await page.screenshot({ path: "test-results/ui/spatial-proximity.png", fullPage: false });

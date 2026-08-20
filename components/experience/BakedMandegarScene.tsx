@@ -294,21 +294,21 @@ export function BakedMandegarScene({
         id: "assembly",
         range: sceneTokens.bakedScene.hudMoments.central,
         primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.central.hudAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.videoWall),
+        secondary: null,
         measure: centralRoot,
       },
       {
         id: "activationLeft",
         range: sceneTokens.bakedScene.hudMoments.left,
         primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.left.hudAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.interactive),
+        secondary: null,
         measure: leftRoot,
       },
       {
         id: "activationRight",
         range: sceneTokens.bakedScene.hudMoments.right,
         primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.right.hudAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.game),
+        secondary: null,
         measure: rightRoot,
       },
       {
@@ -321,8 +321,8 @@ export function BakedMandegarScene({
       {
         id: "proof",
         range: sceneTokens.bakedScene.hudMoments.proof,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.videoWall),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.main),
+        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.central.hudAnchor),
+        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.right.hudAnchor),
         measure: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.videoWall),
       },
       {
@@ -370,6 +370,7 @@ export function BakedMandegarScene({
 
   const clearInteraction = useCallback(() => {
     experienceState.focusProject = null;
+    experienceState.focusScreen = null;
     document.body.style.cursor = "";
   }, []);
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
@@ -377,6 +378,7 @@ export function BakedMandegarScene({
     if (!screenId) return;
     event.stopPropagation();
     experienceState.focusProject = screenId === "interactive" ? 1 : screenId === "game" ? 2 : 0;
+    experienceState.focusScreen = screenId;
     document.body.style.cursor = "pointer";
   }, []);
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {

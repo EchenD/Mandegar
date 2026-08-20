@@ -23,6 +23,7 @@ export const experienceState: {
   lightScale: number;
   focusZone: "photo" | "game" | "touch" | null;
   focusProject: number | null;
+  focusScreen: "videoWall" | "interactive" | "game" | "main" | null;
 } = {
   sequence: "loading",
   intro: getIntroFrame(0),
@@ -39,4 +40,5 @@ export const experienceState: {
   lightScale: 1,
   focusZone: null,
   focusProject: null,
+  focusScreen: null,
 };

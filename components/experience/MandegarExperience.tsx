@@ -117,6 +117,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
       resetIntro();
       experienceState.focusZone = null;
       experienceState.focusProject = null;
+      experienceState.focusScreen = null;
     };
   }, []);
 

@@ -171,7 +171,7 @@ export const sceneTokens = {
     particleCount: { full: 11200, adaptive: 4400 },
     particleLeadProgress: 0.012,
     crowdPreloadProgress: 0.61,
-    crowdFallbackColor: "#31516f",
+    crowdFallbackColor: "#4b372f",
     dataFlowRange: [0.748, 0.79] as const,
     hudMoments: {
       central: [0.16, 0.23] as const,
@@ -187,10 +187,17 @@ export const sceneTokens = {
       particleColor: "#ffc78b",
     },
     screens: {
-      videoWall: "",
-      interactive: "",
-      game: "",
-      main: "",
+      videoWall: publicAssetPath("/media/mandegar/screens/screen-center-21x9.webp"),
+      interactive: publicAssetPath("/media/mandegar/screens/screen-interactive-16x9.webp"),
+      game: publicAssetPath("/media/mandegar/screens/screen-game-3x4.webp"),
+      main: publicAssetPath("/media/mandegar/screens/screen-main-4x3.webp"),
+    },
+    screenHover: {
+      label: "LEARN MORE",
+      brightness: 0.16,
+      darkMediaScreens: ["game", "main"] as const,
+      darkText: "#17191d",
+      lightText: "#fff8ec",
     },
   },
   authoredCamera: {
