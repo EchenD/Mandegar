@@ -36,7 +36,7 @@ async function assertNoHorizontalOverflow(page: import("@playwright/test").Page)
     const viewportWidth = window.innerWidth;
     const offenders = Array.from(document.querySelectorAll<HTMLElement>("body *"))
       .map((element) => ({ element, rect: element.getBoundingClientRect() }))
-      .filter(({ element, rect }) => !element.closest("[aria-hidden='true'], [data-cinematic-beat]") && rect.width > 0 && (rect.right > viewportWidth + 2 || rect.left < -2))
+      .filter(({ element, rect }) => !element.closest("[aria-hidden='true'], [data-cinematic-beat], [data-scene-a11y]") && rect.width > 0 && (rect.right > viewportWidth + 2 || rect.left < -2))
       .slice(0, 8)
       .map(({ element, rect }) => ({ tag: element.tagName, className: element.className, right: Math.round(rect.right), left: Math.round(rect.left) }));
     return { documentWidth, viewportWidth, offenders };
@@ -51,6 +51,20 @@ async function assertNoHorizontalOverflow(page: import("@playwright/test").Page)
     return { width: Math.round(rect.width), height: Math.round(rect.height) };
   }));
   expect(mediaBoxes.every((box) => box.width > 0 && box.height > 0), JSON.stringify(mediaBoxes)).toBe(true);
+}
+
+async function seekPhase(
+  page: import("@playwright/test").Page,
+  phase: string,
+) {
+  const progress = await page.locator(`[data-phase-target='${phase}']`).evaluate((element) => (
+    Number.parseFloat((element as HTMLElement).style.getPropertyValue("--phase-position")) / 100
+  ));
+  await page.locator("[data-experience-root]").evaluate((root, targetProgress) => {
+    root.dispatchEvent(new CustomEvent("mandegar:seek", {
+      detail: { progress: targetProgress },
+    }));
+  }, progress);
 }
 
 async function settleAndLoadPage(page: import("@playwright/test").Page) {
@@ -347,8 +361,10 @@ test.describe("Mandegar responsive layout", () => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
     for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
-      await page.locator(`[data-phase-target='${stage}']`).click();
+      await seekPhase(page, stage);
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
     }
   });
@@ -357,8 +373,10 @@ test.describe("Mandegar responsive layout", () => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
     for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
-      await page.locator(`[data-phase-target='${stage}']`).click();
+      await seekPhase(page, stage);
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
       await page.waitForTimeout(550);
       await expect(page.locator(`[data-scene-copy='${stage}']`)).toBeVisible();
@@ -385,8 +403,58 @@ test.describe("Mandegar responsive layout", () => {
     const proofLinks = page.locator("[data-mandegar-experience] nav a");
     await expect(proofLinks).toHaveCount(3);
     await expect(proofLinks.first()).toHaveAttribute("href", /\/en\/projects\//);
-    await expect(page.locator("[data-particle-system='signal-network']")).toHaveCount(1);
+    const particleSystem = page.locator("[data-particle-system]");
+    await expect(particleSystem).toHaveCount(1);
+    const pipeline = await particleSystem.getAttribute("data-scene-pipeline");
+    await expect(particleSystem).toHaveAttribute(
+      "data-particle-system",
+      pipeline === "baked-modular" ? "transition-boundary" : "signal-network",
+    );
     await expect(page.locator("[data-interaction-system='pointer-touch']")).toHaveCount(1);
+  });
+
+  test("spatial annotations activate only near their projected object", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?phase=discovery", { waitUntil: "networkidle" });
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
+    const hud = page.locator("[data-spatial-labels]");
+    const leader = page.locator("[data-spatial-leader='primary']");
+    const annotation = page.locator("[data-spatial-annotation='primary']");
+    await expect.poll(async () => {
+      const path = await leader.getAttribute("d");
+      const match = path?.match(/^M\s+([\d.-]+)\s+([\d.-]+)/);
+      return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+    }).not.toBeNull();
+    const path = await leader.getAttribute("d");
+    const match = path!.match(/^M\s+([\d.-]+)\s+([\d.-]+)/)!;
+    await expect(annotation).toHaveCSS("opacity", "0");
+    await page.mouse.move(Number(match[1]), Number(match[2]));
+    await expect.poll(async () => Number(await hud.getAttribute("data-proximity"))).toBeGreaterThan(0.9);
+    await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.8);
+    await page.screenshot({ path: "test-results/ui/spatial-proximity.png", fullPage: false });
+    await page.mouse.move(1, 1);
+    await expect.poll(async () => Number(await hud.getAttribute("data-proximity"))).toBeLessThan(0.05);
+    await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(0.1);
+  });
+
+  test("peak stages switch copy and header chrome to a light readable theme", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
+    const copy = page.locator("[data-scene-copy='proof']");
+    await expect(copy).toBeVisible();
+    const colors = await Promise.all([
+      copy.evaluate((element) => getComputedStyle(element).color),
+      page.locator("header a").first().evaluate((element) => getComputedStyle(element).color),
+    ]);
+    for (const color of colors) {
+      const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+      expect(channels).toHaveLength(3);
+      expect(channels.every((channel) => channel > 200), color).toBe(true);
+    }
+    await expect(page.locator("[data-scene-vignette]")).toHaveCount(1);
+    await expect.poll(() => page.locator("[data-experience-root]").evaluate((element) => (
+      element.style.getPropertyValue("--vignette-rgb")
+    ))).toBe("5 7 10");
   });
 
   test("mobile controls remain available without pointer input", async ({ page }) => {
@@ -413,7 +481,7 @@ test.describe("Mandegar responsive layout", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(100);
   });
 
-  test("homepage uses the unified variable typeface and left-side story placement", async ({ page }) => {
+  test("homepage centers bookend copy and keeps story copy lower", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const locale of ["fa", "en"] as const) {
       await page.goto(`/${locale}?phase=discovery`, { waitUntil: "networkidle" });
@@ -421,10 +489,34 @@ test.describe("Mandegar responsive layout", () => {
       await expect(copy).toBeVisible();
       const result = await copy.evaluate((element) => ({
         left: element.getBoundingClientRect().left,
+        right: element.getBoundingClientRect().right,
+        top: element.getBoundingClientRect().top,
+        bottom: element.getBoundingClientRect().bottom,
         font: getComputedStyle(element).fontFamily,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
       }));
-      expect(result.left).toBeLessThan(220);
+      expect(Math.abs((result.left + result.right) * .5 - result.viewportWidth * .5)).toBeLessThan(4);
+      expect(result.top).toBeGreaterThan(result.viewportHeight * .5);
+      expect(result.bottom).toBeLessThan(result.viewportHeight * .92);
       expect(result.font).toContain("Vazirmatn Variable");
+    }
+
+    for (const stage of ["arrival", "loop"] as const) {
+      await seekPhase(page, stage);
+      const copy = page.locator(`[data-scene-copy='${stage}']`);
+      await expect(copy).toBeVisible();
+      const center = await copy.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          x: rect.left + rect.width * 0.5,
+          y: rect.top + rect.height * 0.5,
+          viewportWidth: innerWidth,
+          viewportHeight: innerHeight,
+        };
+      });
+      expect(Math.abs(center.x - center.viewportWidth * 0.5)).toBeLessThan(4);
+      expect(Math.abs(center.y - center.viewportHeight * 0.5)).toBeLessThan(4);
     }
   });
 
