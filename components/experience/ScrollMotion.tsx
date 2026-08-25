@@ -7,20 +7,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
 import { directNarrative, resetNarrative } from "./narrative-director";
-import { getNarrativeCopyTiming, narrativeLoopSeam } from "./narrative-copy-timing";
+import { getNarrativeCopyTiming } from "./narrative-copy-timing";
 import { warpNarrativeProgress } from "./narrative-progress-curve";
 import {
-  getNarrativeBeat,
   getNarrativePreview,
   narrativeScore,
   type ScenePhaseId,
 } from "./narrative-score";
 import { sceneTokens } from "./scene-config";
-import {
-  getNearestNarrativeSnap,
-  narrativeSnapTiming,
-  shouldSnapNarrative,
-} from "./scroll-snap";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -95,7 +89,6 @@ export function ScrollMotion({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
     const supportsSmooth = window.matchMedia("(pointer: fine)").matches;
-    const previousRestoration = window.history.scrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
     const preview = getNarrativePreview(new URLSearchParams(window.location.search).get("phase"));
     const phaseRail = root.querySelector<HTMLElement>("[data-phase-rail]");
@@ -110,19 +103,6 @@ export function ScrollMotion({
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
     let activePhase: ScenePhaseId = "arrival";
-    let wrapping = false;
-    let wrapSettleFrame: number | undefined;
-    let wrapReleaseFrame: number | undefined;
-    let touchStartY = 0;
-    let lastIntentDirection = 0;
-    let lastIntentAt = 0;
-    let snapIdleTimer: number | undefined;
-    let snapReadyTimer: number | undefined;
-    let snapCompletionTimer: number | undefined;
-    let snapTween: gsap.core.Tween | undefined;
-    let snapping = false;
-    let snapReady = false;
-    let loopEndEnteredAt = 0;
 
     const showPhaseRail = () => {
       if (root.dataset.scrollEngaged === "true") return;
@@ -137,10 +117,6 @@ export function ScrollMotion({
     phaseRail?.setAttribute("aria-hidden", "true");
     scrollCue?.setAttribute("aria-hidden", "false");
     if (preview !== undefined) showPhaseRail();
-
-    window.history.scrollRestoration = "manual";
-    document.documentElement.style.scrollBehavior = "auto";
-    if (preview === undefined) window.scrollTo({ top: root.offsetTop, left: 0, behavior: "auto" });
 
     const getScrollDistance = () => Math.max(1, root.offsetHeight - window.innerHeight);
     const getNativeProgress = () => {
@@ -197,7 +173,6 @@ export function ScrollMotion({
       syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.455);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
-        window.history.scrollRestoration = previousRestoration;
         resetNarrative();
         root.removeAttribute("data-story-stage");
       };
@@ -218,10 +193,8 @@ export function ScrollMotion({
         trigger: root,
         start: "top top",
         end: "bottom bottom",
-        // A duration-based scrub interpolates through the entire story when
-        // the native scroll coordinate is rebased at a cyclic boundary.
-        // Direct scrubbing keeps the matched 0/1 seam atomic; Lenis/native
-        // scrolling still supplies the normal between-frame smoothness.
+        // The scene follows the page directly and releases into the content
+        // below when the experience root reaches its natural end.
         scrub: true,
         invalidateOnRefresh: true,
       },
@@ -233,7 +206,7 @@ export function ScrollMotion({
       onUpdate: () => syncExperience(playhead.progress),
     }, 0);
 
-    const goToProgress = (progress: number, snapTimeline = false) => {
+    const goToProgress = (progress: number, syncTimeline = false) => {
       const safeProgress = clamp01(progress);
       const distance = Math.max(0, root.offsetHeight - window.innerHeight);
       const target = root.offsetTop + distance * safeProgress;
@@ -243,7 +216,7 @@ export function ScrollMotion({
         document.documentElement.style.scrollBehavior = "auto";
         window.scrollTo({ top: target, left: 0, behavior: "auto" });
       }
-      if (snapTimeline) {
+      if (syncTimeline) {
         playhead.progress = safeProgress;
         motionTimeline.progress(safeProgress, false);
         syncExperience(safeProgress);
@@ -251,268 +224,40 @@ export function ScrollMotion({
       ScrollTrigger.update();
     };
 
-    const finishSnap = (targetProgress: number) => {
-      if (snapCompletionTimer !== undefined) window.clearTimeout(snapCompletionTimer);
-      snapCompletionTimer = undefined;
-      goToProgress(targetProgress, true);
-      snapping = false;
-      snapTween = undefined;
-      root.removeAttribute("data-scroll-snap");
-    };
-    const cancelSnap = () => {
-      if (snapIdleTimer !== undefined) window.clearTimeout(snapIdleTimer);
-      snapIdleTimer = undefined;
-      if (snapCompletionTimer !== undefined) window.clearTimeout(snapCompletionTimer);
-      snapCompletionTimer = undefined;
-      if (!snapping) return;
-      snapTween?.kill();
-      snapTween = undefined;
-      if (smooth) smooth.scrollTo(window.scrollY, { immediate: true, force: true });
-      snapping = false;
-      root.removeAttribute("data-scroll-snap");
-    };
-    const snapToNearestStage = () => {
-      snapIdleTimer = undefined;
-      if (wrapping || snapping || document.visibilityState !== "visible") return;
-      const activeElement = document.activeElement as HTMLElement | null;
-      if (activeElement?.closest("a, button, input, textarea, select, [contenteditable='true']")) return;
-      const progress = getNativeProgress();
-      if (progress >= narrativeLoopSeam.terminalProgress) return;
-      const target = getNearestNarrativeSnap(progress, lastIntentDirection);
-      if (!shouldSnapNarrative(progress, target.preview)) return;
-      const distance = getScrollDistance();
-      const targetY = root.offsetTop + distance * target.preview;
-      snapping = true;
-      root.dataset.scrollSnap = target.id;
-      snapCompletionTimer = window.setTimeout(
-        () => finishSnap(target.preview),
-        narrativeSnapTiming.durationSeconds * 1000 + 300,
-      );
-      if (smooth) {
-        smooth.scrollTo(targetY, {
-          duration: narrativeSnapTiming.durationSeconds,
-          easing: (value) => value * value * (3 - 2 * value),
-          force: true,
-          onComplete: () => finishSnap(target.preview),
-        });
-        return;
-      }
-      const scrollState = { y: window.scrollY };
-      snapTween = gsap.to(scrollState, {
-        y: targetY,
-        duration: narrativeSnapTiming.durationSeconds,
-        ease: "power2.inOut",
-        overwrite: true,
-        onUpdate: () => window.scrollTo({ top: scrollState.y, left: 0, behavior: "auto" }),
-        onComplete: () => finishSnap(target.preview),
-      });
-    };
-    const scheduleSnap = () => {
-      if (!snapReady || wrapping || snapping) return;
-      if (snapIdleTimer !== undefined) window.clearTimeout(snapIdleTimer);
-      snapIdleTimer = window.setTimeout(snapToNearestStage, narrativeSnapTiming.idleMs);
-    };
-
     const seekExperience = (event: Event) => {
-      cancelSnap();
       const requested = (event as CustomEvent<{ progress?: number }>).detail?.progress;
       if (typeof requested === "number") goToProgress(requested);
     };
     root.addEventListener("mandegar:seek", seekExperience);
-
-    const projectForwardLoop = (deltaPixels = 0) => {
-      const effectiveProgress = Math.max(experienceState.progress, getNativeProgress());
-      const projectedProgress = effectiveProgress + Math.max(0, deltaPixels) / getScrollDistance();
-      if (effectiveProgress < narrativeLoopSeam.wrapReadyProgress) {
-        loopEndEnteredAt = 0;
-        return null;
-      }
-      if (getNarrativeBeat(effectiveProgress).id !== "loop" || projectedProgress < 1) return null;
-      if (narrativeLoopSeam.minimumHoldMs <= 0) return projectedProgress;
-      if (loopEndEnteredAt === 0) {
-        loopEndEnteredAt = performance.now();
-        return null;
-      }
-      return performance.now() - loopEndEnteredAt >= narrativeLoopSeam.minimumHoldMs
-        ? projectedProgress
-        : null;
-    };
-    const projectBackwardLoop = (deltaPixels = 0) => {
-      const effectiveProgress = Math.min(experienceState.progress, getNativeProgress());
-      const projectedProgress = effectiveProgress + Math.min(0, deltaPixels) / getScrollDistance();
-      return getNarrativeBeat(effectiveProgress).id === "arrival" && projectedProgress <= 0 ? projectedProgress : null;
-    };
-    const settleWrap = (progress: number) => {
-      if (wrapSettleFrame !== undefined) window.cancelAnimationFrame(wrapSettleFrame);
-      if (wrapReleaseFrame !== undefined) window.cancelAnimationFrame(wrapReleaseFrame);
-      wrapSettleFrame = window.requestAnimationFrame(() => {
-        playhead.progress = progress;
-        motionTimeline.progress(progress, false);
-        syncExperience(progress);
-        ScrollTrigger.update();
-        wrapReleaseFrame = window.requestAnimationFrame(() => { wrapping = false; });
-      });
-    };
-    let lastNativeProgress = getNativeProgress();
-    const wrapToArrival = () => {
-      if (wrapping) return;
-      wrapping = true;
-      loopEndEnteredAt = 0;
-      const targetProgress = 0.0005;
-      lastNativeProgress = targetProgress;
-      goToProgress(targetProgress, true);
-      settleWrap(targetProgress);
-    };
-    const wrapToLoop = () => {
-      if (wrapping) return;
-      wrapping = true;
-      const targetProgress = 0.9995;
-      lastNativeProgress = targetProgress;
-      goToProgress(targetProgress, true);
-      settleWrap(targetProgress);
-    };
-    const onWheel = (event: WheelEvent) => {
-      if (event.ctrlKey) return;
-      cancelSnap();
-      const deltaPixels = event.deltaY * (event.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? 16
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight : 1);
-      if (deltaPixels !== 0) {
-        showPhaseRail();
-        lastIntentDirection = Math.sign(deltaPixels);
-        lastIntentAt = performance.now();
-      }
-      if (wrapping) {
-        event.preventDefault();
-        return;
-      }
-      const forwardProjection = deltaPixels > 0 ? projectForwardLoop(deltaPixels) : null;
-      const backwardProjection = deltaPixels < 0 ? projectBackwardLoop(deltaPixels) : null;
-      if (forwardProjection !== null) {
-        event.preventDefault();
-        wrapToArrival();
-      } else if (backwardProjection !== null) {
-        event.preventDefault();
-        wrapToLoop();
-      } else {
-        scheduleSnap();
-      }
-    };
-    const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1) return;
-      cancelSnap();
-      touchStartY = event.touches[0]?.clientY ?? 0;
-    };
-    const onTouchMove = (event: TouchEvent) => {
-      if (event.touches.length !== 1) return;
-      const currentY = event.touches[0]?.clientY ?? touchStartY;
-      const delta = touchStartY - currentY;
-      if (Math.abs(delta) >= 4) {
-        showPhaseRail();
-        lastIntentDirection = Math.sign(delta);
-        lastIntentAt = performance.now();
-        scheduleSnap();
-      }
-      if (wrapping) {
-        event.preventDefault();
-        return;
-      }
-      const forwardProjection = delta >= 24 ? projectForwardLoop(delta * 1.6) : null;
-      const backwardProjection = delta <= -24 ? projectBackwardLoop(delta * 1.6) : null;
-      if (forwardProjection !== null) {
-        event.preventDefault();
-        wrapToArrival();
-      } else if (backwardProjection !== null) {
-        event.preventDefault();
-        wrapToLoop();
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("a, button, input, textarea, select")) return;
-      const isForwardKey = ["ArrowDown", "PageDown"].includes(event.key) || (event.key === " " && !event.shiftKey);
-      const isBackwardKey = ["ArrowUp", "PageUp"].includes(event.key) || (event.key === " " && event.shiftKey);
-      const forwardDelta = event.key === "ArrowDown" ? 48 : window.innerHeight * 0.9;
-      const backwardDelta = event.key === "ArrowUp" ? -48 : -window.innerHeight * 0.9;
-      if (isForwardKey || isBackwardKey) {
-        showPhaseRail();
-        cancelSnap();
-        lastIntentDirection = isForwardKey ? 1 : -1;
-        lastIntentAt = performance.now();
-        scheduleSnap();
-      }
-      const forwardProjection = isForwardKey ? projectForwardLoop(forwardDelta) : null;
-      const backwardProjection = isBackwardKey ? projectBackwardLoop(backwardDelta) : null;
-      if (wrapping && (isForwardKey || isBackwardKey)) {
-        event.preventDefault();
-      } else if (forwardProjection !== null) {
-        event.preventDefault();
-        wrapToArrival();
-      } else if (backwardProjection !== null) {
-        event.preventDefault();
-        wrapToLoop();
-      }
-    };
     const onNativeScroll = () => {
       const currentProgress = getNativeProgress();
       syncNativePresentation(currentProgress);
       if (currentProgress > 0.0008) showPhaseRail();
-      const direction = Math.sign(currentProgress - lastNativeProgress);
-      lastNativeProgress = currentProgress;
-      if (snapping) return;
-      scheduleSnap();
-      if (wrapping || direction === 0) return;
-      const followsRecentIntent = direction === lastIntentDirection && performance.now() - lastIntentAt < 2000;
-      if (!followsRecentIntent) return;
-      if (direction > 0 && projectForwardLoop() !== null) {
-        wrapToArrival();
-      } else if (direction < 0 && currentProgress <= 0.0001 && getNarrativeBeat(currentProgress).id === "arrival") {
-        wrapToLoop();
-      }
     };
-    const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted && preview === undefined) goToProgress(0, true);
-    };
-    const onBeforeUnload = () => {
-      if (preview === undefined) window.scrollTo({ top: root.offsetTop, left: 0, behavior: "auto" });
-    };
-    const onPointerDown = () => cancelSnap();
-    window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("scroll", onNativeScroll, { passive: true });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", onPointerDown, { passive: true });
-    window.addEventListener("pageshow", onPageShow);
-    window.addEventListener("beforeunload", onBeforeUnload);
 
-    syncExperience(0);
+    syncExperience(preview ?? getNativeProgress());
     ScrollTrigger.refresh();
-    const initialFrame = window.requestAnimationFrame(() => goToProgress(preview ?? 0, true));
+    const initialFrame = window.requestAnimationFrame(() => {
+      if (preview !== undefined) {
+        goToProgress(preview, true);
+      } else {
+        syncExperience(getNativeProgress());
+        ScrollTrigger.update();
+      }
+    });
     const restoreBehaviorFrame = window.requestAnimationFrame(() => {
       document.documentElement.style.scrollBehavior = previousBehavior;
     });
-    snapReadyTimer = window.setTimeout(() => { snapReady = true; }, 1_000);
 
     return () => {
       window.cancelAnimationFrame(initialFrame);
       window.cancelAnimationFrame(restoreBehaviorFrame);
-      if (wrapSettleFrame !== undefined) window.cancelAnimationFrame(wrapSettleFrame);
-      if (wrapReleaseFrame !== undefined) window.cancelAnimationFrame(wrapReleaseFrame);
-      if (snapReadyTimer !== undefined) window.clearTimeout(snapReadyTimer);
-      cancelSnap();
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);
       smooth?.destroy();
       root.removeEventListener("mandegar:seek", seekExperience);
-      window.removeEventListener("wheel", onWheel);
       window.removeEventListener("scroll", onNativeScroll);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pageshow", onPageShow);
-      window.removeEventListener("beforeunload", onBeforeUnload);
       copyStates.forEach(({ copy, lines }) => {
         copy.removeAttribute("style");
         lines.forEach((line) => line.removeAttribute("style"));
@@ -521,7 +266,6 @@ export function ScrollMotion({
       phaseRail?.removeAttribute("inert");
       phaseRail?.removeAttribute("aria-hidden");
       scrollCue?.removeAttribute("aria-hidden");
-      window.history.scrollRestoration = previousRestoration;
       document.documentElement.style.scrollBehavior = previousBehavior;
       resetNarrative();
       root.removeAttribute("data-story-stage");

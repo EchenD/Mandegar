@@ -44,15 +44,15 @@ Crossfades are 0.55 seconds. They stand in for continuous 3D interpolation and m
 
 The live homepage currently uses the animatic as a direction, not as literal timing. These decisions are locked for the next visual review:
 
-- The homepage has no footer. Continuing downward from the completed Loop wraps directly to Arrival; scrolling upward from Arrival wraps to the readable end of Loop.
-- Boundary jumps snap the GSAP playhead to the destination state. They must never scrub rapidly through intermediate copy or flash every text beat.
+- The completed Loop is the final 3D state. Continuing downward releases the sticky scene into the project, About and testimonial sections, followed by the global footer.
+- The GSAP playhead follows native scroll continuously. It does not magnetically snap or wrap at either boundary.
 - The current review runway is deliberately slow: `1450svh` on desktop and `1300svh` on mobile, with a `0.9` second scrub response. Shortening it requires a new visual sign-off.
 - Each phase has one copy statement. Copy enters and exits line-by-line through depth, clipping, and blur; it never persists as an editorial panel.
 - Copy has no card, border, radius, or box shadow. Only a soft unbounded radial blur may separate it from the scene.
 - Non-centred copy is physically anchored on the left in Persian, Arabic, and English. Invitation and Loop remain centred. Primary navigation stays top-centre.
 - Project proof is mapped to the GLB LED meshes. Photo, game, and touch responses belong to the named GLB modules; the data diagram belongs to the 3D signal field. Do not restore the former HTML cards or controls beneath the copy.
 - Architectural geometry must come from the approved GLB. Runtime-generated geometry is limited to authored effects: light paths, audience traces, particles, and data connections.
-- The signal field stays visible and alive in quiet states, bends around the pointer, emits a press/touch ripple, reorganizes into the Intelligence network, condenses around the GLB halo, and returns to its Arrival distribution before the boundary wrap.
+- The signal field stays visible and alive in quiet states, bends around the pointer, emits a press/touch ripple, reorganizes into the Intelligence network, and condenses into its final Loop composition before the page handoff.
 - The code camera is a review placeholder: distant approach, selective lateral changes, one top view, restrained roll, and an end pose that matches Arrival. It is replaceable by an approved authored camera animation.
 
 Automated timing and browser checks remain paused until the current visual review is approved.

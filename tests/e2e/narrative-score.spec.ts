@@ -20,7 +20,7 @@ test.describe("narrative score", () => {
     }
   });
 
-  test("returns to a quiet visual state at the loop seam", () => {
+  test("settles into a quiet visual state at the final loop stage", () => {
     const arrival = getNarrativeFrame(0);
     const loopEnd = getNarrativeFrame(1);
     expect(arrival.living).toBe(0);

@@ -45,16 +45,15 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
 | Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Local position/rotation amplitudes, three low frequencies and mobile scale |
 | Pointer camera response | `scene-config.ts` → `cameraMotion.pointer` | Local position/rotation range plus frame-rate-independent spring stiffness and damping |
-| Camera loop seam | `stage-presets.ts` → `cameraLoopSeam` | Final crossfade to Arrival camera-life values and exact GLB endpoint lock around the atomic wrap |
+| Final camera hold | `stage-presets.ts` → `getCameraLoopSampleProgress` | Holds the authored Loop composition while the sticky scene releases into the page |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `2175`/`1950`; smaller advances faster, larger advances slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
-| Nine resting points | `narrative-score.ts` → `narrativeScore` → `preview` | Exact camera stage, snap target, timeline marker and interpolation anchor for every stage |
+| Nine review points | `narrative-score.ts` → `narrativeScore` → `preview` | Exact camera stage, timeline marker and interpolation anchor for every stage |
 | Phase boundaries | `narrative-score.ts` → `narrativeScore` → `start` / `end` | Which stage owns each part of narrative progress |
 | Object activation timing | `narrative-score.ts` → `narrativeCueRanges` | Assembly, trails, screens, booths, reveal and loop-reset ranges |
 | Stage-to-stage speed | `narrative-progress-curve.ts` → `narrativeVelocity` | `minimum` slows near stages, `maximum` speeds transitions, and `tangentPower` concentrates acceleration; currently `.15`, `1.8`, `5` |
-| Magnetic snap | `scroll-snap.ts` → `narrativeSnapTiming` | Idle wait and snap duration; the current idle wait is 2 seconds |
 | Shared text breathing | `narrative-copy-timing.ts` → `narrativeCopyRhythm` | `breathing` controls every internal blank gap; opening/closing ratios affect only the loop edges |
 | Individual text timing | `narrative-copy-timing.ts` → `narrativeCopyStageTuning` | Per-stage entry/exit duration and line stagger without changing shared blank gaps |
 | Copy transition | `ScrollMotion.tsx` → `renderCopyState` | Entry/exit timing, vertical travel, depth, blur and bottom-to-top clip mask |
@@ -93,7 +92,7 @@ The panel intentionally does not expose controls that are not yet production-wir
 
 ## Controls that should stay synchronized
 
-- Change a stage's `preview` only in `narrative-score.ts`. Camera anchors, magnetic snap, timeline markers and stage-preset interpolation all read the same value.
+- Change a stage's `preview` only in `narrative-score.ts`. Camera anchors, timeline markers and stage-preset interpolation all read the same value.
 - Tune camera pacing with `narrativeVelocity`; do not move text timings to compensate. Text follows physical scroll while the 3D narrative follows warped progress.
 - Tune empty time with `narrativeCopyRhythm`. Tune how a message enters and exits with `narrativeCopyStageTuning`.
 - Keep the intro end frame equal to `experienceHomeFrame` in `intro-score.ts`; this preserves the seamless handoff into the loop.

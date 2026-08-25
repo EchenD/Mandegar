@@ -3,7 +3,6 @@ import {
   getNarrativeCopyTiming,
   narrativeCopyRhythm,
   narrativeCopyStageTuning,
-  narrativeLoopSeam,
   validateNarrativeCopyTimings,
 } from "../../components/experience/narrative-copy-timing";
 import { narrativeScore } from "../../components/experience/narrative-score";
@@ -27,12 +26,10 @@ test.describe("narrative copy timing", () => {
     const closingBreath = narrativeCopyRhythm.breathing * narrativeCopyRhythm.closingBreathingRatio;
 
     expect(arrival.enterStart).toBeCloseTo(openingBreath, 8);
-    expect(narrativeLoopSeam.wrapReadyProgress - loop.exitEnd).toBeCloseTo(closingBreath, 8);
+    expect(narrativeCopyRhythm.loopBoundary - loop.exitEnd).toBeCloseTo(closingBreath, 8);
     expect(
-      (narrativeLoopSeam.wrapReadyProgress - loop.exitEnd) + arrival.enterStart,
+      (narrativeCopyRhythm.loopBoundary - loop.exitEnd) + arrival.enterStart,
     ).toBeCloseTo(openingBreath + closingBreath, 8);
-    expect(narrativeLoopSeam.wrapReadyProgress).toBe(narrativeCopyRhythm.loopBoundary);
-    expect(narrativeLoopSeam.minimumHoldMs).toBe(0);
   });
 
   test("exposes independent animation tuning for every stage", () => {

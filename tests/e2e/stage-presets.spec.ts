@@ -78,15 +78,15 @@ test.describe("creative stage presets", () => {
     expect(stagePresets.intelligence.production.dataFlow).toBe(1);
   });
 
-  test("holds the complete quiet architecture before staggered activation", () => {
-    const quietHold = getStageFrame(0.485).production;
+  test("starts the shortened texture transition before staggered activation", () => {
+    const quietHold = getStageFrame(0.47).production;
     expect(quietHold.centralPeak).toBe(0);
     expect(quietHold.environmentPeak).toBe(0);
     expect(quietHold.leftPeak).toBe(0);
     expect(quietHold.rightPeak).toBe(0);
     expect(quietHold.mainScreen).toBe(0);
 
-    const environmentWake = getStageFrame(0.5).production;
+    const environmentWake = getStageFrame(0.48).production;
     expect(environmentWake.environmentPeak).toBeGreaterThan(0);
     expect(environmentWake.centralPeak).toBe(0);
     expect(environmentWake.leftPeak).toBe(0);
@@ -111,25 +111,28 @@ test.describe("creative stage presets", () => {
   });
 
   test("stages media and the human peak in authored order", () => {
-    const architectureWake = getStageFrame(0.52).production;
+    const architectureWake = getStageFrame(0.505).production;
     expect(architectureWake.environmentPeak).toBe(1);
-    expect(architectureWake.centralPeak).toBeCloseTo(0, 8);
-    expect(architectureWake.leftPeak).toBeCloseTo(0, 8);
-    expect(architectureWake.rightPeak).toBeCloseTo(0, 8);
-    expect(architectureWake.videoWallScreen).toBe(0);
+    expect(architectureWake.centralPeak).toBeGreaterThan(architectureWake.leftPeak);
+    expect(architectureWake.leftPeak).toBeGreaterThan(architectureWake.rightPeak);
 
-    const centralWake = getStageFrame(0.535).production;
-    expect(centralWake.environmentPeak).toBe(1);
-    expect(centralWake.centralPeak).toBeGreaterThan(centralWake.leftPeak);
-    expect(centralWake.leftPeak).toBe(0);
+    const firstMediaWake = getStageFrame(0.52).production;
+    expect(firstMediaWake.videoWallScreen).toBe(1);
+    expect(firstMediaWake.interactiveScreen).toBe(0);
+    expect(firstMediaWake.gameScreen).toBe(0);
+    expect(firstMediaWake.mainScreen).toBe(0);
 
-    const rightWake = getStageFrame(0.565).production;
-    expect(rightWake.leftPeak).toBeGreaterThan(rightWake.rightPeak);
+    const secondMediaWake = getStageFrame(0.54).production;
+    expect(secondMediaWake.videoWallScreen).toBe(1);
+    expect(secondMediaWake.interactiveScreen).toBe(1);
+    expect(secondMediaWake.gameScreen).toBe(0);
+    expect(secondMediaWake.mainScreen).toBe(0);
 
-    const mediaWake = getStageFrame(0.574).production;
-    expect(mediaWake.videoWallScreen).toBeGreaterThan(mediaWake.interactiveScreen);
-    expect(mediaWake.interactiveScreen).toBeGreaterThan(mediaWake.gameScreen);
-    expect(mediaWake.mainScreen).toBe(0);
+    const thirdMediaWake = getStageFrame(0.56).production;
+    expect(thirdMediaWake.gameScreen).toBe(1);
+    expect(thirdMediaWake.mainScreen).toBe(0);
+
+    expect(getStageFrame(0.575).production.mainScreen).toBe(1);
 
     expect(getStageFrame(0.63).production.crowdPresence).toBe(0);
     expect(getStageFrame(0.67).production.crowdPresence).toBeGreaterThan(0);
@@ -168,21 +171,20 @@ test.describe("creative stage presets", () => {
     resetCreativeStageTuning();
   });
 
-  test("matches procedural and authored camera channels across the loop seam", () => {
-    const arrival = getStageFrame(0.0005);
+  test("holds the final loop composition through the page handoff", () => {
     const loopEnd = getStageFrame(0.9995);
     const loopRest = getStageFrame(narrativeScore[8].preview);
 
-    expect(loopEnd.cameraLife).toBeCloseTo(arrival.cameraLife, 8);
-    expect(loopEnd.cameraPointer).toBeCloseTo(arrival.cameraPointer, 8);
-    expect(loopEnd.production.centralReveal).toBeCloseTo(arrival.production.centralReveal, 8);
-    expect(loopEnd.production.leftReveal).toBeCloseTo(arrival.production.leftReveal, 8);
-    expect(loopEnd.production.rightReveal).toBeCloseTo(arrival.production.rightReveal, 8);
-    expect(loopEnd.production.crowdPresence).toBeCloseTo(arrival.production.crowdPresence, 8);
-    expect(loopEnd.production.dataFlow).toBeCloseTo(arrival.production.dataFlow, 8);
+    expect(loopEnd.cameraLife).toBeCloseTo(loopRest.cameraLife, 8);
+    expect(loopEnd.cameraPointer).toBeCloseTo(loopRest.cameraPointer, 8);
+    expect(loopEnd.production.centralReveal).toBeCloseTo(loopRest.production.centralReveal, 8);
+    expect(loopEnd.production.leftReveal).toBeCloseTo(loopRest.production.leftReveal, 8);
+    expect(loopEnd.production.rightReveal).toBeCloseTo(loopRest.production.rightReveal, 8);
+    expect(loopEnd.production.crowdPresence).toBeCloseTo(loopRest.production.crowdPresence, 8);
+    expect(loopEnd.production.dataFlow).toBeCloseTo(loopRest.production.dataFlow, 8);
     expect(loopRest.cameraLife).toBe(stagePresets.loop.camera.life);
     expect(loopRest.cameraPointer).toBe(stagePresets.loop.camera.pointer);
-    expect(getCameraLoopSampleProgress(0.0005)).toBe(0);
-    expect(getCameraLoopSampleProgress(0.9995)).toBe(1);
+    expect(getCameraLoopSampleProgress(0.0005)).toBe(0.0005);
+    expect(getCameraLoopSampleProgress(0.9995)).toBe(narrativeScore[8].preview);
   });
 });

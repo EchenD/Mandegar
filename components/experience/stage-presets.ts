@@ -111,12 +111,6 @@ export type CreativeStagePresetSnapshot = {
   stages: Partial<Record<ScenePhaseId, Partial<StageTuning>>>;
 };
 
-export const cameraLoopSeam = {
-  entryLockEnd: 0.002,
-  exitBlendStart: narrativeScore[narrativeScore.length - 1].preview,
-  exitLockStart: 0.998,
-} as const;
-
 /**
  * The nine creative review states. Values are normalized art-direction
  * controls; render systems interpolate between them through narrative progress.
@@ -198,7 +192,7 @@ export const stagePresets = {
     spatialInfo: { mode: "zones", prominence: 1 },
     production: {
       environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
-      environmentPeak: 1, centralPeak: 0.7, leftPeak: 0.48, rightPeak: 0.26,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
       interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
       crowdPresence: 0, dataFlow: 0, transitionParticles: 0.28,
       transitionParticleSize: 0.5, transitionTurbulence: 0.32,
@@ -463,14 +457,14 @@ const productionTransitionWindows: ProductionTransitionWindows = {
     rightReveal: [0.55, 0.9],
   },
   experiences: {
-    environmentPeak: [0.3, 0.48],
-    centralPeak: [0.52, 0.68],
-    leftPeak: [0.66, 0.8],
-    rightPeak: [0.78, 0.9],
-    videoWallScreen: [0.91, 0.935],
-    interactiveScreen: [0.935, 0.96],
-    gameScreen: [0.96, 0.98],
-    mainScreen: [0.98, 1],
+    environmentPeak: [0.15, 0.35],
+    centralPeak: [0.25, 0.45],
+    leftPeak: [0.35, 0.55],
+    rightPeak: [0.45, 0.65],
+    videoWallScreen: [0.4, 0.46],
+    interactiveScreen: [0.56, 0.62],
+    gameScreen: [0.72, 0.78],
+    mainScreen: [0.88, 0.94],
   },
   proof: {
     centralPeak: [0.05, 0.3],
@@ -498,12 +492,11 @@ function getProductionTransitionMix(
   );
 }
 
-/** Holds the authored camera on its exact endpoint during the atomic scroll wrap. */
+/** Holds the camera on the final authored Loop composition at the page handoff. */
 export function getCameraLoopSampleProgress(progress: number) {
   const safeProgress = Math.min(1, Math.max(0, progress));
-  if (safeProgress <= cameraLoopSeam.entryLockEnd) return 0;
-  if (safeProgress >= cameraLoopSeam.exitLockStart) return 1;
-  return safeProgress;
+  const finalCameraProgress = narrativeScore[narrativeScore.length - 1].preview;
+  return Math.min(safeProgress, finalCameraProgress);
 }
 
 /** Interpolates renderer controls between the nine authored preview anchors. */
@@ -521,11 +514,6 @@ export function getStageFrame(progress: number): StageFrame {
   const next = getStagePreset(toBeat.id);
   const cameraLife = mixValue(current.camera.life, next.camera.life, mix);
   const cameraPointer = mixValue(current.camera.pointer, next.camera.pointer, mix);
-  const cameraSeamMix = smoothstepValue(
-    (safeProgress - cameraLoopSeam.exitBlendStart)
-      / Math.max(0.0001, cameraLoopSeam.exitLockStart - cameraLoopSeam.exitBlendStart),
-  );
-  const arrivalCamera = getStagePreset("arrival").camera;
   const interpolateProduction = (key: keyof ProductionStageControls) => (
     mixValue(
       current.production[key],
@@ -554,19 +542,12 @@ export function getStageFrame(progress: number): StageFrame {
     revealEdgeWidth: interpolateProduction("revealEdgeWidth"),
     revealTurbulence: interpolateProduction("revealTurbulence"),
   };
-  if (cameraSeamMix > 0) {
-    const arrivalProduction = getStagePreset("arrival").production;
-    (Object.keys(production) as (keyof ProductionStageControls)[]).forEach((key) => {
-      production[key] = mixValue(production[key], arrivalProduction[key], cameraSeamMix);
-    });
-  }
-
   return {
     current,
     next,
     mix,
-    cameraLife: mixValue(cameraLife, arrivalCamera.life, cameraSeamMix),
-    cameraPointer: mixValue(cameraPointer, arrivalCamera.pointer, cameraSeamMix),
+    cameraLife,
+    cameraPointer,
     particlePresence: mixValue(current.particles.presence, next.particles.presence, mix),
     particleResponse: mixValue(current.particles.response, next.particles.response, mix),
     particleSignal: mixValue(current.particles.signal, next.particles.signal, mix),

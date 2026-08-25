@@ -449,6 +449,177 @@
 .semanticFallback a { grid-column: 2; max-width: 36rem; margin: 0; color: rgba(22,25,29,.65); line-height: 1.8; }
 .semanticFallback a { color: #225cff; }
 
+.postExperience {
+  position: relative;
+  z-index: 2;
+  margin-block-start: -8svh;
+  overflow: hidden;
+  border-radius: clamp(1.5rem, 4vw, 4rem) clamp(1.5rem, 4vw, 4rem) 0 0;
+  color: #16191d;
+  background: #f7f7f4;
+  box-shadow: 0 -2rem 6rem rgba(5, 7, 10, .24);
+}
+
+.contentSection {
+  padding-block: clamp(6rem, 11vw, 11rem);
+}
+
+.projectsSection {
+  background: #f7f7f4;
+}
+
+.contentWidth {
+  width: min(78rem, calc(100% - 2.5rem));
+  margin-inline: auto;
+}
+
+.sectionIntro,
+.aboutGrid {
+  display: grid;
+  grid-template-columns: minmax(9rem, .32fr) minmax(0, 1fr);
+  gap: 2rem clamp(2rem, 7vw, 8rem);
+  align-items: start;
+}
+
+.sectionIntro > span,
+.aboutGrid > span {
+  color: #225cff;
+  font-size: .64rem;
+  font-weight: 720;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.sectionIntro h2,
+.aboutGrid h2 {
+  max-width: 15ch;
+  margin: 0;
+  font-size: clamp(2.35rem, 5.8vw, 6.5rem);
+  font-weight: 520;
+  line-height: 1.02;
+  letter-spacing: -.05em;
+}
+
+.sectionIntro p,
+.aboutGrid p {
+  max-width: 39rem;
+  margin-block: 1.4rem 0;
+  color: rgba(22, 25, 29, .64);
+  font-size: clamp(.92rem, 1.25vw, 1.08rem);
+  line-height: 1.8;
+}
+
+.projectList {
+  margin-block-start: clamp(4rem, 8vw, 8rem);
+  border-block-start: 1px solid rgba(22, 25, 29, .14);
+}
+
+.projectItem {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: center;
+  min-height: clamp(11rem, 18vw, 17rem);
+  padding-block: 2rem;
+  border-block-end: 1px solid rgba(22, 25, 29, .14);
+  color: inherit;
+  text-decoration: none;
+  transition: padding-inline .45s cubic-bezier(.22, 1, .36, 1), background .35s ease;
+}
+
+.projectItem:hover,
+.projectItem:focus-visible {
+  padding-inline: clamp(1rem, 2.5vw, 2.5rem);
+  background: #eceffd;
+}
+
+.projectItem:focus-visible {
+  outline: 2px solid #225cff;
+  outline-offset: -2px;
+}
+
+.projectItem > span,
+.projectItem small {
+  color: #225cff;
+  font-size: .62rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.projectItem h3 {
+  max-width: 18ch;
+  margin: .45rem 0 0;
+  font-size: clamp(1.8rem, 3.5vw, 4rem);
+  font-weight: 520;
+  line-height: 1.05;
+}
+
+.projectItem p {
+  max-width: 42rem;
+  margin-block: .8rem 0;
+  color: rgba(22, 25, 29, .62);
+}
+
+.projectItem strong,
+.sectionLink {
+  color: #225cff;
+  font-size: .7rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.emptyState,
+.testimonialPlaceholder {
+  margin-block-start: clamp(3rem, 6vw, 6rem);
+  padding: clamp(2rem, 5vw, 5rem);
+  border: 1px dashed rgba(22, 25, 29, .25);
+  color: rgba(22, 25, 29, .6);
+}
+
+.aboutSection {
+  color: #f7f7f4;
+  background: #11151c;
+}
+
+.aboutGrid > span,
+.aboutSection .sectionLink {
+  color: #75d8ff;
+}
+
+.aboutGrid p {
+  color: rgba(247, 247, 244, .7);
+}
+
+.sectionLink {
+  display: inline-flex;
+  margin-block-start: 2rem;
+}
+
+.testimonialsSection {
+  background: #e8ebea;
+}
+
+.testimonialPlaceholder {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  border-style: solid;
+  background: rgba(247, 247, 244, .48);
+}
+
+.testimonialPlaceholder span {
+  color: #225cff;
+  font-size: .62rem;
+}
+
+.testimonialPlaceholder p {
+  max-width: 42rem;
+  margin: 0;
+  font-size: clamp(1.3rem, 2.4vw, 2.4rem);
+  line-height: 1.35;
+}
+
 @media (max-width: 900px) {
   .phaseRail { width: min(38rem, 72vw); }
   .sceneCopy { width: min(46rem, 82vw); }
@@ -480,6 +651,12 @@
   .semanticFallback section { grid-template-columns: 1fr; }
   .semanticFallback p,
   .semanticFallback a { grid-column: 1; }
+  .postExperience { margin-block-start: -4svh; border-radius: 1.5rem 1.5rem 0 0; }
+  .sectionIntro,
+  .aboutGrid { grid-template-columns: 1fr; }
+  .projectItem { grid-template-columns: 2rem minmax(0, 1fr); }
+  .projectItem > strong { grid-column: 2; }
+  .testimonialPlaceholder { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -489,4 +666,5 @@
   .scrollCue i::after { animation: none !important; }
   .loaderMark span,
   .loaderMark i { animation: none !important; }
+  .projectItem { transition: none; }
 }

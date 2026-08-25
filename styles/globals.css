@@ -31,11 +31,6 @@ html { scroll-behavior: smooth; background: var(--bg); }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 16px; line-height: 1.7; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
 button, input, textarea, select { font-family: inherit; }
 
-body:has([data-mandegar-experience]) .footer { display: none; }
-html:has([data-mandegar-experience]),
-body:has([data-mandegar-experience]) { scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior-y: none; }
-html:has([data-mandegar-experience])::-webkit-scrollbar,
-body:has([data-mandegar-experience])::-webkit-scrollbar { width: 0; height: 0; }
 a { color: inherit; }
 button { font: inherit; }
 ::selection { color: #fff; background: var(--accent); }

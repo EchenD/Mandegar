@@ -229,7 +229,7 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.getByRole("link", { name: "شروع یک پروژه" }).last()).toBeVisible();
   });
 
-  test("camera completion unlocks the scroll loop before the reveal finishes", async ({ page }) => {
+  test("camera completion unlocks page scrolling before the reveal finishes", async ({ page }) => {
     test.setTimeout(90_000);
     const shaderErrors: string[] = [];
     page.on("console", (message) => {
@@ -306,13 +306,12 @@ test.describe("Mandegar responsive layout", () => {
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("activation");
   });
 
-  test("idle scrolling settles softly on the nearest authored stage", async ({ page }) => {
+  test("idle scrolling preserves the visitor's exact position", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
     const root = page.locator("[data-experience-root]");
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
-    await page.waitForTimeout(1_100);
     await root.evaluate((element) => {
       const rootElement = element as HTMLElement;
       const progress = 0.27;
@@ -322,13 +321,13 @@ test.describe("Mandegar responsive layout", () => {
         behavior: "auto",
       });
     });
-    await expect(root).toHaveAttribute("data-scroll-snap", "activation", { timeout: 7_000 });
-    await expect(root).not.toHaveAttribute("data-scroll-snap", "activation", { timeout: 3_000 });
+    await page.waitForTimeout(2_500);
+    await expect(root).not.toHaveAttribute("data-scroll-snap");
     const settledProgress = await root.evaluate((element) => {
       const rootElement = element as HTMLElement;
       return (window.scrollY - rootElement.offsetTop) / Math.max(1, rootElement.offsetHeight - innerHeight);
     });
-    expect(settledProgress).toBeCloseTo(0.31, 2);
+    expect(settledProgress).toBeCloseTo(0.27, 2);
   });
 
   test("opening copy breath follows physical scroll rather than sinus progress", async ({ page }) => {
@@ -465,20 +464,21 @@ test.describe("Mandegar responsive layout", () => {
     await assertNoHorizontalOverflow(page);
   });
 
-  test("homepage hides the footer and forward scroll uses a spatial breath before wrapping to arrival", async ({ page }) => {
+  test("homepage releases the final loop state into page content and the footer", async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
-    await expect(page.locator(".footer")).toBeHidden();
     await page.evaluate(() => {
       document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .999 } }));
     });
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("loop");
     await page.mouse.wheel(0, 900);
-    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("arrival");
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(100);
+    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("loop");
+    await expect(page.locator("[data-post-experience]")).toBeVisible();
+    await page.locator(".footer").scrollIntoViewIfNeeded();
+    await expect(page.locator(".footer")).toBeVisible();
   });
 
   test("homepage centers bookend copy and keeps story copy lower", async ({ page }) => {

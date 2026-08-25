@@ -130,7 +130,7 @@ uses project poster media or a lightweight generated fallback.
 3. Restart `npm run dev`.
 4. Open `/fa?intro=1&creative=1`.
 5. Check the browser console. Missing contract nodes are reported by exact name.
-6. Review all nine resting stages and the loop seam.
+6. Review all nine resting stages and the final Loop-to-page handoff.
 
 The creative panel now exposes section reveal, quiet/peak mix, all four screens,
 crowd, data flow, transition particle strength/size/motion, reveal edge width,

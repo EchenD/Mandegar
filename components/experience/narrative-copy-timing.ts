@@ -64,12 +64,6 @@ export function getNarrativeCopyTiming(phaseId: ScenePhaseId): NarrativeCopyTimi
   };
 }
 
-export const narrativeLoopSeam = {
-  terminalProgress: getNarrativeCopyTiming("loop").exitEnd,
-  wrapReadyProgress: narrativeCopyRhythm.loopBoundary,
-  minimumHoldMs: 0,
-} as const;
-
 export function validateNarrativeCopyTimings() {
   const timings = narrativeScore.map((phase) => getNarrativeCopyTiming(phase.id));
   timings.forEach((timing, index) => {

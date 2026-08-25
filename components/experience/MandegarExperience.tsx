@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import type { Locale } from "@/lib/i18n";
+import { localizedPath, type Locale } from "@/lib/i18n";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
 import { ScrollMotion } from "./ScrollMotion";
@@ -83,6 +83,51 @@ type ExperienceProps = {
 
 type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
 
+const postExperienceCopy = {
+  fa: {
+    projectsKicker: "پروژه‌ها / منتخب",
+    projectsTitle: "چند تجربه که از ایده به واقعیت رسیده‌اند.",
+    projectsBody: "این بخش در مرحله بعد به یک نمایش تعاملی کامل تبدیل می‌شود. فعلاً ساختار آن با پروژه‌های واقعی سایت آماده شده است.",
+    viewProject: "مشاهده پروژه",
+    projectsEmpty: "پروژه‌های تأییدشده پس از انتشار در این بخش نمایش داده می‌شوند.",
+    aboutKicker: "درباره ما",
+    aboutTitle: "ایده، فضا، فناوری و اجرا را در یک مسیر کنار هم می‌آوریم.",
+    aboutBody: "ماندگار تجربه‌های رویدادی و نمایشگاهی را از نخستین ایده تا اجرای نهایی به‌صورت یکپارچه طراحی می‌کند.",
+    aboutLink: "بیشتر درباره ماندگار",
+    testimonialsKicker: "صدای مشتریان",
+    testimonialsTitle: "تجربه همکاری، از نگاه کسانی که کنار ما بوده‌اند.",
+    testimonialsPlaceholder: "نقل‌قول‌های تأییدشده مشتریان در این قسمت قرار می‌گیرند.",
+  },
+  en: {
+    projectsKicker: "Projects / Selected",
+    projectsTitle: "Experiences brought from idea to reality.",
+    projectsBody: "This section will become a richer interactive showcase. Its foundation now uses the site’s real project entries.",
+    viewProject: "View project",
+    projectsEmpty: "Approved projects will appear here when they are published.",
+    aboutKicker: "About us",
+    aboutTitle: "We connect idea, space, technology and delivery in one journey.",
+    aboutBody: "Mandegar designs event and exhibition experiences as one connected process, from the first idea through final delivery.",
+    aboutLink: "More about Mandegar",
+    testimonialsKicker: "Client voices",
+    testimonialsTitle: "The experience of working together, in our clients’ words.",
+    testimonialsPlaceholder: "Approved client testimonials will appear here.",
+  },
+  ar: {
+    projectsKicker: "المشاريع / مختارات",
+    projectsTitle: "تجارب انتقلت من الفكرة إلى الواقع.",
+    projectsBody: "سيتحول هذا القسم لاحقاً إلى عرض تفاعلي أكثر ثراءً. وتستخدم بنيته الحالية مشاريع الموقع الحقيقية.",
+    viewProject: "عرض المشروع",
+    projectsEmpty: "ستظهر المشاريع المعتمدة هنا عند نشرها.",
+    aboutKicker: "من نحن",
+    aboutTitle: "نجمع الفكرة والمكان والتقنية والتنفيذ في رحلة واحدة.",
+    aboutBody: "تصمم ماندگار تجارب الفعاليات والمعارض كمسار متكامل، من الفكرة الأولى حتى التنفيذ النهائي.",
+    aboutLink: "المزيد عن ماندگار",
+    testimonialsKicker: "آراء العملاء",
+    testimonialsTitle: "تجربة العمل معاً، بكلمات عملائنا.",
+    testimonialsPlaceholder: "ستظهر شهادات العملاء المعتمدة هنا.",
+  },
+} as const satisfies Record<Locale, Record<string, string>>;
+
 export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabledByCms = true, lenisEnabled = false }: ExperienceProps) {
   const router = useRouter();
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
@@ -99,6 +144,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
     })),
     [projects],
   );
+  const pageCopy = postExperienceCopy[locale];
 
   useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => {
@@ -197,7 +243,8 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
   }, [soundEnabled]);
 
   return (
-    <ScrollMotion className={styles.root} enabled={interactionReady} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
+    <>
+      <ScrollMotion className={styles.root} enabled={interactionReady} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
       <div
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
@@ -358,7 +405,69 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           </section>
         ))}
       </div>
-    </ScrollMotion>
+      </ScrollMotion>
+
+      <div className={styles.postExperience} data-post-experience>
+        <section className={`${styles.contentSection} ${styles.projectsSection}`} aria-labelledby="home-projects-title">
+          <div className={styles.contentWidth}>
+            <div className={styles.sectionIntro}>
+              <span>{pageCopy.projectsKicker}</span>
+              <div>
+                <h2 id="home-projects-title">{pageCopy.projectsTitle}</h2>
+                <p>{pageCopy.projectsBody}</p>
+              </div>
+            </div>
+            {projects.length ? (
+              <div className={styles.projectList}>
+                {projects.map((project, index) => (
+                  <Link
+                    key={project.slug}
+                    href={localizedPath(locale, `projects/${project.slug}`)}
+                    className={styles.projectItem}
+                  >
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <small>{project.eyebrow}</small>
+                      <h3>{project.title}</h3>
+                      <p>{project.summary}</p>
+                    </div>
+                    <strong>{pageCopy.viewProject} ↗</strong>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyState}>{pageCopy.projectsEmpty}</p>
+            )}
+          </div>
+        </section>
+
+        <section className={`${styles.contentSection} ${styles.aboutSection}`} aria-labelledby="home-about-title">
+          <div className={`${styles.contentWidth} ${styles.aboutGrid}`}>
+            <span>{pageCopy.aboutKicker}</span>
+            <div>
+              <h2 id="home-about-title">{pageCopy.aboutTitle}</h2>
+              <p>{pageCopy.aboutBody}</p>
+              <Link href={localizedPath(locale, "about")} className={styles.sectionLink}>
+                {pageCopy.aboutLink} ↗
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${styles.contentSection} ${styles.testimonialsSection}`} aria-labelledby="home-testimonials-title">
+          <div className={styles.contentWidth}>
+            <div className={styles.sectionIntro}>
+              <span>{pageCopy.testimonialsKicker}</span>
+              <h2 id="home-testimonials-title">{pageCopy.testimonialsTitle}</h2>
+            </div>
+            <div className={styles.testimonialPlaceholder}>
+              <span>01</span>
+              <p>{pageCopy.testimonialsPlaceholder}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
