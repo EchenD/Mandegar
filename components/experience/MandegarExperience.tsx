@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { AboutSystem } from "./AboutSystem";
+import { ClientVoices, type ClientMark, type ClientVoice } from "./ClientVoices";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
 import { ScrollMotion } from "./ScrollMotion";
@@ -14,6 +16,11 @@ import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
   () => import("./ExperienceCanvas").then((module) => module.ExperienceCanvas),
+  { ssr: false },
+);
+
+const ProjectHelix = dynamic(
+  () => import("./ProjectHelix").then((module) => module.ProjectHelix),
   { ssr: false },
 );
 
@@ -77,6 +84,8 @@ type ExperienceProps = {
   copy: ExperienceCopy;
   ctaHref: string;
   projects?: ExperienceProject[];
+  testimonials?: ClientVoice[];
+  clients?: ClientMark[];
   enabledByCms?: boolean;
   lenisEnabled?: boolean;
 };
@@ -87,7 +96,7 @@ const postExperienceCopy = {
   fa: {
     projectsKicker: "پروژه‌ها / منتخب",
     projectsTitle: "چند تجربه که از ایده به واقعیت رسیده‌اند.",
-    projectsBody: "این بخش در مرحله بعد به یک نمایش تعاملی کامل تبدیل می‌شود. فعلاً ساختار آن با پروژه‌های واقعی سایت آماده شده است.",
+    projectsBody: "در هر پروژه مکث کنید و میان نمونه‌های مفهومی حرکت کنید. هر جایگاه برای جایگزینی مستقیم با پروژه‌های تأییدشده CMS آماده است.",
     viewProject: "مشاهده پروژه",
     projectsEmpty: "پروژه‌های تأییدشده پس از انتشار در این بخش نمایش داده می‌شوند.",
     aboutKicker: "درباره ما",
@@ -101,7 +110,7 @@ const postExperienceCopy = {
   en: {
     projectsKicker: "Projects / Selected",
     projectsTitle: "Experiences brought from idea to reality.",
-    projectsBody: "This section will become a richer interactive showcase. Its foundation now uses the site’s real project entries.",
+    projectsBody: "Stay with each project and move through clearly labelled concept samples. Every slot is ready for approved CMS work.",
     viewProject: "View project",
     projectsEmpty: "Approved projects will appear here when they are published.",
     aboutKicker: "About us",
@@ -115,7 +124,7 @@ const postExperienceCopy = {
   ar: {
     projectsKicker: "المشاريع / مختارات",
     projectsTitle: "تجارب انتقلت من الفكرة إلى الواقع.",
-    projectsBody: "سيتحول هذا القسم لاحقاً إلى عرض تفاعلي أكثر ثراءً. وتستخدم بنيته الحالية مشاريع الموقع الحقيقية.",
+    projectsBody: "توقّف عند كل مشروع وتنقّل بين نماذج مفاهيمية واضحة. كل مساحة جاهزة لأعمال CMS المعتمدة.",
     viewProject: "عرض المشروع",
     projectsEmpty: "ستظهر المشاريع المعتمدة هنا عند نشرها.",
     aboutKicker: "من نحن",
@@ -128,7 +137,16 @@ const postExperienceCopy = {
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 
-export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabledByCms = true, lenisEnabled = false }: ExperienceProps) {
+export function MandegarExperience({
+  locale,
+  copy,
+  ctaHref,
+  projects = [],
+  testimonials = [],
+  clients = [],
+  enabledByCms = true,
+  lenisEnabled = false,
+}: ExperienceProps) {
   const router = useRouter();
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
@@ -249,6 +267,7 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
         data-particle-loader="center-spark"
+        role="status"
         aria-live="polite"
         aria-label={`${copy.loading} ${loadProgress}%`}
       >
@@ -417,8 +436,9 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
                 <p>{pageCopy.projectsBody}</p>
               </div>
             </div>
+            {projects.length > 1 ? <ProjectHelix projects={projects} locale={locale} /> : null}
             {projects.length ? (
-              <div className={styles.projectList}>
+              <div className={`${styles.projectList} ${projects.length > 1 ? styles.projectListEnhanced : ""}`}>
                 {projects.map((project, index) => (
                   <Link
                     key={project.slug}
@@ -441,31 +461,23 @@ export function MandegarExperience({ locale, copy, ctaHref, projects = [], enabl
           </div>
         </section>
 
-        <section className={`${styles.contentSection} ${styles.aboutSection}`} aria-labelledby="home-about-title">
-          <div className={`${styles.contentWidth} ${styles.aboutGrid}`}>
-            <span>{pageCopy.aboutKicker}</span>
-            <div>
-              <h2 id="home-about-title">{pageCopy.aboutTitle}</h2>
-              <p>{pageCopy.aboutBody}</p>
-              <Link href={localizedPath(locale, "about")} className={styles.sectionLink}>
-                {pageCopy.aboutLink} ↗
-              </Link>
-            </div>
-          </div>
-        </section>
+        <AboutSystem
+          locale={locale}
+          kicker={pageCopy.aboutKicker}
+          title={pageCopy.aboutTitle}
+          body={pageCopy.aboutBody}
+          linkLabel={pageCopy.aboutLink}
+          href={localizedPath(locale, "about")}
+        />
 
-        <section className={`${styles.contentSection} ${styles.testimonialsSection}`} aria-labelledby="home-testimonials-title">
-          <div className={styles.contentWidth}>
-            <div className={styles.sectionIntro}>
-              <span>{pageCopy.testimonialsKicker}</span>
-              <h2 id="home-testimonials-title">{pageCopy.testimonialsTitle}</h2>
-            </div>
-            <div className={styles.testimonialPlaceholder}>
-              <span>01</span>
-              <p>{pageCopy.testimonialsPlaceholder}</p>
-            </div>
-          </div>
-        </section>
+        <ClientVoices
+          locale={locale}
+          kicker={pageCopy.testimonialsKicker}
+          title={pageCopy.testimonialsTitle}
+          placeholder={pageCopy.testimonialsPlaceholder}
+          voices={testimonials}
+          clients={clients}
+        />
       </div>
     </>
   );

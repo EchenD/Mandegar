@@ -323,7 +323,17 @@
 }
 
 .sceneCopy::before {
-  content: none;
+  position: absolute;
+  inset: -1.4rem -2rem;
+  z-index: -1;
+  border-radius: 1.5rem;
+  background: rgba(247, 247, 244, .012);
+  pointer-events: none;
+  content: "";
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .sceneCopy::before { backdrop-filter: blur(12px); }
 }
 
 :global([dir="rtl"]) .sceneCopy,
@@ -453,7 +463,7 @@
   position: relative;
   z-index: 2;
   margin-block-start: -8svh;
-  overflow: hidden;
+  overflow: clip;
   border-radius: clamp(1.5rem, 4vw, 4rem) clamp(1.5rem, 4vw, 4rem) 0 0;
   color: #16191d;
   background: #f7f7f4;
@@ -473,16 +483,14 @@
   margin-inline: auto;
 }
 
-.sectionIntro,
-.aboutGrid {
+.sectionIntro {
   display: grid;
   grid-template-columns: minmax(9rem, .32fr) minmax(0, 1fr);
   gap: 2rem clamp(2rem, 7vw, 8rem);
   align-items: start;
 }
 
-.sectionIntro > span,
-.aboutGrid > span {
+.sectionIntro > span {
   color: #225cff;
   font-size: .64rem;
   font-weight: 720;
@@ -490,8 +498,7 @@
   text-transform: uppercase;
 }
 
-.sectionIntro h2,
-.aboutGrid h2 {
+.sectionIntro h2 {
   max-width: 15ch;
   margin: 0;
   font-size: clamp(2.35rem, 5.8vw, 6.5rem);
@@ -500,8 +507,7 @@
   letter-spacing: -.05em;
 }
 
-.sectionIntro p,
-.aboutGrid p {
+.sectionIntro p {
   max-width: 39rem;
   margin-block: 1.4rem 0;
   color: rgba(22, 25, 29, .64);
@@ -512,6 +518,10 @@
 .projectList {
   margin-block-start: clamp(4rem, 8vw, 8rem);
   border-block-start: 1px solid rgba(22, 25, 29, .14);
+}
+
+.contentWidth:has([data-project-helix]) > .projectListEnhanced {
+  display: none;
 }
 
 .projectItem {
@@ -560,64 +570,18 @@
   color: rgba(22, 25, 29, .62);
 }
 
-.projectItem strong,
-.sectionLink {
+.projectItem strong {
   color: #225cff;
   font-size: .7rem;
   font-weight: 700;
   text-decoration: none;
 }
 
-.emptyState,
-.testimonialPlaceholder {
+.emptyState {
   margin-block-start: clamp(3rem, 6vw, 6rem);
   padding: clamp(2rem, 5vw, 5rem);
   border: 1px dashed rgba(22, 25, 29, .25);
   color: rgba(22, 25, 29, .6);
-}
-
-.aboutSection {
-  color: #f7f7f4;
-  background: #11151c;
-}
-
-.aboutGrid > span,
-.aboutSection .sectionLink {
-  color: #75d8ff;
-}
-
-.aboutGrid p {
-  color: rgba(247, 247, 244, .7);
-}
-
-.sectionLink {
-  display: inline-flex;
-  margin-block-start: 2rem;
-}
-
-.testimonialsSection {
-  background: #e8ebea;
-}
-
-.testimonialPlaceholder {
-  display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
-  border-style: solid;
-  background: rgba(247, 247, 244, .48);
-}
-
-.testimonialPlaceholder span {
-  color: #225cff;
-  font-size: .62rem;
-}
-
-.testimonialPlaceholder p {
-  max-width: 42rem;
-  margin: 0;
-  font-size: clamp(1.3rem, 2.4vw, 2.4rem);
-  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
@@ -652,11 +616,9 @@
   .semanticFallback p,
   .semanticFallback a { grid-column: 1; }
   .postExperience { margin-block-start: -4svh; border-radius: 1.5rem 1.5rem 0 0; }
-  .sectionIntro,
-  .aboutGrid { grid-template-columns: 1fr; }
+  .sectionIntro { grid-template-columns: 1fr; }
   .projectItem { grid-template-columns: 2rem minmax(0, 1fr); }
   .projectItem > strong { grid-column: 2; }
-  .testimonialPlaceholder { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

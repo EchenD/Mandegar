@@ -1,0 +1,266 @@
+.root {
+  position: relative;
+  height: var(--project-scroll-height, 400svh);
+  margin-block: clamp(4rem, 8vw, 8rem) 0;
+}
+
+.sticky {
+  position: sticky;
+  inset-block-start: 0;
+  height: 100svh;
+  overflow: hidden;
+  border: 1px solid rgba(117, 216, 255, .16);
+  border-radius: clamp(1.2rem, 3vw, 2.8rem);
+  color: #f7f7f4;
+  background:
+    radial-gradient(circle at 72% 42%, rgba(34, 92, 255, .15), transparent 30%),
+    radial-gradient(circle at 56% 80%, rgba(117, 216, 255, .08), transparent 32%),
+    #080b10;
+  box-shadow: 0 2.5rem 7rem rgba(7, 9, 14, .2);
+  isolation: isolate;
+}
+
+.sticky::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image:
+    linear-gradient(rgba(117, 216, 255, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(117, 216, 255, .04) 1px, transparent 1px);
+  background-size: clamp(4rem, 8vw, 8rem) clamp(4rem, 8vw, 8rem);
+  mask-image: radial-gradient(circle at 66% 48%, black, transparent 76%);
+  pointer-events: none;
+  content: "";
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.canvas::after {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 66% 46%, transparent 14%, rgba(9, 12, 18, .08) 46%, rgba(9, 12, 18, .72) 100%),
+    linear-gradient(90deg, rgba(8, 11, 16, .9) 0%, rgba(8, 11, 16, .5) 34%, transparent 58%, rgba(8, 11, 16, .18) 100%);
+  pointer-events: none;
+  content: "";
+}
+
+:global([dir="rtl"]) .canvas::after {
+  background:
+    radial-gradient(circle at 34% 46%, transparent 14%, rgba(9, 12, 18, .08) 46%, rgba(9, 12, 18, .72) 100%),
+    linear-gradient(270deg, rgba(8, 11, 16, .9) 0%, rgba(8, 11, 16, .5) 34%, transparent 58%, rgba(8, 11, 16, .18) 100%);
+}
+
+.interface {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.instruction {
+  position: absolute;
+  inset-block-start: clamp(5.25rem, 7vw, 6.5rem);
+  inset-inline-start: clamp(1.3rem, 3vw, 2.5rem);
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  color: rgba(247, 247, 244, .5);
+  font-size: .56rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.instruction::before {
+  width: 2rem;
+  height: 1px;
+  background: #75d8ff;
+  content: "";
+}
+
+.counter {
+  position: absolute;
+  inset-block-start: clamp(5.25rem, 7vw, 6.5rem);
+  inset-inline-end: clamp(1.3rem, 3vw, 2.5rem);
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  color: rgba(247, 247, 244, .42);
+}
+
+.counter strong {
+  color: #75d8ff;
+  font-size: clamp(1.6rem, 3vw, 3.2rem);
+  font-weight: 520;
+  line-height: 1;
+}
+
+.counter span {
+  font-size: .62rem;
+}
+
+.projectNav {
+  position: absolute;
+  inset-inline-end: clamp(1.3rem, 3vw, 2.5rem);
+  inset-block-end: clamp(1.5rem, 4vw, 3.5rem);
+  display: flex;
+  gap: .5rem;
+  pointer-events: auto;
+}
+
+.projectNav button {
+  position: relative;
+  display: grid;
+  width: 2.6rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(247, 247, 244, .18);
+  border-radius: 50%;
+  color: rgba(247, 247, 244, .46);
+  background: rgba(8, 11, 16, .42);
+  font: inherit;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: color .3s ease, border-color .3s ease, background .3s ease, transform .3s ease;
+}
+
+.projectNav button::after {
+  position: absolute;
+  inset: -.28rem;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  content: "";
+  transition: border-color .3s ease;
+}
+
+.projectNav button:hover,
+.projectNav button[data-active="true"] {
+  border-color: #75d8ff;
+  color: #f7f7f4;
+  background: rgba(34, 92, 255, .28);
+  transform: translateY(-2px);
+}
+
+.projectNav button[data-active="true"]::after {
+  border-color: rgba(117, 216, 255, .34);
+}
+
+.projectNav button:focus-visible {
+  outline: 2px solid #75d8ff;
+  outline-offset: .3rem;
+}
+
+.projectNav span {
+  font-size: .54rem;
+  letter-spacing: .05em;
+}
+
+.projectCopy {
+  position: absolute;
+  inset-inline-start: clamp(1.3rem, 4vw, 4rem);
+  inset-block-end: clamp(2rem, 9vh, 6.5rem);
+  width: min(31rem, 38vw);
+  text-shadow: 0 .25rem 1.4rem rgba(0, 0, 0, .55);
+}
+
+.projectCopyInner {
+  animation: projectCopyIn .6s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.projectMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+
+.projectMeta small {
+  color: #75d8ff;
+  font-size: .58rem;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.projectMeta span {
+  padding: .32rem .5rem;
+  border: 1px solid rgba(117, 216, 255, .28);
+  border-radius: 999px;
+  color: rgba(247, 247, 244, .56);
+  font-size: .48rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.projectCopy h3 {
+  max-width: 12ch;
+  margin: .55rem 0 0;
+  font-size: clamp(2.25rem, 4.5vw, 5.5rem);
+  font-weight: 520;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.projectCopy p {
+  max-width: 30rem;
+  margin-block: 1rem 0;
+  color: rgba(247, 247, 244, .68);
+  font-size: clamp(.78rem, 1vw, .96rem);
+}
+
+.projectCopy a {
+  display: inline-flex;
+  margin-block-start: 1.2rem;
+  color: #75d8ff;
+  font-size: .7rem;
+  font-weight: 700;
+  pointer-events: auto;
+  text-decoration: none;
+}
+
+.projectCopy a:focus-visible {
+  outline: 2px solid #75d8ff;
+  outline-offset: .35rem;
+}
+
+@keyframes projectCopyIn {
+  from {
+    opacity: 0;
+    transform: translateY(1.2rem);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .sticky { border-radius: 1.2rem; }
+  .canvas::after {
+    background:
+      linear-gradient(0deg, rgba(9, 12, 18, .96), transparent 48%),
+      radial-gradient(circle at 50% 38%, transparent 15%, rgba(9, 12, 18, .45) 68%, rgba(9, 12, 18, .85));
+  }
+  .instruction,
+  .counter { display: none; }
+  .projectCopy {
+    inset-block-end: 5.8rem;
+    width: calc(100% - 2.6rem);
+  }
+  .projectCopy h3 { max-width: 13ch; font-size: clamp(2rem, 9vw, 3rem); }
+  .projectCopy p { display: none; }
+  .projectNav {
+    inset-inline: 1.3rem auto;
+    inset-block-end: 1.6rem;
+  }
+  .projectNav button { width: 2.35rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root { display: none; }
+  .projectCopyInner { animation: none; }
+}

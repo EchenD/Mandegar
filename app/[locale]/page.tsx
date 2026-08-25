@@ -1,6 +1,6 @@
 import { MandegarExperience, type ExperienceCopy } from "@/components/experience/MandegarExperience";
 import { getText } from "@/lib/content";
-import { getHomeModel, getProjects, getSiteSettings } from "@/lib/content-source";
+import { getHomeModel, getProjects, getSiteSettings, getTrustContent } from "@/lib/content-source";
 import { ensureLocale, localizedPath, type Locale } from "@/lib/i18n";
 
 const fallbackCopy: Record<Locale, ExperienceCopy> = {
@@ -122,7 +122,12 @@ function usable(value: string | undefined, fallback: string) {
 export default async function HomePage({ params }: { params: Promise<{ locale?: string }> }) {
   const { locale: rawLocale } = await params;
   const locale = ensureLocale(rawLocale || "fa");
-  const [home, settings, availableProjects] = await Promise.all([getHomeModel(locale), getSiteSettings(), getProjects(locale)]);
+  const [home, settings, availableProjects, trust] = await Promise.all([
+    getHomeModel(locale),
+    getSiteSettings(),
+    getProjects(locale),
+    getTrustContent(locale),
+  ]);
   const { copy: cmsCopy, ctaOverrides, featuredProjects, fromCms } = home;
   const base = fallbackCopy[locale];
   const copy: ExperienceCopy = {
@@ -144,7 +149,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
   };
   const requestedHref = ctaOverrides.conversion?.href;
   const ctaHref = requestedHref?.startsWith("/") ? requestedHref : localizedPath(locale, "contact");
-  const projects = (featuredProjects.length ? featuredProjects : availableProjects).slice(0, 3).map((project) => ({
+  const projects = (featuredProjects.length ? featuredProjects : availableProjects).slice(0, 6).map((project) => ({
     slug: project.slug,
     title: getText(project.title, locale),
     eyebrow: getText(project.eyebrow, locale),
@@ -152,6 +157,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
     mediaSrc: project.media.src,
     isPlaceholder: Boolean(project.isPlaceholder),
   }));
+  const testimonials = trust.testimonials.map((testimonial) => ({
+    quote: getText(testimonial.quote, locale),
+    person: getText(testimonial.person, locale),
+    role: getText(testimonial.role, locale),
+    organization: getText(testimonial.organization, locale),
+    isPlaceholder: false,
+  }));
+  const clients = trust.clients.map((client) => ({ name: client.name, logo: client.logo }));
 
   return (
     <MandegarExperience
@@ -159,6 +172,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
       copy={copy}
       ctaHref={ctaHref}
       projects={projects}
+      testimonials={testimonials}
+      clients={clients}
       enabledByCms={settings.featureFlags.immersiveCanvas}
       lenisEnabled={settings.featureFlags.lenis}
     />

@@ -481,6 +481,65 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator(".footer")).toBeVisible();
   });
 
+  test("project helix renders CMS projects without hijacking page scroll", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+    const helix = page.locator("[data-project-helix]");
+    await expect(helix.getByRole("button")).toHaveCount(6);
+    const start = await helix.evaluate((node) => {
+      const top = node.getBoundingClientRect().top + window.scrollY;
+      const travel = node.clientHeight - window.innerHeight;
+      return top + travel * 0.08;
+    });
+    await page.evaluate((top) => window.scrollTo(0, top), start);
+    await expect(helix.locator("canvas")).toBeVisible({ timeout: 30_000 });
+    await expect(helix.getByRole("link", { name: /View project/ })).toBeVisible();
+    await expect.poll(async () => {
+      const box = await helix.locator("[data-project-helix-sticky]").boundingBox();
+      return Math.round(box?.y ?? -100);
+    }).toBe(0);
+    const heldTitle = await helix.locator("h3").textContent();
+    const before = await page.evaluate(() => window.scrollY);
+    await page.mouse.wheel(0, 450);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before + 100);
+    await expect.poll(() => helix.locator("h3").textContent()).toBe(heldTitle);
+    await expect(helix).not.toHaveAttribute("data-scroll-snap");
+  });
+
+  test("about system and client voice previews are interactive and accessible", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+
+    const about = page.locator("[data-about-system]");
+    const processNodes = about.getByRole("button");
+    await expect(processNodes).toHaveCount(4);
+    const technology = about.getByRole("button", { name: /Technology/ });
+    await technology.focus();
+    await expect(technology).toBeFocused();
+    await expect(technology).toHaveAttribute("aria-pressed", "true");
+    await expect(about.locator("h3")).toHaveText("Technology");
+
+    const voices = page.locator("[data-client-voices]");
+    await expect(voices.locator("[data-sample='true']")).toBeVisible();
+    const before = await voices.locator("article blockquote").textContent();
+    await voices.getByRole("button", { name: "Next voice" }).click();
+    await expect.poll(() => voices.locator("article blockquote").textContent()).not.toBe(before);
+    await expect(voices.getByRole("group", { name: "Choose a client voice" }).getByRole("button")).toHaveCount(3);
+  });
+
+  test("new post-experience sections fit mobile RTL without overflow", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-about-system]")).toBeVisible();
+    await expect(page.locator("[data-client-voices]")).toBeVisible();
+    await assertNoHorizontalOverflow(page);
+  });
+
   test("homepage centers bookend copy and keeps story copy lower", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const locale of ["fa", "en"] as const) {
@@ -523,7 +582,7 @@ test.describe("Mandegar responsive layout", () => {
   test("project filters and detail route work", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto("/fa/projects", { waitUntil: "networkidle" });
-    await expect(page.locator(".projectCard")).toHaveCount(3);
+    await expect(page.locator(".projectCard")).toHaveCount(6);
     await page.locator(".filterButton").nth(1).click();
     await expect(page.locator(".projectCard")).toHaveCount(1);
     await page.goto("/fa/projects/placeholder-exhibition-01", { waitUntil: "networkidle" });

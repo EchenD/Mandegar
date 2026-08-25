@@ -102,7 +102,7 @@ export const media = {
   }, "video-placeholder"),
 };
 
-export const projects: Project[] = [
+const coreProjects: Project[] = [
   {
     slug: "placeholder-exhibition-01",
     title: { fa: "نمایشگاه مفهومی / فضای تجربه", en: "Concept build / Exhibition environment", ar: "نموذج مفاهيمي / مساحة معرض" },
@@ -225,6 +225,76 @@ export const projects: Project[] = [
       ar: "يبقى هذا القسم بلا أرقام حتى وصول البيانات الموثقة والموافقة.",
     },
     isPlaceholder: true,
+  },
+];
+
+export const projects: Project[] = [
+  ...coreProjects,
+  {
+    ...coreProjects[0],
+    slug: "placeholder-photo-04",
+    title: {
+      fa: "پرتره فراگیر / خاطره مشترک",
+      en: "Immersive portrait / Shared memory",
+      ar: "صورة غامرة / ذكرى مشتركة",
+    },
+    eyebrow: {
+      fa: "دموی مفهومی / تجربه تصویری",
+      en: "Concept demo / Photo experience",
+      ar: "عرض مفاهيمي / تجربة تصويرية",
+    },
+    summary: {
+      fa: "نمونه‌ای موقت از تجربه‌ای که حضور مخاطب را به یک یادگار تصویری شخصی تبدیل می‌کند.",
+      en: "A clearly labelled sample of an experience that turns participation into a personal visual keepsake.",
+      ar: "نموذج مؤقت يحوّل مشاركة الزائر إلى تذكار بصري شخصي.",
+    },
+    category: { fa: "تجربه تصویری", en: "Photo experience", ar: "تجربة تصويرية" },
+    media: media.photo,
+    gallery: [media.photo, media.spark, media.interactive],
+  },
+  {
+    ...coreProjects[1],
+    slug: "placeholder-intelligence-05",
+    title: {
+      fa: "جریان مخاطب / بینش زنده",
+      en: "Audience flow / Living insight",
+      ar: "حركة الجمهور / رؤية حية",
+    },
+    eyebrow: {
+      fa: "دموی مفهومی / هوشمندی رویداد",
+      en: "Concept demo / Event intelligence",
+      ar: "عرض مفاهيمي / ذكاء الفعاليات",
+    },
+    summary: {
+      fa: "نمایشی مفهومی از اینکه چگونه حرکت‌های جمعی می‌توانند بدون ادعای داده واقعی، به یک لایه بصری زنده تبدیل شوند.",
+      en: "A concept preview of how collective movement could become a living visual layer, without claiming real audience data.",
+      ar: "تصور مفاهيمي لكيفية تحوّل الحركة الجماعية إلى طبقة بصرية حية، من دون ادعاء بيانات حقيقية.",
+    },
+    category: { fa: "هوشمندی رویداد", en: "Event intelligence", ar: "ذكاء الفعاليات" },
+    media: media.intelligence,
+    gallery: [media.intelligence, media.interactive, media.exhibition],
+  },
+  {
+    ...coreProjects[2],
+    slug: "placeholder-arrival-06",
+    title: {
+      fa: "درگاه برند / ورود نورانی",
+      en: "Brand portal / Luminous arrival",
+      ar: "بوابة العلامة / وصول مضيء",
+    },
+    eyebrow: {
+      fa: "دموی مفهومی / لحظه ورود",
+      en: "Concept demo / Arrival moment",
+      ar: "عرض مفاهيمي / لحظة الوصول",
+    },
+    summary: {
+      fa: "یک مطالعه موقت برای ورودی‌ای که پیش از رسیدن مخاطب به فضای اصلی، داستان رویداد را آغاز می‌کند.",
+      en: "A temporary study for an entrance that begins the event story before guests reach the main space.",
+      ar: "دراسة مؤقتة لمدخل يبدأ قصة الفعالية قبل وصول الضيوف إلى المساحة الرئيسية.",
+    },
+    category: { fa: "هویت فضایی", en: "Spatial identity", ar: "هوية مكانية" },
+    media: media.spark,
+    gallery: [media.spark, media.exhibition, media.stage],
   },
 ];
 
