@@ -71,7 +71,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       ]} />
       <section className="detailHero">
         <div className="pageWidth">
-          <Link className="backLink" href={localizedPath(locale, "projects")}>← {ui.backToProjects}</Link>
+          <Link prefetch={false} className="backLink" href={localizedPath(locale, "projects")}>← {ui.backToProjects}</Link>
           <div className="detailMeta"><span>{categories.join(" · ")}</span><span>{project.year}</span><span>{getText(project.location, locale)}</span></div>
           <h1>{title}</h1>
           <p>{summary}</p>
@@ -96,7 +96,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
       </section>
-      {project.relatedProjects?.length ? <section className="sectionPad relatedSection"><div className="pageWidth"><div className="sectionKicker">{labels.related}</div><div className="relatedGrid">{project.relatedProjects.map((related) => <Link key={related.slug} href={localizedPath(locale, `projects/${related.slug}`)} data-analytics="related_project_view" data-analytics-label={related.slug}><MediaPlaceholder media={related.media} locale={locale} /><div><span>{getText(related.category, locale)} · {related.year}</span><h2>{getText(related.title, locale)}</h2><p>{getText(related.summary, locale)}</p></div></Link>)}</div></div></section> : null}
+      {project.relatedProjects?.length ? <section className="sectionPad relatedSection"><div className="pageWidth"><div className="sectionKicker">{labels.related}</div><div className="relatedGrid">{project.relatedProjects.map((related) => <Link prefetch={false} key={related.slug} href={localizedPath(locale, `projects/${related.slug}`)} data-analytics="related_project_view" data-analytics-label={related.slug}><MediaPlaceholder media={related.media} locale={locale} /><div><span>{getText(related.category, locale)} · {related.year}</span><h2>{getText(related.title, locale)}</h2><p>{getText(related.summary, locale)}</p></div></Link>)}</div></div></section> : null}
     </div>
   );
 }

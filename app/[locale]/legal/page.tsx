@@ -66,7 +66,7 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
       <section className="detailBody">
         <div className="pageWidth legalContent">
           {sections.map((section, index) => <section key={section.heading} aria-labelledby={`legal-${index}`}><h2 id={`legal-${index}`}>{section.heading}</h2><p>{section.body}</p></section>)}
-          <Link className="textLink" href={localizedPath(locale, "contact")}>{locale === "fa" ? "پرسش درباره این صفحه" : locale === "ar" ? "استفسار حول هذه الصفحة" : "Ask about this page"}<span aria-hidden="true">↗</span></Link>
+          <Link prefetch={false} className="textLink" href={localizedPath(locale, "contact")}>{locale === "fa" ? "پرسش درباره این صفحه" : locale === "ar" ? "استفسار حول هذه الصفحة" : "Ask about this page"}<span aria-hidden="true">↗</span></Link>
         </div>
       </section>
     </div>

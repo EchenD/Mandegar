@@ -8,7 +8,7 @@ export function ProjectCard({ project, locale, featured = false }: { project: Pr
   const categories = (project.categories || [project.category]).map((category) => getText(category, locale)).join(" · ");
   return (
     <article className={`projectCard ${featured ? "projectCardFeatured" : ""}`}>
-      <Link href={localizedPath(locale, `projects/${project.slug}`)} className="projectCardLink" data-analytics="project_view" data-analytics-label={project.slug}>
+      <Link prefetch={false} href={localizedPath(locale, `projects/${project.slug}`)} className="projectCardLink" data-analytics="project_view" data-analytics-label={project.slug}>
         <MediaPlaceholder media={project.media} locale={locale} className="projectMedia" />
         <div className="projectCardBody">
           <div className="projectCardMeta"><span>{categories}</span><span>{project.year}</span><span>{getText(project.location, locale)}</span></div>

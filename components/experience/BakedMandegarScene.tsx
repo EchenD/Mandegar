@@ -32,7 +32,15 @@ import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./MandegarModel";
-import { assetSlots, getHeroHandoffProgress, phaseProgress, sceneTokens, type SceneQuality } from "./scene-config";
+import {
+  assetSlots,
+  getHeroBackgroundProgress,
+  getHeroHandoffProgress,
+  journeyBackgroundColor,
+  phaseProgress,
+  sceneTokens,
+  type SceneQuality,
+} from "./scene-config";
 import type { SpatialHudFrame, SpatialHudModeId, SpatialScreenPoint } from "./spatial-hud";
 import { TransitionParticleField } from "./TransitionParticleField";
 
@@ -216,8 +224,11 @@ export function BakedMandegarScene({
     assetSlots.bakedTextures.exhibitionQuiet,
     assetSlots.bakedTextures.exhibitionPeak,
   ]);
-  const { camera, size } = useThree();
+  const { camera, scene, size } = useThree();
   const firstFrame = useRef(false);
+  const bakedBackground = useMemo(() => new THREE.Color(sceneTokens.bakedScene.background), []);
+  const journeyBackground = useMemo(() => new THREE.Color(journeyBackgroundColor), []);
+  const blendedBackground = useMemo(() => new THREE.Color(), []);
   const environment = useMemo(() => {
     const clone = cloneSkeleton(environmentGltf.scene);
     clone.visible = false;
@@ -396,6 +407,12 @@ export function BakedMandegarScene({
       return;
     }
 
+    blendedBackground.copy(bakedBackground).lerp(
+      journeyBackground,
+      getHeroBackgroundProgress(experienceState.progress),
+    );
+    scene.background = blendedBackground;
+
     const production = experienceState.stage.production;
     const heroPresence = 1 - getHeroHandoffProgress(experienceState.progress);
     const environmentReveal = experienceState.sequence === "loading"
@@ -403,10 +420,10 @@ export function BakedMandegarScene({
       : experienceState.sequence === "intro"
         ? experienceState.intro.assemblyProgress
         : production.environmentReveal * heroPresence;
-    updateSection(runtime.environment, environmentReveal, production.environmentPeak * heroPresence, clock.elapsedTime);
-    updateSection(runtime.central, production.centralReveal * heroPresence, production.centralPeak * heroPresence, clock.elapsedTime);
-    updateSection(runtime.left, production.leftReveal * heroPresence, production.leftPeak * heroPresence, clock.elapsedTime);
-    updateSection(runtime.right, production.rightReveal * heroPresence, production.rightPeak * heroPresence, clock.elapsedTime);
+    updateSection(runtime.environment, environmentReveal, production.environmentPeak, clock.elapsedTime);
+    updateSection(runtime.central, production.centralReveal * heroPresence, production.centralPeak, clock.elapsedTime);
+    updateSection(runtime.left, production.leftReveal * heroPresence, production.leftPeak, clock.elapsedTime);
+    updateSection(runtime.right, production.rightReveal * heroPresence, production.rightPeak, clock.elapsedTime);
 
     if (!firstFrame.current) {
       firstFrame.current = true;

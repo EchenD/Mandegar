@@ -21,7 +21,7 @@ import {
   type RuntimeMaterialBinding,
 } from "./baked-material-binding";
 import { experienceState } from "./experience-state";
-import { assetSlots, sceneTokens } from "./scene-config";
+import { assetSlots, getHeroHandoffProgress, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
 
 type CrowdRuntime = {
@@ -115,14 +115,15 @@ function BakedCrowdAsset({
     }
 
     const production = experienceState.stage.production;
+    const presence = production.crowdPresence * (1 - getHeroHandoffProgress(experienceState.progress));
     if (runtime.mode === "baked" && runtime.uniforms) {
-      updateCrowdUniforms(runtime.uniforms, production.crowdPresence, production);
+      updateCrowdUniforms(runtime.uniforms, presence, production);
       runtime.uniforms.uTime.value = clock.elapsedTime;
     } else if (runtime.material instanceof THREE.MeshBasicMaterial) {
-      runtime.material.opacity = smoothstep(production.crowdPresence);
-      runtime.material.depthWrite = production.crowdPresence > 0.98;
+      runtime.material.opacity = smoothstep(presence);
+      runtime.material.depthWrite = presence > 0.98;
     }
-    runtime.root.visible = production.crowdPresence > 0.001;
+    runtime.root.visible = presence > 0.001;
   });
 
   return (

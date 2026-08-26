@@ -22,7 +22,7 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
           <p className="footerLine">{settings?.footerLine ? getText(settings.footerLine, locale) : copy.footer}</p>
         </div>
         <div className="footerLinks">
-          {navigation.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
+          {navigation.map((item) => <Link prefetch={false} key={item.href} href={item.href}>{item.label}</Link>)}
           {settings?.socialLinks.map((item) => <a key={item.url} href={item.url} target="_blank" rel="noreferrer">{item.label}</a>)}
         </div>
         <div className="footerMeta">
@@ -31,7 +31,7 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
         </div>
       </div>
       <div className="pageWidth footerBottom">
-        <Link href={localizedPath(locale, "legal")}>{legal}</Link>
+        <Link prefetch={false} href={localizedPath(locale, "legal")}>{legal}</Link>
         <span>{mediaNote}</span>
       </div>
     </footer>

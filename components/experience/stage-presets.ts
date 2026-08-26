@@ -260,9 +260,9 @@ export const stagePresets = {
     spatialInfo: { mode: "hidden", prominence: 0 },
     production: {
       environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
-      environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
-      interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
-      crowdPresence: 0, dataFlow: 0, transitionParticles: 0.68,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
+      crowdPresence: 1, dataFlow: 0, transitionParticles: 0.68,
       transitionParticleSize: 0.52, transitionTurbulence: 0.4,
       revealEdgeWidth: 0.4, revealTurbulence: 0.42,
     },

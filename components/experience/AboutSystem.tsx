@@ -128,7 +128,7 @@ export function AboutSystem({ locale, kicker, title, body, linkLabel, href }: Ab
             <h2 id="home-about-title">{title}</h2>
             <div>
               <p>{body}</p>
-              <Link href={href}>{linkLabel} <span aria-hidden="true">↗</span></Link>
+              <Link prefetch={false} href={href}>{linkLabel} <span aria-hidden="true">↗</span></Link>
             </div>
           </div>
         </div>

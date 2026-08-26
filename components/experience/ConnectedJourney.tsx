@@ -15,6 +15,7 @@ import {
 } from "react";
 import * as THREE from "three";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { publicAssetPath } from "@/lib/public-asset-path";
 import { warpNarrativeProgress } from "./narrative-progress-curve";
 import { getHeroHandoffProgress } from "./scene-config";
 import {
@@ -62,7 +63,6 @@ type JourneyCopy = {
   testimonialsPlaceholder: string;
   finalTitle: string;
   finalBody: string;
-  finalCta: string;
 };
 
 type ConnectedJourneyProps = {
@@ -72,7 +72,6 @@ type ConnectedJourneyProps = {
   clients: JourneyClient[];
   copy: JourneyCopy;
   aboutHref: string;
-  ctaHref: string;
 };
 
 type ProcessItem = {
@@ -88,7 +87,13 @@ type JourneyStop = {
 };
 
 const HOLD_DURATION = 0.76;
+const FINALE_HOLD_DURATION = 3.4;
 const TRANSITION_DURATION = 0.36;
+const ENTRY_LEAD_VIEWPORTS = 3;
+const PARTICLE_ENTRY_HANDOFF_START = 0.32;
+const BLACK_HOLD_VIEWPORTS = 0.18;
+const PROJECT_ENTRY_VIEWPORTS = 1.05;
+const finaleLogoSrc = publicAssetPath("/images/mandegar-finale-logo.webp");
 
 const processCopy: Record<Locale, { instruction: string; system: string; conclusion: string; items: ProcessItem[] }> = {
   fa: {
@@ -221,17 +226,21 @@ function seededValue(index: number, offset: number) {
 }
 
 function timelineDuration(count: number) {
-  return count * HOLD_DURATION + Math.max(0, count - 1) * TRANSITION_DURATION;
+  if (count <= 0) return 0;
+  return Math.max(0, count - 1) * HOLD_DURATION
+    + FINALE_HOLD_DURATION
+    + Math.max(0, count - 1) * TRANSITION_DURATION;
 }
 
 function timelineState(progress: number, count: number) {
   if (count <= 1) return { cursor: 0, activeIndex: 0 };
   let remaining = clamp01(progress) * timelineDuration(count);
   for (let index = 0; index < count; index += 1) {
-    if (remaining <= HOLD_DURATION || index === count - 1) {
+    const holdDuration = index === count - 1 ? FINALE_HOLD_DURATION : HOLD_DURATION;
+    if (remaining <= holdDuration || index === count - 1) {
       return { cursor: index, activeIndex: index };
     }
-    remaining -= HOLD_DURATION;
+    remaining -= holdDuration;
     if (remaining <= TRANSITION_DURATION) {
       const transition = smoothstep(remaining / TRANSITION_DURATION);
       return {
@@ -245,12 +254,12 @@ function timelineState(progress: number, count: number) {
 }
 
 function stopProgress(index: number, count: number) {
-  return (index * (HOLD_DURATION + TRANSITION_DURATION) + HOLD_DURATION * 0.5) / timelineDuration(count);
+  const holdDuration = index === count - 1 ? FINALE_HOLD_DURATION : HOLD_DURATION;
+  return (index * (HOLD_DURATION + TRANSITION_DURATION) + holdDuration * 0.5) / timelineDuration(count);
 }
 
 function ProjectPortal({
   project,
-  texture,
   index,
   position,
   progress,
@@ -261,7 +270,6 @@ function ProjectPortal({
   onSelect,
 }: {
   project: JourneyProject;
-  texture: THREE.Texture;
   index: number;
   position: THREE.Vector3;
   progress: JourneyProgressRef;
@@ -271,6 +279,14 @@ function ProjectPortal({
   onInspect: (index: number | null) => void;
   onSelect: (index: number) => void;
 }) {
+  const sourceTexture = useLoader(THREE.TextureLoader, project.mediaSrc);
+  const texture = useMemo(() => {
+    const clonedTexture = sourceTexture.clone();
+    clonedTexture.colorSpace = THREE.SRGBColorSpace;
+    clonedTexture.anisotropy = 4;
+    clonedTexture.needsUpdate = true;
+    return clonedTexture;
+  }, [sourceTexture]);
   const group = useRef<THREE.Group>(null);
   const image = useRef<THREE.MeshBasicMaterial>(null);
   const frame = useRef<THREE.MeshBasicMaterial>(null);
@@ -294,8 +310,9 @@ function ProjectPortal({
 
   useEffect(() => () => {
     document.body.style.cursor = "";
+    texture.dispose();
     haloGeometry.dispose();
-  }, [haloGeometry]);
+  }, [haloGeometry, texture]);
 
   useFrame(({ camera, clock }, delta) => {
     const node = group.current;
@@ -305,9 +322,10 @@ function ProjectPortal({
     const focus = 1 - smoothstep(clamp01((distance - 0.12) / 0.9));
     const entry = smoothstep(entryProgress.current);
     const exit = 1 - smoothstep(clamp01((progress.current - lastProjectStop) / 0.85));
-    const opacity = Math.max(0.035, focus) * entry * exit;
+    const entryOpacity = index === 0 ? entry : 1;
+    const opacity = Math.max(0.035, focus) * exit * entryOpacity;
     const activeLift = focus * 0.3 + (hover.current.active ? 0.18 : 0);
-    const targetScale = (0.78 + focus * 0.34 + (hover.current.active ? 0.035 : 0)) * 0.78;
+    const targetScale = (0.78 + focus * 0.34 + (hover.current.active ? 0.035 : 0)) * 0.62;
 
     node.position.x = THREE.MathUtils.damp(node.position.x, position.x, 6, delta);
     node.position.y = THREE.MathUtils.damp(node.position.y, position.y + activeLift, 6, delta);
@@ -317,12 +335,12 @@ function ProjectPortal({
       6,
       delta,
     );
-    node.quaternion.copy(camera.quaternion);
+    node.lookAt(camera.position);
     node.rotateY(hover.current.x * 0.045);
     node.rotateX(hover.current.y * -0.035);
     node.rotateZ(Math.sin(clock.elapsedTime * 0.35 + index) * 0.002);
     node.scale.setScalar(THREE.MathUtils.damp(node.scale.x, targetScale, 7, delta));
-    node.visible = opacity > 0.004;
+    node.visible = entryProgress.current > 0.002 && opacity > 0.004;
     if (image.current) image.current.opacity = opacity;
     if (frame.current) frame.current.opacity = opacity * (0.35 + focus * 0.65);
     if (shadow.current) shadow.current.opacity = opacity * 0.8;
@@ -378,10 +396,6 @@ function ProjectPortal({
           toneMapped={false}
         />
       </mesh>
-      <mesh position={[0, -1.92, 0]}>
-        <boxGeometry args={[1.15, 0.025, 0.025]} />
-        <meshBasicMaterial color={project.isPlaceholder ? "#d95cff" : "#75d8ff"} transparent opacity={0.72} />
-      </mesh>
       <points geometry={haloGeometry} raycast={() => undefined}>
         <pointsMaterial
           ref={halo}
@@ -417,45 +431,22 @@ function ProjectWorld({
   onInspect: (index: number | null) => void;
   onSelect: (index: number) => void;
 }) {
-  const sourceTextures = useLoader(THREE.TextureLoader, projects.map((project) => project.mediaSrc)) as THREE.Texture[];
-  const textures = useMemo(() => sourceTextures.map((source) => {
-    const texture = source.clone();
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
-    texture.needsUpdate = true;
-    return texture;
-  }), [sourceTextures]);
-
-  const route = useMemo(() => {
-    const curve = new THREE.CatmullRomCurve3(positions, false, "catmullrom", 0.42);
-    const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(Math.max(48, projects.length * 32)));
-    const material = new THREE.LineBasicMaterial({ color: "#225cff", transparent: true, opacity: 0.42, depthWrite: false });
-    return new THREE.Line(geometry, material);
-  }, [positions, projects.length]);
-
-  useEffect(() => () => {
-    textures.forEach((texture) => texture.dispose());
-    route.geometry.dispose();
-    (route.material as THREE.Material).dispose();
-  }, [route, textures]);
-
   return (
     <group>
-      <primitive object={route} />
       {projects.map((project, index) => (
-        <ProjectPortal
-          key={project.slug}
-          project={project}
-          texture={textures[index]}
-          index={index}
-          position={positions[index]}
-          progress={progress}
-          entryProgress={entryProgress}
-          projectStart={projectStart}
-          lastProjectStop={lastProjectStop}
-          onInspect={onInspect}
-          onSelect={onSelect}
-        />
+        <Suspense key={project.slug} fallback={null}>
+          <ProjectPortal
+            project={project}
+            index={index}
+            position={positions[index]}
+            progress={progress}
+            entryProgress={entryProgress}
+            projectStart={projectStart}
+            lastProjectStop={lastProjectStop}
+            onInspect={onInspect}
+            onSelect={onSelect}
+          />
+        </Suspense>
       ))}
     </group>
   );
@@ -609,6 +600,7 @@ function JourneyScene({
   projects,
   voiceCount,
   progress,
+  particleProgress,
   entryProgress,
   projectStart,
   processStart,
@@ -623,6 +615,7 @@ function JourneyScene({
   projects: JourneyProject[];
   voiceCount: number;
   progress: JourneyProgressRef;
+  particleProgress: JourneyProgressRef;
   entryProgress: JourneyProgressRef;
   projectStart: number;
   processStart: number;
@@ -638,7 +631,7 @@ function JourneyScene({
   const target = useRef(new THREE.Vector3());
   const darkBackground = useMemo(() => new THREE.Color("#080b10"), []);
   const projectPositions = useMemo(() => projects.map((_, index) => {
-    const curveOffset = 1.8 + Math.sin(index * 0.92) * 0.65;
+    const curveOffset = 0.72 + Math.sin(index * 0.92) * 0.18;
     return new THREE.Vector3(compositionDirection * curveOffset, Math.sin(index * 0.72) * 0.62, -index * 7);
   }), [compositionDirection, projects]);
   const cameraPoints = useMemo(() => {
@@ -654,7 +647,7 @@ function JourneyScene({
   const cameraCurve = useMemo(() => new THREE.CatmullRomCurve3(cameraPoints, false, "catmullrom", 0.5), [cameraPoints]);
   const targetPoints = useMemo(() => {
     const points = projectPositions.length
-      ? projectPositions.map((position) => position.clone().add(new THREE.Vector3(-compositionDirection * 1.85, 0, 0)))
+      ? projectPositions.map((position) => position.clone().add(new THREE.Vector3(-compositionDirection * 0.85, 0, 0)))
       : [new THREE.Vector3(0, 0, 0)];
     if (points.length === 1) return [points[0], points[0].clone().add(new THREE.Vector3(0, 0, -0.01))];
     return points;
@@ -669,7 +662,7 @@ function JourneyScene({
     const projectCursor = clamp01((cursor - projectStart) / Math.max(1, projects.length - 1));
     const pathPosition = cameraCurve.getPointAt(projectCursor);
     const pathTarget = targetCurve.getPointAt(projectCursor);
-    pathPosition.z += (1 - entryProgress.current) * 4.2;
+    pathPosition.z += (1 - entryProgress.current) * (size.width <= 760 ? 6.8 : 8.4);
 
     const coreMix = smoothstep(clamp01(cursor - lastProjectStop));
     const voiceMix = smoothstep(clamp01(cursor - (voiceStart - 1)));
@@ -685,19 +678,17 @@ function JourneyScene({
     camera.position.lerp(desiredPosition, 1 - Math.exp(-delta * 4.8));
     target.current.lerp(desiredTarget, 1 - Math.exp(-delta * 5.4));
     camera.lookAt(target.current);
-    if (scene.background instanceof THREE.Color) scene.background.copy(darkBackground);
     if (scene.fog instanceof THREE.Fog) scene.fog.color.copy(darkBackground);
   });
 
   return (
     <>
-      <color attach="background" args={["#080b10"]} />
       <fog attach="fog" args={["#080b10", 8, 92]} />
       <ambientLight intensity={0.62} color="#a9c8ff" />
       <directionalLight position={[5, 8, 8]} intensity={1.25} color="#f7f7f4" />
       <pointLight position={[-4, 2, coreZ + 3]} intensity={11} distance={16} color="#225cff" />
       <pointLight position={[4, -1, constellationZ + 2]} intensity={8} distance={15} color="#50c7ff" />
-      <JourneyDepthField progress={progress} entryProgress={entryProgress} />
+      <JourneyDepthField progress={progress} entryProgress={particleProgress} />
       {projects.length ? (
         <ProjectWorld
           projects={projects}
@@ -728,7 +719,9 @@ function JourneyScene({
         activeIndex={activeVoice}
         compositionDirection={compositionDirection}
       />
-      <FinaleParticleWordmark centerZ={constellationZ} progress={progress} finalStop={finalStop} />
+      <Suspense fallback={null}>
+        <FinaleParticleWordmark centerZ={constellationZ} progress={progress} finalStop={finalStop} />
+      </Suspense>
     </>
   );
 }
@@ -749,11 +742,11 @@ export function ConnectedJourney({
   clients,
   copy,
   aboutHref,
-  ctaHref,
 }: ConnectedJourneyProps) {
   const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
+  const particleProgress = useRef(0);
   const entryProgress = useRef(0);
   const frame = useRef<number | undefined>(undefined);
   const [motionMode, setMotionMode] = useState<"pending" | "full" | "reduced">("pending");
@@ -794,6 +787,13 @@ export function ConnectedJourney({
   const isVoiceActive = activeStop.kind === "voice";
 
   useEffect(() => {
+    safeProjects.forEach((project) => {
+      useLoader.preload(THREE.TextureLoader, project.mediaSrc);
+    });
+    useLoader.preload(THREE.TextureLoader, finaleLogoSrc);
+  }, [safeProjects]);
+
+  useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncPreference = () => setMotionMode(preference.matches ? "reduced" : "full");
     syncPreference();
@@ -816,24 +816,37 @@ export function ConnectedJourney({
       const node = root.current;
       if (!node) return;
       const bounds = node.getBoundingClientRect();
-      const entryLead = window.innerHeight;
-      const travel = Math.max(1, node.offsetHeight - window.innerHeight - entryLead);
-      const rawProgress = clamp01((-bounds.top - entryLead) / travel);
+      const entryLead = window.innerHeight * ENTRY_LEAD_VIEWPORTS;
+      const blackHoldDistance = window.innerHeight * BLACK_HOLD_VIEWPORTS;
+      const projectEntryDistance = window.innerHeight * PROJECT_ENTRY_VIEWPORTS;
+      const timelineLead = entryLead + blackHoldDistance + projectEntryDistance;
+      const travel = Math.max(1, node.offsetHeight - window.innerHeight - timelineLead);
+      const rawProgress = clamp01((-bounds.top - timelineLead) / travel);
       const hero = document.querySelector<HTMLElement>("[data-experience-root]");
       const heroTravel = Math.max(1, (hero?.offsetHeight ?? window.innerHeight) - window.innerHeight);
       const heroNativeProgress = hero
         ? clamp01((window.scrollY - hero.offsetTop) / heroTravel)
         : 1;
-      const nextEntryProgress = bounds.top <= -entryLead
+      const heroHandoffProgress = bounds.top <= -entryLead
         ? 1
         : getHeroHandoffProgress(warpNarrativeProgress(heroNativeProgress));
-      const journeyReveal = smoothstep(nextEntryProgress);
+      const nextParticleProgress = smoothstep(clamp01(
+        (heroHandoffProgress - PARTICLE_ENTRY_HANDOFF_START)
+          / (1 - PARTICLE_ENTRY_HANDOFF_START),
+      ));
+      const postHeroDistance = Math.max(0, -bounds.top - entryLead - blackHoldDistance);
+      const nextEntryProgress = smoothstep(clamp01(postHeroDistance / projectEntryDistance));
+      const journeyReveal = nextParticleProgress;
+      const copyReveal = smoothstep(clamp01((nextEntryProgress - 0.58) / 0.42));
       const next = timelineState(rawProgress, stops.length);
       progress.current = next.cursor;
+      particleProgress.current = nextParticleProgress;
       entryProgress.current = nextEntryProgress;
       node.style.setProperty("--journey-cursor", next.cursor.toFixed(4));
       node.style.setProperty("--journey-entry", nextEntryProgress.toFixed(4));
       node.style.setProperty("--journey-reveal", journeyReveal.toFixed(4));
+      node.style.setProperty("--journey-copy-entry", copyReveal.toFixed(4));
+      node.style.setProperty("--journey-background", heroHandoffProgress.toFixed(4));
       node.style.setProperty("--journey-progress", rawProgress.toFixed(4));
       setActiveStopIndex((current) => current === next.activeIndex ? current : next.activeIndex);
     };
@@ -855,10 +868,13 @@ export function ConnectedJourney({
   const seekStop = useCallback((index: number) => {
     const node = root.current;
     if (!node || motionMode !== "full") return;
-    const entryLead = window.innerHeight;
-    const travel = Math.max(1, node.offsetHeight - window.innerHeight - entryLead);
+    const entryLead = window.innerHeight * ENTRY_LEAD_VIEWPORTS;
+    const timelineLead = entryLead
+      + window.innerHeight * BLACK_HOLD_VIEWPORTS
+      + window.innerHeight * PROJECT_ENTRY_VIEWPORTS;
+    const travel = Math.max(1, node.offsetHeight - window.innerHeight - timelineLead);
     const top = node.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: top + entryLead + travel * stopProgress(index, stops.length), behavior: "smooth" });
+    window.scrollTo({ top: top + timelineLead + travel * stopProgress(index, stops.length), behavior: "smooth" });
   }, [motionMode, stops.length]);
 
   const chooseProcess = (index: number, seek = false) => {
@@ -900,13 +916,17 @@ export function ConnectedJourney({
                 <Canvas
                   camera={{ position: [0, 0, 11], fov: 43, near: 0.1, far: 140 }}
                   dpr={[1, 1.4]}
-                  gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+                  gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+                  onCreated={({ gl }) => {
+                    gl.setClearColor(0x000000, 0);
+                  }}
                 >
                   <Suspense fallback={null}>
                     <JourneyScene
                       projects={safeProjects}
                       voiceCount={Math.max(displayVoices.length, clients.length, 3)}
                       progress={progress}
+                      particleProgress={particleProgress}
                       entryProgress={entryProgress}
                       projectStart={projectStart}
                       processStart={processStart}
@@ -938,7 +958,7 @@ export function ConnectedJourney({
                   </div>
                   <h3 id="journey-project-title">{activeProject.title}</h3>
                   <p>{activeProject.summary}</p>
-                  <Link href={localizedPath(locale, `projects/${activeProject.slug}`)}>{copy.viewProject} <span aria-hidden="true">↗</span></Link>
+                  <Link prefetch={false} href={localizedPath(locale, `projects/${activeProject.slug}`)}>{copy.viewProject} <span aria-hidden="true">↗</span></Link>
                 </article>
               ) : (
                 <p className={styles.emptyProjects}>{copy.projectsEmpty}</p>
@@ -970,7 +990,7 @@ export function ConnectedJourney({
               <p>{copy.projectBody}</p>
               <div>
                 {safeProjects.map((project, index) => (
-                  <Link key={project.slug} href={localizedPath(locale, `projects/${project.slug}`)}>
+                  <Link prefetch={false} key={project.slug} href={localizedPath(locale, `projects/${project.slug}`)}>
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <strong>{project.title}</strong>
                     <small>{project.eyebrow}</small>
@@ -1023,7 +1043,7 @@ export function ConnectedJourney({
           </div>
           <div className={styles.processConclusion}>
             <p>{processCopy[locale].conclusion}</p>
-            <Link href={aboutHref}>{copy.aboutLink} <span aria-hidden="true">↗</span></Link>
+            <Link prefetch={false} href={aboutHref}>{copy.aboutLink} <span aria-hidden="true">↗</span></Link>
           </div>
         </section>
 
@@ -1080,9 +1100,15 @@ export function ConnectedJourney({
 
         <section className={`${styles.layer} ${styles.finaleLayer}`} data-active={activeStop.kind === "finale" ? "true" : "false"}>
           <div>
-            <strong className={styles.finaleWordmark} aria-hidden="true">MANDEGAR</strong>
+            <Image
+              className={styles.finaleWordmark}
+              src={finaleLogoSrc}
+              width={1800}
+              height={1031}
+              alt=""
+              aria-hidden="true"
+            />
             <h2 className={styles.finaleHeading}>{copy.finalTitle}</h2>
-            <Link href={ctaHref}>{copy.finalCta} <span aria-hidden="true">↗</span></Link>
           </div>
         </section>
 

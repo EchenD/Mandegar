@@ -379,7 +379,7 @@ export function ProjectHelix({ projects, locale }: { projects: HelixProject[]; l
               </div>
               <h3>{activeProject.title}</h3>
               <p>{activeProject.summary}</p>
-              <Link href={localizedPath(locale, `projects/${activeProject.slug}`)}>
+              <Link prefetch={false} href={localizedPath(locale, `projects/${activeProject.slug}`)}>
                 {viewLabels[locale]} ↗
               </Link>
             </div>

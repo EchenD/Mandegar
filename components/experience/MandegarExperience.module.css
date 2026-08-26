@@ -358,11 +358,9 @@
 .sceneCopy [data-copy-line] { will-change: opacity, transform, filter, clip-path; }
 
 .sceneCopy.invitationCopy,
-.sceneCopy.loopCopy,
 .sceneCopy.arrivalCopy { width: min(48rem, 72vw); }
 
-.sceneCopy.arrivalCopy,
-.sceneCopy.loopCopy { inset-block-start: 50%; }
+.sceneCopy.arrivalCopy { inset-block-start: 50%; }
 
 :global([dir="rtl"]) .sceneCopy.arrivalCopy {
   right: auto;
@@ -641,10 +639,8 @@
   .sceneCopy p { max-width: 30rem; margin-block-start: .65rem; font-size: .76rem; line-height: 1.55; }
   .sceneCopy > span { margin-block-end: .65rem; }
   .sceneCopy.arrivalCopy,
-  .sceneCopy.invitationCopy,
-  .sceneCopy.loopCopy { inset-inline: auto; left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
-  .sceneCopy.arrivalCopy,
-  .sceneCopy.loopCopy { inset-block-start: 50%; }
+  .sceneCopy.invitationCopy { inset-inline: auto; left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
+  .sceneCopy.arrivalCopy { inset-block-start: 50%; }
   .ctaRow { margin-block-start: 1.1rem; }
   .primaryCta { min-height: 2.7rem; }
   .phaseRail { inset-block-end: 1rem; width: calc(100% - 2rem); }

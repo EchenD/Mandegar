@@ -10,7 +10,7 @@ import {
   narrativeCueRanges as activationSequence,
   rangeProgress as phaseProgress,
 } from "./narrative-score";
-import { sceneTokens } from "./scene-config";
+import { getHeroBackgroundProgress, journeyBackgroundColor, sceneTokens } from "./scene-config";
 
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
@@ -47,6 +47,7 @@ export function WorldEnvironment() {
   const quietBackground = useMemo(() => new THREE.Color(sceneTokens.environment.background.quiet), []);
   const activeBackground = useMemo(() => new THREE.Color(sceneTokens.environment.background.active), []);
   const peakBackground = useMemo(() => new THREE.Color(sceneTokens.environment.background.peak), []);
+  const journeyBackground = useMemo(() => new THREE.Color(journeyBackgroundColor), []);
   const background = useMemo(() => new THREE.Color(), []);
   const trails = useMemo(() => [
     makeTrail([[-7, 0.025, 5.8], [-4.2, 0.03, 3.4], [-2.2, 0.035, 1.9], [0, 0.04, 1.1]]),
@@ -96,7 +97,8 @@ export function WorldEnvironment() {
     const backgroundEnergy = Math.max(story.living, stage.lightEnergy * 0.28);
     background.copy(quietBackground)
       .lerp(activeBackground, backgroundEnergy * 0.82)
-      .lerp(peakBackground, story.peak * 0.78);
+      .lerp(peakBackground, story.peak * 0.78)
+      .lerp(journeyBackground, getHeroBackgroundProgress(progress));
     scene.background = background;
     if (scene.fog instanceof THREE.Fog) {
       scene.fog.color.copy(background);

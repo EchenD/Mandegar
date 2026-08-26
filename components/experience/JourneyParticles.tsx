@@ -2,11 +2,13 @@
 
 /* eslint-disable react-hooks/immutability -- R3F frame callbacks update GPU uniforms directly. */
 
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { publicAssetPath } from "@/lib/public-asset-path";
 
 export type JourneyProgressRef = { current: number };
+const finaleLogoSrc = publicAssetPath("/images/mandegar-finale-logo.webp");
 
 const depthVertexShader = /* glsl */ `
   attribute float aSeed;
@@ -131,35 +133,55 @@ const wordmarkVertexShader = /* glsl */ `
   uniform float uOpacity;
   uniform float uPixelRatio;
   uniform vec2 uPointer;
+  uniform vec2 uPointerTail;
+  uniform float uInteraction;
   varying float vAlpha;
   varying float vSeed;
+  varying float vEnergy;
 
   void main() {
     float resolve = smoothstep(0.0, 1.0, uReveal);
     vec3 displaced = mix(aStart, position, resolve);
-    displaced.z += sin(uTime * 0.42 + aSeed * 31.0) * 0.025 * resolve;
+    displaced.z += sin(uTime * 0.42 + aSeed * 31.0) * 0.018 * resolve;
 
     vec4 pointerViewPosition = modelViewMatrix * vec4(displaced, 1.0);
     vec4 pointerClipPosition = projectionMatrix * pointerViewPosition;
     vec2 screenPosition = pointerClipPosition.xy / max(abs(pointerClipPosition.w), 0.001);
-    vec2 away = screenPosition - uPointer;
-    float distanceToPointer = max(length(away), 0.001);
-    float influence = (1.0 - smoothstep(0.0, 0.2, distanceToPointer)) * resolve;
-    displaced.xy += normalize(away) * influence * mix(0.08, 0.24, aSeed);
-    displaced.z += influence * mix(0.08, 0.34, aSeed);
+    vec2 flow = uPointer - uPointerTail;
+    float flowLength = max(length(flow), 0.001);
+    vec2 flowDirection = flow / flowLength;
+    vec2 flowNormal = vec2(-flowDirection.y, flowDirection.x);
+    float trailPosition = fract(aSeed * 7.137 + aSeed * aSeed * 3.71);
+    float curveEnvelope = sin(trailPosition * 3.14159265);
+    float curl = sin(aSeed * 31.0 + uTime * 2.4 + trailPosition * 9.0);
+    vec2 trailPoint = mix(uPointerTail, uPointer, trailPosition);
+    trailPoint += flowNormal * curl * curveEnvelope * mix(0.06, 0.23, uInteraction);
+    float particleRadius = mix(0.09, 0.2, uInteraction) * mix(0.72, 1.28, fract(aSeed * 19.73));
+    float trailInfluence = 1.0 - smoothstep(0.0, particleRadius, length(screenPosition - trailPoint));
+    float headInfluence = 1.0 - smoothstep(0.0, particleRadius * 1.28, length(screenPosition - uPointer));
+    float influence = max(trailInfluence * 0.82, headInfluence) * resolve * uInteraction;
+    vec2 pullTarget = mix(trailPoint, uPointer, headInfluence);
+    vec2 towardWake = pullTarget - screenPosition;
+    float wake = sin(uTime * 4.0 + aSeed * 41.0) * curveEnvelope;
+    displaced.xy += towardWake * influence * mix(1.5, 3.2, aSeed);
+    displaced.xy += flowNormal * wake * influence * mix(0.08, 0.28, aSeed);
+    displaced.xy += flowDirection * influence * (aSeed - 0.5) * 0.18;
+    displaced.z += influence * mix(0.12, 0.62, aSeed);
 
     vec4 viewPosition = modelViewMatrix * vec4(displaced, 1.0);
     gl_Position = projectionMatrix * viewPosition;
     float perspective = clamp(255.0 / max(1.0, -viewPosition.z), 0.75, 3.0);
-    gl_PointSize = mix(1.05, 2.55, aSeed) * uPixelRatio * perspective;
+    gl_PointSize = mix(1.0, 2.7, aSeed) * uPixelRatio * perspective * (1.0 + influence * 0.42);
     vAlpha = uOpacity * mix(0.38, 0.96, aSeed);
     vSeed = aSeed;
+    vEnergy = influence;
   }
 `;
 
 const wordmarkFragmentShader = /* glsl */ `
   varying float vAlpha;
   varying float vSeed;
+  varying float vEnergy;
 
   void main() {
     vec2 point = gl_PointCoord - 0.5;
@@ -167,7 +189,8 @@ const wordmarkFragmentShader = /* glsl */ `
     if (radius > 0.5) discard;
     float glow = 1.0 - smoothstep(0.04, 0.5, radius);
     float core = 1.0 - smoothstep(0.0, 0.12, radius);
-    vec3 color = mix(vec3(0.32, 0.62, 1.0), vec3(0.82, 0.95, 1.0), vSeed);
+    vec3 baseColor = mix(vec3(0.34, 0.68, 1.0), vec3(0.88, 0.97, 1.0), vSeed);
+    vec3 color = mix(baseColor, vec3(1.0), vEnergy * 0.72);
     gl_FragColor = vec4(color + core * 0.22, (glow * 0.7 + core * 0.3) * vAlpha);
     #include <colorspace_fragment>
   }
@@ -273,22 +296,29 @@ function buildProcessGeometry(count: number) {
   return geometry;
 }
 
-function buildWordmarkGeometry() {
+function buildWordmarkGeometry(image: CanvasImageSource) {
   const geometry = new THREE.BufferGeometry();
   if (typeof document === "undefined") return geometry;
 
+  const source = image as CanvasImageSource & {
+    naturalWidth?: number;
+    naturalHeight?: number;
+    videoWidth?: number;
+    videoHeight?: number;
+    width?: number;
+    height?: number;
+  };
+  const sourceWidth = source.naturalWidth ?? source.videoWidth ?? source.width ?? 1;
+  const sourceHeight = source.naturalHeight ?? source.videoHeight ?? source.height ?? 1;
+  const aspect = sourceWidth / Math.max(1, sourceHeight);
   const canvas = document.createElement("canvas");
-  canvas.width = 960;
-  canvas.height = 220;
+  canvas.width = 900;
+  canvas.height = Math.max(1, Math.round(canvas.width / aspect));
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return geometry;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#ffffff";
-  context.font = "700 154px Arial, sans-serif";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText("MANDEGAR", canvas.width / 2, canvas.height / 2 + 4);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   const samples: Array<[number, number]> = [];
   for (let y = 0; y < canvas.height; y += 5) {
@@ -301,16 +331,18 @@ function buildWordmarkGeometry() {
   const positions = new Float32Array(samples.length * 3);
   const starts = new Float32Array(samples.length * 3);
   const seeds = new Float32Array(samples.length);
+  const worldWidth = 9.5;
+  const worldHeight = worldWidth / aspect;
   samples.forEach(([x, y], index) => {
     const seed = random();
     const angle = index * 2.399963 + seed * 0.35;
-    const radius = 2.2 + seed * 3.8;
-    positions[index * 3] = (x / canvas.width - 0.5) * 8.4;
-    positions[index * 3 + 1] = (0.5 - y / canvas.height) * 1.95;
+    const radius = 2.8 + seed * 4.6;
+    positions[index * 3] = (x / canvas.width - 0.5) * worldWidth;
+    positions[index * 3 + 1] = (0.5 - y / canvas.height) * worldHeight;
     positions[index * 3 + 2] = 0;
     starts[index * 3] = Math.cos(angle) * radius;
-    starts[index * 3 + 1] = Math.sin(angle) * radius * 0.58;
-    starts[index * 3 + 2] = (random() - 0.5) * 8.5;
+    starts[index * 3 + 1] = Math.sin(angle) * radius * 0.72;
+    starts[index * 3 + 2] = (random() - 0.5) * 10;
     seeds[index] = seed;
   });
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -443,7 +475,11 @@ export function FinaleParticleWordmark({
   finalStop: number;
 }) {
   const { gl, size } = useThree();
-  const geometry = useMemo(() => buildWordmarkGeometry(), []);
+  const logoTexture = useLoader(THREE.TextureLoader, finaleLogoSrc);
+  const geometry = useMemo(() => buildWordmarkGeometry(logoTexture.image), [logoTexture]);
+  const pointerHead = useRef(new THREE.Vector2());
+  const pointerTail = useRef(new THREE.Vector2());
+  const interaction = useRef(0);
   const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -451,6 +487,8 @@ export function FinaleParticleWordmark({
       uOpacity: { value: 0 },
       uPixelRatio: { value: Math.min(gl.getPixelRatio(), 1.5) },
       uPointer: { value: new THREE.Vector2() },
+      uPointerTail: { value: new THREE.Vector2() },
+      uInteraction: { value: 0 },
     },
     vertexShader: wordmarkVertexShader,
     fragmentShader: wordmarkFragmentShader,
@@ -467,11 +505,22 @@ export function FinaleParticleWordmark({
 
   useFrame(({ clock, pointer }, delta) => {
     const reveal = smoothstep((progress.current - (finalStop - 0.72)) / 0.72);
+    pointerHead.current.lerp(pointer, 1 - Math.exp(-delta * 20));
+    pointerTail.current.lerp(pointerHead.current, 1 - Math.exp(-delta * 3.2));
+    const flowEnergy = Math.min(1, pointerHead.current.distanceTo(pointerTail.current) * 7.5);
+    interaction.current = THREE.MathUtils.damp(
+      interaction.current,
+      flowEnergy,
+      flowEnergy > interaction.current ? 14 : 1.7,
+      delta,
+    );
     material.uniforms.uTime.value = clock.elapsedTime;
     material.uniforms.uReveal.value = THREE.MathUtils.damp(material.uniforms.uReveal.value, reveal, 5.5, delta);
     material.uniforms.uOpacity.value = THREE.MathUtils.damp(material.uniforms.uOpacity.value, reveal, 6, delta);
     material.uniforms.uPixelRatio.value = Math.min(gl.getPixelRatio(), 1.5);
-    material.uniforms.uPointer.value.lerp(pointer, 0.09);
+    material.uniforms.uPointer.value.copy(pointerHead.current);
+    material.uniforms.uPointerTail.value.copy(pointerTail.current);
+    material.uniforms.uInteraction.value = interaction.current;
   });
 
   return (
@@ -479,7 +528,7 @@ export function FinaleParticleWordmark({
       geometry={geometry}
       material={material}
       position={[0, 0, centerZ]}
-      scale={size.width <= 760 ? 0.72 : 1}
+      scale={size.width <= 760 ? 0.66 : 0.94}
       frustumCulled={false}
       raycast={() => undefined}
     />

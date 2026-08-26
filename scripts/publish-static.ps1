@@ -91,6 +91,11 @@ try {
     throw "The export is incomplete: fa/index.html was not generated."
   }
 
+  $finaleLogoExport = Join-Path $exportDirectory "images\mandegar-finale-logo.webp"
+  if (-not (Test-Path -LiteralPath $finaleLogoExport -PathType Leaf)) {
+    throw "The export is missing the finale logo: $finaleLogoExport"
+  }
+
   if ($BuildOnly) {
     Write-Host "Static GitHub Pages export is ready at $exportDirectory."
     return

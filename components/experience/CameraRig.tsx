@@ -95,8 +95,6 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
   const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const cameraLifeQuaternion = useRef(new THREE.Quaternion());
   const handoffCameraOffset = useRef(new THREE.Vector3());
-  const handoffBaseQuaternion = useRef(new THREE.Quaternion());
-  const handoffTargetQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
   const cameraLifeBlend = useRef(0);
 
@@ -199,18 +197,10 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
     if (handoffProgress > 0) {
       handoffCameraOffset.current.set(
         0,
-        -handoffProgress * (mobile ? 4.8 : 5.6),
-        handoffProgress * (mobile ? 2.2 : 2.8),
-      );
+        0,
+        handoffProgress * (mobile ? 5.2 : 6.4),
+      ).applyQuaternion(camera.quaternion);
       camera.position.add(handoffCameraOffset.current);
-      cameraTarget.current.y -= handoffProgress * (mobile ? 1.2 : 1.6);
-      handoffBaseQuaternion.current.copy(camera.quaternion);
-      camera.lookAt(cameraTarget.current);
-      handoffTargetQuaternion.current.copy(camera.quaternion);
-      camera.quaternion.copy(handoffBaseQuaternion.current).slerp(
-        handoffTargetQuaternion.current,
-        handoffProgress,
-      );
     }
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {

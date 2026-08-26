@@ -4,7 +4,7 @@ import { localizedPath, type Locale } from "@/lib/i18n";
 
 export function ServiceCard({ service, locale }: { service: Service; locale: Locale }) {
   return (
-    <Link href={localizedPath(locale, `services/${service.slug}`)} className="serviceCard">
+    <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className="serviceCard">
       <div className="serviceNumber">{service.number}</div>
       <div className="serviceCardCopy">
         <h3>{getText(service.title, locale)}</h3>

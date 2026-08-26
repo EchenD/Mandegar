@@ -50,9 +50,6 @@ type ExperienceCopy = {
   invitationEyebrow: string;
   invitationTitle: string;
   invitationBody: string;
-  loopEyebrow: string;
-  loopTitle: string;
-  loopBody: string;
   startProject: string;
   scroll: string;
   replay: string;
@@ -407,17 +404,7 @@ export function MandegarExperience({
               <h2 data-copy-line>{copy.invitationTitle}</h2>
               <p data-copy-line>{copy.invitationBody}</p>
               <div className={styles.ctaRow} data-copy-line>
-                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project">
-                  {copy.startProject}<i aria-hidden="true">↗</i>
-                </Link>
-              </div>
-            </section>
-            <section className={`${styles.sceneCopy} ${styles.loopCopy}`} data-scene-copy="loop" data-cinematic-beat>
-              <span data-copy-line>{copy.loopEyebrow}</span>
-              <h2 data-copy-line>{copy.loopTitle}</h2>
-              <p data-copy-line>{copy.loopBody}</p>
-              <div className={styles.ctaRow} data-copy-line>
-                <Link href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project_loop">
+                <Link prefetch={false} href={ctaHref} className={styles.primaryCta} data-analytics="cta_start_project">
                   {copy.startProject}<i aria-hidden="true">↗</i>
                 </Link>
               </div>
@@ -436,7 +423,7 @@ export function MandegarExperience({
               </button>
             ))}
             {projects.slice(0, 3).map((project) => (
-              <Link key={project.slug} href={`/${locale}/projects/${project.slug}`}>{project.title}</Link>
+              <Link prefetch={false} key={project.slug} href={`/${locale}/projects/${project.slug}`}>{project.title}</Link>
             ))}
           </nav>
 
@@ -476,11 +463,10 @@ export function MandegarExperience({
           [copy.proofEyebrow, copy.proofTitle, copy.proofBody],
           [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody],
           [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody],
-          [copy.loopEyebrow, copy.loopTitle, copy.loopBody],
         ].map((content, index) => (
           <section key={content[0]}>
             <span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>
-            {index >= 7 ? <Link href={ctaHref}>{copy.startProject}</Link> : null}
+            {index >= 7 ? <Link prefetch={false} href={ctaHref}>{copy.startProject}</Link> : null}
           </section>
         ))}
       </div>
@@ -506,10 +492,8 @@ export function MandegarExperience({
           testimonialsPlaceholder: pageCopy.testimonialsPlaceholder,
           finalTitle: copy.invitationTitle,
           finalBody: copy.invitationBody,
-          finalCta: copy.startProject,
         }}
         aboutHref={localizedPath(locale, "about")}
-        ctaHref={ctaHref}
       />
 
       <button

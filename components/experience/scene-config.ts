@@ -319,7 +319,21 @@ export function phaseProgress(progress: number, range: readonly [number, number]
   return rangeProgress(progress, range);
 }
 
-export const heroHandoffRange = [0.982, 1] as const;
+export const heroHandoffRange = [
+  narrativeScore.find((beat) => beat.id === "invitation")?.preview ?? 0.885,
+  1,
+] as const;
+
+export const journeyBackgroundColor = "#080b10";
+export const heroBackgroundRange = [
+  Math.max(0, heroHandoffRange[0] - 0.02),
+  heroHandoffRange[0],
+] as const;
+
+export function getHeroBackgroundProgress(progress: number) {
+  const value = phaseProgress(progress, heroBackgroundRange);
+  return value * value * (3 - 2 * value);
+}
 
 export function getHeroHandoffProgress(progress: number) {
   const value = phaseProgress(progress, heroHandoffRange);

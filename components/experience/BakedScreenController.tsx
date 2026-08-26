@@ -17,7 +17,7 @@ import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { prepareBakedTexture } from "./baked-scene-material";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./MandegarModel";
-import { sceneTokens } from "./scene-config";
+import { getHeroHandoffProgress, sceneTokens } from "./scene-config";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -343,6 +343,7 @@ export function BakedScreenController({
       return;
     }
 
+    const heroPresence = 1 - getHeroHandoffProgress(experienceState.progress);
     (Object.values(runtimes) as ScreenRuntime[]).forEach((runtime) => {
       const activation = getActivation(runtime.id);
       const production = experienceState.stage.production;
@@ -356,7 +357,7 @@ export function BakedScreenController({
       runtime.material.uniforms.uActivation.value = activation;
       runtime.material.uniforms.uHover.value = hover;
       runtime.material.uniforms.uTime.value = clock.elapsedTime;
-      runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);
+      runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId) * heroPresence;
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
       runtime.hoverLabelMaterial.opacity = hover;

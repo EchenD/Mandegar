@@ -56,7 +56,7 @@ export function Header({ locale, settings }: HeaderProps) {
 
   return (
     <header className={styles.header}>
-      <Link className={styles.logo} href={localizedPath(locale)} aria-label={locale === "fa" ? "خانه مندگار" : locale === "ar" ? "الصفحة الرئيسية لمندگار" : "Mandegar home"} onClick={() => setOpen(false)}>
+      <Link prefetch={false} className={styles.logo} href={localizedPath(locale)} aria-label={locale === "fa" ? "خانه مندگار" : locale === "ar" ? "الصفحة الرئيسية لمندگار" : "Mandegar home"} onClick={() => setOpen(false)}>
         <span className={styles.logoMark} aria-hidden="true"><span /></span>
         <span className={styles.logoText}>{settings?.title || "MANDEGAR"}</span>
       </Link>
@@ -70,7 +70,7 @@ export function Header({ locale, settings }: HeaderProps) {
         inert={mobileNavigation && !open ? true : undefined}
       >
         {links.map((link) => (
-          <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
+          <Link prefetch={false} key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
         ))}
         <div className={styles.mobileLanguage} aria-label="Language switcher">
           <LanguageLink locale={locale} target="fa" pathname={pathname} />
@@ -85,7 +85,7 @@ export function Header({ locale, settings }: HeaderProps) {
           <LanguageLink locale={locale} target="en" pathname={pathname} />
           <LanguageLink locale={locale} target="ar" pathname={pathname} />
         </div>
-        <Link className="button buttonSmall" href={localizedPath(locale, "contact")} data-analytics="cta_start_project" onClick={() => setOpen(false)}>{copy.start}</Link>
+        <Link prefetch={false} className="button buttonSmall" href={localizedPath(locale, "contact")} data-analytics="cta_start_project" onClick={() => setOpen(false)}>{copy.start}</Link>
         <button ref={menuButton} className={styles.menuButton} type="button" aria-expanded={open} aria-controls="primary-navigation" onClick={() => setOpen(!open)}>
           <span className="srOnly">{open ? copy.close : copy.menu}</span>
           <i /><i />
@@ -104,7 +104,7 @@ function LanguageLink({ locale, target, pathname }: { locale: Locale; target: Lo
   const segments = pathname.split("/");
   const href = locales.includes(segments[1] as Locale) ? ["", target, ...segments.slice(2)].join("/") : localizedPath(target);
   return (
-    <Link className={locale === target ? styles.activeLanguage : ""} href={href} hrefLang={target} lang={target} data-analytics="language_select" data-analytics-label={target} aria-current={locale === target ? "page" : undefined}>
+    <Link prefetch={false} className={locale === target ? styles.activeLanguage : ""} href={href} hrefLang={target} lang={target} data-analytics="language_select" data-analytics-label={target} aria-current={locale === target ? "page" : undefined}>
       {target === "fa" ? "فا" : target === "en" ? "EN" : "AR"}
     </Link>
   );

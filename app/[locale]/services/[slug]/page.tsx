@@ -54,7 +54,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       ]} />
       <section className="detailHero">
         <div className="pageWidth">
-          <Link className="backLink" href={localizedPath(locale, "services")}>← {back}</Link>
+          <Link prefetch={false} className="backLink" href={localizedPath(locale, "services")}>← {back}</Link>
           {service.status === "emerging" ? <span className="emergingNotice">{ui.emerging}</span> : null}
           <div className="detailMeta"><span>{service.number}</span><span>{service.status === "emerging" ? ui.emerging : current}</span></div>
           <h1>{title}</h1>
