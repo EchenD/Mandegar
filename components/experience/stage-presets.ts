@@ -259,7 +259,7 @@ export const stagePresets = {
     lighting: { mode: "reset", energy: 0.24, contrast: 0.2 },
     spatialInfo: { mode: "hidden", prominence: 0 },
     production: {
-      environmentReveal: 1, centralReveal: 0.26, leftReveal: 0.26, rightReveal: 0.26,
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
       environmentPeak: 0, centralPeak: 0, leftPeak: 0, rightPeak: 0,
       interactiveScreen: 0, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
       crowdPresence: 0, dataFlow: 0, transitionParticles: 0.68,
@@ -492,11 +492,9 @@ function getProductionTransitionMix(
   );
 }
 
-/** Holds the camera on the final authored Loop composition at the page handoff. */
+/** Lets the final Loop camera finish on its centered handoff composition. */
 export function getCameraLoopSampleProgress(progress: number) {
-  const safeProgress = Math.min(1, Math.max(0, progress));
-  const finalCameraProgress = narrativeScore[narrativeScore.length - 1].preview;
-  return Math.min(safeProgress, finalCameraProgress);
+  return Math.min(1, Math.max(0, progress));
 }
 
 /** Interpolates renderer controls between the nine authored preview anchors. */

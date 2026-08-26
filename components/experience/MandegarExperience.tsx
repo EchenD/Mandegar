@@ -3,10 +3,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
-import { AboutSystem } from "./AboutSystem";
-import { ClientVoices, type ClientMark, type ClientVoice } from "./ClientVoices";
+import type { JourneyClient, JourneyVoice } from "./ConnectedJourney";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
 import { ScrollMotion } from "./ScrollMotion";
@@ -19,8 +18,8 @@ const ExperienceCanvas = dynamic(
   { ssr: false },
 );
 
-const ProjectHelix = dynamic(
-  () => import("./ProjectHelix").then((module) => module.ProjectHelix),
+const ConnectedJourney = dynamic(
+  () => import("./ConnectedJourney").then((module) => module.ConnectedJourney),
   { ssr: false },
 );
 
@@ -84,8 +83,8 @@ type ExperienceProps = {
   copy: ExperienceCopy;
   ctaHref: string;
   projects?: ExperienceProject[];
-  testimonials?: ClientVoice[];
-  clients?: ClientMark[];
+  testimonials?: JourneyVoice[];
+  clients?: JourneyClient[];
   enabledByCms?: boolean;
   lenisEnabled?: boolean;
 };
@@ -95,8 +94,8 @@ type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: typeof Au
 const postExperienceCopy = {
   fa: {
     projectsKicker: "پروژه‌ها / منتخب",
-    projectsTitle: "چند تجربه که از ایده به واقعیت رسیده‌اند.",
-    projectsBody: "در هر پروژه مکث کنید و میان نمونه‌های مفهومی حرکت کنید. هر جایگاه برای جایگزینی مستقیم با پروژه‌های تأییدشده CMS آماده است.",
+    projectsTitle: "این‌ها تجربه‌هایی هستند که پیش‌تر برای دیگران ساخته‌ایم.",
+    projectsBody: "مسیر در هر پروژه مکث می‌کند تا کار را ببینید و با حرکت نشانگر جزئیات آن را کشف کنید. هر جایگاه برای پروژه‌های تأییدشده CMS آماده است.",
     viewProject: "مشاهده پروژه",
     projectsEmpty: "پروژه‌های تأییدشده پس از انتشار در این بخش نمایش داده می‌شوند.",
     aboutKicker: "درباره ما",
@@ -109,8 +108,8 @@ const postExperienceCopy = {
   },
   en: {
     projectsKicker: "Projects / Selected",
-    projectsTitle: "Experiences brought from idea to reality.",
-    projectsBody: "Stay with each project and move through clearly labelled concept samples. Every slot is ready for approved CMS work.",
+    projectsTitle: "Here is what we have already built with others.",
+    projectsBody: "The journey pauses at every project so you can see the work and inspect it with the pointer. Every position is ready for approved CMS work.",
     viewProject: "View project",
     projectsEmpty: "Approved projects will appear here when they are published.",
     aboutKicker: "About us",
@@ -123,8 +122,8 @@ const postExperienceCopy = {
   },
   ar: {
     projectsKicker: "المشاريع / مختارات",
-    projectsTitle: "تجارب انتقلت من الفكرة إلى الواقع.",
-    projectsBody: "توقّف عند كل مشروع وتنقّل بين نماذج مفاهيمية واضحة. كل مساحة جاهزة لأعمال CMS المعتمدة.",
+    projectsTitle: "هذه تجارب سبق أن بنيناها مع الآخرين.",
+    projectsBody: "تتوقّف الرحلة عند كل مشروع لتشاهد العمل وتستكشف تفاصيله بالمؤشر. كل مساحة جاهزة لأعمال CMS المعتمدة.",
     viewProject: "عرض المشروع",
     projectsEmpty: "ستظهر المشاريع المعتمدة هنا عند نشرها.",
     aboutKicker: "من نحن",
@@ -153,6 +152,7 @@ export function MandegarExperience({
   const [loadProgress, setLoadProgress] = useState(12);
   const [interactionReady, setInteractionReady] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [backToTopVisible, setBackToTopVisible] = useState(false);
   const audioContext = useRef<AudioContext | undefined>(undefined);
   const audioNodes = useRef<AudioNode[]>([]);
   const canvasProjects = useMemo(
@@ -163,6 +163,29 @@ export function MandegarExperience({
     [projects],
   );
   const pageCopy = postExperienceCopy[locale];
+
+  useLayoutEffect(() => {
+    const previousRestoration = window.history.scrollRestoration;
+    const previousBehavior = document.documentElement.style.scrollBehavior;
+    window.history.scrollRestoration = "manual";
+    document.documentElement.style.scrollBehavior = "auto";
+
+    const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const handlePageShow = () => resetScroll();
+    resetScroll();
+    window.addEventListener("pageshow", handlePageShow);
+    const firstFrame = window.requestAnimationFrame(() => {
+      resetScroll();
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.removeEventListener("pageshow", handlePageShow);
+      window.history.scrollRestoration = previousRestoration;
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    };
+  }, []);
 
   useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => {
@@ -193,6 +216,31 @@ export function MandegarExperience({
     };
   }, [interactionReady]);
 
+  useEffect(() => {
+    let frame: number | undefined;
+    const syncBackToTop = () => {
+      frame = undefined;
+      const hero = document.querySelector<HTMLElement>("[data-experience-root]");
+      const threshold = hero
+        ? hero.offsetTop + hero.offsetHeight - window.innerHeight
+        : window.innerHeight * 2;
+      const visible = interactionReady && window.scrollY >= threshold;
+      setBackToTopVisible((current) => current === visible ? current : visible);
+    };
+    const requestSync = () => {
+      if (frame !== undefined) return;
+      frame = window.requestAnimationFrame(syncBackToTop);
+    };
+    syncBackToTop();
+    window.addEventListener("scroll", requestSync, { passive: true });
+    window.addEventListener("resize", requestSync);
+    return () => {
+      window.removeEventListener("scroll", requestSync);
+      window.removeEventListener("resize", requestSync);
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+    };
+  }, [interactionReady]);
+
   const handleRuntimeReady = useCallback((nextRuntime: "pending" | "fallback" | "adaptive" | "full") => {
     setRuntime(nextRuntime);
     setLoadProgress(72);
@@ -212,6 +260,18 @@ export function MandegarExperience({
     const checkpoint = narrativeScore.find((item) => item.id === phase);
     if (checkpoint) scrollToProgress(checkpoint.preview);
   }, [scrollToProgress]);
+
+  const returnToTop = useCallback(() => {
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    if (root) {
+      root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: 0 } }));
+      return;
+    }
+    const previousBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.style.scrollBehavior = previousBehavior;
+  }, []);
 
   const selectProject = useCallback((index: number) => {
     const project = projects[index];
@@ -426,59 +486,42 @@ export function MandegarExperience({
       </div>
       </ScrollMotion>
 
-      <div className={styles.postExperience} data-post-experience>
-        <section className={`${styles.contentSection} ${styles.projectsSection}`} aria-labelledby="home-projects-title">
-          <div className={styles.contentWidth}>
-            <div className={styles.sectionIntro}>
-              <span>{pageCopy.projectsKicker}</span>
-              <div>
-                <h2 id="home-projects-title">{pageCopy.projectsTitle}</h2>
-                <p>{pageCopy.projectsBody}</p>
-              </div>
-            </div>
-            {projects.length > 1 ? <ProjectHelix projects={projects} locale={locale} /> : null}
-            {projects.length ? (
-              <div className={`${styles.projectList} ${projects.length > 1 ? styles.projectListEnhanced : ""}`}>
-                {projects.map((project, index) => (
-                  <Link
-                    key={project.slug}
-                    href={localizedPath(locale, `projects/${project.slug}`)}
-                    className={styles.projectItem}
-                  >
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <div>
-                      <small>{project.eyebrow}</small>
-                      <h3>{project.title}</h3>
-                      <p>{project.summary}</p>
-                    </div>
-                    <strong>{pageCopy.viewProject} ↗</strong>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.emptyState}>{pageCopy.projectsEmpty}</p>
-            )}
-          </div>
-        </section>
+      <ConnectedJourney
+        locale={locale}
+        projects={projects}
+        voices={testimonials}
+        clients={clients}
+        copy={{
+          projectKicker: pageCopy.projectsKicker,
+          projectTitle: pageCopy.projectsTitle,
+          projectBody: pageCopy.projectsBody,
+          viewProject: pageCopy.viewProject,
+          projectsEmpty: pageCopy.projectsEmpty,
+          aboutKicker: pageCopy.aboutKicker,
+          aboutTitle: pageCopy.aboutTitle,
+          aboutBody: pageCopy.aboutBody,
+          aboutLink: pageCopy.aboutLink,
+          testimonialsKicker: pageCopy.testimonialsKicker,
+          testimonialsTitle: pageCopy.testimonialsTitle,
+          testimonialsPlaceholder: pageCopy.testimonialsPlaceholder,
+          finalTitle: copy.invitationTitle,
+          finalBody: copy.invitationBody,
+          finalCta: copy.startProject,
+        }}
+        aboutHref={localizedPath(locale, "about")}
+        ctaHref={ctaHref}
+      />
 
-        <AboutSystem
-          locale={locale}
-          kicker={pageCopy.aboutKicker}
-          title={pageCopy.aboutTitle}
-          body={pageCopy.aboutBody}
-          linkLabel={pageCopy.aboutLink}
-          href={localizedPath(locale, "about")}
-        />
-
-        <ClientVoices
-          locale={locale}
-          kicker={pageCopy.testimonialsKicker}
-          title={pageCopy.testimonialsTitle}
-          placeholder={pageCopy.testimonialsPlaceholder}
-          voices={testimonials}
-          clients={clients}
-        />
-      </div>
+      <button
+        className={styles.backToTop}
+        type="button"
+        data-visible={backToTopVisible ? "true" : "false"}
+        aria-label={locale === "fa" ? "بازگشت به بالا" : locale === "ar" ? "العودة إلى الأعلى" : "Back to top"}
+        title={locale === "fa" ? "بازگشت به بالا" : locale === "ar" ? "العودة إلى الأعلى" : "Back to top"}
+        onClick={returnToTop}
+      >
+        <span aria-hidden="true">↑</span>
+      </button>
     </>
   );
 }

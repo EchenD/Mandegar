@@ -232,7 +232,7 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
       * 1.35;
     let pointerTarget = experienceState.pointerPresent && strength > 0.002 ? 1 : 0;
     if (experienceState.pointerPresent) {
-      pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
+      pointerNdc.current.set(experienceState.pointerX, experienceState.pointerY);
       camera.getWorldDirection(pointerNormal.current);
       pointerPlane.current.setFromNormalAndCoplanarPoint(pointerNormal.current, networkFocus);
       raycaster.current.setFromCamera(pointerNdc.current, camera);

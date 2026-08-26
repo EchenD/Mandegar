@@ -209,7 +209,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     if (secondaryMeta.current && secondaryMeta.current.textContent !== (copy.secondaryMeta ?? "")) secondaryMeta.current.textContent = copy.secondaryMeta ?? "";
 
     const pointerX = (experienceState.pointerX * 0.5 + 0.5) * frame.width;
-    const pointerY = (experienceState.pointerY * 0.5 + 0.5) * frame.height;
+    const pointerY = (0.5 - experienceState.pointerY * 0.5) * frame.height;
     const proximityRadius = frame.compact ? 120 : 230;
     const proximityCore = frame.compact ? 34 : 54;
     const getProximity = (point: SpatialScreenPoint) => {
@@ -284,8 +284,14 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     });
     const onVisibilityChange = () => setPageVisible(document.visibilityState === "visible");
     const onPointerMove = (event: PointerEvent) => {
-      experienceState.pointerX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 2;
-      experienceState.pointerY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 2;
+      const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+      const bounds = canvas?.getBoundingClientRect();
+      const left = bounds?.left ?? 0;
+      const top = bounds?.top ?? 0;
+      const width = Math.max(bounds?.width ?? window.innerWidth, 1);
+      const height = Math.max(bounds?.height ?? window.innerHeight, 1);
+      experienceState.pointerX = THREE.MathUtils.clamp(((event.clientX - left) / width) * 2 - 1, -1, 1);
+      experienceState.pointerY = THREE.MathUtils.clamp(1 - ((event.clientY - top) / height) * 2, -1, 1);
       experienceState.pointerPresent = event.pointerType !== "touch";
     };
     const resetPointer = () => {

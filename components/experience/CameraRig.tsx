@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { experienceState } from "./experience-state";
-import { assetSlots, cameraKeyframes, sceneTokens } from "./scene-config";
+import { assetSlots, cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
 import { getCameraLoopSampleProgress } from "./stage-presets";
 
 function smoothstep(value: number) {
@@ -94,6 +94,9 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
   const cameraForward = useRef(new THREE.Vector3());
   const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const cameraLifeQuaternion = useRef(new THREE.Quaternion());
+  const handoffCameraOffset = useRef(new THREE.Vector3());
+  const handoffBaseQuaternion = useRef(new THREE.Quaternion());
+  const handoffTargetQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
   const cameraLifeBlend = useRef(0);
 
@@ -191,6 +194,24 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
       introCameraOffset.current.fromArray(experienceState.intro.cameraLocalOffset).applyQuaternion(camera.quaternion);
       camera.position.add(introCameraOffset.current);
     }
+
+    const handoffProgress = introActive ? 0 : getHeroHandoffProgress(progress);
+    if (handoffProgress > 0) {
+      handoffCameraOffset.current.set(
+        0,
+        -handoffProgress * (mobile ? 4.8 : 5.6),
+        handoffProgress * (mobile ? 2.2 : 2.8),
+      );
+      camera.position.add(handoffCameraOffset.current);
+      cameraTarget.current.y -= handoffProgress * (mobile ? 1.2 : 1.6);
+      handoffBaseQuaternion.current.copy(camera.quaternion);
+      camera.lookAt(cameraTarget.current);
+      handoffTargetQuaternion.current.copy(camera.quaternion);
+      camera.quaternion.copy(handoffBaseQuaternion.current).slerp(
+        handoffTargetQuaternion.current,
+        handoffProgress,
+      );
+    }
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {
         fov: baseFov,
@@ -205,8 +226,9 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
       ? 0
       : THREE.MathUtils.damp(cameraLifeBlend.current, 1, 1, springDelta);
     const lifeBlend = cameraLifeBlend.current;
-    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife;
-    const pointerScale = lifeBlend * stage.cameraPointer;
+    const heroPresence = 1 - handoffProgress;
+    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife * heroPresence;
+    const pointerScale = lifeBlend * stage.cameraPointer * heroPresence;
     cameraLifeTime.current += springDelta;
     const elapsed = cameraLifeTime.current;
     const turn = Math.PI * 2;
@@ -223,7 +245,7 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
     cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
     cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
     camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0] * pointerScale);
-    camera.position.addScaledVector(cameraUp.current, breathY - cameraPointer.current.y * pointerMotion.position[1] * pointerScale);
+    camera.position.addScaledVector(cameraUp.current, breathY + cameraPointer.current.y * pointerMotion.position[1] * pointerScale);
     camera.position.addScaledVector(cameraForward.current, breathZ);
     const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + 0.35) * breathing.rotation[0] * breathingScale;
     const breathYaw = (
@@ -232,7 +254,7 @@ export function CameraRig({ source = assetSlots.assembled }: { source?: string }
     ) * breathing.rotation[1] * breathingScale;
     const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + 0.6) * breathing.rotation[2] * breathingScale;
     cameraLifeEuler.current.set(
-      breathPitch - cameraPointer.current.y * pointerMotion.rotation[0] * pointerScale,
+      breathPitch + cameraPointer.current.y * pointerMotion.rotation[0] * pointerScale,
       breathYaw - cameraPointer.current.x * pointerMotion.rotation[1] * pointerScale,
       breathRoll,
       "YXZ",

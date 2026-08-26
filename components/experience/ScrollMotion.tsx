@@ -14,7 +14,7 @@ import {
   narrativeScore,
   type ScenePhaseId,
 } from "./narrative-score";
-import { sceneTokens } from "./scene-config";
+import { getHeroHandoffProgress, sceneTokens } from "./scene-config";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -138,6 +138,7 @@ export function ScrollMotion({
       const phase = narrative.phase;
       root.dataset.narrativeProgress = safeProgress.toFixed(4);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
+      root.style.setProperty("--hero-handoff", getHeroHandoffProgress(safeProgress).toFixed(4));
       root.dataset.storyStage = phase;
       const vignettePeak = Math.max(
         experienceState.stage.production.environmentPeak,

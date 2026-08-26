@@ -32,8 +32,7 @@ import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./MandegarModel";
-import { phaseProgress } from "./scene-config";
-import { assetSlots, sceneTokens, type SceneQuality } from "./scene-config";
+import { assetSlots, getHeroHandoffProgress, phaseProgress, sceneTokens, type SceneQuality } from "./scene-config";
 import type { SpatialHudFrame, SpatialHudModeId, SpatialScreenPoint } from "./spatial-hud";
 import { TransitionParticleField } from "./TransitionParticleField";
 
@@ -398,15 +397,16 @@ export function BakedMandegarScene({
     }
 
     const production = experienceState.stage.production;
+    const heroPresence = 1 - getHeroHandoffProgress(experienceState.progress);
     const environmentReveal = experienceState.sequence === "loading"
       ? 0
       : experienceState.sequence === "intro"
         ? experienceState.intro.assemblyProgress
-        : production.environmentReveal;
-    updateSection(runtime.environment, environmentReveal, production.environmentPeak, clock.elapsedTime);
-    updateSection(runtime.central, production.centralReveal, production.centralPeak, clock.elapsedTime);
-    updateSection(runtime.left, production.leftReveal, production.leftPeak, clock.elapsedTime);
-    updateSection(runtime.right, production.rightReveal, production.rightPeak, clock.elapsedTime);
+        : production.environmentReveal * heroPresence;
+    updateSection(runtime.environment, environmentReveal, production.environmentPeak * heroPresence, clock.elapsedTime);
+    updateSection(runtime.central, production.centralReveal * heroPresence, production.centralPeak * heroPresence, clock.elapsedTime);
+    updateSection(runtime.left, production.leftReveal * heroPresence, production.leftPeak * heroPresence, clock.elapsedTime);
+    updateSection(runtime.right, production.rightReveal * heroPresence, production.rightPeak * heroPresence, clock.elapsedTime);
 
     if (!firstFrame.current) {
       firstFrame.current = true;

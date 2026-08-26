@@ -165,7 +165,7 @@ export const narrativeCueRanges = {
   totalReveal: [0.4, 0.52],
   intelligence: [0.73, 0.82],
   haloCondense: [0.82, 0.91],
-  loopReset: [0.93, 1],
+  loopReset: [0.982, 1],
 } as const;
 
 export const narrativeMoments = {

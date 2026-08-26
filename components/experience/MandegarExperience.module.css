@@ -1,5 +1,6 @@
 .root {
   --scene-progress: 0;
+  --hero-handoff: 0;
   --vignette-rgb: 219 219 216;
   --vignette-opacity: .82;
   --experience-ink: #16191d;
@@ -15,6 +16,14 @@
   background: #e8ebea;
   isolation: isolate;
   transition: z-index 0s linear .78s;
+}
+
+:global(html:has([data-experience-root])) {
+  scrollbar-width: none;
+}
+
+:global(html:has([data-experience-root]))::-webkit-scrollbar {
+  display: none;
 }
 
 .root[data-story-stage="experiences"],
@@ -117,6 +126,12 @@
   opacity: var(--vignette-opacity);
   pointer-events: none;
   will-change: background, opacity;
+}
+
+.root[data-story-stage="loop"] .soundControl,
+.root[data-story-stage="loop"] .phaseRail,
+.root[data-story-stage="loop"] .scrollCue {
+  opacity: calc(1 - var(--hero-handoff));
 }
 
 .loader {
@@ -318,22 +333,7 @@
   visibility: hidden;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  isolation: isolate;
   will-change: opacity, visibility;
-}
-
-.sceneCopy::before {
-  position: absolute;
-  inset: -1.4rem -2rem;
-  z-index: -1;
-  border-radius: 1.5rem;
-  background: rgba(247, 247, 244, .012);
-  pointer-events: none;
-  content: "";
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .sceneCopy::before { backdrop-filter: blur(12px); }
 }
 
 :global([dir="rtl"]) .sceneCopy,
@@ -415,6 +415,10 @@
 
 .root[data-scroll-engaged="true"] .phaseRail { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
 
+.root[data-scroll-engaged="true"][data-story-stage="loop"] .phaseRail {
+  opacity: calc(1 - var(--hero-handoff));
+}
+
 .phaseTrack { position: relative; display: block; height: 1px; background: var(--experience-line); }
 .phaseTrack i { display: block; width: 100%; height: 100%; background: var(--experience-accent); transform: scaleX(var(--scroll-progress)); transform-origin: left center; will-change: transform; }
 .phaseButtons { position: relative; height: 1.2rem; margin-block-start: .45rem; }
@@ -428,6 +432,42 @@
 .scrollCue i { position: relative; width: 1px; height: 2.4rem; overflow: hidden; background: var(--experience-line); }
 .scrollCue i::after { position: absolute; inset: -45% 0 auto; height: 45%; background: var(--experience-accent); content: ""; animation: scrollCueTravel 1.65s cubic-bezier(.4, 0, .2, 1) infinite; }
 .root[data-scroll-engaged="true"] .scrollCue { opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, .45rem); transition-delay: 0s, 0s, .45s; }
+
+.backToTop {
+  position: fixed;
+  inset-inline-end: clamp(4.5rem, 6vw, 5.5rem);
+  inset-block-end: clamp(1rem, 2vh, 1.4rem);
+  z-index: 30;
+  display: grid;
+  width: 2.9rem;
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(117, 216, 255, .34);
+  border-radius: 50%;
+  color: #f7f7f4;
+  background: rgba(8, 11, 16, .64);
+  box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transform: translateY(.75rem) scale(.92);
+  transition: opacity .3s ease, visibility 0s linear .3s, transform .35s cubic-bezier(.22, 1, .36, 1), border-color .25s ease;
+}
+
+.backToTop[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+.backToTop span { font-size: 1rem; line-height: 1; transform: translateY(-.05rem); }
+.backToTop:hover { border-color: #75d8ff; transform: translateY(-.18rem) scale(1.03); }
+.backToTop:focus-visible { outline: 2px solid #75d8ff; outline-offset: .25rem; }
 
 .root[data-story-stage="experiences"] :global([data-spatial-labels]),
 .root[data-story-stage="proof"] :global([data-spatial-labels]),

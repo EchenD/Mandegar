@@ -319,6 +319,13 @@ export function phaseProgress(progress: number, range: readonly [number, number]
   return rangeProgress(progress, range);
 }
 
+export const heroHandoffRange = [0.982, 1] as const;
+
+export function getHeroHandoffProgress(progress: number) {
+  const value = phaseProgress(progress, heroHandoffRange);
+  return value * value * (3 - 2 * value);
+}
+
 export function getVisualStoryState(progress: number) {
   const { living, peak, energy, reset } = getNarrativeFrame(progress);
   return { living, peak, energy, reset };

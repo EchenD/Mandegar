@@ -185,6 +185,6 @@ test.describe("creative stage presets", () => {
     expect(loopRest.cameraLife).toBe(stagePresets.loop.camera.life);
     expect(loopRest.cameraPointer).toBe(stagePresets.loop.camera.pointer);
     expect(getCameraLoopSampleProgress(0.0005)).toBe(0.0005);
-    expect(getCameraLoopSampleProgress(0.9995)).toBe(narrativeScore[8].preview);
+    expect(getCameraLoopSampleProgress(0.9995)).toBe(0.9995);
   });
 });

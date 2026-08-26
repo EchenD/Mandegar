@@ -90,7 +90,7 @@ export function WorldEnvironment() {
     if (magentaLight.current) magentaLight.current.intensity = (stageGlow * 0.72 + story.energy * 1.85 + story.peak * 2.1 + Math.sin(clock.elapsedTime * 0.72) * story.energy * 0.2) * experienceState.lightScale;
     if (amberLight.current) amberLight.current.intensity = (stageGlow * 0.48 + story.energy * 1.4 + story.peak * 2.35 + Math.cos(clock.elapsedTime * 0.58) * story.energy * 0.16) * experienceState.lightScale;
     if (interactionLight.current) {
-      interactionLight.current.position.set(pointer.current.x * 7, 3.7 - pointer.current.y * 2.8, 4.5);
+      interactionLight.current.position.set(pointer.current.x * 7, 3.7 + pointer.current.y * 2.8, 4.5);
       interactionLight.current.intensity = (0.08 + stage.particleResponse * 0.34 + story.energy * 0.58 + experienceState.pointerPulse * stage.particleResponse * 1.4) * experienceState.lightScale;
     }
     const backgroundEnergy = Math.max(story.living, stage.lightEnergy * 0.28);

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { experienceState } from "./experience-state";
-import { sceneTokens, type SceneQuality } from "./scene-config";
+import { getHeroHandoffProgress, sceneTokens, type SceneQuality } from "./scene-config";
 
 const vertexShader = /* glsl */ `
   attribute float aSeed;
@@ -173,7 +173,7 @@ export function AmbientDust({
       environmentPresence,
       0.18,
       0.72,
-    );
+    ) * (1 - getHeroHandoffProgress(progress));
     if (points.current) points.current.visible = material.uniforms.uOpacity.value > 0.002;
   });
 

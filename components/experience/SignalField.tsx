@@ -98,7 +98,7 @@ export function SignalField({ quality }: { quality: SceneQuality }) {
       : stage.particlePresence;
     const modelScale = 1;
     const modelYOffset = 0;
-    pointerNdc.current.set(experienceState.pointerX, -experienceState.pointerY);
+    pointerNdc.current.set(experienceState.pointerX, experienceState.pointerY);
     camera.getWorldDirection(pointerNormal.current);
     focusWorld.current.copy(data.focus).multiplyScalar(modelScale);
     focusWorld.current.y += modelYOffset;

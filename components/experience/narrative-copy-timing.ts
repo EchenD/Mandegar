@@ -21,7 +21,7 @@ export const narrativeCopyRhythm = {
   breathing: 0.012,
   openingBreathingRatio: 3,
   closingBreathingRatio: 0.5,
-  loopBoundary: 0.998,
+  loopBoundary: 0.984,
 } as const;
 
 /** Per-stage animation character; these values never change the shared breathing gaps. */

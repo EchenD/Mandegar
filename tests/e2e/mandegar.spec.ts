@@ -481,6 +481,59 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator(".footer")).toBeVisible();
   });
 
+  test("reload starts at the beginning and the gallery is pre-positioned behind the hero handoff", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0", { waitUntil: "networkidle" });
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
+
+    const root = page.locator("[data-experience-root]");
+    const journey = page.locator("[data-connected-journey]");
+    const flow = await page.evaluate(() => {
+      const hero = document.querySelector<HTMLElement>("[data-experience-root]");
+      const projects = document.querySelector<HTMLElement>("[data-connected-journey]");
+      if (!hero || !projects) return null;
+      return {
+        heroEnd: hero.getBoundingClientRect().top + window.scrollY + hero.offsetHeight,
+        journeyStart: projects.getBoundingClientRect().top + window.scrollY,
+        journeyMargin: getComputedStyle(projects).marginBlockStart,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(flow).not.toBeNull();
+    expect(Math.abs((flow?.heroEnd ?? 0) - (flow?.journeyStart ?? 0) - (flow?.viewportHeight ?? 0) * 2)).toBeLessThan(2);
+    expect(flow?.journeyMargin).toBe(`-${(flow?.viewportHeight ?? 0) * 2}px`);
+
+    await root.evaluate((node) => {
+      node.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .995 } }));
+    });
+    await expect.poll(() => journey.evaluate((node) => Number(getComputedStyle(node).getPropertyValue("--journey-reveal")))).toBeGreaterThan(.7);
+    await expect.poll(() => journey.locator("[data-project-helix-sticky]").evaluate((node) => Math.round(node.getBoundingClientRect().top))).toBe(0);
+
+    await page.evaluate(() => {
+      const projects = document.querySelector<HTMLElement>("[data-connected-journey]");
+      if (projects) window.scrollTo({ top: projects.offsetTop + window.innerHeight, behavior: "auto" });
+    });
+    await expect(journey.locator("canvas")).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => journey.locator("[data-project-helix-sticky]").evaluate((node) => Math.round(node.getBoundingClientRect().top))).toBe(0);
+    await expect.poll(() => journey.evaluate((node) => Number(getComputedStyle(node).getPropertyValue("--journey-reveal")))).toBe(1);
+
+    const backToTop = page.getByRole("button", { name: "Back to top" });
+    await expect(backToTop).toBeVisible();
+    await backToTop.click();
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
+
+    await page.evaluate(() => {
+      const projects = document.querySelector<HTMLElement>("[data-connected-journey]");
+      if (projects) window.scrollTo({ top: projects.offsetTop + window.innerHeight, behavior: "auto" });
+    });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1_000);
+
+    await page.reload({ waitUntil: "networkidle" });
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
+    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-native-progress")).toBe("0.0000");
+  });
+
   test("project helix renders CMS projects without hijacking page scroll", async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -490,8 +543,8 @@ test.describe("Mandegar responsive layout", () => {
     await expect(helix.getByRole("button")).toHaveCount(6);
     const start = await helix.evaluate((node) => {
       const top = node.getBoundingClientRect().top + window.scrollY;
-      const travel = node.clientHeight - window.innerHeight;
-      return top + travel * 0.08;
+      const travel = node.clientHeight - window.innerHeight * 2;
+      return top + window.innerHeight + travel * 0.08;
     });
     await page.evaluate((top) => window.scrollTo(0, top), start);
     await expect(helix.locator("canvas")).toBeVisible({ timeout: 30_000 });

@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
 import { bakedSceneContract, type BakedSectionId } from "./baked-scene-contract";
 import { experienceState } from "./experience-state";
-import { sceneTokens, type SceneQuality } from "./scene-config";
+import { getHeroHandoffProgress, sceneTokens, type SceneQuality } from "./scene-config";
 import { getStageFrame } from "./stage-presets";
 
 type SampleSource = {
@@ -233,6 +233,9 @@ export function TransitionParticleField({
 
   useFrame(({ clock }) => {
     const production = experienceState.stage.production;
+    const handoffProgress = getHeroHandoffProgress(experienceState.progress);
+    const heroPresence = 1 - handoffProgress;
+    const particleExit = THREE.MathUtils.smoothstep(handoffProgress, 0.68, 1);
     const particleProduction = getStageFrame(
       Math.min(1, experienceState.progress + sceneTokens.bakedScene.particleLeadProgress),
     ).production;
@@ -240,22 +243,22 @@ export function TransitionParticleField({
       ? experienceState.intro.assemblyProgress
       : production.environmentReveal;
     material.uniforms.uReveal.value.set(
-      environmentReveal,
-      production.centralReveal,
-      production.leftReveal,
-      production.rightReveal,
+      environmentReveal * heroPresence,
+      production.centralReveal * heroPresence,
+      production.leftReveal * heroPresence,
+      production.rightReveal * heroPresence,
     );
     material.uniforms.uParticleReveal.value.set(
-      environmentReveal,
-      particleProduction.centralReveal,
-      particleProduction.leftReveal,
-      particleProduction.rightReveal,
+      environmentReveal * heroPresence,
+      particleProduction.centralReveal * heroPresence,
+      particleProduction.leftReveal * heroPresence,
+      particleProduction.rightReveal * heroPresence,
     );
     material.uniforms.uTime.value = clock.elapsedTime;
-    material.uniforms.uIntensity.value = production.transitionParticles;
+    material.uniforms.uIntensity.value = production.transitionParticles * (1 - particleExit);
     material.uniforms.uSize.value = production.transitionParticleSize;
     material.uniforms.uTurbulence.value = production.transitionTurbulence;
-    if (points.current) points.current.visible = production.transitionParticles > 0.002;
+    if (points.current) points.current.visible = material.uniforms.uIntensity.value > 0.002;
   });
 
   return <points ref={points} geometry={geometry} material={material} frustumCulled={false} />;
