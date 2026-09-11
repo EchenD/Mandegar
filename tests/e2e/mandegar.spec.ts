@@ -436,10 +436,12 @@ test.describe("Mandegar responsive layout", () => {
     await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(0.1);
   });
 
-  test("peak stages switch copy and header chrome to a light readable theme", async ({ page }) => {
+  test("texture transition switches copy and header chrome to a light readable theme", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
-    const copy = page.locator("[data-scene-copy='proof']");
+    await page.goto("/en?phase=activation", { waitUntil: "networkidle" });
+    const root = page.locator("[data-experience-root]");
+    await expect(root).toHaveAttribute("data-ui-tone", "light");
+    const copy = page.locator("[data-scene-copy='activation']");
     await expect(copy).toBeVisible();
     const colors = await Promise.all([
       copy.evaluate((element) => getComputedStyle(element).color),
@@ -451,7 +453,7 @@ test.describe("Mandegar responsive layout", () => {
       expect(channels.every((channel) => channel > 200), color).toBe(true);
     }
     await expect(page.locator("[data-scene-vignette]")).toHaveCount(1);
-    await expect.poll(() => page.locator("[data-experience-root]").evaluate((element) => (
+    await expect.poll(() => root.evaluate((element) => (
       element.style.getPropertyValue("--vignette-rgb")
     ))).toBe("5 7 10");
   });

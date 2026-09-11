@@ -15,7 +15,7 @@
   color: var(--experience-ink);
   background: #e8ebea;
   isolation: isolate;
-  transition: z-index 0s linear .78s;
+  transition: color .25s ease, z-index 0s linear .78s;
 }
 
 :global(html:has([data-experience-root])) {
@@ -26,10 +26,7 @@
   display: none;
 }
 
-.root[data-story-stage="experiences"],
-.root[data-story-stage="proof"],
-.root[data-story-stage="intelligence"],
-.root[data-story-stage="invitation"] {
+.root[data-ui-tone="light"] {
   --experience-ink: #f7f7f4;
   --experience-muted: rgba(247, 247, 244, .76);
   --experience-faint: rgba(247, 247, 244, .5);
@@ -333,6 +330,7 @@
   visibility: hidden;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  transition: color .25s ease;
   will-change: opacity, visibility;
 }
 
@@ -350,11 +348,12 @@
   letter-spacing: .12em;
   text-transform: uppercase;
   justify-content: center;
+  transition: color .25s ease;
 }
 
 .sceneCopy > span::before { content: ""; width: 1.8rem; height: 1px; background: currentColor; }
 .sceneCopy h2 { max-width: 18ch; margin: 0 auto; font-size: clamp(1.9rem, 2.8vw, 3.75rem); font-weight: 520; line-height: 1.14; letter-spacing: -.025em; }
-.sceneCopy p { max-width: 34rem; margin: .8rem auto 0; color: var(--experience-muted); font-size: clamp(.8rem, .95vw, .98rem); line-height: 1.72; }
+.sceneCopy p { max-width: 34rem; margin: .8rem auto 0; color: var(--experience-muted); font-size: clamp(.8rem, .95vw, .98rem); line-height: 1.72; transition: color .25s ease; }
 .sceneCopy [data-copy-line] { will-change: opacity, transform, filter, clip-path; }
 
 .sceneCopy.invitationCopy,
@@ -392,9 +391,10 @@
   font: inherit;
   font-size: .55rem;
   cursor: pointer;
+  transition: color .25s ease, background-color .25s ease;
 }
 
-.soundControl span { color: var(--experience-accent); }
+.soundControl span { color: var(--experience-accent); transition: color .25s ease; }
 .soundControl:focus-visible { outline: 2px solid #225cff; outline-offset: 2px; }
 
 .phaseRail {
@@ -417,12 +417,12 @@
   opacity: calc(1 - var(--hero-handoff));
 }
 
-.phaseTrack { position: relative; display: block; height: 1px; background: var(--experience-line); }
-.phaseTrack i { display: block; width: 100%; height: 100%; background: var(--experience-accent); transform: scaleX(var(--scroll-progress)); transform-origin: left center; will-change: transform; }
+.phaseTrack { position: relative; display: block; height: 1px; background: var(--experience-line); transition: background-color .25s ease; }
+.phaseTrack i { display: block; width: 100%; height: 100%; background: var(--experience-accent); transform: scaleX(var(--scroll-progress)); transform-origin: left center; transition: background-color .25s ease; will-change: transform; }
 .phaseButtons { position: relative; height: 1.2rem; margin-block-start: .45rem; }
 .phaseButtons button { position: absolute; left: var(--phase-position); display: flex; align-items: baseline; gap: .3rem; min-width: 0; padding: 0; border: 0; color: var(--experience-faint); background: none; font: inherit; font-size: .46rem; text-align: start; cursor: pointer; transform: translateX(-50%); transition: color .25s ease; }
 .phaseButtons button[data-active="true"] { color: var(--experience-ink); }
-.phaseButtons small { color: var(--experience-accent); font-size: .42rem; }
+.phaseButtons small { color: var(--experience-accent); font-size: .42rem; transition: color .25s ease; }
 .phaseButtons span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .phaseButtons button:focus-visible { outline: 1px solid #225cff; outline-offset: 3px; }
 
@@ -467,10 +467,7 @@
 .backToTop:hover { border-color: #75d8ff; transform: translateY(-.18rem) scale(1.03); }
 .backToTop:focus-visible { outline: 2px solid #75d8ff; outline-offset: .25rem; }
 
-.root[data-story-stage="experiences"] :global([data-spatial-labels]),
-.root[data-story-stage="proof"] :global([data-spatial-labels]),
-.root[data-story-stage="intelligence"] :global([data-spatial-labels]),
-.root[data-story-stage="invitation"] :global([data-spatial-labels]) {
+.root[data-ui-tone="light"] :global([data-spatial-labels]) {
   --hud-accent: #75d8ff !important;
   --hud-ink: #f7f7f4 !important;
 }

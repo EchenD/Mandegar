@@ -140,19 +140,20 @@ export function ScrollMotion({
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.style.setProperty("--hero-handoff", getHeroHandoffProgress(safeProgress).toFixed(4));
       root.dataset.storyStage = phase;
-      const vignettePeak = Math.max(
+      const texturePeak = Math.max(
         experienceState.stage.production.environmentPeak,
         experienceState.stage.production.centralPeak,
         experienceState.stage.production.leftPeak,
         experienceState.stage.production.rightPeak,
       );
+      root.dataset.uiTone = texturePeak > 0.42 ? "light" : "dark";
       const quietVignette = [219, 219, 216] as const;
       const peakVignette = [5, 7, 10] as const;
       const vignetteRgb = quietVignette.map((channel, index) => Math.round(
-        channel + (peakVignette[index] - channel) * vignettePeak,
+        channel + (peakVignette[index] - channel) * texturePeak,
       ));
       root.style.setProperty("--vignette-rgb", vignetteRgb.join(" "));
-      root.style.setProperty("--vignette-opacity", (0.82 + vignettePeak * 0.18).toFixed(3));
+      root.style.setProperty("--vignette-opacity", (0.82 + texturePeak * 0.18).toFixed(3));
       syncNativePresentation(nativeProgress);
       if (phase !== activePhase) {
         activePhase = phase;
@@ -284,6 +285,7 @@ export function ScrollMotion({
       data-experience-root
       data-intro-active={enabled ? undefined : "true"}
       data-story-stage="arrival"
+      data-ui-tone="dark"
       style={{
         "--scene-progress": 0,
         "--scroll-progress": 0,

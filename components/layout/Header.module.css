@@ -11,8 +11,8 @@
   padding-block: 1.25rem;
 }
 
-.logo { display: inline-flex; align-items: center; gap: .65rem; color: var(--ink); text-decoration: none; font-size: .78rem; font-weight: 750; letter-spacing: .16em; }
-.logoMark { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border: 1px solid var(--ink); border-radius: 50%; }
+.logo { display: inline-flex; align-items: center; gap: .65rem; color: var(--ink); text-decoration: none; font-size: .78rem; font-weight: 750; letter-spacing: .16em; transition: color .25s ease; }
+.logoMark { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border: 1px solid var(--ink); border-radius: 50%; transition: border-color .25s ease; }
 .logoMark span { width: .38rem; height: .38rem; border-radius: 50%; background: var(--accent); box-shadow: 0 0 .7rem var(--accent); }
 .logoText { line-height: 1; }
 .nav { display: flex; align-items: center; gap: 2rem; margin-inline-start: auto; margin-inline-end: 2rem; }
@@ -24,7 +24,7 @@
 .activeLanguage { color: var(--ink) !important; font-weight: 750; }
 .mobileLanguage { display: none; }
 .menuButton { display: none; border: 0; background: transparent; cursor: pointer; padding: .55rem; }
-.menuButton i { display: block; width: 1.35rem; height: 1px; background: var(--ink); margin-block: .28rem; }
+.menuButton i { display: block; width: 1.35rem; height: 1px; background: var(--ink); margin-block: .28rem; transition: background-color .25s ease; }
 
 :global(body:has(.heroSection)) .header .logo,
 :global(body:has(.heroSection)) .header .nav a,
@@ -47,27 +47,15 @@
 :global(body:has([data-mandegar-experience])) .header .actions > .button { color: #fff; background: var(--ink); }
 :global(body:has([data-mandegar-experience])) .header .navOpen a { color: var(--ink); }
 
-:global(body:has([data-story-stage="proof"])) .header .logo,
-:global(body:has([data-story-stage="proof"])) .header .nav:not(.navOpen) a,
-:global(body:has([data-story-stage="proof"])) .header .desktopLanguage a,
-:global(body:has([data-story-stage="intelligence"])) .header .logo,
-:global(body:has([data-story-stage="intelligence"])) .header .nav:not(.navOpen) a,
-:global(body:has([data-story-stage="intelligence"])) .header .desktopLanguage a,
-:global(body:has([data-story-stage="invitation"])) .header .logo,
-:global(body:has([data-story-stage="invitation"])) .header .nav:not(.navOpen) a,
-:global(body:has([data-story-stage="invitation"])) .header .desktopLanguage a { color: rgba(247, 247, 244, .72); }
+:global(body:has([data-ui-tone="light"])) .header .logo,
+:global(body:has([data-ui-tone="light"])) .header .nav:not(.navOpen) a,
+:global(body:has([data-ui-tone="light"])) .header .desktopLanguage a { color: rgba(247, 247, 244, .72); }
 
-:global(body:has([data-story-stage="proof"])) .header .logoMark,
-:global(body:has([data-story-stage="intelligence"])) .header .logoMark,
-:global(body:has([data-story-stage="invitation"])) .header .logoMark { border-color: rgba(247, 247, 244, .82); }
+:global(body:has([data-ui-tone="light"])) .header .logoMark { border-color: rgba(247, 247, 244, .82); }
 
-:global(body:has([data-story-stage="proof"])) .header .menuButton i,
-:global(body:has([data-story-stage="intelligence"])) .header .menuButton i,
-:global(body:has([data-story-stage="invitation"])) .header .menuButton i { background: #f7f7f4; }
+:global(body:has([data-ui-tone="light"])) .header .menuButton i { background: #f7f7f4; }
 
-:global(body:has([data-story-stage="proof"])) .header .actions > .button,
-:global(body:has([data-story-stage="intelligence"])) .header .actions > .button,
-:global(body:has([data-story-stage="invitation"])) .header .actions > .button { color: #16191d; background: #f7f7f4; }
+:global(body:has([data-ui-tone="light"])) .header .actions > .button { color: #16191d; background: #f7f7f4; }
 
 .header:has(.navOpen) .logo { color: var(--ink) !important; }
 .header:has(.navOpen) .logoMark { border-color: var(--ink) !important; }
