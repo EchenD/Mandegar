@@ -16,7 +16,7 @@ import {
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { prepareBakedTexture } from "./baked-scene-material";
 import { experienceState } from "./experience-state";
-import type { SceneProject } from "./MandegarModel";
+import type { SceneProject } from "./experience-types";
 import { getHeroHandoffProgress, sceneTokens } from "./scene-config";
 
 const vertexShader = /* glsl */ `

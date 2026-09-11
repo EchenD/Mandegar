@@ -3,19 +3,15 @@
 import { Canvas } from "@react-three/fiber";
 import { Component, Suspense, type CSSProperties, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { AudienceSystem } from "./AudienceSystem";
 import { BakedMandegarScene } from "./BakedMandegarScene";
 import {
   narrativeCueRanges as activationSequence,
   rangeProgress as phaseProgress,
 } from "./narrative-score";
 import { CameraRig } from "./CameraRig";
-import { ExperiencePostProcessing } from "./ExperiencePostProcessing";
-import { MandegarModel, type SceneProject } from "./MandegarModel";
-import { SignalField } from "./SignalField";
+import type { SceneProject } from "./experience-types";
 import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { experienceState } from "./experience-state";
-import { WorldEnvironment } from "./WorldEnvironment";
 import type { SpatialHudFrame, SpatialHudModeId, SpatialScreenPoint } from "./spatial-hud";
 import spatialStyles from "./SpatialLabels.module.css";
 
@@ -52,37 +48,19 @@ function ExhibitionWorld({
   onProjectSelect?: (index: number) => void;
   onSpatialFrame?: (frame: SpatialHudFrame) => void;
 }) {
-  if (sceneTokens.rendering.pipeline === "baked-modular") {
-    return (
-      <>
-        <color attach="background" args={[sceneTokens.bakedScene.background]} />
-        <Suspense fallback={null}>
-          <CameraRig source={assetSlots.environment} />
-          <BakedMandegarScene
-            quality={quality}
-            projects={projects}
-            onFirstFrame={onFirstFrame}
-            onProjectSelect={onProjectSelect}
-            onSpatialFrame={onSpatialFrame}
-          />
-        </Suspense>
-      </>
-    );
-  }
   return (
     <>
-      <WorldEnvironment />
+      <color attach="background" args={[sceneTokens.bakedScene.background]} />
       <Suspense fallback={null}>
-        <CameraRig />
-        <MandegarModel
+        <CameraRig source={assetSlots.environment} />
+        <BakedMandegarScene
+          quality={quality}
           projects={projects}
           onFirstFrame={onFirstFrame}
           onProjectSelect={onProjectSelect}
           onSpatialFrame={onSpatialFrame}
         />
-        <SignalField quality={quality} />
       </Suspense>
-      {sceneTokens.featureFlags.audience ? <AudienceSystem quality={quality} /> : null}
     </>
   );
 }
@@ -325,28 +303,27 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
 
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback className={className} />;
   const profile = qualityProfiles[runtime];
-  const bakedPipeline = sceneTokens.rendering.pipeline === "baked-modular";
   return (
     <>
       <CanvasErrorBoundary fallback={<CanvasFallback className={className} />}>
         <Canvas
           className={className}
           data-experience-canvas="true"
-          data-particle-system={bakedPipeline ? "transition-boundary" : "signal-network"}
+          data-particle-system="transition-boundary"
           data-interaction-system="pointer-touch"
-          data-color-mode={bakedPipeline ? "baked-srgb" : "aces"}
-          data-postprocessing={bakedPipeline ? "none" : runtime === "full" ? "bloom-dof" : "performance"}
+          data-color-mode="baked-srgb"
+          data-postprocessing="none"
           data-scene-pipeline={sceneTokens.rendering.pipeline}
           aria-hidden="true"
           dpr={[profile.dpr[0], profile.dpr[1]]}
           frameloop={pageVisible ? "always" : "never"}
           camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
-          shadows={!bakedPipeline && runtime === "full"}
+          shadows={false}
           gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}
           onPointerDown={() => { experienceState.pointerPulse = 1; }}
           onCreated={({ gl }) => {
-            gl.toneMapping = bakedPipeline ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-            gl.toneMappingExposure = bakedPipeline ? 1 : sceneTokens.environment.exposure;
+            gl.toneMapping = THREE.NoToneMapping;
+            gl.toneMappingExposure = 1;
             gl.outputColorSpace = THREE.SRGBColorSpace;
           }}
         >
@@ -357,7 +334,6 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
             onProjectSelect={onProjectSelect}
             onSpatialFrame={renderSpatialHud}
           />
-          {bakedPipeline ? null : <ExperiencePostProcessing quality={runtime} />}
         </Canvas>
       </CanvasErrorBoundary>
       <div

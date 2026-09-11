@@ -1,13 +1,7 @@
 # Mandegar baked scene asset contract
 
-The production renderer is implemented behind:
-
-```env
-NEXT_PUBLIC_MANDEGAR_BAKED_SCENE=1
-```
-
-Leave it at `0` until every required file below exists. The legacy
-`mandegar_hero.glb` remains the fallback and is not replaced by this workflow.
+The production renderer uses the modular assets below directly. All required
+files must be present before starting the application.
 
 ## Coordinate rules
 
@@ -126,11 +120,10 @@ uses project poster media or a lightweight generated fallback.
 ## Activation and verification
 
 1. Copy all three GLBs and four production JPG textures to the paths above.
-2. Set `NEXT_PUBLIC_MANDEGAR_BAKED_SCENE=1` in `.env.local`.
-3. Restart `npm run dev`.
-4. Open `/fa?intro=1&creative=1`.
-5. Check the browser console. Missing contract nodes are reported by exact name.
-6. Review all nine resting stages and the final Loop-to-page handoff.
+2. Restart `npm run dev`.
+3. Open `/fa?intro=1&creative=1`.
+4. Check the browser console. Missing contract nodes are reported by exact name.
+5. Review all nine resting stages and the final Loop-to-page handoff.
 
 The creative panel now exposes section reveal, quiet/peak mix, all four screens,
 crowd, data flow, transition particle strength/size/motion, reveal edge width,

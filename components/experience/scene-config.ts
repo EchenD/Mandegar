@@ -14,7 +14,6 @@ import { bakedSceneContract } from "./baked-scene-contract";
 
 export type { ScenePhaseId } from "./narrative-score";
 export type SceneQuality = "full" | "adaptive";
-export type ScenePipeline = "legacy" | "baked-modular";
 export type CameraKeyframe = {
   progress: number;
   position: readonly [number, number, number];
@@ -28,11 +27,7 @@ export type CameraKeyframe = {
 
 export const sceneTokens = {
   rendering: {
-    pipeline: (
-      process.env.NEXT_PUBLIC_MANDEGAR_BAKED_SCENE === "1"
-        ? "baked-modular"
-        : "legacy"
-    ) as ScenePipeline,
+    pipeline: "baked-modular",
   },
   colors: {
     warmWhite: "#f7f7f4",
@@ -299,7 +294,6 @@ export const qualityProfiles: Record<SceneQuality, {
 };
 
 export const assetSlots = {
-  assembled: `${publicAssetPath("/models/mandegar/mandegar_hero.glb")}?revision=camera-v2`,
   environment: publicAssetPath("/models/mandegar/mandegar_environment.glb"),
   exhibition: publicAssetPath("/models/mandegar/mandegar_exhibition.glb"),
   crowd: publicAssetPath("/models/mandegar/mandegar_crowd.glb"),

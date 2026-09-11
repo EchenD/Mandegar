@@ -3,8 +3,8 @@ import { publicAssetPath } from "../../lib/public-asset-path";
 
 test.describe("public asset paths", () => {
   test("keeps root-relative asset URLs in normal application builds", () => {
-    expect(publicAssetPath("/models/mandegar/mandegar_hero.glb")).toBe(
-      "/models/mandegar/mandegar_hero.glb",
+    expect(publicAssetPath("/models/mandegar/mandegar_environment.glb")).toBe(
+      "/models/mandegar/mandegar_environment.glb",
     );
   });
 

@@ -31,7 +31,7 @@ import { BakedScreenController } from "./BakedScreenController";
 import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
-import type { SceneProject } from "./MandegarModel";
+import type { SceneProject } from "./experience-types";
 import {
   assetSlots,
   getHeroBackgroundProgress,

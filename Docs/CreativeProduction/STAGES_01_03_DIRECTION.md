@@ -90,7 +90,7 @@ These three stages form one sentence: **silence → discovery → coordinated ac
 | Fallback camera blockout | `scene-config.ts` → `cameraKeyframes` |
 | HUD ranges and model nodes | `scene-config.ts` → `spatialLabels` |
 | Routed particle anchors | `scene-config.ts` → `particles.modelNodes.signalRoutes` |
-| Material activation | `MandegarModel.tsx` |
+| Material activation | `BakedMandegarScene.tsx` |
 | Environment and accent lights | `WorldEnvironment.tsx` |
 
 ## Acceptance check

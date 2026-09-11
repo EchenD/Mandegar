@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { experienceState } from "./experience-state";
-import { assetSlots, cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
+import { cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
 import { getCameraLoopSampleProgress } from "./stage-presets";
 
 function smoothstep(value: number) {
@@ -73,7 +73,7 @@ export function syncPerspectiveCameraProjection(
   return true;
 }
 
-export function CameraRig({ source = assetSlots.assembled }: { source?: string }) {
+export function CameraRig({ source }: { source: string }) {
   const gltf = useLoader(GLTFLoader, source);
   const { camera, size } = useThree();
   const fallbackProjection = useRef({
