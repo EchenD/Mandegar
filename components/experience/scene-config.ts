@@ -165,8 +165,7 @@ export const sceneTokens = {
     background: "#dbdbd8",
     particleCount: { full: 11200, adaptive: 4400 },
     particleLeadProgress: 0.012,
-    crowdPreloadProgress: 0.61,
-    crowdFallbackColor: "#4b372f",
+    crowdPreloadProgress: 0.06,
     dataFlowRange: [0.748, 0.79] as const,
     ambientDust: {
       count: { full: 220, adaptive: 110 },
@@ -185,9 +184,9 @@ export const sceneTokens = {
       intelligence: [0.785, 0.837] as const,
     },
     material: {
-      edgeColor: "#ffbd73",
+      edgeColor: "#b9d2ff",
       edgeStrength: 0.2,
-      particleColor: "#ffc78b",
+      particleColor: "#a1b7ff",
     },
     screens: {
       videoWall: publicAssetPath("/media/mandegar/screens/screen-center-21x9.webp"),

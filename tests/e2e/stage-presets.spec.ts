@@ -62,15 +62,36 @@ test.describe("creative stage presets", () => {
       stage.production.rightReveal,
     ])).toEqual([
       [0, 0, 0],
-      [1, 0, 0],
-      [1, 1, 0],
+      [1, 1, 1],
+      [1, 1, 1],
     ]);
+  });
+
+  test("reveals all exhibition sections early with a short stagger", () => {
+    const beforeReveal = getStageFrame(0.085).production;
+    expect(beforeReveal.centralReveal).toBe(0);
+    expect(beforeReveal.leftReveal).toBe(0);
+    expect(beforeReveal.rightReveal).toBe(0);
+
+    const stagger = getStageFrame(0.105).production;
+    expect(stagger.centralReveal).toBeGreaterThan(stagger.leftReveal);
+    expect(stagger.leftReveal).toBeGreaterThan(stagger.rightReveal);
+
+    const settled = getStageFrame(0.145).production;
+    expect(settled.centralReveal).toBe(1);
+    expect(settled.leftReveal).toBe(1);
+    expect(settled.rightReveal).toBe(1);
   });
 
   test("authors reveal, peak media, crowd, and intelligence as separate channels", () => {
     expect(stagePresets.reveal.production.rightReveal).toBe(1);
-    expect(stagePresets.reveal.production.environmentPeak).toBe(0);
-    expect(stagePresets.experiences.production.interactiveScreen).toBe(1);
+    expect(stagePresets.discovery.production.crowdPresence).toBe(1);
+    expect(stagePresets.discovery.production.environmentPeak).toBe(0);
+    expect(stagePresets.activation.production.environmentPeak).toBe(1);
+    expect(stagePresets.activation.production.interactiveScreen).toBe(1);
+    expect(stagePresets.reveal.production.videoWallScreen).toBe(1);
+    expect(stagePresets.experiences.production.gameScreen).toBe(1);
+    expect(stagePresets.experiences.production.mainScreen).toBe(1);
     expect(stagePresets.proof.production.videoWallScreen).toBe(1);
     expect(stagePresets.proof.production.mainScreen).toBe(1);
     expect(stagePresets.proof.production.crowdPresence).toBe(1);
@@ -78,20 +99,25 @@ test.describe("creative stage presets", () => {
     expect(stagePresets.intelligence.production.dataFlow).toBe(1);
   });
 
-  test("starts the shortened texture transition before staggered activation", () => {
-    const quietHold = getStageFrame(0.47).production;
-    expect(quietHold.centralPeak).toBe(0);
-    expect(quietHold.environmentPeak).toBe(0);
-    expect(quietHold.leftPeak).toBe(0);
-    expect(quietHold.rightPeak).toBe(0);
-    expect(quietHold.mainScreen).toBe(0);
+  test("reveals the crowd before the staggered texture transition", () => {
+    const crowdSettled = getStageFrame(0.17).production;
+    expect(crowdSettled.crowdPresence).toBe(1);
+    expect(crowdSettled.environmentPeak).toBe(0);
+    expect(crowdSettled.centralPeak).toBe(0);
+    expect(crowdSettled.leftPeak).toBe(0);
+    expect(crowdSettled.rightPeak).toBe(0);
 
-    const environmentWake = getStageFrame(0.48).production;
-    expect(environmentWake.environmentPeak).toBeGreaterThan(0);
-    expect(environmentWake.centralPeak).toBe(0);
-    expect(environmentWake.leftPeak).toBe(0);
-    expect(environmentWake.rightPeak).toBe(0);
-    expect(environmentWake.mainScreen).toBe(0);
+    const textureWake = getStageFrame(0.2).production;
+    expect(textureWake.environmentPeak).toBeGreaterThan(textureWake.centralPeak);
+    expect(textureWake.centralPeak).toBeGreaterThan(textureWake.leftPeak);
+    expect(textureWake.leftPeak).toBeGreaterThan(textureWake.rightPeak);
+    expect(textureWake.mainScreen).toBe(0);
+
+    const textureSettled = getStageFrame(0.23).production;
+    expect(textureSettled.environmentPeak).toBe(1);
+    expect(textureSettled.centralPeak).toBe(1);
+    expect(textureSettled.leftPeak).toBe(1);
+    expect(textureSettled.rightPeak).toBe(1);
   });
 
   test("settles product HUDs at their named review checkpoints", () => {
@@ -110,33 +136,24 @@ test.describe("creative stage presets", () => {
     });
   });
 
-  test("stages media and the human peak in authored order", () => {
-    const architectureWake = getStageFrame(0.505).production;
-    expect(architectureWake.environmentPeak).toBe(1);
-    expect(architectureWake.centralPeak).toBeGreaterThan(architectureWake.leftPeak);
-    expect(architectureWake.leftPeak).toBeGreaterThan(architectureWake.rightPeak);
+  test("turns on left, center, and right monitors at stages three through five", () => {
+    const stageThree = getStageFrame(0.31).production;
+    expect(stageThree.interactiveScreen).toBe(1);
+    expect(stageThree.videoWallScreen).toBe(0);
+    expect(stageThree.gameScreen).toBe(0);
+    expect(stageThree.mainScreen).toBe(0);
 
-    const firstMediaWake = getStageFrame(0.52).production;
-    expect(firstMediaWake.videoWallScreen).toBe(1);
-    expect(firstMediaWake.interactiveScreen).toBe(0);
-    expect(firstMediaWake.gameScreen).toBe(0);
-    expect(firstMediaWake.mainScreen).toBe(0);
+    const stageFour = getStageFrame(0.455).production;
+    expect(stageFour.interactiveScreen).toBe(1);
+    expect(stageFour.videoWallScreen).toBe(1);
+    expect(stageFour.gameScreen).toBe(0);
+    expect(stageFour.mainScreen).toBe(0);
 
-    const secondMediaWake = getStageFrame(0.54).production;
-    expect(secondMediaWake.videoWallScreen).toBe(1);
-    expect(secondMediaWake.interactiveScreen).toBe(1);
-    expect(secondMediaWake.gameScreen).toBe(0);
-    expect(secondMediaWake.mainScreen).toBe(0);
-
-    const thirdMediaWake = getStageFrame(0.56).production;
-    expect(thirdMediaWake.gameScreen).toBe(1);
-    expect(thirdMediaWake.mainScreen).toBe(0);
-
-    expect(getStageFrame(0.575).production.mainScreen).toBe(1);
-
-    expect(getStageFrame(0.63).production.crowdPresence).toBe(0);
-    expect(getStageFrame(0.67).production.crowdPresence).toBeGreaterThan(0);
-    expect(getStageFrame(0.7).production.crowdPresence).toBe(1);
+    const stageFive = getStageFrame(0.58).production;
+    expect(stageFive.interactiveScreen).toBe(1);
+    expect(stageFive.videoWallScreen).toBe(1);
+    expect(stageFive.gameScreen).toBe(1);
+    expect(stageFive.mainScreen).toBe(1);
   });
 
   test("interpolates renderer controls automatically between authored previews", () => {

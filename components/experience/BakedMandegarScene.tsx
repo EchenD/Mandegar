@@ -224,8 +224,9 @@ export function BakedMandegarScene({
     assetSlots.bakedTextures.exhibitionQuiet,
     assetSlots.bakedTextures.exhibitionPeak,
   ]);
-  const { camera, scene, size } = useThree();
+  const { camera, gl, scene, size } = useThree();
   const firstFrame = useRef(false);
+  const warmupFrameRendered = useRef(false);
   const bakedBackground = useMemo(() => new THREE.Color(sceneTokens.bakedScene.background), []);
   const journeyBackground = useMemo(() => new THREE.Color(journeyBackgroundColor), []);
   const blendedBackground = useMemo(() => new THREE.Color(), []);
@@ -355,6 +356,8 @@ export function BakedMandegarScene({
     runtimeRef.current = nextRuntime;
     environment.visible = true;
     exhibition.visible = true;
+    warmupFrameRendered.current = false;
+    textures.forEach((texture) => gl.initTexture(texture));
 
     return () => {
       if (runtimeRef.current === nextRuntime) {
@@ -363,12 +366,13 @@ export function BakedMandegarScene({
 
       environment.visible = false;
       exhibition.visible = false;
+      warmupFrameRendered.current = false;
       disposeSectionRuntime(nextRuntime.environment);
       disposeSectionRuntime(nextRuntime.central);
       disposeSectionRuntime(nextRuntime.left);
       disposeSectionRuntime(nextRuntime.right);
     };
-  }, [environment, exhibition, textures]);
+  }, [environment, exhibition, gl, textures]);
 
   const projection = useRef({
     world: Array.from({ length: 4 }, () => new THREE.Vector3()),
@@ -412,6 +416,13 @@ export function BakedMandegarScene({
       getHeroBackgroundProgress(experienceState.progress),
     );
     scene.background = blendedBackground;
+
+    // Keep every section renderable for one covered frame so Three.js uploads
+    // geometry and compiles each reveal material before the intro can begin.
+    if (!warmupFrameRendered.current) {
+      warmupFrameRendered.current = true;
+      return;
+    }
 
     const production = experienceState.stage.production;
     const heroPresence = 1 - getHeroHandoffProgress(experienceState.progress);

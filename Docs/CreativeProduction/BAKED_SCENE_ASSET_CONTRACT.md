@@ -71,30 +71,28 @@ File: `public/models/mandegar/mandegar_crowd.glb`
 
 ```text
 root_crowd
-├─ crowd_table
-├─ crowd_photo
-├─ crowd_game
-├─ crowd_general
-└─ crowd_slots
-   └─ crowdSlot_*
+├─ Human_00
+├─ Human_01
+├─ …
+├─ Human_28
+└─ crowd_slots (optional)
 ```
 
-The crowd is loaded only shortly before it is needed. `crowd_slots` is
-optional and is reserved for later procedural variation; do not make a fourth
-positions GLB. Crowd meshes must use the same baked UV atlas layout as the
-exhibition texture pair. Until the named production groups are present, the
-runtime deliberately uses a neutral unlit fallback material instead of sampling
-the exhibition atlas with incompatible placeholder UVs.
+The crowd is loaded only shortly before it is needed. The current asset stores
+`Human_00` through `Human_28` directly under `root_crowd`; `crowd_slots` remains
+optional and reserved for later procedural variation. Every human uses the same
+baked shader, quiet/peak texture pair, reveal edge, and turbulence controls as
+the exhibition meshes. Crowd UVs must therefore match the exhibition atlas.
 
 ## Four baked textures
 
-Export the production-ready JPG textures directly to:
+Export the production-ready WebP textures directly to:
 
 ```text
-public/textures/mandegar/baked/env_quiet.jpg
-public/textures/mandegar/baked/env_peak.jpg
-public/textures/mandegar/baked/exhibit_quiet.jpg
-public/textures/mandegar/baked/exhibit_peak.jpg
+public/textures/mandegar/baked/env_quiet.webp
+public/textures/mandegar/baked/env_peak.webp
+public/textures/mandegar/baked/exhibit_quiet.webp
+public/textures/mandegar/baked/exhibit_peak.webp
 ```
 
 The quiet/peak pair for each atlas must retain identical dimensions and UV
@@ -119,7 +117,7 @@ uses project poster media or a lightweight generated fallback.
 
 ## Activation and verification
 
-1. Copy all three GLBs and four production JPG textures to the paths above.
+1. Copy all three GLBs and four production WebP textures to the paths above.
 2. Restart `npm run dev`.
 3. Open `/fa?intro=1&creative=1`.
 4. Check the browser console. Missing contract nodes are reported by exact name.

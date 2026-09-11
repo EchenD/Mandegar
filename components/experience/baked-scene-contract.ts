@@ -15,16 +15,16 @@ function reportContractWarning(message: string) {
 export const bakedSceneContract = {
   textures: {
     environmentQuiet: {
-      runtime: "/textures/mandegar/baked/env_quiet.jpg",
+      runtime: "/textures/mandegar/baked/env_quiet.webp",
     },
     environmentPeak: {
-      runtime: "/textures/mandegar/baked/env_peak.jpg",
+      runtime: "/textures/mandegar/baked/env_peak.webp",
     },
     exhibitionQuiet: {
-      runtime: "/textures/mandegar/baked/exhibit_quiet.jpg",
+      runtime: "/textures/mandegar/baked/exhibit_quiet.webp",
     },
     exhibitionPeak: {
-      runtime: "/textures/mandegar/baked/exhibit_peak.jpg",
+      runtime: "/textures/mandegar/baked/exhibit_peak.webp",
     },
   },
   materials: {
@@ -75,7 +75,7 @@ export const bakedSceneContract = {
   },
   crowd: {
     root: "root_crowd",
-    groups: ["crowd_table", "crowd_photo", "crowd_game", "crowd_general"],
+    actorPrefix: "Human_",
     slots: "crowd_slots",
   },
 } as const;

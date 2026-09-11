@@ -9,6 +9,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   bakedSceneContract,
+  validateContractMaterials,
   validateContractNodes,
 } from "./baked-scene-contract";
 import {
@@ -20,15 +21,15 @@ import {
   restoreRuntimeMaterial,
   type RuntimeMaterialBinding,
 } from "./baked-material-binding";
+import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { experienceState } from "./experience-state";
 import { assetSlots, getHeroHandoffProgress, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
 
 type CrowdRuntime = {
-  mode: "baked" | "fallback";
-  material: THREE.ShaderMaterial | THREE.MeshBasicMaterial;
+  material: THREE.ShaderMaterial;
   root: THREE.Object3D;
-  uniforms?: BakedMaterialUniforms;
+  uniforms: BakedMaterialUniforms;
   bindings: RuntimeMaterialBinding[];
 };
 
@@ -45,53 +46,35 @@ function BakedCrowdAsset({
     clone.visible = false;
     return clone;
   }, [gltf.scene]);
-  const requiredNodes = useMemo(() => [
-    bakedSceneContract.crowd.root,
-    ...bakedSceneContract.crowd.groups,
-  ], []);
-  const usesCrowdFallback = useMemo(
-    () => requiredNodes.some((name) => !gltf.scene.getObjectByName(name)),
-    [gltf.scene, requiredNodes],
-  );
   const runtimeRef = useRef<CrowdRuntime | null>(null);
 
   useEffect(() => {
-    validateContractNodes(gltf.scene, requiredNodes, "Crowd GLB");
-  }, [gltf.scene, requiredNodes]);
+    validateContractNodes(gltf.scene, [bakedSceneContract.crowd.root], "Crowd GLB");
+    validateContractMaterials(
+      gltf.scene,
+      [bakedSceneContract.materials.exhibition],
+      "Crowd GLB",
+    );
+  }, [gltf.scene]);
 
   useEffect(() => {
     scene.updateMatrixWorld(true);
     const root = scene.getObjectByName(bakedSceneContract.crowd.root) ?? scene;
-    const baked = usesCrowdFallback
-      ? null
-      : createBakedSceneMaterial({
-        name: "MAT_CROWD_BAKED_RUNTIME",
-        quietMap,
-        peakMap,
-        edgeColor: sceneTokens.bakedScene.material.edgeColor,
-      });
-    const material = baked?.material ?? new THREE.MeshBasicMaterial({
-      name: "MAT_CROWD_FALLBACK_RUNTIME",
-      color: sceneTokens.bakedScene.crowdFallbackColor,
-      opacity: 0,
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-      toneMapped: false,
+    const baked = createBakedSceneMaterial({
+      name: "MAT_CROWD_BAKED_RUNTIME",
+      quietMap,
+      peakMap,
+      edgeColor: sceneTokens.bakedScene.material.edgeColor,
     });
-    const bindings = bindRuntimeMaterial(root, material);
-    if (baked) {
-      const bounds = new THREE.Box3().setFromObject(root);
-      const center = bounds.getCenter(new THREE.Vector3());
-      const size = bounds.getSize(new THREE.Vector3());
-      baked.uniforms.uRevealOrigin.value.copy(center);
-      baked.uniforms.uRevealExtent.value = Math.max(0.001, size.length() * 0.58);
-    }
+    const revealOrigin = getRevealOrigin(root, null);
+    baked.uniforms.uRevealOrigin.value.copy(revealOrigin);
+    baked.uniforms.uRevealExtent.value = getRevealExtent(root, revealOrigin);
+    baked.uniforms.uEdgeStrength.value = sceneTokens.bakedScene.material.edgeStrength;
+    const bindings = bindRuntimeMaterial(root, baked.material);
     const runtime = {
-      mode: baked ? "baked" : "fallback",
-      material,
+      material: baked.material,
       root,
-      uniforms: baked?.uniforms,
+      uniforms: baked.uniforms,
       bindings,
     } satisfies CrowdRuntime;
     runtime.root.visible = experienceState.stage.production.crowdPresence > 0.001;
@@ -106,7 +89,7 @@ function BakedCrowdAsset({
       restoreRuntimeMaterial(runtime.bindings, runtime.material);
       runtime.material.dispose();
     };
-  }, [peakMap, quietMap, scene, usesCrowdFallback]);
+  }, [peakMap, quietMap, scene]);
 
   useFrame(({ clock }) => {
     const runtime = runtimeRef.current;
@@ -116,13 +99,8 @@ function BakedCrowdAsset({
 
     const production = experienceState.stage.production;
     const presence = production.crowdPresence * (1 - getHeroHandoffProgress(experienceState.progress));
-    if (runtime.mode === "baked" && runtime.uniforms) {
-      updateCrowdUniforms(runtime.uniforms, presence, production);
-      runtime.uniforms.uTime.value = clock.elapsedTime;
-    } else if (runtime.material instanceof THREE.MeshBasicMaterial) {
-      runtime.material.opacity = smoothstep(presence);
-      runtime.material.depthWrite = presence > 0.98;
-    }
+    updateCrowdUniforms(runtime.uniforms, presence, production);
+    runtime.uniforms.uTime.value = clock.elapsedTime;
     runtime.root.visible = presence > 0.001;
   });
 
@@ -132,11 +110,6 @@ function BakedCrowdAsset({
       <CrowdIntelligenceNetwork crowd={scene} />
     </>
   );
-}
-
-function smoothstep(value: number) {
-  const safe = THREE.MathUtils.clamp(value, 0, 1);
-  return safe * safe * (3 - 2 * safe);
 }
 
 function updateCrowdUniforms(

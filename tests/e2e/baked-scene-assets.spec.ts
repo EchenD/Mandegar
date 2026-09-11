@@ -45,9 +45,9 @@ test.describe("baked scene assets", () => {
     );
   });
 
-  test("checks in every production JPG texture", () => {
+  test("checks in every production WebP texture", () => {
     Object.entries(bakedSceneContract.textures).forEach(([id, texture]) => {
-      expect(texture.runtime, `${id} must use a JPG texture`).toMatch(/\.jpg$/i);
+      expect(texture.runtime, `${id} must use a WebP texture`).toMatch(/\.webp$/i);
       expect(
         existsSync(resolvePublicAsset(texture.runtime)),
         `${id} production texture is missing: ${texture.runtime}`,
