@@ -2,8 +2,10 @@ export type ScenePhaseId =
   | "arrival"
   | "discovery"
   | "activation"
+  | "engagement"
   | "reveal"
   | "experiences"
+  | "connection"
   | "proof"
   | "intelligence"
   | "invitation"
@@ -13,8 +15,10 @@ export type NarrativeAttention =
   | "space"
   | "signal"
   | "systems"
+  | "engagement"
   | "reveal"
   | "zones"
+  | "connection"
   | "projects"
   | "data"
   | "invitation"
@@ -43,17 +47,26 @@ export type NarrativeBeat = {
   channels: readonly NarrativeChannel[];
 };
 
+export const narrativeStageCount = 11;
+export const narrativeStageDuration = 1 / narrativeStageCount;
+
+function getEqualStageTiming(index: number) {
+  return {
+    start: index * narrativeStageDuration,
+    end: (index + 1) * narrativeStageDuration,
+    preview: (index + 0.5) * narrativeStageDuration,
+  };
+}
+
 /**
  * The authored story score is the single source of truth for phase order,
  * phase boundaries, review checkpoints, and the intended owner of attention.
- * Values intentionally match the existing production timeline.
+ * Every stage owns the same amount of physical scroll time.
  */
 export const narrativeScore = [
   {
     id: "arrival",
-    start: 0,
-    end: 0.12,
-    preview: 0.05,
+    ...getEqualStageTiming(0),
     attention: "space",
     interaction: "subtle",
     cameraShot: "arrival-wide",
@@ -62,9 +75,7 @@ export const narrativeScore = [
   },
   {
     id: "discovery",
-    start: 0.12,
-    end: 0.23,
-    preview: 0.175,
+    ...getEqualStageTiming(1),
     attention: "signal",
     interaction: "subtle",
     cameraShot: "discovery-approach",
@@ -73,9 +84,7 @@ export const narrativeScore = [
   },
   {
     id: "activation",
-    start: 0.23,
-    end: 0.39,
-    preview: 0.31,
+    ...getEqualStageTiming(2),
     attention: "systems",
     interaction: "subtle",
     cameraShot: "activation-traverse",
@@ -83,10 +92,17 @@ export const narrativeScore = [
     channels: ["architecture", "signal", "screens"],
   },
   {
+    id: "engagement",
+    ...getEqualStageTiming(3),
+    attention: "engagement",
+    interaction: "subtle",
+    cameraShot: "engagement-focus",
+    assets: ["arrival", "activation"],
+    channels: ["architecture", "signal", "screens", "audience"],
+  },
+  {
     id: "reveal",
-    start: 0.39,
-    end: 0.52,
-    preview: 0.455,
+    ...getEqualStageTiming(4),
     attention: "reveal",
     interaction: "none",
     cameraShot: "full-reveal",
@@ -95,9 +111,7 @@ export const narrativeScore = [
   },
   {
     id: "experiences",
-    start: 0.52,
-    end: 0.64,
-    preview: 0.58,
+    ...getEqualStageTiming(5),
     attention: "zones",
     interaction: "zones",
     cameraShot: "experience-zones",
@@ -105,10 +119,17 @@ export const narrativeScore = [
     channels: ["architecture", "signal", "screens", "audience", "annotations"],
   },
   {
+    id: "connection",
+    ...getEqualStageTiming(6),
+    attention: "connection",
+    interaction: "zones",
+    cameraShot: "connected-journey",
+    assets: ["arrival", "activation", "zones"],
+    channels: ["architecture", "signal", "screens", "audience", "annotations"],
+  },
+  {
     id: "proof",
-    start: 0.64,
-    end: 0.76,
-    preview: 0.7,
+    ...getEqualStageTiming(7),
     attention: "projects",
     interaction: "projects",
     cameraShot: "project-proof",
@@ -117,9 +138,7 @@ export const narrativeScore = [
   },
   {
     id: "intelligence",
-    start: 0.76,
-    end: 0.84,
-    preview: 0.8,
+    ...getEqualStageTiming(8),
     attention: "data",
     interaction: "subtle",
     cameraShot: "event-intelligence",
@@ -128,9 +147,7 @@ export const narrativeScore = [
   },
   {
     id: "invitation",
-    start: 0.84,
-    end: 0.93,
-    preview: 0.885,
+    ...getEqualStageTiming(9),
     attention: "invitation",
     interaction: "cta",
     cameraShot: "invitation-hold",
@@ -139,9 +156,7 @@ export const narrativeScore = [
   },
   {
     id: "loop",
-    start: 0.93,
-    end: 1,
-    preview: 0.965,
+    ...getEqualStageTiming(10),
     attention: "return",
     interaction: "subtle",
     cameraShot: "loop-return",
@@ -152,30 +167,30 @@ export const narrativeScore = [
 
 /** Existing effect cues, centralized here while their visual values are preserved. */
 export const narrativeCueRanges = {
-  lightTrails: [0.1, 0.22],
+  lightTrails: [0.081818, 0.166667],
   screens: [
-    [0.2, 0.28],
-    [0.25, 0.33],
-    [0.29, 0.37],
+    [0.153199, 0.207071],
+    [0.186869, 0.257576],
+    [0.213805, 0.318182],
   ],
-  mediaWall: [0.29, 0.38],
-  booths: [0.34, 0.43],
-  branding: [0.38, 0.47],
-  audience: [0.41, 0.51],
-  totalReveal: [0.4, 0.52],
-  intelligence: [0.73, 0.82],
-  haloCondense: [0.82, 0.91],
-  loopReset: [0.982, 1],
+  mediaWall: [0.213805, 0.328877],
+  booths: [0.272727, 0.382353],
+  branding: [0.328877, 0.42],
+  audience: [0.360963, 0.449091],
+  totalReveal: [0.350267, 0.456364],
+  intelligence: [0.709091, 0.794118],
+  haloCondense: [0.794118, 0.892045],
+  loopReset: [0.976623, 1],
 } as const;
 
 export const narrativeMoments = {
   livingWorld: {
-    enter: [0.36, 0.5],
-    exit: [0.84, 0.93],
+    enter: [0.30303, 0.441818],
+    exit: [0.815508, 0.914773],
   },
   peakReveal: {
-    enter: [0.405, 0.465],
-    exit: [0.505, 0.57],
+    enter: [0.355615, 0.416364],
+    exit: [0.445455, 0.492727],
   },
 } as const;
 
@@ -258,8 +273,14 @@ export function validateNarrativeScore(score: readonly NarrativeBeat[] = narrati
     if (beat.preview < beat.start || beat.preview > beat.end) {
       throw new Error(`Narrative beat '${beat.id}' preview is outside its range.`);
     }
+    if (Math.abs((beat.end - beat.start) - narrativeStageDuration) > 0.000001) {
+      throw new Error(`Narrative beat '${beat.id}' does not have the shared stage duration.`);
+    }
     if (index > 0 && Math.abs(score[index - 1].end - beat.start) > 0.0001) {
       throw new Error(`Narrative beat '${beat.id}' is not contiguous with the previous beat.`);
+    }
+    if (index > 0 && Math.abs((beat.preview - score[index - 1].preview) - narrativeStageDuration) > 0.000001) {
+      throw new Error(`Narrative beat '${beat.id}' is not evenly spaced from the previous beat.`);
     }
   });
   if (score[0].start !== 0 || score[score.length - 1].end !== 1) {

@@ -48,9 +48,9 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Final camera hold | `stage-presets.ts` → `getCameraLoopSampleProgress` | Holds the authored Loop composition while the sticky scene releases into the page |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
-| Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `2175`/`1950`; smaller advances faster, larger advances slower |
+| Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `2660`/`2385`; smaller advances faster, larger advances slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
-| Nine review points | `narrative-score.ts` → `narrativeScore` → `preview` | Exact camera stage, timeline marker and interpolation anchor for every stage |
+| Eleven review points | `narrative-score.ts` → `narrativeScore` → `preview` | Equally spaced camera stage, timeline marker and interpolation anchor for every stage |
 | Phase boundaries | `narrative-score.ts` → `narrativeScore` → `start` / `end` | Which stage owns each part of narrative progress |
 | Object activation timing | `narrative-score.ts` → `narrativeCueRanges` | Assembly, trails, screens, booths, reveal and loop-reset ranges |
 | Stage-to-stage speed | `narrative-progress-curve.ts` → `narrativeVelocity` | `minimum` slows near stages, `maximum` speeds transitions, and `tangentPower` concentrates acceleration; currently `.15`, `1.8`, `5` |
@@ -78,7 +78,7 @@ http://localhost:3000/fa?intro=0&phase=discovery&creative=1
 
 The panel is deliberately excluded from production builds. It can:
 
-- jump to any of the nine review stages;
+- jump to any of the eleven review stages;
 - tune camera breathing and pointer response;
 - tune particle presence, response, routed signal and halo strength;
 - tune lighting energy, contrast and spatial-HUD prominence;
@@ -100,10 +100,10 @@ The panel intentionally does not expose controls that are not yet production-wir
 
 ## Recommended final-tuning order
 
-1. Set the nine `preview` anchors and confirm the narrative order.
+1. Set the eleven `preview` anchors and confirm the narrative order.
 2. Tune `scrollLengthVh`, then `narrativeVelocity.minimum`, `maximum` and `tangentPower`.
 3. Tune shared text breathing, followed by per-stage entry/exit durations.
-4. Author the nine camera shots and stage presets.
+4. Author the eleven camera shots and stage presets.
 5. Tune particles, lighting, labels and post-processing per stage.
 6. Finish typography, text blur, loader, scroll cue and responsive positions.
 

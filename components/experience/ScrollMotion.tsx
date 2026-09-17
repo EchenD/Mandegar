@@ -172,7 +172,7 @@ export function ScrollMotion({
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
       showPhaseRail();
-      syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.455);
+      syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.409091);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
         resetNarrative();

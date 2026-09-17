@@ -8,7 +8,7 @@ import {
 import { narrativeScore } from "../../components/experience/narrative-score";
 
 test.describe("narrative copy timing", () => {
-  test("keeps one shared breathing length between all nine messages", () => {
+  test("keeps one shared breathing length between all eleven stage timings", () => {
     expect(validateNarrativeCopyTimings()).toBe(true);
     const timings = narrativeScore.map((phase) => getNarrativeCopyTiming(phase.id));
     for (let index = 1; index < timings.length; index += 1) {

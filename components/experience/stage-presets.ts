@@ -112,7 +112,7 @@ export type CreativeStagePresetSnapshot = {
 };
 
 /**
- * The nine creative review states. Values are normalized art-direction
+ * The eleven creative review states. Values are normalized art-direction
  * controls; render systems interpolate between them through narrative progress.
  */
 export const stagePresets = {
@@ -167,6 +167,23 @@ export const stagePresets = {
     interaction: "subtle",
     channels: ["architecture", "signal", "screens"],
   },
+  engagement: {
+    id: "engagement",
+    camera: { shot: "engagement-focus", life: 0.5, pointer: 0.4 },
+    particles: { mode: "wake", presence: 0.72, response: 0.62, signal: 0.5, halo: 0.12 },
+    lighting: { mode: "activated", energy: 0.68, contrast: 0.56 },
+    spatialInfo: { mode: "activation", prominence: 0.9 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 1, gameScreen: 0, videoWallScreen: 0, mainScreen: 0,
+      crowdPresence: 1, dataFlow: 0, transitionParticles: 0.94,
+      transitionParticleSize: 0.66, transitionTurbulence: 0.56,
+      revealEdgeWidth: 0.43, revealTurbulence: 0.58,
+    },
+    interaction: "subtle",
+    channels: ["architecture", "signal", "screens", "audience"],
+  },
   reveal: {
     id: "reveal",
     camera: { shot: "full-reveal", life: 0.42, pointer: 0.28 },
@@ -197,6 +214,23 @@ export const stagePresets = {
       crowdPresence: 1, dataFlow: 0, transitionParticles: 0.28,
       transitionParticleSize: 0.5, transitionTurbulence: 0.32,
       revealEdgeWidth: 0.34, revealTurbulence: 0.38,
+    },
+    interaction: "zones",
+    channels: ["architecture", "signal", "screens", "audience", "annotations"],
+  },
+  connection: {
+    id: "connection",
+    camera: { shot: "connected-journey", life: 0.5, pointer: 0.6 },
+    particles: { mode: "zones", presence: 0.65, response: 0.72, signal: 0.46, halo: 0.19 },
+    lighting: { mode: "focused", energy: 0.62, contrast: 0.62 },
+    spatialInfo: { mode: "zones", prominence: 1 },
+    production: {
+      environmentReveal: 1, centralReveal: 1, leftReveal: 1, rightReveal: 1,
+      environmentPeak: 1, centralPeak: 1, leftPeak: 1, rightPeak: 1,
+      interactiveScreen: 1, gameScreen: 1, videoWallScreen: 1, mainScreen: 1,
+      crowdPresence: 1, dataFlow: 0, transitionParticles: 0.16,
+      transitionParticleSize: 0.48, transitionTurbulence: 0.28,
+      revealEdgeWidth: 0.32, revealTurbulence: 0.34,
     },
     interaction: "zones",
     channels: ["architecture", "signal", "screens", "audience", "annotations"],
@@ -442,14 +476,14 @@ type ProductionTransitionWindows = Partial<Record<
 >>;
 
 /**
- * Per-channel windows preserve the nine editable resting presets while giving
+ * Per-channel windows preserve the eleven editable resting presets while giving
  * transitions an authored order. Values are normalized within the interval
  * between two adjacent preview anchors.
  */
 const productionTransitionWindows: ProductionTransitionWindows = {
   discovery: {
-    // Normalized within arrival (0.05) → discovery (0.175): a short,
-    // early center → left → right cascade that reads as one reveal.
+    // Normalized between the equally spaced arrival and discovery checkpoints:
+    // a short, early center → left → right cascade that reads as one reveal.
     centralReveal: [0.3, 0.62],
     leftReveal: [0.36, 0.68],
     rightReveal: [0.42, 0.74],
@@ -495,12 +529,48 @@ function getProductionTransitionMix(
   );
 }
 
-/** Lets the final Loop camera finish on its centered handoff composition. */
+const cameraTimelineAnchors = [
+  0,
+  ...narrativeScore.map((stage) => stage.preview),
+  1,
+];
+
+const authoredCameraSampleAnchors = [
+  0,
+  0.05,
+  0.175,
+  0.31,
+  0.37,
+  0.455,
+  0.58,
+  0.625,
+  0.7,
+  0.8,
+  0.885,
+  0.965,
+  1,
+];
+
+/** Keeps the original camera compositions attached to the equally timed stages. */
 export function getCameraLoopSampleProgress(progress: number) {
-  return Math.min(1, Math.max(0, progress));
+  const safeProgress = Math.min(1, Math.max(0, progress));
+  const nextIndex = cameraTimelineAnchors.findIndex((anchor) => anchor >= safeProgress);
+  if (nextIndex <= 0) return authoredCameraSampleAnchors[0];
+  if (nextIndex < 0) return authoredCameraSampleAnchors.at(-1)!;
+  const fromIndex = nextIndex - 1;
+  const timelineSpan = Math.max(
+    0.0001,
+    cameraTimelineAnchors[nextIndex] - cameraTimelineAnchors[fromIndex],
+  );
+  const mix = (safeProgress - cameraTimelineAnchors[fromIndex]) / timelineSpan;
+  return mixValue(
+    authoredCameraSampleAnchors[fromIndex],
+    authoredCameraSampleAnchors[nextIndex],
+    mix,
+  );
 }
 
-/** Interpolates renderer controls between the nine authored preview anchors. */
+/** Interpolates renderer controls between the eleven authored preview anchors. */
 export function getStageFrame(progress: number): StageFrame {
   const safeProgress = Math.min(1, Math.max(0, progress));
   const nextIndex = narrativeScore.findIndex((beat) => beat.preview >= safeProgress);

@@ -19,7 +19,7 @@ test.describe("narrative progress velocity", () => {
     expect(getNarrativeVelocity(0.1)).toBeLessThan(getNarrativeVelocity(0.25));
   });
 
-  test("preserves all nine stage anchors and remains monotonic", () => {
+  test("preserves all eleven stage anchors and remains monotonic", () => {
     expect(validateNarrativeProgressCurve()).toBe(true);
     for (const stage of narrativeScore) {
       expect(warpNarrativeProgress(stage.preview)).toBeCloseTo(stage.preview, 8);

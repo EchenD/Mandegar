@@ -15,6 +15,15 @@ import {
 } from "../../components/experience/stage-presets";
 
 test.describe("creative stage presets", () => {
+  const preview = (id: (typeof narrativeScore)[number]["id"]) => (
+    narrativeScore.find((stage) => stage.id === id)!.preview
+  );
+  const between = (
+    from: (typeof narrativeScore)[number]["id"],
+    to: (typeof narrativeScore)[number]["id"],
+    mix: number,
+  ) => preview(from) + (preview(to) - preview(from)) * mix;
+
   test("keeps the modular asset naming contract stable", () => {
     expect(bakedSceneContract.environment.section).toBe("env_shell");
     expect(Object.values(bakedSceneContract.exhibition.sections).map((section) => section.root))
@@ -29,7 +38,7 @@ test.describe("creative stage presets", () => {
 
   test("define one valid renderer preset for every narrative stage", () => {
     expect(validateStagePresets()).toBe(true);
-    expect(Object.keys(stagePresets)).toHaveLength(9);
+    expect(Object.keys(stagePresets)).toHaveLength(11);
     expect(narrativeScore.map((stage) => getStagePreset(stage.id).id)).toEqual(
       narrativeScore.map((stage) => stage.id),
     );
@@ -39,7 +48,9 @@ test.describe("creative stage presets", () => {
     expect(stagePresets.arrival.spatialInfo.mode).toBe("hidden");
     expect(stagePresets.discovery.spatialInfo.mode).toBe("assembly");
     expect(stagePresets.activation.spatialInfo.mode).toBe("activation");
+    expect(stagePresets.engagement.spatialInfo.mode).toBe("activation");
     expect(stagePresets.experiences.spatialInfo.mode).toBe("zones");
+    expect(stagePresets.connection.spatialInfo.mode).toBe("zones");
     expect(stagePresets.proof.spatialInfo.mode).toBe("projects");
     expect(stagePresets.intelligence.spatialInfo.mode).toBe("metrics");
     expect(stagePresets.invitation.spatialInfo.mode).toBe("invitation");
@@ -68,16 +79,16 @@ test.describe("creative stage presets", () => {
   });
 
   test("reveals all exhibition sections early with a short stagger", () => {
-    const beforeReveal = getStageFrame(0.085).production;
+    const beforeReveal = getStageFrame(between("arrival", "discovery", 0.28)).production;
     expect(beforeReveal.centralReveal).toBe(0);
     expect(beforeReveal.leftReveal).toBe(0);
     expect(beforeReveal.rightReveal).toBe(0);
 
-    const stagger = getStageFrame(0.105).production;
+    const stagger = getStageFrame(between("arrival", "discovery", 0.44)).production;
     expect(stagger.centralReveal).toBeGreaterThan(stagger.leftReveal);
     expect(stagger.leftReveal).toBeGreaterThan(stagger.rightReveal);
 
-    const settled = getStageFrame(0.145).production;
+    const settled = getStageFrame(between("arrival", "discovery", 0.76)).production;
     expect(settled.centralReveal).toBe(1);
     expect(settled.leftReveal).toBe(1);
     expect(settled.rightReveal).toBe(1);
@@ -100,20 +111,20 @@ test.describe("creative stage presets", () => {
   });
 
   test("reveals the crowd before the staggered texture transition", () => {
-    const crowdSettled = getStageFrame(0.17).production;
+    const crowdSettled = getStageFrame(between("arrival", "discovery", 0.96)).production;
     expect(crowdSettled.crowdPresence).toBe(1);
     expect(crowdSettled.environmentPeak).toBe(0);
     expect(crowdSettled.centralPeak).toBe(0);
     expect(crowdSettled.leftPeak).toBe(0);
     expect(crowdSettled.rightPeak).toBe(0);
 
-    const textureWake = getStageFrame(0.2).production;
+    const textureWake = getStageFrame(between("discovery", "activation", 0.185)).production;
     expect(textureWake.environmentPeak).toBeGreaterThan(textureWake.centralPeak);
     expect(textureWake.centralPeak).toBeGreaterThan(textureWake.leftPeak);
     expect(textureWake.leftPeak).toBeGreaterThan(textureWake.rightPeak);
     expect(textureWake.mainScreen).toBe(0);
 
-    const textureSettled = getStageFrame(0.23).production;
+    const textureSettled = getStageFrame(between("discovery", "activation", 0.41)).production;
     expect(textureSettled.environmentPeak).toBe(1);
     expect(textureSettled.centralPeak).toBe(1);
     expect(textureSettled.leftPeak).toBe(1);
@@ -136,24 +147,36 @@ test.describe("creative stage presets", () => {
     });
   });
 
-  test("turns on left, center, and right monitors at stages three through five", () => {
-    const stageThree = getStageFrame(0.31).production;
+  test("preserves monitor state while the two inserted stages hold the story", () => {
+    const stageThree = getStageFrame(preview("activation")).production;
     expect(stageThree.interactiveScreen).toBe(1);
     expect(stageThree.videoWallScreen).toBe(0);
     expect(stageThree.gameScreen).toBe(0);
     expect(stageThree.mainScreen).toBe(0);
 
-    const stageFour = getStageFrame(0.455).production;
-    expect(stageFour.interactiveScreen).toBe(1);
-    expect(stageFour.videoWallScreen).toBe(1);
-    expect(stageFour.gameScreen).toBe(0);
-    expect(stageFour.mainScreen).toBe(0);
+    const insertedEngagement = getStageFrame(preview("engagement")).production;
+    expect(insertedEngagement.interactiveScreen).toBe(1);
+    expect(insertedEngagement.videoWallScreen).toBe(0);
+    expect(insertedEngagement.gameScreen).toBe(0);
+    expect(insertedEngagement.mainScreen).toBe(0);
 
-    const stageFive = getStageFrame(0.58).production;
-    expect(stageFive.interactiveScreen).toBe(1);
-    expect(stageFive.videoWallScreen).toBe(1);
-    expect(stageFive.gameScreen).toBe(1);
-    expect(stageFive.mainScreen).toBe(1);
+    const reveal = getStageFrame(preview("reveal")).production;
+    expect(reveal.interactiveScreen).toBe(1);
+    expect(reveal.videoWallScreen).toBe(1);
+    expect(reveal.gameScreen).toBe(0);
+    expect(reveal.mainScreen).toBe(0);
+
+    const experiences = getStageFrame(preview("experiences")).production;
+    expect(experiences.interactiveScreen).toBe(1);
+    expect(experiences.videoWallScreen).toBe(1);
+    expect(experiences.gameScreen).toBe(1);
+    expect(experiences.mainScreen).toBe(1);
+
+    const insertedConnection = getStageFrame(preview("connection")).production;
+    expect(insertedConnection.interactiveScreen).toBe(1);
+    expect(insertedConnection.videoWallScreen).toBe(1);
+    expect(insertedConnection.gameScreen).toBe(1);
+    expect(insertedConnection.mainScreen).toBe(1);
   });
 
   test("interpolates renderer controls automatically between authored previews", () => {
@@ -190,7 +213,7 @@ test.describe("creative stage presets", () => {
 
   test("holds the final loop composition through the page handoff", () => {
     const loopEnd = getStageFrame(0.9995);
-    const loopRest = getStageFrame(narrativeScore[8].preview);
+    const loopRest = getStageFrame(narrativeScore.at(-1)!.preview);
 
     expect(loopEnd.cameraLife).toBeCloseTo(loopRest.cameraLife, 8);
     expect(loopEnd.cameraPointer).toBeCloseTo(loopRest.cameraPointer, 8);
@@ -201,7 +224,9 @@ test.describe("creative stage presets", () => {
     expect(loopEnd.production.dataFlow).toBeCloseTo(loopRest.production.dataFlow, 8);
     expect(loopRest.cameraLife).toBe(stagePresets.loop.camera.life);
     expect(loopRest.cameraPointer).toBe(stagePresets.loop.camera.pointer);
-    expect(getCameraLoopSampleProgress(0.0005)).toBe(0.0005);
-    expect(getCameraLoopSampleProgress(0.9995)).toBe(0.9995);
+    expect(getCameraLoopSampleProgress(0)).toBe(0);
+    expect(getCameraLoopSampleProgress(1)).toBe(1);
+    expect(getCameraLoopSampleProgress(preview("engagement"))).toBeCloseTo(0.37, 8);
+    expect(getCameraLoopSampleProgress(preview("connection"))).toBeCloseTo(0.625, 8);
   });
 });

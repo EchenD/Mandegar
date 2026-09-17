@@ -35,12 +35,18 @@ type ExperienceCopy = {
   activationEyebrow: string;
   activationTitle: string;
   activationBody: string;
+  engagementEyebrow: string;
+  engagementTitle: string;
+  engagementBody: string;
   revealEyebrow: string;
   revealTitle: string;
   revealBody: string;
   experiencesEyebrow: string;
   experiencesTitle: string;
   experiencesBody: string;
+  connectionEyebrow: string;
+  connectionTitle: string;
+  connectionBody: string;
   proofEyebrow: string;
   proofTitle: string;
   proofBody: string;
@@ -160,6 +166,9 @@ export function MandegarExperience({
     [projects],
   );
   const pageCopy = postExperienceCopy[locale];
+  const activePhaseNumber = String(
+    narrativeScore.findIndex((phase) => phase.id === activePhase) + 1,
+  ).padStart(2, "0");
 
   useLayoutEffect(() => {
     const previousRestoration = window.history.scrollRestoration;
@@ -379,6 +388,11 @@ export function MandegarExperience({
               <h2 data-copy-line>{copy.activationTitle}</h2>
               <p data-copy-line>{copy.activationBody}</p>
             </section>
+            <section className={styles.sceneCopy} data-scene-copy="engagement" data-cinematic-beat>
+              <span data-copy-line>{copy.engagementEyebrow}</span>
+              <h2 data-copy-line>{copy.engagementTitle}</h2>
+              <p data-copy-line>{copy.engagementBody}</p>
+            </section>
             <section className={`${styles.sceneCopy} ${styles.revealCopy}`} data-scene-copy="reveal" data-cinematic-beat>
               <span data-copy-line>{copy.revealEyebrow}</span>
               <h2 data-copy-line>{copy.revealTitle}</h2>
@@ -388,6 +402,11 @@ export function MandegarExperience({
               <span data-copy-line>{copy.experiencesEyebrow}</span>
               <h2 data-copy-line>{copy.experiencesTitle}</h2>
               <p data-copy-line>{copy.experiencesBody}</p>
+            </section>
+            <section className={styles.sceneCopy} data-scene-copy="connection" data-cinematic-beat>
+              <span data-copy-line>{copy.connectionEyebrow}</span>
+              <h2 data-copy-line>{copy.connectionTitle}</h2>
+              <p data-copy-line>{copy.connectionBody}</p>
             </section>
             <section className={`${styles.sceneCopy} ${styles.proofCopy}`} data-scene-copy="proof" data-cinematic-beat>
               <span data-copy-line>{copy.proofEyebrow}</span>
@@ -433,13 +452,31 @@ export function MandegarExperience({
           </button>
 
           <div className={styles.phaseRail} data-phase-rail aria-label={locale === "en" ? "Experience phases" : locale === "ar" ? "مراحل التجربة" : "مراحل تجربه"}>
+            <div
+              className={styles.phaseCurrent}
+              data-phase-current
+              dir={locale === "en" ? "ltr" : "rtl"}
+              aria-live="polite"
+            >
+              <small>{activePhaseNumber}</small>
+              <span>{copy.phases[activePhase]}</span>
+            </div>
             <span className={styles.phaseTrack}>
               <i />
             </span>
             <div className={styles.phaseButtons}>
               {narrativeScore.map((phase, index) => (
-                <button key={phase.id} type="button" style={{ "--phase-position": `${phase.preview * 100}%` } as CSSProperties} data-phase-target={phase.id} data-active={activePhase === phase.id ? "true" : "false"} onClick={() => scrollToPhase(phase.id)}>
-                  <small>0{index + 1}</small><span>{copy.phases[phase.id]}</span>
+                <button
+                  key={phase.id}
+                  type="button"
+                  style={{ "--phase-position": `${phase.preview * 100}%` } as CSSProperties}
+                  data-phase-target={phase.id}
+                  data-active={activePhase === phase.id ? "true" : "false"}
+                  aria-label={`${String(index + 1).padStart(2, "0")} / ${copy.phases[phase.id]}`}
+                  title={copy.phases[phase.id]}
+                  onClick={() => scrollToPhase(phase.id)}
+                >
+                  <small aria-hidden="true">{String(index + 1).padStart(2, "0")}</small>
                 </button>
               ))}
             </div>
@@ -458,15 +495,17 @@ export function MandegarExperience({
           [`01 / ${copy.phases.arrival}`, copy.arrivalLabel, ""],
           [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody],
           [copy.activationEyebrow, copy.activationTitle, copy.activationBody],
+          [copy.engagementEyebrow, copy.engagementTitle, copy.engagementBody],
           [copy.revealEyebrow, copy.revealTitle, copy.revealBody],
           [copy.experiencesEyebrow, copy.experiencesTitle, copy.experiencesBody],
+          [copy.connectionEyebrow, copy.connectionTitle, copy.connectionBody],
           [copy.proofEyebrow, copy.proofTitle, copy.proofBody],
           [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody],
           [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody],
         ].map((content, index) => (
           <section key={content[0]}>
             <span>{content[0]}</span><h2>{content[1]}</h2><p>{content[2]}</p>
-            {index >= 7 ? <Link prefetch={false} href={ctaHref}>{copy.startProject}</Link> : null}
+            {index >= 9 ? <Link prefetch={false} href={ctaHref}>{copy.startProject}</Link> : null}
           </section>
         ))}
       </div>

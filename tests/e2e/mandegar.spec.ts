@@ -274,6 +274,8 @@ test.describe("Mandegar responsive layout", () => {
     await expect(root).toHaveAttribute("data-scroll-engaged", "true");
     await expect(cue).toBeHidden();
     await expect(rail).toBeVisible();
+    await expect(rail.locator("[data-phase-target]")).toHaveCount(11);
+    await expect(rail.locator("[data-phase-current]")).toContainText("01Arrival");
 
     const activation = page.locator("[data-phase-target='activation']");
     const { nativeProgress, railProgress } = await root.evaluate((element) => ({
@@ -284,11 +286,21 @@ test.describe("Mandegar responsive layout", () => {
     }));
     expect(nativeProgress).toBeGreaterThan(0);
     expect(railProgress).toBeCloseTo(nativeProgress, 4);
-    expect(
-      await activation.evaluate((element) =>
-        element.style.getPropertyValue("--phase-position"),
-      ),
-    ).toBe("31%");
+    const activationPosition = await activation.evaluate((element) => Number.parseFloat(
+      element.style.getPropertyValue("--phase-position"),
+    ));
+    const phasePositions = await rail.locator("[data-phase-target]").evaluateAll((elements) => (
+      elements.map((element) => Number.parseFloat(
+        (element as HTMLElement).style.getPropertyValue("--phase-position"),
+      ))
+    ));
+    expect(activationPosition).toBeCloseTo(phasePositions[2], 8);
+    for (let index = 2; index < phasePositions.length; index += 1) {
+      expect(phasePositions[index] - phasePositions[index - 1]).toBeCloseTo(
+        phasePositions[1] - phasePositions[0],
+        8,
+      );
+    }
   });
 
   test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {
@@ -299,10 +311,7 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[data-experience-root] canvas")).toHaveCount(1);
     await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "arrival");
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
-    await page.evaluate(() => {
-      const root = document.querySelector<HTMLElement>("[data-experience-root]");
-      if (root) window.scrollTo({ top: root.offsetTop + (root.offsetHeight - innerHeight) * .31, behavior: "auto" });
-    });
+    await seekPhase(page, "activation");
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe("activation");
   });
 
@@ -356,13 +365,13 @@ test.describe("Mandegar responsive layout", () => {
     await expect(arrival).toBeVisible();
   });
 
-  test("nine-state scene stays aligned with named checkpoints", async ({ page }) => {
+  test("eleven-state scene stays aligned with named checkpoints", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
-    for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
+    for (const stage of ["arrival", "discovery", "activation", "engagement", "reveal", "experiences", "connection", "proof", "intelligence", "invitation", "loop"] as const) {
       await seekPhase(page, stage);
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
     }
@@ -374,7 +383,7 @@ test.describe("Mandegar responsive layout", () => {
     await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
-    for (const stage of ["arrival", "discovery", "activation", "reveal", "experiences", "proof", "intelligence", "invitation", "loop"] as const) {
+    for (const stage of ["arrival", "discovery", "activation", "engagement", "reveal", "experiences", "connection", "proof", "intelligence", "invitation"] as const) {
       await seekPhase(page, stage);
       await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-story-stage")).toBe(stage);
       await page.waitForTimeout(550);

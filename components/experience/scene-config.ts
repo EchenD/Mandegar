@@ -108,8 +108,8 @@ export const sceneTokens = {
       peakBrightness: 1.42,
     },
     audience: {
-      enter: [0.41, 0.51] as const,
-      exit: [0.875, 0.93] as const,
+      enter: [0.360963, 0.449091] as const,
+      exit: [0.852941, 0.914773] as const,
       opacity: { full: 0.42, adaptive: 0.48 },
       peakBoost: 0.2,
       gatherDistance: 0.58,
@@ -166,7 +166,7 @@ export const sceneTokens = {
     particleCount: { full: 11200, adaptive: 4400 },
     particleLeadProgress: 0.012,
     crowdPreloadProgress: 0.06,
-    dataFlowRange: [0.748, 0.79] as const,
+    dataFlowRange: [0.725455, 0.763636] as const,
     ambientDust: {
       count: { full: 220, adaptive: 110 },
       color: "#d2b99d",
@@ -176,12 +176,12 @@ export const sceneTokens = {
       foregroundBias: 0.62,
     },
     hudMoments: {
-      central: [0.16, 0.23] as const,
-      left: [0.297, 0.39] as const,
-      right: [0.441, 0.477] as const,
-      experiences: [0.54, 0.64] as const,
-      proof: [0.66, 0.76] as const,
-      intelligence: [0.785, 0.837] as const,
+      central: [0.125455, 0.173401] as const,
+      left: [0.218519, 0.339572] as const,
+      right: [0.394118, 0.425091] as const,
+      experiences: [0.470909, 0.609091] as const,
+      proof: [0.633333, 0.736364] as const,
+      intelligence: [0.759091, 0.812299] as const,
     },
     material: {
       edgeColor: "#b9d2ff",
@@ -227,13 +227,13 @@ export const sceneTokens = {
   },
   spatialLabels: {
     moments: {
-      assembly: [0.115, 0.225] as const,
-      activationLeft: [0.225, 0.34] as const,
-      activationRight: [0.34, 0.455] as const,
-      reveal: [0.47, 0.52] as const,
-      experiences: [0.52, 0.64] as const,
-      proof: [0.64, 0.76] as const,
-      intelligence: [0.76, 0.837] as const,
+      assembly: [0.092727, 0.170034] as const,
+      activationLeft: [0.170034, 0.272727] as const,
+      activationRight: [0.272727, 0.409091] as const,
+      reveal: [0.42, 0.456364] as const,
+      experiences: [0.456364, 0.609091] as const,
+      proof: [0.609091, 0.736364] as const,
+      intelligence: [0.736364, 0.812299] as const,
     },
     nodes: {
       core: "hero_core_shell",
@@ -255,7 +255,7 @@ export const sceneTokens = {
       compact: { inline: 64, top: 76, bottom: 96 },
     },
   },
-  scrollLengthVh: { desktop: 2175, mobile: 1950 },
+  scrollLengthVh: { desktop: 2660, mobile: 2385 },
   featureFlags: {
     audience: true,
     screenShader: true,
@@ -313,7 +313,7 @@ export function phaseProgress(progress: number, range: readonly [number, number]
 }
 
 export const heroHandoffRange = [
-  narrativeScore.find((beat) => beat.id === "invitation")?.preview ?? 0.885,
+  narrativeScore.find((beat) => beat.id === "invitation")?.preview ?? 0.863636,
   1,
 ] as const;
 

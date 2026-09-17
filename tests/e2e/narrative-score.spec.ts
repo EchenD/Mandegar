@@ -3,6 +3,7 @@ import {
   getNarrativeBeat,
   getNarrativeFrame,
   narrativeScore,
+  narrativeStageDuration,
   validateNarrativeScore,
 } from "../../components/experience/narrative-score";
 
@@ -18,6 +19,19 @@ test.describe("narrative score", () => {
       expect(getNarrativeBeat(beat.preview).id).toBe(beat.id);
       expect(getNarrativeFrame(beat.preview).phase).toBe(beat.id);
     }
+  });
+
+  test("gives every stage the same duration and checkpoint spacing", () => {
+    narrativeScore.forEach((beat, index) => {
+      expect(beat.end - beat.start).toBeCloseTo(narrativeStageDuration, 10);
+      expect(beat.preview).toBeCloseTo((index + 0.5) * narrativeStageDuration, 10);
+      if (index > 0) {
+        expect(beat.preview - narrativeScore[index - 1].preview).toBeCloseTo(
+          narrativeStageDuration,
+          10,
+        );
+      }
+    });
   });
 
   test("settles into a quiet visual state at the final loop stage", () => {
