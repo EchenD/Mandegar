@@ -78,6 +78,15 @@ export type ExperienceProject = {
   eyebrow: string;
   summary: string;
   mediaSrc: string;
+  mediaKind?: "image" | "video" | "video-placeholder";
+  mediaPoster?: string;
+  gallery?: Array<{
+    src: string;
+    kind?: "image" | "video" | "video-placeholder";
+    poster?: string;
+  }>;
+  year?: string;
+  location?: string;
   isPlaceholder: boolean;
 };
 
@@ -166,10 +175,6 @@ export function MandegarExperience({
     [projects],
   );
   const pageCopy = postExperienceCopy[locale];
-  const activePhaseNumber = String(
-    narrativeScore.findIndex((phase) => phase.id === activePhase) + 1,
-  ).padStart(2, "0");
-
   useLayoutEffect(() => {
     const previousRestoration = window.history.scrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
@@ -451,37 +456,6 @@ export function MandegarExperience({
             {soundEnabled ? copy.muteSound : copy.enableSound}
           </button>
 
-          <div className={styles.phaseRail} data-phase-rail aria-label={locale === "en" ? "Experience phases" : locale === "ar" ? "مراحل التجربة" : "مراحل تجربه"}>
-            <div
-              className={styles.phaseCurrent}
-              data-phase-current
-              dir={locale === "en" ? "ltr" : "rtl"}
-              aria-live="polite"
-            >
-              <small>{activePhaseNumber}</small>
-              <span>{copy.phases[activePhase]}</span>
-            </div>
-            <span className={styles.phaseTrack}>
-              <i />
-            </span>
-            <div className={styles.phaseButtons}>
-              {narrativeScore.map((phase, index) => (
-                <button
-                  key={phase.id}
-                  type="button"
-                  style={{ "--phase-position": `${phase.preview * 100}%` } as CSSProperties}
-                  data-phase-target={phase.id}
-                  data-active={activePhase === phase.id ? "true" : "false"}
-                  aria-label={`${String(index + 1).padStart(2, "0")} / ${copy.phases[phase.id]}`}
-                  title={copy.phases[phase.id]}
-                  onClick={() => scrollToPhase(phase.id)}
-                >
-                  <small aria-hidden="true">{String(index + 1).padStart(2, "0")}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className={styles.scrollCue} data-scroll-cue>
             <span>{copy.scroll}</span><i />
           </div>
@@ -522,15 +496,6 @@ export function MandegarExperience({
           projectBody: pageCopy.projectsBody,
           viewProject: pageCopy.viewProject,
           projectsEmpty: pageCopy.projectsEmpty,
-          aboutKicker: pageCopy.aboutKicker,
-          aboutTitle: pageCopy.aboutTitle,
-          aboutBody: pageCopy.aboutBody,
-          aboutLink: pageCopy.aboutLink,
-          testimonialsKicker: pageCopy.testimonialsKicker,
-          testimonialsTitle: pageCopy.testimonialsTitle,
-          testimonialsPlaceholder: pageCopy.testimonialsPlaceholder,
-          finalTitle: copy.invitationTitle,
-          finalBody: copy.invitationBody,
         }}
         aboutHref={localizedPath(locale, "about")}
       />

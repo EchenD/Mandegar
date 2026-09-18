@@ -57,6 +57,26 @@
 
 :global(body:has([data-ui-tone="light"])) .header .actions > .button { color: #16191d; background: #f7f7f4; }
 
+:global(html[data-mandegar-tone="dark"]) .header .logo,
+:global(html[data-mandegar-tone="dark"]) .header .nav:not(.navOpen) a,
+:global(html[data-mandegar-tone="dark"]) .header .desktopLanguage a { color: rgba(241, 234, 223, .7) !important; }
+
+:global(html[data-mandegar-tone="dark"]) .header .logoMark { border-color: rgba(241, 234, 223, .82) !important; }
+
+:global(html[data-mandegar-tone="dark"]) .header .menuButton i { background: #f1eadf !important; }
+
+:global(html[data-mandegar-tone="dark"]) .header .actions > .button { color: #16110d !important; background: #f1eadf !important; }
+
+:global(html[data-mandegar-tone="light"]) .header .logo,
+:global(html[data-mandegar-tone="light"]) .header .nav:not(.navOpen) a,
+:global(html[data-mandegar-tone="light"]) .header .desktopLanguage a { color: rgba(27, 23, 20, .7) !important; }
+
+:global(html[data-mandegar-tone="light"]) .header .logoMark { border-color: rgba(27, 23, 20, .82) !important; }
+
+:global(html[data-mandegar-tone="light"]) .header .menuButton i { background: #1b1714 !important; }
+
+:global(html[data-mandegar-tone="light"]) .header .actions > .button { color: #f1eadf !important; background: #1b1714 !important; }
+
 .header:has(.navOpen) .logo { color: var(--ink) !important; }
 .header:has(.navOpen) .logoMark { border-color: var(--ink) !important; }
 .header:has(.navOpen) .menuButton i { background: var(--ink) !important; }

@@ -1,9 +1,9 @@
 import { narrativeScore } from "./narrative-score";
 
 export const narrativeVelocity = {
-  minimum: 0.15,
-  maximum: 1.8,
-  tangentPower: 5,
+  minimum: 0.9,
+  maximum: 1.1,
+  tangentPower: 1,
 } as const;
 
 const curveSamples = 512;

@@ -105,7 +105,7 @@ export const media = {
 const coreProjects: Project[] = [
   {
     slug: "placeholder-exhibition-01",
-    title: { fa: "نمایشگاه مفهومی / فضای تجربه", en: "Concept build / Exhibition environment", ar: "نموذج مفاهيمي / مساحة معرض" },
+    title: { fa: "فضای گردهمایی", en: "The Gathering Space", ar: "مساحة اللقاء" },
     eyebrow: { fa: "دموی مفهومی / نمایشگاه", en: "Concept demo / Exhibition", ar: "عرض مفاهيمي / معرض" },
     summary: {
       fa: "یک قاب موقت برای نمایش پروژه واقعی آینده؛ از فضای خالی تا تجربه‌ای که مخاطب را درگیر می‌کند.",
@@ -146,7 +146,7 @@ const coreProjects: Project[] = [
   },
   {
     slug: "placeholder-interactive-02",
-    title: { fa: "دیوار تعاملی / دعوت به مشارکت", en: "Interactive wall / Audience participation", ar: "جدار تفاعلي / مشاركة الجمهور" },
+    title: { fa: "دیوار زنده", en: "The Living Wall", ar: "الجدار الحي" },
     eyebrow: { fa: "دموی مفهومی / تعامل", en: "Concept demo / Interaction", ar: "عرض مفاهيمي / تفاعل" },
     summary: {
       fa: "مخاطب فقط تماشا نمی‌کند؛ با فضا وارد گفت‌وگو می‌شود.",
@@ -187,7 +187,7 @@ const coreProjects: Project[] = [
   },
   {
     slug: "placeholder-live-03",
-    title: { fa: "صحنه زنده / لحظه مشترک", en: "Live stage / Shared moment", ar: "منصة مباشرة / لحظة مشتركة" },
+    title: { fa: "یک لحظه مشترک", en: "One Shared Moment", ar: "لحظة مشتركة" },
     eyebrow: { fa: "دموی مفهومی / رویداد زنده", en: "Concept demo / Live event", ar: "عرض مفاهيمي / فعالية مباشرة" },
     summary: {
       fa: "وقتی صحنه، محتوا، نور و آدم‌ها در یک لحظه ماندگار به هم می‌رسند.",
@@ -234,9 +234,9 @@ export const projects: Project[] = [
     ...coreProjects[0],
     slug: "placeholder-photo-04",
     title: {
-      fa: "پرتره فراگیر / خاطره مشترک",
-      en: "Immersive portrait / Shared memory",
-      ar: "صورة غامرة / ذكرى مشتركة",
+      fa: "پرتره‌های در حرکت",
+      en: "Portraits in Motion",
+      ar: "صور في حركة",
     },
     eyebrow: {
       fa: "دموی مفهومی / تجربه تصویری",
@@ -256,9 +256,9 @@ export const projects: Project[] = [
     ...coreProjects[1],
     slug: "placeholder-intelligence-05",
     title: {
-      fa: "جریان مخاطب / بینش زنده",
-      en: "Audience flow / Living insight",
-      ar: "حركة الجمهور / رؤية حية",
+      fa: "نبض مخاطب",
+      en: "The Audience Pulse",
+      ar: "نبض الجمهور",
     },
     eyebrow: {
       fa: "دموی مفهومی / هوشمندی رویداد",
@@ -278,9 +278,9 @@ export const projects: Project[] = [
     ...coreProjects[2],
     slug: "placeholder-arrival-06",
     title: {
-      fa: "درگاه برند / ورود نورانی",
-      en: "Brand portal / Luminous arrival",
-      ar: "بوابة العلامة / وصول مضيء",
+      fa: "ورود در نور",
+      en: "Arrival in Light",
+      ar: "الوصول في الضوء",
     },
     eyebrow: {
       fa: "دموی مفهومی / لحظه ورود",

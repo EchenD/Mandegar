@@ -23,7 +23,7 @@ import {
 } from "./baked-material-binding";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { experienceState } from "./experience-state";
-import { assetSlots, getHeroHandoffProgress, sceneTokens } from "./scene-config";
+import { assetSlots, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
 
 type CrowdRuntime = {
@@ -98,7 +98,7 @@ function BakedCrowdAsset({
     }
 
     const production = experienceState.stage.production;
-    const presence = production.crowdPresence * (1 - getHeroHandoffProgress(experienceState.progress));
+    const presence = production.crowdPresence;
     updateCrowdUniforms(runtime.uniforms, presence, production);
     runtime.uniforms.uTime.value = clock.elapsedTime;
     runtime.root.visible = presence > 0.001;

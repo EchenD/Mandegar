@@ -94,7 +94,8 @@ export function CameraRig({ source }: { source: string }) {
   const cameraForward = useRef(new THREE.Vector3());
   const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const cameraLifeQuaternion = useRef(new THREE.Quaternion());
-  const handoffCameraOffset = useRef(new THREE.Vector3());
+  const handoffBaseQuaternion = useRef(new THREE.Quaternion());
+  const handoffLookQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
   const cameraLifeBlend = useRef(0);
 
@@ -138,6 +139,7 @@ export function CameraRig({ source }: { source: string }) {
     }
   }, [authored, gltf.animations]);
 
+  /* eslint-disable react-hooks/immutability -- Three.js camera transforms are intentionally updated inside the render loop. */
   useFrame((_, delta) => {
     const progress = experienceState.progress;
     const cameraProgress = getCameraLoopSampleProgress(progress);
@@ -194,13 +196,17 @@ export function CameraRig({ source }: { source: string }) {
     }
 
     const handoffProgress = introActive ? 0 : getHeroHandoffProgress(progress);
+    // Descend while progressively locking the view onto the center monitor.
+    camera.position.y -= handoffProgress * 4;
     if (handoffProgress > 0) {
-      handoffCameraOffset.current.set(
-        0,
-        0,
-        handoffProgress * (mobile ? 5.2 : 6.4),
-      ).applyQuaternion(camera.quaternion);
-      camera.position.add(handoffCameraOffset.current);
+      handoffBaseQuaternion.current.copy(camera.quaternion);
+      cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
+      camera.lookAt(cameraTarget.current);
+      handoffLookQuaternion.current.copy(camera.quaternion);
+      camera.quaternion.copy(handoffBaseQuaternion.current).slerp(
+        handoffLookQuaternion.current,
+        handoffProgress,
+      );
     }
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {
@@ -253,6 +259,7 @@ export function CameraRig({ source }: { source: string }) {
     camera.quaternion.multiply(cameraLifeQuaternion.current);
     experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
   });
+  /* eslint-enable react-hooks/immutability */
 
   return null;
 }

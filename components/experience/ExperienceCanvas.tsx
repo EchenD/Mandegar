@@ -81,6 +81,7 @@ function CanvasFallback({ className }: { className?: string }) {
 export function ExperienceCanvas({ className, enabledByCms = true, projects = [], zoneLabels, onProjectSelect, onRuntimeReady, onFirstFrame }: ExperienceCanvasProps) {
   const [runtime, setRuntime] = useState<RuntimeState>("pending");
   const [pageVisible, setPageVisible] = useState(true);
+  const [sceneVisible, setSceneVisible] = useState(true);
   const spatialRoot = useRef<HTMLDivElement>(null);
   const primaryAnchor = useRef<SVGCircleElement>(null);
   const secondaryAnchor = useRef<SVGCircleElement>(null);
@@ -301,6 +302,24 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
     };
   }, [enabledByCms, onFirstFrame, onRuntimeReady]);
 
+  useEffect(() => {
+    if (runtime === "pending" || runtime === "fallback") return;
+    let observer: IntersectionObserver | undefined;
+    const frame = requestAnimationFrame(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+      if (!canvas) return;
+      observer = new IntersectionObserver(([entry]) => {
+        setSceneVisible(entry.isIntersecting);
+      }, { rootMargin: "100px 0px" });
+      observer.observe(canvas);
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [runtime]);
+
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback className={className} />;
   const profile = qualityProfiles[runtime];
   return (
@@ -316,7 +335,7 @@ export function ExperienceCanvas({ className, enabledByCms = true, projects = []
           data-scene-pipeline={sceneTokens.rendering.pipeline}
           aria-hidden="true"
           dpr={[profile.dpr[0], profile.dpr[1]]}
-          frameloop={pageVisible ? "always" : "never"}
+          frameloop={pageVisible && sceneVisible ? "always" : "never"}
           camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
           shadows={false}
           gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}

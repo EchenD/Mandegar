@@ -35,7 +35,6 @@ import type { SceneProject } from "./experience-types";
 import {
   assetSlots,
   getHeroBackgroundProgress,
-  getHeroHandoffProgress,
   journeyBackgroundColor,
   phaseProgress,
   sceneTokens,
@@ -425,7 +424,7 @@ export function BakedMandegarScene({
     }
 
     const production = experienceState.stage.production;
-    const heroPresence = 1 - getHeroHandoffProgress(experienceState.progress);
+    const heroPresence = 1;
     const environmentReveal = experienceState.sequence === "loading"
       ? 0
       : experienceState.sequence === "intro"
@@ -446,7 +445,7 @@ export function BakedMandegarScene({
       progress >= candidate.range[0] && progress < candidate.range[1]
     )) ?? null;
     const opacity = mode
-      ? getHudOpacity(progress, mode.range) * experienceState.stage.spatialProminence
+      ? getHudOpacity(progress, mode.range) * experienceState.stage.spatialProminence * heroPresence
       : 0;
     const scratch = projection.current;
     if (mode && opacity > 0.001) {

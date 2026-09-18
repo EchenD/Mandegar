@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { narrativeScore } from "../../components/experience/narrative-score";
 
 const aspectMatrix = [
   { name: "desktop-wide", width: 1440, height: 900 },
@@ -57,9 +58,8 @@ async function seekPhase(
   page: import("@playwright/test").Page,
   phase: string,
 ) {
-  const progress = await page.locator(`[data-phase-target='${phase}']`).evaluate((element) => (
-    Number.parseFloat((element as HTMLElement).style.getPropertyValue("--phase-position")) / 100
-  ));
+  const progress = narrativeScore.find((beat) => beat.id === phase)?.preview;
+  if (progress === undefined) throw new Error(`Unknown narrative phase: ${phase}`);
   await page.locator("[data-experience-root]").evaluate((root, targetProgress) => {
     root.dispatchEvent(new CustomEvent("mandegar:seek", {
       detail: { progress: targetProgress },
@@ -153,7 +153,7 @@ test.describe("Mandegar responsive layout", () => {
     expect(aboutHeader.navigationCenter).toBe(720);
   });
 
-  test("opening loader covers the full interface and isolates text blur", async ({ page }) => {
+  test("opening loader covers the full interface without leaking interaction", async ({ page }) => {
     test.setTimeout(90_000);
     await page.route("**/models/**", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1_200));
@@ -172,7 +172,6 @@ test.describe("Mandegar responsive layout", () => {
       const copy = document.querySelector<HTMLElement>("[data-scene-copy]");
       const loaderRect = loaderElement?.getBoundingClientRect();
       const copyStyle = copy ? getComputedStyle(copy) : null;
-      const copyBlurStyle = copy ? getComputedStyle(copy, "::before") : null;
       return {
         coversViewport: Boolean(
           loaderRect
@@ -183,16 +182,14 @@ test.describe("Mandegar responsive layout", () => {
         ),
         ownsTopCorner: Boolean(document.elementFromPoint(4, 4)?.closest("[data-particle-loader]")),
         rootZIndex: Number(root ? getComputedStyle(root).zIndex : 0),
-        copyIsolation: copyStyle?.isolation,
-        copyBackdrop: copyBlurStyle?.backdropFilter,
+        copyPointerEvents: copyStyle?.pointerEvents,
       };
     });
 
     expect(presentation.coversViewport).toBe(true);
     expect(presentation.ownsTopCorner).toBe(true);
     expect(presentation.rootZIndex).toBeGreaterThan(40);
-    expect(presentation.copyIsolation).toBe("isolate");
-    expect(presentation.copyBackdrop).toContain("blur");
+    expect(presentation.copyPointerEvents).toBe("none");
   });
 
   test("language switcher preserves the current route", async ({ page }) => {
@@ -246,14 +243,13 @@ test.describe("Mandegar responsive layout", () => {
     expect(shaderErrors).toEqual([]);
   });
 
-  test("scroll guidance hands off to an accurate phase rail after user input", async ({ page }) => {
+  test("scroll guidance hands off to accurate native progress after user input", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
 
     const root = page.locator("[data-experience-root]");
     const cue = page.locator("[data-scroll-cue]");
-    const rail = page.locator("[data-phase-rail]");
 
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute(
       "data-complete",
@@ -268,39 +264,20 @@ test.describe("Mandegar responsive layout", () => {
       "",
     );
     await expect(cue).toBeVisible();
-    await expect(rail).toBeHidden();
+    await expect(page.locator("[data-phase-rail]")).toHaveCount(0);
 
     await page.mouse.wheel(0, 120);
     await expect(root).toHaveAttribute("data-scroll-engaged", "true");
     await expect(cue).toBeHidden();
-    await expect(rail).toBeVisible();
-    await expect(rail.locator("[data-phase-target]")).toHaveCount(11);
-    await expect(rail.locator("[data-phase-current]")).toContainText("01Arrival");
 
-    const activation = page.locator("[data-phase-target='activation']");
-    const { nativeProgress, railProgress } = await root.evaluate((element) => ({
+    const { nativeProgress, renderedProgress } = await root.evaluate((element) => ({
       nativeProgress: Number((element as HTMLElement).dataset.nativeProgress),
-      railProgress: Number(
+      renderedProgress: Number(
         getComputedStyle(element).getPropertyValue("--scroll-progress").trim(),
       ),
     }));
     expect(nativeProgress).toBeGreaterThan(0);
-    expect(railProgress).toBeCloseTo(nativeProgress, 4);
-    const activationPosition = await activation.evaluate((element) => Number.parseFloat(
-      element.style.getPropertyValue("--phase-position"),
-    ));
-    const phasePositions = await rail.locator("[data-phase-target]").evaluateAll((elements) => (
-      elements.map((element) => Number.parseFloat(
-        (element as HTMLElement).style.getPropertyValue("--phase-position"),
-      ))
-    ));
-    expect(activationPosition).toBeCloseTo(phasePositions[2], 8);
-    for (let index = 2; index < phasePositions.length; index += 1) {
-      expect(phasePositions[index] - phasePositions[index - 1]).toBeCloseTo(
-        phasePositions[1] - phasePositions[0],
-        8,
-      );
-    }
+    expect(renderedProgress).toBeCloseTo(nativeProgress, 4);
   });
 
   test("homepage owns one persistent canvas host and advances the scroll narrative", async ({ page }) => {
@@ -492,7 +469,7 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator(".footer")).toBeVisible();
   });
 
-  test("reload starts at the beginning and the gallery is pre-positioned behind the hero handoff", async ({ page }) => {
+  test("reload starts at the beginning and the connected journey stays continuous", async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
@@ -512,22 +489,27 @@ test.describe("Mandegar responsive layout", () => {
       };
     });
     expect(flow).not.toBeNull();
-    expect(Math.abs((flow?.heroEnd ?? 0) - (flow?.journeyStart ?? 0) - (flow?.viewportHeight ?? 0) * 2)).toBeLessThan(2);
-    expect(flow?.journeyMargin).toBe(`-${(flow?.viewportHeight ?? 0) * 2}px`);
+    expect(Math.abs(
+      (flow?.heroEnd ?? 0)
+      - (flow?.journeyStart ?? 0)
+      - (flow?.viewportHeight ?? 0) * 4.5,
+    )).toBeLessThan(2);
+    expect(flow?.journeyMargin).toBe(`-${(flow?.viewportHeight ?? 0) * 4.5}px`);
 
     await root.evaluate((node) => {
       node.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .995 } }));
     });
-    await expect.poll(() => journey.evaluate((node) => Number(getComputedStyle(node).getPropertyValue("--journey-reveal")))).toBeGreaterThan(.7);
-    await expect.poll(() => journey.locator("[data-project-helix-sticky]").evaluate((node) => Math.round(node.getBoundingClientRect().top))).toBe(0);
-
     await page.evaluate(() => {
       const projects = document.querySelector<HTMLElement>("[data-connected-journey]");
-      if (projects) window.scrollTo({ top: projects.offsetTop + window.innerHeight, behavior: "auto" });
+      if (projects) {
+        const travel = projects.clientHeight - window.innerHeight;
+        window.scrollTo({ top: projects.offsetTop + travel * .08, behavior: "auto" });
+      }
     });
-    await expect(journey.locator("canvas")).toBeVisible({ timeout: 30_000 });
-    await expect.poll(() => journey.locator("[data-project-helix-sticky]").evaluate((node) => Math.round(node.getBoundingClientRect().top))).toBe(0);
-    await expect.poll(() => journey.evaluate((node) => Number(getComputedStyle(node).getPropertyValue("--journey-reveal")))).toBe(1);
+    await expect.poll(() => journey.locator("[data-journey-surface]").evaluate((node) => (
+      Math.round(node.getBoundingClientRect().top)
+    ))).toBe(0);
+    await expect(journey.locator("[data-project-copy] a:visible").first()).toBeVisible();
 
     const backToTop = page.getByRole("button", { name: "Back to top" });
     await expect(backToTop).toBeVisible();
@@ -545,66 +527,65 @@ test.describe("Mandegar responsive layout", () => {
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-native-progress")).toBe("0.0000");
   });
 
-  test("project helix renders CMS projects without hijacking page scroll", async ({ page }) => {
+  test("connected journey keeps native scroll and holds the active project", async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
-    const helix = page.locator("[data-project-helix]");
-    await expect(helix.getByRole("button")).toHaveCount(6);
-    const start = await helix.evaluate((node) => {
+    const journey = page.locator("[data-connected-journey]");
+    const firstProject = journey.locator("[data-project-copy='0']");
+    const heading = firstProject.getByRole("heading", { level: 2 });
+    const start = await journey.evaluate((node) => {
       const top = node.getBoundingClientRect().top + window.scrollY;
-      const travel = node.clientHeight - window.innerHeight * 2;
-      return top + window.innerHeight + travel * 0.08;
+      const travel = node.clientHeight - window.innerHeight;
+      return top + travel * .08;
     });
     await page.evaluate((top) => window.scrollTo(0, top), start);
-    await expect(helix.locator("canvas")).toBeVisible({ timeout: 30_000 });
-    await expect(helix.getByRole("link", { name: /View project/ })).toBeVisible();
-    await expect.poll(async () => {
-      const box = await helix.locator("[data-project-helix-sticky]").boundingBox();
-      return Math.round(box?.y ?? -100);
-    }).toBe(0);
-    const heldTitle = await helix.locator("h3").textContent();
+    await expect(firstProject.getByRole("link")).toBeVisible();
+    await expect.poll(() => journey.locator("[data-journey-surface]").evaluate((node) => (
+      Math.round(node.getBoundingClientRect().top)
+    ))).toBe(0);
+    const heldHref = await firstProject.getByRole("link").getAttribute("href");
     const before = await page.evaluate(() => window.scrollY);
-    await page.mouse.wheel(0, 450);
+    await page.mouse.wheel(0, 220);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before + 100);
-    await expect.poll(() => helix.locator("h3").textContent()).toBe(heldTitle);
-    await expect(helix).not.toHaveAttribute("data-scroll-snap");
+    await expect(firstProject.getByRole("link")).toHaveAttribute("href", heldHref || "");
+    await expect(heading).toBeVisible();
+    await expect(journey).not.toHaveAttribute("data-scroll-snap");
   });
 
-  test("about system and client voice previews are interactive and accessible", async ({ page }) => {
+  test("reduced-motion visitors receive the complete project study", async ({ page }) => {
     test.setTimeout(120_000);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
-
-    const about = page.locator("[data-about-system]");
-    const processNodes = about.getByRole("button");
-    await expect(processNodes).toHaveCount(4);
-    const technology = about.getByRole("button", { name: /Technology/ });
-    await technology.focus();
-    await expect(technology).toBeFocused();
-    await expect(technology).toHaveAttribute("aria-pressed", "true");
-    await expect(about.locator("h3")).toHaveText("Technology");
-
-    const voices = page.locator("[data-client-voices]");
-    await expect(voices.locator("[data-sample='true']")).toBeVisible();
-    const before = await voices.locator("article blockquote").textContent();
-    await voices.getByRole("button", { name: "Next voice" }).click();
-    await expect.poll(() => voices.locator("article blockquote").textContent()).not.toBe(before);
-    await expect(voices.getByRole("group", { name: "Choose a client voice" }).getByRole("button")).toHaveCount(3);
+    const study = page.locator("[data-connected-journey]");
+    await expect(study).toHaveAttribute("data-motion", "reduced");
+    await study.scrollIntoViewIfNeeded();
+    await expect(study.locator("[data-project-copy]").first().getByRole("heading", { level: 2 })).toBeVisible();
+    const projectLink = study.locator("[data-project-copy]").first().getByRole("link");
+    await expect(projectLink).toBeVisible();
+    await projectLink.focus();
+    await expect(projectLink).toBeFocused();
+    await expect.poll(() => study.locator("[data-journey-surface]").evaluate((node) => (
+      getComputedStyle(node).position
+    ))).toBe("relative");
   });
 
-  test("new post-experience sections fit mobile RTL without overflow", async ({ page }) => {
+  test("project study fits mobile RTL without overflow", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
-    await expect(page.locator("[data-about-system]")).toBeVisible();
-    await expect(page.locator("[data-client-voices]")).toBeVisible();
+    const study = page.locator("[data-connected-journey]");
+    await expect(study).toHaveAttribute("data-motion", "reduced");
+    await study.scrollIntoViewIfNeeded();
+    await expect(study.locator("[data-project-copy]").first().getByRole("heading", { level: 2 })).toBeVisible();
+    await expect(study.locator("[data-project-copy]").first().getByRole("link")).toBeVisible();
+    await expect.poll(() => study.evaluate((node) => getComputedStyle(node).direction)).toBe("rtl");
     await assertNoHorizontalOverflow(page);
   });
 
-  test("homepage centers bookend copy and keeps story copy lower", async ({ page }) => {
+  test("homepage centers arrival copy and keeps story copy lower", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const locale of ["fa", "en"] as const) {
       await page.goto(`/${locale}?phase=discovery`, { waitUntil: "networkidle" });
@@ -625,22 +606,20 @@ test.describe("Mandegar responsive layout", () => {
       expect(result.font).toContain("Vazirmatn Variable");
     }
 
-    for (const stage of ["arrival", "loop"] as const) {
-      await seekPhase(page, stage);
-      const copy = page.locator(`[data-scene-copy='${stage}']`);
-      await expect(copy).toBeVisible();
-      const center = await copy.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return {
-          x: rect.left + rect.width * 0.5,
-          y: rect.top + rect.height * 0.5,
-          viewportWidth: innerWidth,
-          viewportHeight: innerHeight,
-        };
-      });
-      expect(Math.abs(center.x - center.viewportWidth * 0.5)).toBeLessThan(4);
-      expect(Math.abs(center.y - center.viewportHeight * 0.5)).toBeLessThan(4);
-    }
+    await seekPhase(page, "arrival");
+    const copy = page.locator("[data-scene-copy='arrival']");
+    await expect(copy).toBeVisible();
+    const center = await copy.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width * 0.5,
+        y: rect.top + rect.height * 0.5,
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+      };
+    });
+    expect(Math.abs(center.x - center.viewportWidth * 0.5)).toBeLessThan(4);
+    expect(Math.abs(center.y - center.viewportHeight * 0.5)).toBeLessThan(4);
   });
 
   test("project filters and detail route work", async ({ page }) => {

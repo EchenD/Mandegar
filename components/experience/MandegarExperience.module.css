@@ -120,7 +120,7 @@
     rgb(var(--vignette-rgb) / .68) 76%,
     rgb(var(--vignette-rgb)) 100%
   );
-  opacity: var(--vignette-opacity);
+  opacity: calc(var(--vignette-opacity) * (1 - var(--hero-handoff)));
   pointer-events: none;
   will-change: background, opacity;
 }

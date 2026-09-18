@@ -86,7 +86,7 @@ test.describe("baked scene contract validation", () => {
 
   test("renders the environment shell at the arrival frame", async ({ page }) => {
     await page.goto("/fa?intro=0&phase=arrival", { waitUntil: "networkidle" });
-    const canvas = page.locator("canvas");
+    const canvas = page.locator("[data-experience-root] canvas");
     await expect(canvas).toBeVisible();
     await page.waitForTimeout(800);
 

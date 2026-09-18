@@ -158,12 +158,21 @@ export default async function HomePage({ params }: { params: Promise<{ locale?: 
   };
   const requestedHref = ctaOverrides.conversion?.href;
   const ctaHref = requestedHref?.startsWith("/") ? requestedHref : localizedPath(locale, "contact");
-  const projects = (featuredProjects.length ? featuredProjects : availableProjects).slice(0, 6).map((project) => ({
+  const projects = (featuredProjects.length ? featuredProjects : availableProjects).slice(0, 8).map((project) => ({
     slug: project.slug,
     title: getText(project.title, locale),
     eyebrow: getText(project.eyebrow, locale),
     summary: getText(project.summary, locale),
     mediaSrc: project.media.src,
+    mediaKind: project.media.kind,
+    mediaPoster: project.media.poster,
+    gallery: (project.gallery || []).map((item) => ({
+      src: item.src,
+      kind: item.kind,
+      poster: item.poster,
+    })),
+    year: project.year,
+    location: getText(project.location, locale),
     isPlaceholder: Boolean(project.isPlaceholder),
   }));
   const testimonials = trust.testimonials.map((testimonial) => ({
