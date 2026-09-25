@@ -264,11 +264,15 @@ test.describe("Mandegar responsive layout", () => {
       "",
     );
     await expect(cue).toBeVisible();
-    await expect(page.locator("[data-phase-rail]")).toHaveCount(0);
+    const journeyProgress = page.locator("[data-phase-rail]");
+    await expect(journeyProgress).toBeAttached();
+    await expect(journeyProgress).toHaveAttribute("aria-hidden", "true");
 
     await page.mouse.wheel(0, 120);
     await expect(root).toHaveAttribute("data-scroll-engaged", "true");
     await expect(cue).toBeHidden();
+    await expect(journeyProgress).toHaveAttribute("aria-hidden", "false");
+    await expect(journeyProgress).toHaveAttribute("aria-valuemax", "11");
 
     const { nativeProgress, renderedProgress } = await root.evaluate((element) => ({
       nativeProgress: Number((element as HTMLElement).dataset.nativeProgress),

@@ -174,6 +174,10 @@ export function MandegarExperience({
     [projects],
   );
   const pageCopy = postExperienceCopy[locale];
+  const activePhaseIndex = Math.max(
+    0,
+    narrativeScore.findIndex((phase) => phase.id === activePhase),
+  );
   useLayoutEffect(() => {
     const previousRestoration = window.history.scrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
@@ -433,6 +437,23 @@ export function MandegarExperience({
 
           <div className={styles.scrollCue} data-scroll-cue>
             <span>{copy.scroll}</span><i />
+          </div>
+
+          <div
+            className={styles.phaseRail}
+            data-phase-rail
+            role="progressbar"
+            aria-label={`${copy.scroll}: ${copy.phases[activePhase]}`}
+            aria-valuemin={1}
+            aria-valuemax={narrativeScore.length}
+            aria-valuenow={activePhaseIndex + 1}
+            aria-valuetext={`${activePhaseIndex + 1} / ${narrativeScore.length} — ${copy.phases[activePhase]}`}
+          >
+            <div className={styles.phaseCurrent}>
+              <small>{String(activePhaseIndex + 1).padStart(2, "0")} / {String(narrativeScore.length).padStart(2, "0")}</small>
+              <span dir="auto">{copy.phases[activePhase]}</span>
+            </div>
+            <span className={styles.phaseTrack} aria-hidden="true"><i /></span>
           </div>
 
           {CreativePanel ? <CreativePanel activePhase={activePhase} onSeek={scrollToPhase} /> : null}
