@@ -84,16 +84,39 @@ optional and reserved for later procedural variation. Every human uses the same
 baked shader, quiet/peak texture pair, reveal edge, and turbulence controls as
 the exhibition meshes. Crowd UVs must therefore match the exhibition atlas.
 
-## Four baked textures
+## Baked textures
 
-Export the production-ready WebP textures directly to:
+Keep the four lossless 4096x4096 PNG source textures outside the deployed
+`public/` tree. The expected source names are `env_quiet.png`, `env_peak.png`,
+`exhibit_quiet.png`, and `exhibit_peak.png`.
+
+Run the reproducible conversion pipeline from the repository root:
+
+```powershell
+npm run assets:textures -- "D:\Projects\Navid\mandegar3d\Texture\Update"
+```
+
+The script requires Khronos KTX-Software (`toktx` and `ktx`) and generates a
+complete mip chain. It normalizes source color to 8-bit sRGB before producing
+4K desktop WebP/KTX2 files:
 
 ```text
 public/textures/mandegar/baked/env_quiet.webp
+public/textures/mandegar/baked/env_quiet.ktx2
 public/textures/mandegar/baked/env_peak.webp
+public/textures/mandegar/baked/env_peak.ktx2
 public/textures/mandegar/baked/exhibit_quiet.webp
+public/textures/mandegar/baked/exhibit_quiet.ktx2
 public/textures/mandegar/baked/exhibit_peak.webp
+public/textures/mandegar/baked/exhibit_peak.ktx2
 ```
+
+It also generates equivalent 2048x2048 files under
+`public/textures/mandegar/baked/mobile/`. Full quality loads the 4K KTX2 set;
+adaptive quality loads the 2K KTX2 set. WebP files remain checked-in companion
+and inspection assets; the runtime does not switch to them automatically. Do
+not export the 16-bit source directly to runtime:
+all four members of the set must use the same color and bit-depth pipeline.
 
 The quiet/peak pair for each atlas must retain identical dimensions and UV
 layout. Keep baked direct light, soft shadow, reflection and broad highlights
@@ -104,9 +127,10 @@ Fresnel. It only gives bright pixels in the approved peak bake a restrained
 lift, so specular and reflection detail must remain authored in the V-Ray
 texture.
 
-Optimize the JPGs before committing them and keep their existing paths stable.
-High-resolution authoring files belong outside the deployed `public/` tree and
-are not part of the repository or production build.
+Do not hand-edit generated files. Re-run `npm run assets:textures` when a source
+changes, validate the complete set, and commit the generated outputs together.
+High-resolution authoring files are not part of the repository or production
+build.
 
 ## Screen media
 
@@ -117,7 +141,7 @@ uses project poster media or a lightweight generated fallback.
 
 ## Activation and verification
 
-1. Copy all three GLBs and four production WebP textures to the paths above.
+1. Copy all three GLBs and generate both desktop and mobile texture sets.
 2. Restart `npm run dev`.
 3. Open `/fa?intro=1&creative=1`.
 4. Check the browser console. Missing contract nodes are reported by exact name.

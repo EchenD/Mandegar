@@ -35,16 +35,44 @@ function reportContractWarning(message: string) {
 export const bakedSceneContract = {
   textures: {
     environmentQuiet: {
-      runtime: "/textures/mandegar/baked/env_quiet.webp",
+      desktop: {
+        runtime: "/textures/mandegar/baked/env_quiet.ktx2",
+        webp: "/textures/mandegar/baked/env_quiet.webp",
+      },
+      mobile: {
+        runtime: "/textures/mandegar/baked/mobile/env_quiet.ktx2",
+        webp: "/textures/mandegar/baked/mobile/env_quiet.webp",
+      },
     },
     environmentPeak: {
-      runtime: "/textures/mandegar/baked/env_peak.webp",
+      desktop: {
+        runtime: "/textures/mandegar/baked/env_peak.ktx2",
+        webp: "/textures/mandegar/baked/env_peak.webp",
+      },
+      mobile: {
+        runtime: "/textures/mandegar/baked/mobile/env_peak.ktx2",
+        webp: "/textures/mandegar/baked/mobile/env_peak.webp",
+      },
     },
     exhibitionQuiet: {
-      runtime: "/textures/mandegar/baked/exhibit_quiet.webp",
+      desktop: {
+        runtime: "/textures/mandegar/baked/exhibit_quiet.ktx2",
+        webp: "/textures/mandegar/baked/exhibit_quiet.webp",
+      },
+      mobile: {
+        runtime: "/textures/mandegar/baked/mobile/exhibit_quiet.ktx2",
+        webp: "/textures/mandegar/baked/mobile/exhibit_quiet.webp",
+      },
     },
     exhibitionPeak: {
-      runtime: "/textures/mandegar/baked/exhibit_peak.webp",
+      desktop: {
+        runtime: "/textures/mandegar/baked/exhibit_peak.ktx2",
+        webp: "/textures/mandegar/baked/exhibit_peak.webp",
+      },
+      mobile: {
+        runtime: "/textures/mandegar/baked/mobile/exhibit_peak.ktx2",
+        webp: "/textures/mandegar/baked/mobile/exhibit_peak.webp",
+      },
     },
   },
   materials: {

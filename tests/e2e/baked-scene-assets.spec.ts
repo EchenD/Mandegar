@@ -26,10 +26,18 @@ test.describe("baked scene assets", () => {
     const contractTextures = bakedSceneContract.textures;
 
     expect(assetSlots.bakedTextures).toEqual({
-      environmentQuiet: publicAssetPath(contractTextures.environmentQuiet.runtime),
-      environmentPeak: publicAssetPath(contractTextures.environmentPeak.runtime),
-      exhibitionQuiet: publicAssetPath(contractTextures.exhibitionQuiet.runtime),
-      exhibitionPeak: publicAssetPath(contractTextures.exhibitionPeak.runtime),
+      full: {
+        environmentQuiet: publicAssetPath(contractTextures.environmentQuiet.desktop.runtime),
+        environmentPeak: publicAssetPath(contractTextures.environmentPeak.desktop.runtime),
+        exhibitionQuiet: publicAssetPath(contractTextures.exhibitionQuiet.desktop.runtime),
+        exhibitionPeak: publicAssetPath(contractTextures.exhibitionPeak.desktop.runtime),
+      },
+      adaptive: {
+        environmentQuiet: publicAssetPath(contractTextures.environmentQuiet.mobile.runtime),
+        environmentPeak: publicAssetPath(contractTextures.environmentPeak.mobile.runtime),
+        exhibitionQuiet: publicAssetPath(contractTextures.exhibitionQuiet.mobile.runtime),
+        exhibitionPeak: publicAssetPath(contractTextures.exhibitionPeak.mobile.runtime),
+      },
     });
   });
 
@@ -45,13 +53,56 @@ test.describe("baked scene assets", () => {
     );
   });
 
-  test("checks in every production WebP texture", () => {
+  test("checks in every desktop and mobile texture variant", () => {
     Object.entries(bakedSceneContract.textures).forEach(([id, texture]) => {
-      expect(texture.runtime, `${id} must use a WebP texture`).toMatch(/\.webp$/i);
-      expect(
-        existsSync(resolvePublicAsset(texture.runtime)),
-        `${id} production texture is missing: ${texture.runtime}`,
-      ).toBe(true);
+      Object.entries({ desktop: texture.desktop, mobile: texture.mobile }).forEach(
+        ([variant, assets]) => {
+          expect(assets.runtime, `${id} ${variant} must use KTX2 at runtime`).toMatch(/\.ktx2$/i);
+          expect(assets.webp, `${id} ${variant} must retain its WebP companion`).toMatch(/\.webp$/i);
+          [assets.runtime, assets.webp].forEach((assetPath) => {
+            expect(
+              existsSync(resolvePublicAsset(assetPath)),
+              `${id} ${variant} texture is missing: ${assetPath}`,
+            ).toBe(true);
+          });
+        },
+      );
     });
+    expect(existsSync(resolvePublicAsset("/basis/basis_transcoder.js"))).toBe(true);
+    expect(existsSync(resolvePublicAsset("/basis/basis_transcoder.wasm"))).toBe(true);
+  });
+
+  test("loads the KTX2 tier selected for the viewport", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "hardwareConcurrency", { configurable: true, get: () => 8 });
+      Object.defineProperty(navigator, "deviceMemory", { configurable: true, get: () => 8 });
+    });
+    const requestedAssets: string[] = [];
+    page.on("response", (response) => {
+      const pathname = new URL(response.url()).pathname;
+      if (/\.(?:ktx2|wasm)$/i.test(pathname)) requestedAssets.push(pathname);
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/en?intro=0&phase=reveal", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-experience-canvas='true']")).toBeVisible();
+    expect(requestedAssets.filter((asset) => asset.endsWith(".ktx2")).sort()).toEqual([
+      "/textures/mandegar/baked/env_peak.ktx2",
+      "/textures/mandegar/baked/env_quiet.ktx2",
+      "/textures/mandegar/baked/exhibit_peak.ktx2",
+      "/textures/mandegar/baked/exhibit_quiet.ktx2",
+    ]);
+    expect(requestedAssets.some((asset) => asset.endsWith("/basis_transcoder.wasm"))).toBe(true);
+
+    requestedAssets.length = 0;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.locator("[data-experience-canvas='true']")).toBeVisible();
+    expect(requestedAssets.filter((asset) => asset.endsWith(".ktx2")).sort()).toEqual([
+      "/textures/mandegar/baked/mobile/env_peak.ktx2",
+      "/textures/mandegar/baked/mobile/env_quiet.ktx2",
+      "/textures/mandegar/baked/mobile/exhibit_peak.ktx2",
+      "/textures/mandegar/baked/mobile/exhibit_quiet.ktx2",
+    ]);
   });
 });

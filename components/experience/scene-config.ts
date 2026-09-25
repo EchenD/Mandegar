@@ -251,11 +251,20 @@ export const assetSlots = {
   environment: publicAssetPath("/models/mandegar/mandegar_environment.glb"),
   exhibition: publicAssetPath("/models/mandegar/mandegar_exhibition.glb"),
   crowd: publicAssetPath("/models/mandegar/mandegar_crowd.glb"),
+  basisTranscoder: publicAssetPath("/basis/"),
   bakedTextures: {
-    environmentQuiet: publicAssetPath(bakedSceneContract.textures.environmentQuiet.runtime),
-    environmentPeak: publicAssetPath(bakedSceneContract.textures.environmentPeak.runtime),
-    exhibitionQuiet: publicAssetPath(bakedSceneContract.textures.exhibitionQuiet.runtime),
-    exhibitionPeak: publicAssetPath(bakedSceneContract.textures.exhibitionPeak.runtime),
+    full: {
+      environmentQuiet: publicAssetPath(bakedSceneContract.textures.environmentQuiet.desktop.runtime),
+      environmentPeak: publicAssetPath(bakedSceneContract.textures.environmentPeak.desktop.runtime),
+      exhibitionQuiet: publicAssetPath(bakedSceneContract.textures.exhibitionQuiet.desktop.runtime),
+      exhibitionPeak: publicAssetPath(bakedSceneContract.textures.exhibitionPeak.desktop.runtime),
+    },
+    adaptive: {
+      environmentQuiet: publicAssetPath(bakedSceneContract.textures.environmentQuiet.mobile.runtime),
+      environmentPeak: publicAssetPath(bakedSceneContract.textures.environmentPeak.mobile.runtime),
+      exhibitionQuiet: publicAssetPath(bakedSceneContract.textures.exhibitionQuiet.mobile.runtime),
+      exhibitionPeak: publicAssetPath(bakedSceneContract.textures.exhibitionPeak.mobile.runtime),
+    },
   },
 } as const;
 

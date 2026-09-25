@@ -105,7 +105,8 @@ export function prepareBakedTexture(texture: THREE.Texture) {
   texture.flipY = false;
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.generateMipmaps = true;
+  texture.generateMipmaps = (texture.mipmaps?.length ?? 0) === 0
+    && !(texture instanceof THREE.CompressedTexture);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
