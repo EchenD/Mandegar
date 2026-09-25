@@ -4,6 +4,26 @@ export type BakedExhibitionSectionId = "central" | "left" | "right";
 export type BakedSectionId = "environment" | BakedExhibitionSectionId;
 export type BakedScreenId = "videoWall" | "interactive" | "game" | "main";
 
+export const interactionAnchorNames = [
+  "fxAnchor_interaction_photo_hotspot",
+  "fxAnchor_interaction_photo_flash",
+  "fxAnchor_interaction_photo_phone",
+  "fxAnchor_interaction_touch_hotspot",
+  "fxAnchor_interaction_stage_hotspot",
+  "fxAnchor_stage_beam_origin_01",
+  "fxAnchor_stage_beam_origin_02",
+  "fxAnchor_stage_beam_origin_03",
+  "fxAnchor_stage_beam_origin_04",
+  "fxAnchor_stage_beam_origin_05",
+  "fxAnchor_stage_beam_target_01",
+  "fxAnchor_stage_beam_target_02",
+  "fxAnchor_stage_beam_target_03",
+  "fxAnchor_stage_beam_target_04",
+  "fxAnchor_stage_beam_target_05",
+  "fxAnchor_interaction_game_hotspot",
+  "fxAnchor_interaction_draw_hotspot",
+] as const;
+
 const reportedContractWarnings = new Set<string>();
 
 function reportContractWarning(message: string) {
@@ -44,19 +64,16 @@ export const bakedSceneContract = {
       central: {
         root: "section_central",
         revealAnchor: "fxAnchor_reveal_central",
-        hudAnchor: "fxAnchor_hud_central",
         signalAnchor: "fxAnchor_signal_central",
       },
       left: {
         root: "section_left",
         revealAnchor: "fxAnchor_reveal_left",
-        hudAnchor: "fxAnchor_hud_left",
         signalAnchor: "fxAnchor_signal_left",
       },
       right: {
         root: "section_right",
         revealAnchor: "fxAnchor_reveal_right",
-        hudAnchor: "fxAnchor_hud_right",
         signalAnchor: "fxAnchor_signal_right",
       },
     },
@@ -71,6 +88,29 @@ export const bakedSceneContract = {
       interactive: "left",
       game: "right",
       main: "right",
+    },
+    interactionAnchors: {
+      photoHotspot: "fxAnchor_interaction_photo_hotspot",
+      photoFlash: "fxAnchor_interaction_photo_flash",
+      photoPhone: "fxAnchor_interaction_photo_phone",
+      touchHotspot: "fxAnchor_interaction_touch_hotspot",
+      stageHotspot: "fxAnchor_interaction_stage_hotspot",
+      gameHotspot: "fxAnchor_interaction_game_hotspot",
+      drawHotspot: "fxAnchor_interaction_draw_hotspot",
+      beamOrigins: [
+        "fxAnchor_stage_beam_origin_01",
+        "fxAnchor_stage_beam_origin_02",
+        "fxAnchor_stage_beam_origin_03",
+        "fxAnchor_stage_beam_origin_04",
+        "fxAnchor_stage_beam_origin_05",
+      ],
+      beamTargets: [
+        "fxAnchor_stage_beam_target_01",
+        "fxAnchor_stage_beam_target_02",
+        "fxAnchor_stage_beam_target_03",
+        "fxAnchor_stage_beam_target_04",
+        "fxAnchor_stage_beam_target_05",
+      ],
     },
   },
   crowd: {
@@ -118,6 +158,16 @@ export function validateContractMaterials(
   return missing;
 }
 
+export function validateInteractionAnchors(root: THREE.Object3D) {
+  const missing = interactionAnchorNames.filter((name) => !root.getObjectByName(name));
+  missing.forEach((name) => {
+    reportContractWarning(
+      `[Mandegar] Exhibition GLB is missing required interaction anchor: ${name}; using deterministic runtime fallback.`,
+    );
+  });
+  return missing;
+}
+
 export const requiredEnvironmentNodes = [
   bakedSceneContract.environment.root,
   bakedSceneContract.environment.section,
@@ -129,15 +179,12 @@ export const requiredExhibitionNodes = [
   bakedSceneContract.exhibition.root,
   bakedSceneContract.exhibition.sections.central.root,
   bakedSceneContract.exhibition.sections.central.revealAnchor,
-  bakedSceneContract.exhibition.sections.central.hudAnchor,
   bakedSceneContract.exhibition.sections.central.signalAnchor,
   bakedSceneContract.exhibition.sections.left.root,
   bakedSceneContract.exhibition.sections.left.revealAnchor,
-  bakedSceneContract.exhibition.sections.left.hudAnchor,
   bakedSceneContract.exhibition.sections.left.signalAnchor,
   bakedSceneContract.exhibition.sections.right.root,
   bakedSceneContract.exhibition.sections.right.revealAnchor,
-  bakedSceneContract.exhibition.sections.right.hudAnchor,
   bakedSceneContract.exhibition.sections.right.signalAnchor,
   ...Object.values(bakedSceneContract.exhibition.screens),
 ] as const;

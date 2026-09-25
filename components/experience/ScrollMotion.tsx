@@ -131,6 +131,7 @@ export function ScrollMotion({
     };
 
     const syncExperience = (progress: number) => {
+      if (root.hasAttribute("data-interaction-active")) return;
       const timelineProgress = clamp01(progress);
       const nativeProgress = reduced || saveData ? timelineProgress : getNativeProgress();
       const safeProgress = reduced ? timelineProgress : warpNarrativeProgress(timelineProgress);
@@ -172,7 +173,7 @@ export function ScrollMotion({
     if (reduced || saveData) {
       root.dataset.reducedMotion = "true";
       showPhaseRail();
-      syncExperience(narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.409091);
+      syncExperience(preview ?? narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.409091);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
         resetNarrative();
@@ -232,6 +233,7 @@ export function ScrollMotion({
     };
     root.addEventListener("mandegar:seek", seekExperience);
     const onNativeScroll = () => {
+      if (root.hasAttribute("data-interaction-active")) return;
       const currentProgress = getNativeProgress();
       syncNativePresentation(currentProgress);
       if (currentProgress > 0.0008) showPhaseRail();

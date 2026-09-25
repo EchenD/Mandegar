@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import type { JourneyClient, JourneyVoice } from "./ConnectedJourney";
@@ -11,6 +10,7 @@ import { resetIntro } from "./intro-director";
 import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
+import { InteractionDirector } from "./interactions/InteractionDirector";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -158,7 +158,6 @@ export function MandegarExperience({
   enabledByCms = true,
   lenisEnabled = false,
 }: ExperienceProps) {
-  const router = useRouter();
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
@@ -213,9 +212,6 @@ export function MandegarExperience({
       });
       audioContext.current?.close();
       resetIntro();
-      experienceState.focusZone = null;
-      experienceState.focusProject = null;
-      experienceState.focusScreen = null;
     };
   }, []);
 
@@ -284,11 +280,6 @@ export function MandegarExperience({
     document.documentElement.style.scrollBehavior = previousBehavior;
   }, []);
 
-  const selectProject = useCallback((index: number) => {
-    const project = projects[index];
-    if (project) router.push(`/${locale}/projects/${project.slug}`);
-  }, [locale, projects, router]);
-
   const toggleSound = useCallback(async () => {
     if (soundEnabled) {
       audioNodes.current.forEach((node) => {
@@ -355,8 +346,6 @@ export function MandegarExperience({
             className={styles.canvas}
             enabledByCms={enabledByCms}
             projects={canvasProjects}
-            zoneLabels={{ photo: copy.zones.photo, game: copy.zones.game }}
-            onProjectSelect={selectProject}
             onRuntimeReady={handleRuntimeReady}
             onFirstFrame={handleFirstFrame}
           />
@@ -376,6 +365,8 @@ export function MandegarExperience({
             <span className={styles.fallbackHalo} />
             <span className={styles.fallbackTrail} />
           </div>
+
+          <InteractionDirector locale={locale} activePhase={activePhase} runtime={runtime} />
 
           <div className={styles.copyLayer}>
             <section className={`${styles.sceneCopy} ${styles.arrivalCopy}`} data-scene-copy="arrival" data-cinematic-beat>
@@ -434,22 +425,6 @@ export function MandegarExperience({
               </div>
             </section>
           </div>
-
-          <nav className={styles.sceneA11y} data-scene-a11y aria-label={copy.experiencesTitle}>
-            {(["photo", "game", "touch"] as const).map((zone) => (
-              <button
-                key={zone}
-                type="button"
-                onFocus={() => { experienceState.focusZone = zone; }}
-                onBlur={() => { experienceState.focusZone = null; }}
-              >
-                {copy.zones[zone]}
-              </button>
-            ))}
-            {projects.slice(0, 3).map((project) => (
-              <Link prefetch={false} key={project.slug} href={`/${locale}/projects/${project.slug}`}>{project.title}</Link>
-            ))}
-          </nav>
 
           <button className={styles.soundControl} type="button" aria-pressed={soundEnabled} onClick={toggleSound}>
             <span aria-hidden="true">{soundEnabled ? "◖" : "○"}</span>

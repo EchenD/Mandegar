@@ -310,6 +310,19 @@
 
 .copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; }
 
+.root[data-interaction-active] .copyLayer,
+.root[data-interaction-active] .phaseRail,
+.root[data-interaction-active] .scrollCue,
+.root[data-interaction-active] .soundControl {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.root[data-interaction-active] {
+  transition-delay: 0s;
+}
+
 .root[data-intro-active="true"] .copyLayer,
 .root[data-intro-active="true"] .phaseRail,
 .root[data-intro-active="true"] .scrollCue,
@@ -489,11 +502,6 @@
 .backToTop span { font-size: 1rem; line-height: 1; transform: translateY(-.05rem); }
 .backToTop:hover { border-color: #75d8ff; transform: translateY(-.18rem) scale(1.03); }
 .backToTop:focus-visible { outline: 2px solid #75d8ff; outline-offset: .25rem; }
-
-.root[data-ui-tone="light"] :global([data-spatial-labels]) {
-  --hud-accent: #75d8ff !important;
-  --hud-ink: #f7f7f4 !important;
-}
 
 @keyframes scrollCueTravel {
   0% { opacity: 0; transform: translateY(0); }

@@ -18,6 +18,7 @@ import { prepareBakedTexture } from "./baked-scene-material";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { sceneTokens } from "./scene-config";
+import { interactionRuntime } from "./interactions/interaction-runtime";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -100,9 +101,9 @@ type ScreenRuntime = {
   media: THREE.Texture;
   video: HTMLVideoElement | null;
   bindings: RuntimeMaterialBinding[];
-  hoverLabel: THREE.Sprite;
-  hoverLabelMaterial: THREE.SpriteMaterial;
-  hoverLabelTexture: THREE.CanvasTexture;
+  liveTexture: THREE.CanvasTexture | null;
+  liveCanvas: HTMLCanvasElement | null;
+  liveRevision: number;
 };
 
 function createFallbackTexture() {
@@ -111,76 +112,6 @@ function createFallbackTexture() {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
-}
-
-function createHoverLabelTexture(color: string) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 256;
-  const context = canvas.getContext("2d");
-  if (context) {
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = color;
-    context.font = "700 62px Arial, sans-serif";
-    context.letterSpacing = "10px";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(sceneTokens.bakedScene.screenHover.label, 486, 116);
-    context.globalAlpha = 0.72;
-    context.fillRect(286, 184, 400, 3);
-    context.beginPath();
-    context.moveTo(713, 184);
-    context.lineTo(685, 170);
-    context.lineTo(685, 198);
-    context.closePath();
-    context.fill();
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function createHoverLabel(
-  root: THREE.Object3D,
-  object: THREE.Object3D | null | undefined,
-  id: BakedScreenId,
-) {
-  const darkMediaScreens = sceneTokens.bakedScene.screenHover.darkMediaScreens as readonly BakedScreenId[];
-  const color = darkMediaScreens.includes(id)
-    ? sceneTokens.bakedScene.screenHover.lightText
-    : sceneTokens.bakedScene.screenHover.darkText;
-  const texture = createHoverLabelTexture(color);
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    opacity: 0,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-  });
-  const sprite = new THREE.Sprite(material);
-  sprite.name = `fxLabel_screen_${id}`;
-  sprite.visible = false;
-  sprite.renderOrder = 100;
-  sprite.frustumCulled = false;
-  sprite.raycast = () => {};
-
-  if (object) {
-    root.updateMatrixWorld(true);
-    object.updateWorldMatrix(true, false);
-    const bounds = new THREE.Box3().setFromObject(object);
-    const center = bounds.getCenter(new THREE.Vector3());
-    const size = bounds.getSize(new THREE.Vector3());
-    const width = THREE.MathUtils.clamp(Math.max(size.x, size.z) * 0.34, 0.82, 2.8);
-    root.worldToLocal(center);
-    sprite.position.copy(center);
-    sprite.scale.set(width, width * 0.25, 1);
-  }
-  root.add(sprite);
-  return { material, sprite, texture };
 }
 
 function getActivation(id: BakedScreenId) {
@@ -235,7 +166,7 @@ export function BakedScreenController({
           uMedia: { value: media },
           uActivation: { value: 0 },
           uHover: { value: 0 },
-          uHoverBrightness: { value: sceneTokens.bakedScene.screenHover.brightness },
+          uHoverBrightness: { value: 0 },
           uHasMedia: { value: 0 },
           uTime: { value: 0 },
           uRevealProgress: { value: 0 },
@@ -254,7 +185,6 @@ export function BakedScreenController({
         polygonOffsetUnits: -1,
       });
       const object = root.getObjectByName(bakedSceneContract.exhibition.screens[id]);
-      const hoverLabel = createHoverLabel(root, object, id);
       result[id] = {
         id,
         sectionId,
@@ -262,9 +192,9 @@ export function BakedScreenController({
         media,
         video: null,
         bindings: object ? bindRuntimeMaterial(object, material) : [],
-        hoverLabel: hoverLabel.sprite,
-        hoverLabelMaterial: hoverLabel.material,
-        hoverLabelTexture: hoverLabel.texture,
+        liveTexture: null,
+        liveCanvas: null,
+        liveRevision: 0,
       };
     });
     runtimesRef.current = result;
@@ -328,16 +258,14 @@ export function BakedScreenController({
           runtime.video.load();
         }
         restoreRuntimeMaterial(runtime.bindings, runtime.material);
-        root.remove(runtime.hoverLabel);
-        runtime.hoverLabelTexture.dispose();
-        runtime.hoverLabelMaterial.dispose();
+        runtime.liveTexture?.dispose();
         runtime.media.dispose();
         runtime.material.dispose();
       });
     };
   }, [projects, root]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock }) => {
     const runtimes = runtimesRef.current;
     if (!runtimes) {
       return;
@@ -346,21 +274,34 @@ export function BakedScreenController({
     (Object.values(runtimes) as ScreenRuntime[]).forEach((runtime) => {
       const activation = getActivation(runtime.id);
       const production = experienceState.stage.production;
-      const hoverTarget = experienceState.focusScreen === runtime.id && activation > 0.08 ? 1 : 0;
-      const hoverBlend = 1 - Math.exp(-delta * (hoverTarget > runtime.material.uniforms.uHover.value ? 11 : 7));
-      const hover = THREE.MathUtils.lerp(
-        runtime.material.uniforms.uHover.value,
-        hoverTarget,
-        hoverBlend,
-      );
       runtime.material.uniforms.uActivation.value = activation;
-      runtime.material.uniforms.uHover.value = hover;
+      runtime.material.uniforms.uHover.value = 0;
       runtime.material.uniforms.uTime.value = clock.elapsedTime;
       runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
-      runtime.hoverLabelMaterial.opacity = hover;
-      runtime.hoverLabel.visible = hover > 0.002;
+      const liveEntry = interactionRuntime.monitorEntries[runtime.id];
+      if (liveEntry?.canvas !== runtime.liveCanvas) {
+        runtime.liveTexture?.dispose();
+        runtime.liveCanvas = liveEntry?.canvas ?? null;
+        runtime.liveRevision = 0;
+        runtime.liveTexture = liveEntry
+          ? prepareBakedTexture(new THREE.CanvasTexture(liveEntry.canvas)) as THREE.CanvasTexture
+          : null;
+        if (runtime.liveTexture) {
+          runtime.liveTexture.generateMipmaps = false;
+          runtime.liveTexture.minFilter = THREE.LinearFilter;
+          runtime.material.uniforms.uMedia.value = runtime.liveTexture;
+          runtime.material.uniforms.uHasMedia.value = 1;
+        } else {
+          runtime.material.uniforms.uMedia.value = runtime.media;
+          runtime.material.uniforms.uHasMedia.value = 1;
+        }
+      }
+      if (liveEntry && runtime.liveTexture && liveEntry.revision !== runtime.liveRevision) {
+        runtime.liveRevision = liveEntry.revision;
+        runtime.liveTexture.needsUpdate = true;
+      }
       if (!runtime.video) return;
       if (activation > 0.04 && runtime.video.paused) {
         void runtime.video.play().catch(() => undefined);

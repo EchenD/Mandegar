@@ -11,6 +11,7 @@ import {
   bakedSceneContract,
   requiredEnvironmentNodes,
   requiredExhibitionNodes,
+  validateInteractionAnchors,
   validateContractMaterials,
   validateContractNodes,
   type BakedScreenId,
@@ -32,15 +33,21 @@ import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
+import { resolveInteractionAnchors, type InteractionAnchorRuntime } from "./interactions/interaction-anchors";
+import {
+  dispatchSceneInteraction,
+  interactionRuntime,
+  publishInteractionAnchors,
+  requestInteraction,
+} from "./interactions/interaction-runtime";
+import type { InteractionAnchorPoint, InteractionStation } from "./interactions/interaction-types";
 import {
   assetSlots,
   getHeroBackgroundProgress,
   journeyBackgroundColor,
-  phaseProgress,
   sceneTokens,
   type SceneQuality,
 } from "./scene-config";
-import type { SpatialHudFrame, SpatialHudModeId, SpatialScreenPoint } from "./spatial-hud";
 import { TransitionParticleField } from "./TransitionParticleField";
 
 type SectionRuntime = {
@@ -55,15 +62,6 @@ type BakedSceneRuntime = {
   central: SectionRuntime;
   left: SectionRuntime;
   right: SectionRuntime;
-  hudModes: HudMode[];
-};
-
-type HudMode = {
-  id: SpatialHudModeId;
-  range: readonly [number, number];
-  primary: THREE.Object3D | null | undefined;
-  secondary: THREE.Object3D | null | undefined;
-  measure: THREE.Object3D | null | undefined;
 };
 
 function collectExcludedScreenObjects(root: THREE.Object3D) {
@@ -127,68 +125,23 @@ function updateSection(
   runtime.root.visible = reveal > 0.001;
 }
 
-function smoothstep(value: number) {
-  const safe = THREE.MathUtils.clamp(value, 0, 1);
-  return safe * safe * (3 - 2 * safe);
-}
-
-function getHudOpacity(progress: number, range: readonly [number, number]) {
-  const span = Math.max(0.001, range[1] - range[0]);
-  const fade = Math.min(0.026, span * 0.2);
-  const enter = smoothstep(phaseProgress(progress, [range[0], range[0] + fade]));
-  const exit = smoothstep(phaseProgress(progress, [range[1] - fade, range[1]]));
-  return enter * (1 - exit);
-}
-
 function projectObject(
-  object: THREE.Object3D | null | undefined,
+  anchor: { object: THREE.Object3D; fallback: boolean },
   camera: THREE.Camera,
   size: { width: number; height: number },
   world: THREE.Vector3,
   projected: THREE.Vector3,
-  output: SpatialScreenPoint,
-) {
-  if (!object) {
-    output.visible = false;
-    return;
-  }
-  object.getWorldPosition(world);
+): InteractionAnchorPoint {
+  anchor.object.getWorldPosition(world);
   projected.copy(world).project(camera);
-  output.x = (projected.x * 0.5 + 0.5) * size.width;
-  output.y = (-projected.y * 0.5 + 0.5) * size.height;
-  output.visible = projected.z >= -1 && projected.z <= 1
-    && projected.x >= -1.15 && projected.x <= 1.15
-    && projected.y >= -1.15 && projected.y <= 1.15;
-}
-
-function projectMeasurement(
-  object: THREE.Object3D | null | undefined,
-  camera: THREE.Camera,
-  size: { width: number; height: number },
-  worldStart: THREE.Vector3,
-  worldEnd: THREE.Vector3,
-  projectedStart: THREE.Vector3,
-  projectedEnd: THREE.Vector3,
-  start: SpatialScreenPoint,
-  end: SpatialScreenPoint,
-) {
-  if (!object) {
-    start.visible = false;
-    end.visible = false;
-    return 0;
-  }
-  const bounds = new THREE.Box3().setFromObject(object);
-  worldStart.set(bounds.min.x, bounds.max.y, bounds.max.z);
-  worldEnd.set(bounds.max.x, bounds.max.y, bounds.max.z);
-  projectedStart.copy(worldStart).project(camera);
-  projectedEnd.copy(worldEnd).project(camera);
-  start.x = (projectedStart.x * 0.5 + 0.5) * size.width;
-  start.y = (-projectedStart.y * 0.5 + 0.5) * size.height;
-  end.x = (projectedEnd.x * 0.5 + 0.5) * size.width;
-  end.y = (-projectedEnd.y * 0.5 + 0.5) * size.height;
-  start.visible = projectedStart.z >= -1 && projectedStart.z <= 1;
-  end.visible = projectedEnd.z >= -1 && projectedEnd.z <= 1;
-  return worldStart.distanceTo(worldEnd);
+  return {
+    x: (projected.x * 0.5 + 0.5) * size.width,
+    y: (-projected.y * 0.5 + 0.5) * size.height,
+    visible: projected.z >= -1 && projected.z <= 1
+      && projected.x >= -1.08 && projected.x <= 1.08
+      && projected.y >= -1.08 && projected.y <= 1.08,
+    fallback: anchor.fallback,
+  };
 }
 
 function findScreenId(object: THREE.Object3D) {
@@ -202,18 +155,282 @@ function findScreenId(object: THREE.Object3D) {
   return null;
 }
 
+const screenStations: Partial<Record<BakedScreenId, InteractionStation>> = {
+  interactive: "touch",
+  videoWall: "stage",
+  game: "game",
+  main: "draw",
+};
+
+function InteractionBeamEffects({
+  anchors,
+  quality,
+}: {
+  anchors: InteractionAnchorRuntime;
+  quality: SceneQuality;
+}) {
+  const group = useMemo(() => {
+    const next = new THREE.Group();
+    next.name = "fxInteraction_stage_beams";
+    anchors.beamOrigins.forEach((origin, index) => {
+      const start = origin.object.getWorldPosition(new THREE.Vector3());
+      const end = anchors.beamTargets[index].object.getWorldPosition(new THREE.Vector3());
+      const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+      const material = new THREE.LineBasicMaterial({
+        color: ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"][index],
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const line = new THREE.Line(geometry, material);
+      line.name = `fxInteraction_stage_beam_${String(index + 1).padStart(2, "0")}`;
+      line.frustumCulled = false;
+      line.raycast = () => {};
+      next.add(line);
+    });
+    return next;
+  }, [anchors]);
+
+  useFrame((_, delta) => {
+    group.children.forEach((child, index) => {
+      const material = (child as THREE.Line).material as THREE.LineBasicMaterial;
+      const target = interactionRuntime.activeBeams[index] ? (quality === "full" ? 0.92 : 0.62) : 0;
+      material.opacity = THREE.MathUtils.damp(material.opacity, target, 12, delta);
+      child.visible = material.opacity > 0.002;
+    });
+  });
+
+  useEffect(() => () => {
+    group.children.forEach((child) => {
+      const line = child as THREE.Line;
+      line.geometry.dispose();
+      (line.material as THREE.Material).dispose();
+    });
+  }, [group]);
+
+  return <primitive object={group} />;
+}
+
+function createCueTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    context.clearRect(0, 0, 128, 128);
+    context.beginPath();
+    context.arc(64, 64, 42, 0, Math.PI * 2);
+    context.strokeStyle = "rgba(117,216,255,.95)";
+    context.lineWidth = 6;
+    context.shadowColor = "#225cff";
+    context.shadowBlur = 20;
+    context.stroke();
+    context.shadowBlur = 0;
+    context.fillStyle = "#f7f7f4";
+    context.fillRect(61, 45, 6, 38);
+    context.fillRect(45, 61, 38, 6);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function InteractionSceneCues({ anchors }: { anchors: InteractionAnchorRuntime }) {
+  const group = useMemo(() => {
+    const next = new THREE.Group();
+    next.name = "fxInteraction_station_cues";
+    const texture = createCueTexture();
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      color: "#ffffff",
+      transparent: true,
+      opacity: 0.92,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    (Object.entries(anchors.stations) as Array<[InteractionStation, InteractionAnchorRuntime["stations"][InteractionStation]]>)
+      .forEach(([station, anchor]) => {
+        const sprite = new THREE.Sprite(material);
+        sprite.name = `fxInteraction_cue_${station}`;
+        sprite.userData.interactionStation = station;
+        sprite.position.copy(anchor.object.getWorldPosition(new THREE.Vector3()));
+        sprite.scale.setScalar(0.72);
+        sprite.renderOrder = 50;
+        sprite.visible = false;
+        next.add(sprite);
+      });
+    next.userData.cueTexture = texture;
+    next.userData.cueMaterial = material;
+    return next;
+  }, [anchors]);
+
+  useFrame(({ clock }) => {
+    const available = interactionRuntime.activeStation ? null : interactionRuntime.availableStation;
+    const pulse = 0.82 + Math.sin(clock.elapsedTime * 3.2) * 0.12;
+    (group.userData.cueMaterial as THREE.SpriteMaterial).opacity = pulse;
+    group.children.forEach((child) => {
+      child.visible = child.userData.interactionStation === available;
+      const scale = child.visible ? 0.72 + Math.sin(clock.elapsedTime * 3.2) * 0.04 : 0.72;
+      child.scale.setScalar(scale);
+    });
+  });
+
+  useEffect(() => () => {
+    (group.userData.cueMaterial as THREE.Material).dispose();
+    (group.userData.cueTexture as THREE.Texture).dispose();
+  }, [group]);
+
+  return (
+    <primitive
+      object={group}
+      onPointerMove={(event: ThreeEvent<PointerEvent>) => {
+        if (!event.object.userData.interactionStation) return;
+        event.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => { document.body.style.cursor = ""; }}
+      onClick={(event: ThreeEvent<MouseEvent>) => {
+        const station = event.object.userData.interactionStation as InteractionStation | undefined;
+        if (!station || interactionRuntime.availableStation !== station) return;
+        event.stopPropagation();
+        requestInteraction(station, "pointer");
+      }}
+    />
+  );
+}
+
+function createFlashTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.18, "rgba(117,216,255,.9)");
+    gradient.addColorStop(1, "rgba(117,216,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 128, 128);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntime }) {
+  const portraitSource = useLoader(THREE.TextureLoader, "/media/placeholders/photo-experience.webp");
+  const group = useMemo(() => {
+    const next = new THREE.Group();
+    next.name = "fxInteraction_photo_result";
+    const portrait = portraitSource.clone();
+    portrait.colorSpace = THREE.SRGBColorSpace;
+    portrait.needsUpdate = true;
+    const phoneMaterial = new THREE.SpriteMaterial({
+      map: portrait,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const phoneFrameMaterial = new THREE.SpriteMaterial({
+      color: "#101419",
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const phoneFrame = new THREE.Sprite(phoneFrameMaterial);
+    phoneFrame.name = "fxInteraction_photo_phone_frame";
+    phoneFrame.position.copy(anchors.photoPhone.object.getWorldPosition(new THREE.Vector3()));
+    phoneFrame.scale.set(0.06, 0.1, 1);
+    phoneFrame.renderOrder = 52;
+    phoneFrame.visible = false;
+    const phone = new THREE.Sprite(phoneMaterial);
+    phone.name = "fxInteraction_photo_phone_result";
+    phone.position.copy(anchors.photoPhone.object.getWorldPosition(new THREE.Vector3()));
+    phone.scale.set(0.05, 0.08, 1);
+    phone.renderOrder = 53;
+    phone.visible = false;
+    const flashTexture = createFlashTexture();
+    const flashMaterial = new THREE.SpriteMaterial({
+      map: flashTexture,
+      color: "#ffffff",
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const flash = new THREE.Sprite(flashMaterial);
+    flash.name = "fxInteraction_photo_flash";
+    flash.position.copy(anchors.photoFlash.object.getWorldPosition(new THREE.Vector3()));
+    flash.scale.setScalar(2.4);
+    flash.renderOrder = 51;
+    flash.visible = false;
+    next.add(phoneFrame, phone, flash);
+    next.userData.phoneFrame = phoneFrame;
+    next.userData.phoneFrameMaterial = phoneFrameMaterial;
+    next.userData.phone = phone;
+    next.userData.phoneMaterial = phoneMaterial;
+    next.userData.portrait = portrait;
+    next.userData.flash = flash;
+    next.userData.flashMaterial = flashMaterial;
+    next.userData.flashTexture = flashTexture;
+    return next;
+  }, [anchors, portraitSource]);
+  const previousStep = useRef(interactionRuntime.photoStep);
+  const flashAge = useRef(1);
+
+  useFrame((_, delta) => {
+    const phone = group.userData.phone as THREE.Sprite;
+    const phoneMaterial = group.userData.phoneMaterial as THREE.SpriteMaterial;
+    const phoneFrame = group.userData.phoneFrame as THREE.Sprite;
+    const phoneFrameMaterial = group.userData.phoneFrameMaterial as THREE.SpriteMaterial;
+    const flash = group.userData.flash as THREE.Sprite;
+    const flashMaterial = group.userData.flashMaterial as THREE.SpriteMaterial;
+    const step = interactionRuntime.photoStep;
+    if (step === "captured" && previousStep.current !== "captured") flashAge.current = 0;
+    previousStep.current = step;
+    const showPhone = step === "captured";
+    phone.visible = showPhone || phoneMaterial.opacity > 0.01;
+    phoneFrame.visible = phone.visible;
+    phoneMaterial.opacity = THREE.MathUtils.damp(phoneMaterial.opacity, showPhone ? 1 : 0, 9, delta);
+    phoneFrameMaterial.opacity = phoneMaterial.opacity;
+    const scale = THREE.MathUtils.damp(phoneFrame.scale.y, showPhone ? 0.78 : 0.08, 8, delta);
+    phoneFrame.scale.set(scale * 0.58, scale, 1);
+    phone.scale.set(scale * 0.5, scale * 0.9, 1);
+    flashAge.current += delta;
+    flashMaterial.opacity = Math.max(0, 1 - flashAge.current * 2.4);
+    flash.visible = flashMaterial.opacity > 0.01;
+  });
+
+  useEffect(() => () => {
+    (group.userData.phoneMaterial as THREE.Material).dispose();
+    (group.userData.phoneFrameMaterial as THREE.Material).dispose();
+    (group.userData.portrait as THREE.Texture).dispose();
+    (group.userData.flashMaterial as THREE.Material).dispose();
+    (group.userData.flashTexture as THREE.Texture).dispose();
+  }, [group]);
+
+  return <primitive object={group} />;
+}
+
 export function BakedMandegarScene({
   quality,
   projects,
   onFirstFrame,
-  onProjectSelect,
-  onSpatialFrame,
 }: {
   quality: SceneQuality;
   projects: SceneProject[];
   onFirstFrame?: () => void;
-  onProjectSelect?: (index: number) => void;
-  onSpatialFrame?: (frame: SpatialHudFrame) => void;
 }) {
   const environmentGltf = useLoader(GLTFLoader, assetSlots.environment);
   const exhibitionGltf = useLoader(GLTFLoader, assetSlots.exhibition);
@@ -239,12 +456,17 @@ export function BakedMandegarScene({
     clone.visible = false;
     return clone;
   }, [exhibitionGltf.scene]);
+  const interactionAnchors = useMemo(
+    () => resolveInteractionAnchors(exhibition),
+    [exhibition],
+  );
   const textures = useMemo(() => loadedTextures.map(prepareBakedTexture), [loadedTextures]);
   const runtimeRef = useRef<BakedSceneRuntime | null>(null);
 
   useEffect(() => {
     validateContractNodes(environmentGltf.scene, requiredEnvironmentNodes, "Environment GLB");
     validateContractNodes(exhibitionGltf.scene, requiredExhibitionNodes, "Exhibition GLB");
+    validateInteractionAnchors(exhibitionGltf.scene);
     validateContractMaterials(
       environmentGltf.scene,
       [bakedSceneContract.materials.environment],
@@ -256,6 +478,8 @@ export function BakedMandegarScene({
       "Exhibition GLB",
     );
   }, [environmentGltf.scene, exhibitionGltf.scene]);
+
+  useEffect(() => () => interactionAnchors.dispose(), [interactionAnchors]);
 
   useEffect(() => {
     environment.updateMatrixWorld(true);
@@ -300,56 +524,11 @@ export function BakedMandegarScene({
       materialName: "MAT_EXHIBIT_RIGHT_RUNTIME",
       excluded: excludedScreens,
     });
-    const hudModes: HudMode[] = [
-      {
-        id: "assembly",
-        range: sceneTokens.bakedScene.hudMoments.central,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.central.hudAnchor),
-        secondary: null,
-        measure: centralRoot,
-      },
-      {
-        id: "activationLeft",
-        range: sceneTokens.bakedScene.hudMoments.left,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.left.hudAnchor),
-        secondary: null,
-        measure: leftRoot,
-      },
-      {
-        id: "activationRight",
-        range: sceneTokens.bakedScene.hudMoments.right,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.right.hudAnchor),
-        secondary: null,
-        measure: rightRoot,
-      },
-      {
-        id: "experiences",
-        range: sceneTokens.bakedScene.hudMoments.experiences,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.left.hudAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.right.hudAnchor),
-        measure: null,
-      },
-      {
-        id: "proof",
-        range: sceneTokens.bakedScene.hudMoments.proof,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.central.hudAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.right.hudAnchor),
-        measure: exhibition.getObjectByName(bakedSceneContract.exhibition.screens.videoWall),
-      },
-      {
-        id: "intelligence",
-        range: sceneTokens.bakedScene.hudMoments.intelligence,
-        primary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.left.signalAnchor),
-        secondary: exhibition.getObjectByName(bakedSceneContract.exhibition.sections.central.signalAnchor),
-        measure: null,
-      },
-    ];
     const nextRuntime: BakedSceneRuntime = {
       environment: environmentRuntime,
       central,
       left,
       right,
-      hudModes,
     };
 
     runtimeRef.current = nextRuntime;
@@ -374,34 +553,99 @@ export function BakedMandegarScene({
   }, [environment, exhibition, gl, textures]);
 
   const projection = useRef({
-    world: Array.from({ length: 4 }, () => new THREE.Vector3()),
-    projected: Array.from({ length: 4 }, () => new THREE.Vector3()),
-    primary: { x: 0, y: 0, visible: false },
-    secondary: { x: 0, y: 0, visible: false },
-    measureStart: { x: 0, y: 0, visible: false },
-    measureEnd: { x: 0, y: 0, visible: false },
+    world: Array.from({ length: 17 }, () => new THREE.Vector3()),
+    projected: Array.from({ length: 17 }, () => new THREE.Vector3()),
+    frame: 0,
   });
 
   const clearInteraction = useCallback(() => {
-    experienceState.focusProject = null;
-    experienceState.focusScreen = null;
     document.body.style.cursor = "";
   }, []);
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     const screenId = findScreenId(event.object);
-    if (!screenId) return;
+    const station = screenId ? screenStations[screenId] : null;
+    if (station && interactionRuntime.activeStation === station && event.uv) {
+      event.stopPropagation();
+      document.body.style.cursor = station === "game" || station === "stage" ? "pointer" : "crosshair";
+      dispatchSceneInteraction(station, {
+        phase: "move",
+        x: THREE.MathUtils.clamp(event.uv.x, 0, 1),
+        y: THREE.MathUtils.clamp(event.uv.y, 0, 1),
+        pointerId: event.pointerId,
+        input: event.pointerType === "touch" ? "touch" : "pointer",
+      });
+      return;
+    }
+    if (!station || interactionRuntime.availableStation !== station) {
+      document.body.style.cursor = "";
+      return;
+    }
     event.stopPropagation();
-    experienceState.focusProject = screenId === "interactive" ? 1 : screenId === "game" ? 2 : 0;
-    experienceState.focusScreen = screenId;
     document.body.style.cursor = "pointer";
   }, []);
+  const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
+    const screenId = findScreenId(event.object);
+    const station = screenId ? screenStations[screenId] : null;
+    if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
+    event.stopPropagation();
+    const target = event.nativeEvent.target;
+    if (target instanceof Element && "setPointerCapture" in target) {
+      target.setPointerCapture(event.pointerId);
+    }
+    dispatchSceneInteraction(station, {
+      phase: "down",
+      x: THREE.MathUtils.clamp(event.uv.x, 0, 1),
+      y: THREE.MathUtils.clamp(event.uv.y, 0, 1),
+      pointerId: event.pointerId,
+      input: event.pointerType === "touch" ? "touch" : "pointer",
+    });
+  }, []);
+  const handlePointerEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
+    const screenId = findScreenId(event.object);
+    const station = screenId ? screenStations[screenId] : null;
+    if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
+    event.stopPropagation();
+    dispatchSceneInteraction(station, {
+      phase: event.type === "pointercancel" ? "cancel" : "up",
+      x: THREE.MathUtils.clamp(event.uv.x, 0, 1),
+      y: THREE.MathUtils.clamp(event.uv.y, 0, 1),
+      pointerId: event.pointerId,
+      input: event.pointerType === "touch" ? "touch" : "pointer",
+    });
+  }, []);
+  const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
+    const screenId = findScreenId(event.object);
+    const station = screenId ? screenStations[screenId] : null;
+    if (station && interactionRuntime.activeStation === station) {
+      dispatchSceneInteraction(station, {
+        phase: "cancel",
+        x: event.uv ? THREE.MathUtils.clamp(event.uv.x, 0, 1) : 0.5,
+        y: event.uv ? THREE.MathUtils.clamp(event.uv.y, 0, 1) : 0.5,
+        pointerId: event.pointerId,
+        input: event.pointerType === "touch" ? "touch" : "pointer",
+      });
+    }
+    clearInteraction();
+  }, [clearInteraction]);
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
     const screenId = findScreenId(event.object);
-    if (!screenId) return;
+    const station = screenId ? screenStations[screenId] : null;
+    if (!station || !event.uv) return;
+    if (interactionRuntime.activeStation === station) {
+      event.stopPropagation();
+      dispatchSceneInteraction(station, {
+        phase: "activate",
+        x: THREE.MathUtils.clamp(event.uv.x, 0, 1),
+        y: THREE.MathUtils.clamp(event.uv.y, 0, 1),
+        pointerId: 0,
+        input: "pointer",
+      });
+      return;
+    }
+    if (interactionRuntime.availableStation !== station) return;
     event.stopPropagation();
-    const index = screenId === "interactive" ? 1 : screenId === "game" ? 2 : 0;
-    onProjectSelect?.(index);
-  }, [onProjectSelect]);
+    requestInteraction(station, "pointer");
+  }, []);
   useEffect(() => clearInteraction, [clearInteraction]);
 
   useFrame(({ clock }) => {
@@ -439,53 +683,32 @@ export function BakedMandegarScene({
       firstFrame.current = true;
       onFirstFrame?.();
     }
-    if (!onSpatialFrame) return;
-    const progress = experienceState.progress;
-    const mode = runtime.hudModes.find((candidate) => (
-      progress >= candidate.range[0] && progress < candidate.range[1]
-    )) ?? null;
-    const opacity = mode
-      ? getHudOpacity(progress, mode.range) * experienceState.stage.spatialProminence * heroPresence
-      : 0;
     const scratch = projection.current;
-    if (mode && opacity > 0.001) {
-      environment.updateMatrixWorld(true);
-      exhibition.updateMatrixWorld(true);
-      camera.updateMatrixWorld(true);
-      projectObject(mode.primary, camera, size, scratch.world[0], scratch.projected[0], scratch.primary);
-      projectObject(mode.secondary, camera, size, scratch.world[1], scratch.projected[1], scratch.secondary);
-    } else {
-      scratch.primary.visible = false;
-      scratch.secondary.visible = false;
-    }
-    const measureMeters = mode && opacity > 0.001
-      ? projectMeasurement(
-        mode.measure,
-        camera,
-        size,
-        scratch.world[2],
-        scratch.world[3],
-        scratch.projected[2],
-        scratch.projected[3],
-        scratch.measureStart,
-        scratch.measureEnd,
-      )
-      : 0;
-    if (!mode || opacity <= 0.001) {
-      scratch.measureStart.visible = false;
-      scratch.measureEnd.visible = false;
-    }
-    onSpatialFrame({
-      mode: mode?.id ?? null,
-      opacity,
-      compact: size.width <= 760,
-      width: size.width,
-      height: size.height,
-      primary: scratch.primary,
-      secondary: scratch.secondary,
-      measureStart: scratch.measureStart,
-      measureEnd: scratch.measureEnd,
-      measureMeters,
+    scratch.frame += 1;
+    if (scratch.frame % 4 !== 0) return;
+    environment.updateMatrixWorld(true);
+    exhibition.updateMatrixWorld(true);
+    camera.updateMatrixWorld(true);
+    let index = 0;
+    const project = (anchor: { object: THREE.Object3D; fallback: boolean }) => {
+      const point = projectObject(anchor, camera, size, scratch.world[index], scratch.projected[index]);
+      index += 1;
+      return point;
+    };
+    publishInteractionAnchors({
+      stations: {
+        photo: project(interactionAnchors.stations.photo),
+        touch: project(interactionAnchors.stations.touch),
+        stage: project(interactionAnchors.stations.stage),
+        game: project(interactionAnchors.stations.game),
+        draw: project(interactionAnchors.stations.draw),
+      },
+      photoFlash: project(interactionAnchors.photoFlash),
+      photoPhone: project(interactionAnchors.photoPhone),
+      beams: interactionAnchors.beamOrigins.map((origin, beamIndex) => ({
+        origin: project(origin),
+        target: project(interactionAnchors.beamTargets[beamIndex]),
+      })),
     });
   });
 
@@ -494,11 +717,17 @@ export function BakedMandegarScene({
       <primitive object={environment} />
       <primitive
         object={exhibition}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
         onPointerMove={handlePointerMove}
-        onPointerOut={clearInteraction}
+        onPointerOut={handlePointerOut}
         onClick={handleClick}
       />
       <BakedScreenController root={exhibition} projects={projects} />
+      <InteractionSceneCues anchors={interactionAnchors} />
+      <InteractionPhotoEffects anchors={interactionAnchors} />
+      <InteractionBeamEffects anchors={interactionAnchors} quality={quality} />
       <TransitionParticleField
         environment={environment}
         exhibition={exhibition}
