@@ -374,20 +374,22 @@ test.describe("Mandegar responsive layout", () => {
     }
   });
 
-  test("experience zones respond to keyboard and project proof stays CMS-addressable", async ({ page }) => {
+  test("station entry responds to keyboard without restoring scene navigation", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?phase=experiences", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
     await expect(page.locator("[data-scene-copy='experiences']")).toBeVisible();
-    const sceneNavigation = page.locator("[data-mandegar-experience] nav");
-    const photo = sceneNavigation.getByRole("button", { name: /Photo/ });
-    await photo.focus();
-    await expect(photo).toBeFocused();
+    const game = page.locator("[data-interaction-hotspot='game']");
+    await expect(game).toBeAttached();
+    await game.focus();
+    await expect(game).toBeFocused();
+    await expect(game).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("[data-interaction-panel='game']")).toBeVisible();
+    await page.keyboard.press("Escape");
 
     await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
-    const proofLinks = page.locator("[data-mandegar-experience] nav a");
-    await expect(proofLinks).toHaveCount(3);
-    await expect(proofLinks.first()).toHaveAttribute("href", /\/en\/projects\//);
+    await expect(page.locator("[data-mandegar-experience] nav a")).toHaveCount(0);
     const particleSystem = page.locator("[data-particle-system]");
     await expect(particleSystem).toHaveCount(1);
     const pipeline = await particleSystem.getAttribute("data-scene-pipeline");
@@ -395,31 +397,15 @@ test.describe("Mandegar responsive layout", () => {
       "data-particle-system",
       pipeline === "baked-modular" ? "transition-boundary" : "signal-network",
     );
-    await expect(page.locator("[data-interaction-system='pointer-touch']")).toHaveCount(1);
+    await expect(page.locator("[data-interaction-system='station-director']")).toHaveCount(1);
   });
 
-  test("spatial annotations activate only near their projected object", async ({ page }) => {
+  test("legacy proximity annotations are absent", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?phase=discovery", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
-    const hud = page.locator("[data-spatial-labels]");
-    const anchor = page.locator("[data-spatial-anchor='primary']");
-    const annotation = page.locator("[data-spatial-annotation='primary']");
-    await expect.poll(async () => {
-      const x = await anchor.getAttribute("cx");
-      const y = await anchor.getAttribute("cy");
-      return x !== null && y !== null ? { x: Number(x), y: Number(y) } : null;
-    }).not.toBeNull();
-    const x = Number(await anchor.getAttribute("cx"));
-    const y = Number(await anchor.getAttribute("cy"));
-    await expect(annotation).toHaveCSS("opacity", "0");
-    await page.mouse.move(x, y);
-    await expect.poll(async () => Number(await hud.getAttribute("data-proximity"))).toBeGreaterThan(0.9);
-    await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.8);
-    await page.screenshot({ path: "test-results/ui/spatial-proximity.png", fullPage: false });
-    await page.mouse.move(1, 1);
-    await expect.poll(async () => Number(await hud.getAttribute("data-proximity"))).toBeLessThan(0.05);
-    await expect.poll(() => annotation.evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(0.1);
+    await expect(page.locator("[data-spatial-labels], [data-spatial-annotation], [data-spatial-anchor]")).toHaveCount(0);
+    await expect(page.getByText("LEARN MORE", { exact: true })).toHaveCount(0);
   });
 
   test("texture transition switches copy and header chrome to a light readable theme", async ({ page }) => {

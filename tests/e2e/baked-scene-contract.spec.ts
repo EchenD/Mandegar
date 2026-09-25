@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 import * as THREE from "three";
 import {
+  interactionAnchorNames,
   validateContractMaterials,
   validateContractNodes,
+  validateInteractionAnchors,
 } from "../../components/experience/baked-scene-contract";
 import {
   bindRuntimeMaterial,
@@ -10,6 +12,29 @@ import {
 } from "../../components/experience/baked-material-binding";
 
 test.describe("baked scene contract validation", () => {
+  test("declares the complete authored interaction anchor contract", () => {
+    expect(interactionAnchorNames).toHaveLength(17);
+    const origins = interactionAnchorNames.filter((name) => name.includes("beam_origin_"));
+    const targets = interactionAnchorNames.filter((name) => name.includes("beam_target_"));
+    expect(origins.map((name) => name.slice(-2))).toEqual(["01", "02", "03", "04", "05"]);
+    expect(targets.map((name) => name.slice(-2))).toEqual(["01", "02", "03", "04", "05"]);
+  });
+
+  test("reports precise development fallbacks when authored anchors are absent", () => {
+    const root = new THREE.Group();
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (message) => warnings.push(String(message));
+    try {
+      expect(validateInteractionAnchors(root)).toEqual(interactionAnchorNames);
+      expect(warnings).toHaveLength(interactionAnchorNames.length);
+      expect(warnings[0]).toContain("required interaction anchor");
+      expect(warnings[0]).toContain("deterministic runtime fallback");
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
   test("accepts required source materials without warning", () => {
     const root = new THREE.Group();
     const material = new THREE.MeshBasicMaterial();
@@ -137,5 +162,22 @@ test.describe("baked scene contract validation", () => {
       .toEqual([]);
     expect(warnings).toEqual([...new Set(warnings)]);
     expect(shaderErrors).toEqual([]);
+  });
+
+  test("hydrates the authored-anchor debug route without contract errors", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (
+        message.type() === "error"
+        && /hydration|missing required interaction anchor/i.test(message.text())
+      ) {
+        errors.push(message.text());
+      }
+    });
+
+    await page.goto("/en?intro=0&phase=reveal&anchors=1", { waitUntil: "networkidle" });
+    await expect(page.locator("[data-anchor-debug]")).toHaveCount(1);
+    expect(errors).toEqual([]);
   });
 });

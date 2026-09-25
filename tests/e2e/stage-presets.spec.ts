@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
 import { bakedSceneContract } from "../../components/experience/baked-scene-contract";
 import { sceneTokens } from "../../components/experience/scene-config";
+import { interactionRegistry } from "../../components/experience/interactions/interaction-registry";
 import {
   applyCreativeStagePresetSnapshot,
   getCameraLoopSampleProgress,
@@ -131,20 +132,14 @@ test.describe("creative stage presets", () => {
     expect(textureSettled.rightPeak).toBe(1);
   });
 
-  test("settles product HUDs at their named review checkpoints", () => {
-    const checkpoints = {
-      central: narrativeScore.find((stage) => stage.id === "discovery")!.preview,
-      left: narrativeScore.find((stage) => stage.id === "activation")!.preview,
-      right: narrativeScore.find((stage) => stage.id === "reveal")!.preview,
-      intelligence: narrativeScore.find((stage) => stage.id === "intelligence")!.preview,
-    } as const;
-    Object.entries(checkpoints).forEach(([id, preview]) => {
-      const range = sceneTokens.bakedScene.hudMoments[
-        id as keyof typeof sceneTokens.bakedScene.hudMoments
-      ];
-      expect(range[0]).toBeLessThan(preview);
-      expect(range[1]).toBeGreaterThan(preview);
-    });
+  test("assigns one deliberate interaction to each revised narrative phase", () => {
+    expect(Object.values(interactionRegistry).map(({ phase }) => phase)).toEqual([
+      "activation",
+      "engagement",
+      "reveal",
+      "experiences",
+      "connection",
+    ]);
   });
 
   test("preserves monitor state while the two inserted stages hold the story", () => {

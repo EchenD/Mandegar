@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testPort = process.env.PLAYWRIGHT_PORT || "3000";
+const testBaseUrl = `http://localhost:${testPort}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
@@ -9,7 +12,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: testBaseUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -17,8 +20,8 @@ export default defineConfig({
     locale: "fa-IR",
   },
   webServer: {
-    command: "npm run dev -- -p 3000",
-    url: "http://localhost:3000/fa",
+    command: `npm run dev -- -p ${testPort}`,
+    url: `${testBaseUrl}/fa/`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
