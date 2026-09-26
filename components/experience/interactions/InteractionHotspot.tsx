@@ -1,6 +1,20 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, Ref } from "react";
 import type { InteractionAnchorPoint, InteractionInput, InteractionStation } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
+
+function resolveHotspotPoint(point: InteractionAnchorPoint) {
+  return point.visible ? point : { x: 50, y: 50, visible: true, fallback: true };
+}
+
+export function positionInteractionHotspot(
+  element: HTMLButtonElement,
+  point: InteractionAnchorPoint,
+) {
+  const position = resolveHotspotPoint(point);
+  element.style.setProperty("--hotspot-x", `${position.x}px`);
+  element.style.setProperty("--hotspot-y", `${position.y}px`);
+  element.dataset.anchorFallback = position.fallback ? "true" : "false";
+}
 
 export function InteractionHotspot({
   station,
@@ -8,16 +22,19 @@ export function InteractionHotspot({
   point,
   completed,
   onEnter,
+  elementRef,
 }: {
   station: InteractionStation;
   label: string;
   point: InteractionAnchorPoint;
   completed: boolean;
   onEnter: (input: InteractionInput) => void;
+  elementRef?: Ref<HTMLButtonElement>;
 }) {
-  const position = point.visible ? point : { x: 50, y: 50, visible: true, fallback: true };
+  const position = resolveHotspotPoint(point);
   return (
     <button
+      ref={elementRef}
       type="button"
       className={styles.hotspot}
       data-interaction-hotspot={station}

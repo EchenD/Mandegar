@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import type { ScenePhaseId } from "../narrative-score";
 import { DrawingInteraction } from "./DrawingInteraction";
 import { GameInteraction } from "./GameInteraction";
 import { getInteractionCopy } from "./interaction-copy";
 import { InteractionChrome } from "./InteractionChrome";
-import { InteractionHotspot } from "./InteractionHotspot";
+import { InteractionHotspot, positionInteractionHotspot } from "./InteractionHotspot";
 import { getStationForPhase } from "./interaction-registry";
 import {
   interactionRuntime,
@@ -23,6 +23,14 @@ import { PhotoBoothInteraction } from "./PhotoBoothInteraction";
 import { StageBeamInteraction } from "./StageBeamInteraction";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
 import styles from "./HeroInteractions.module.css";
+
+const interactionStationNames: readonly InteractionStation[] = [
+  "photo",
+  "touch",
+  "stage",
+  "game",
+  "draw",
+];
 
 function fallbackFrame(): InteractionAnchorFrame {
   const width = typeof window === "undefined" ? 1200 : window.innerWidth;
@@ -45,7 +53,7 @@ function fallbackFrame(): InteractionAnchorFrame {
   };
 }
 
-export function InteractionDirector({
+export const InteractionDirector = memo(function InteractionDirector({
   locale,
   activePhase,
   runtime,
@@ -55,8 +63,8 @@ export function InteractionDirector({
   runtime: "pending" | "fallback" | "adaptive" | "full";
 }) {
   const copy = useMemo(() => getInteractionCopy(locale), [locale]);
+  const initialAnchors = useMemo(() => fallbackFrame(), []);
   const [state, dispatch] = useReducer(interactionReducer, initialInteractionState);
-  const [anchors, setAnchors] = useState<InteractionAnchorFrame>(fallbackFrame);
   const [settledPhase, setSettledPhase] = useState<ScenePhaseId | null>(null);
   const [showAnchorDebug, setShowAnchorDebug] = useState(false);
   const [reducedMotion] = useState(() => (
@@ -65,7 +73,24 @@ export function InteractionDirector({
   const previousFocus = useRef<HTMLElement | null>(null);
   const savedScroll = useRef(0);
   const panelRoot = useRef<HTMLDivElement>(null);
+  const anchors = useRef(initialAnchors);
+  const hotspotElement = useRef<HTMLButtonElement>(null);
+  const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
   const expectedStation = getStationForPhase(activePhase);
+
+  const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
+    const hotspot = hotspotElement.current;
+    const station = hotspot?.dataset.interactionHotspot as InteractionStation | undefined;
+    if (hotspot && station) positionInteractionHotspot(hotspot, frame.stations[station]);
+    interactionStationNames.forEach((name) => {
+      const element = debugAnchorElements.current[name];
+      if (!element) return;
+      const point = frame.stations[name];
+      element.style.left = `${point.x}px`;
+      element.style.top = `${point.y}px`;
+      element.dataset.fallback = point.fallback ? "true" : "false";
+    });
+  }, []);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -117,7 +142,9 @@ export function InteractionDirector({
     };
     const handleAnchors = (event: Event) => {
       const detail = (event as CustomEvent<InteractionAnchorFrame>).detail;
-      if (detail) setAnchors(detail);
+      if (!detail) return;
+      anchors.current = detail;
+      applyAnchorFrame(detail);
     };
     window.addEventListener("mandegar:interaction-request", handleRequest);
     window.addEventListener("mandegar:interaction-anchors", handleAnchors);
@@ -125,7 +152,18 @@ export function InteractionDirector({
       window.removeEventListener("mandegar:interaction-request", handleRequest);
       window.removeEventListener("mandegar:interaction-anchors", handleAnchors);
     };
-  }, [enter]);
+  }, [applyAnchorFrame, enter]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const root = panelRoot.current;
+    if (!root) return;
+    root.dataset.reactRenderCount = String(Number(root.dataset.reactRenderCount ?? 0) + 1);
+  });
+
+  useEffect(() => {
+    applyAnchorFrame(anchors.current);
+  }, [applyAnchorFrame, showAnchorDebug, state.availableStation]);
 
   useEffect(() => {
     if (!state.activeStation) return;
@@ -227,9 +265,10 @@ export function InteractionDirector({
         <InteractionHotspot
           station={state.availableStation}
           label={copy.stations[state.availableStation].label}
-          point={anchors.stations[state.availableStation]}
+          point={initialAnchors.stations[state.availableStation]}
           completed={state.completed[state.availableStation]}
           onEnter={(input) => enter(state.availableStation!, input)}
+          elementRef={hotspotElement}
         />
       )}
 
@@ -253,11 +292,25 @@ export function InteractionDirector({
 
       {showAnchorDebug && (
         <div className={styles.anchorDebug} data-anchor-debug aria-hidden="true">
-          {Object.entries(anchors.stations).map(([name, point]) => (
-            <i key={name} style={{ left: point.x, top: point.y }} data-fallback={point.fallback ? "true" : "false"}>{name}</i>
-          ))}
+          {interactionStationNames.map((name) => {
+            const point = initialAnchors.stations[name];
+            return (
+              <i
+                key={name}
+                ref={(element) => {
+                  if (element) debugAnchorElements.current[name] = element;
+                  else delete debugAnchorElements.current[name];
+                }}
+                style={{ left: point.x, top: point.y }}
+                data-fallback={point.fallback ? "true" : "false"}
+                data-anchor-debug-point={name}
+              >
+                {name}
+              </i>
+            );
+          })}
         </div>
       )}
     </div>
   );
-}
+});

@@ -180,4 +180,54 @@ test.describe("baked scene contract validation", () => {
     await expect(page.locator("[data-anchor-debug]")).toHaveCount(1);
     expect(errors).toEqual([]);
   });
+
+  test("updates projected anchors without rerendering the interaction director", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=reveal&anchors=1", { waitUntil: "networkidle" });
+    const director = page.locator("[data-interaction-director]");
+    await expect(director).toHaveAttribute("data-available-station", "stage");
+    const result = await director.evaluate((element) => {
+      const before = Number((element as HTMLElement).dataset.reactRenderCount);
+      const point = (x: number, y: number) => ({ x, y, visible: true, fallback: false });
+      const detail = {
+        stations: {
+          photo: point(101, 201),
+          touch: point(102, 202),
+          stage: point(321, 222),
+          game: point(104, 204),
+          draw: point(105, 205),
+        },
+        photoFlash: point(0, 0),
+        photoPhone: point(0, 0),
+        beams: Array.from({ length: 5 }, () => ({
+          origin: point(0, 0),
+          target: point(0, 0),
+        })),
+      };
+      for (let index = 0; index < 12; index += 1) {
+        window.dispatchEvent(new CustomEvent("mandegar:interaction-anchors", { detail }));
+      }
+      const hotspot = element.querySelector<HTMLElement>("[data-interaction-hotspot='stage']");
+      const debugPoint = element.querySelector<HTMLElement>("[data-anchor-debug-point='stage']");
+      return {
+        before,
+        after: Number((element as HTMLElement).dataset.reactRenderCount),
+        hotspotX: hotspot?.style.getPropertyValue("--hotspot-x"),
+        hotspotY: hotspot?.style.getPropertyValue("--hotspot-y"),
+        debugLeft: debugPoint?.style.left,
+        debugTop: debugPoint?.style.top,
+      };
+    });
+
+    expect(result.after).toBe(result.before);
+    expect(result).toMatchObject({
+      hotspotX: "321px",
+      hotspotY: "222px",
+      debugLeft: "321px",
+      debugTop: "222px",
+    });
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+    await expect(director).toHaveAttribute("data-react-render-count", String(result.before));
+  });
 });
