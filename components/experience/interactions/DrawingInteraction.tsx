@@ -1,237 +1,562 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
 import {
   markInteractionCanvasDirty,
   registerInteractionCanvas,
   registerSceneInteraction,
 } from "./interaction-runtime";
+import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
 
 type Point = { x: number; y: number };
 type Stroke = Point[];
+type DrawingControl = "close" | "undo" | "clear" | "finish";
 
-function configureDrawingContext(context: CanvasRenderingContext2D) {
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.lineWidth = 11;
-  context.strokeStyle = "#75d8ff";
-  context.shadowColor = "#225cff";
-  context.shadowBlur = 22;
-}
+const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.main.canvas;
+const drawingArea = { left: 0.055, top: 0.205, width: 0.89, height: 0.57 } as const;
+const controlDefinitions = [
+  { id: "undo", left: 0.055, width: 0.21 },
+  { id: "clear", left: 0.28, width: 0.21 },
+  { id: "finish", left: 0.68, width: 0.265 },
+] as const;
 
-function renderDrawing(canvas: HTMLCanvasElement, strokes: Stroke[]) {
-  const context = canvas.getContext("2d");
-  if (!context) return;
-  const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-  background.addColorStop(0, "#080b10");
-  background.addColorStop(1, "#101c35");
-  context.fillStyle = background;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  configureDrawingContext(context);
-  strokes.forEach((stroke) => {
-    if (stroke.length === 0) return;
-    context.beginPath();
-    context.moveTo(stroke[0].x, stroke[0].y);
-    for (let index = 1; index < stroke.length; index += 1) {
-      context.lineTo(stroke[index].x, stroke[index].y);
-    }
-    context.stroke();
-  });
-  context.shadowBlur = 0;
-  canvas.dataset.fullRenderCount = String(Number(canvas.dataset.fullRenderCount ?? 0) + 1);
-  markInteractionCanvasDirty("main");
-}
-
-function renderDrawingSegments(
-  canvas: HTMLCanvasElement,
-  start: Point,
-  points: readonly Point[],
+function roundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
 ) {
-  if (points.length === 0) return;
-  const context = canvas.getContext("2d");
-  if (!context) return;
-  configureDrawingContext(context);
+  const safeRadius = Math.min(radius, width / 2, height / 2);
   context.beginPath();
-  context.moveTo(start.x, start.y);
-  points.forEach((point) => context.lineTo(point.x, point.y));
-  context.stroke();
-  context.shadowBlur = 0;
-  canvas.dataset.incrementalRenderCount = String(
-    Number(canvas.dataset.incrementalRenderCount ?? 0) + 1,
-  );
-  markInteractionCanvasDirty("main");
+  context.moveTo(x + safeRadius, y);
+  context.arcTo(x + width, y, x + width, y + height, safeRadius);
+  context.arcTo(x + width, y + height, x, y + height, safeRadius);
+  context.arcTo(x, y + height, x, y, safeRadius);
+  context.arcTo(x, y, x + width, y, safeRadius);
+  context.closePath();
 }
 
-export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy; onComplete: () => void }) {
+function hitRect(x: number, y: number, left: number, top: number, width: number, height: number) {
+  return x >= left && x <= left + width && y >= top && y <= top + height;
+}
+
+function revealProgress(progress: number, start: number, end: number) {
+  const value = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  return value * value * (3 - 2 * value);
+}
+
+function controlAtPoint(x: number, y: number): DrawingControl | null {
+  if (Math.hypot(x - 0.945, y - 0.07) <= 0.045) return "close";
+  if (y < 0.83 || y > 0.955) return null;
+  const control = controlDefinitions.find(({ left, width }) => hitRect(x, y, left, 0.83, width, 0.125));
+  return control?.id ?? null;
+}
+
+function pointInDrawingArea(x: number, y: number) {
+  return hitRect(x, y, drawingArea.left, drawingArea.top, drawingArea.width, drawingArea.height);
+}
+
+function clampDrawingPoint(point: Point) {
+  const left = drawingArea.left * canvasWidth;
+  const right = (drawingArea.left + drawingArea.width) * canvasWidth;
+  const top = drawingArea.top * canvasHeight;
+  const bottom = (drawingArea.top + drawingArea.height) * canvasHeight;
+  return {
+    x: Math.max(left, Math.min(right, point.x)),
+    y: Math.max(top, Math.min(bottom, point.y)),
+  };
+}
+
+export function DrawingInteraction({
+  copy,
+  onClose,
+  onComplete,
+  onContinue,
+}: {
+  copy: InteractionCopy;
+  onClose: () => void;
+  onComplete: () => void;
+  onContinue: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<Stroke[]>([]);
   const activeStroke = useRef<Stroke | null>(null);
   const activePointer = useRef<number | null>(null);
-  const lastRenderedPoint = useRef<Point | null>(null);
-  const pendingPoints = useRef<Point[]>([]);
   const renderFrame = useRef<number | null>(null);
+  const transitionFrame = useRef<number | null>(null);
+  const finaleFrame = useRef<number | null>(null);
+  const transitionProgress = useRef(0);
+  const transitionState = useRef<"intro" | "ready" | "outro">("intro");
+  const finaleStartedAt = useRef<number | null>(null);
+  const monitorImage = useRef<HTMLImageElement | null>(null);
+  const hoverControl = useRef<DrawingControl | null>(null);
+  const keyboardFocus = useRef<DrawingControl | null>(null);
+  const finishedRef = useRef(false);
+  const completionReported = useRef(false);
   const [strokeCount, setStrokeCount] = useState(0);
   const [finished, setFinished] = useState(false);
 
-  const pointFromEvent = useCallback((
-    clientX: number,
-    clientY: number,
-    bounds?: DOMRect,
-  ) => {
+  const paint = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const canvasBounds = bounds ?? canvas.getBoundingClientRect();
-    return {
-      x: ((clientX - canvasBounds.left) / canvasBounds.width) * canvas.width,
-      y: ((clientY - canvasBounds.top) / canvasBounds.height) * canvas.height,
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const width = canvas.width;
+    const height = canvas.height;
+    const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
+    const transition = transitionProgress.current;
+    const surfaceReveal = revealProgress(transition, 0, 0.36);
+    const contentReveal = revealProgress(transition, 0.2, 0.68);
+    const controlsReveal = revealProgress(transition, 0.58, 1);
+    const count = strokes.current.length;
+    const isFinished = finishedRef.current;
+    const finaleElapsed = finaleStartedAt.current === null
+      ? 1
+      : Math.min(1, (performance.now() - finaleStartedAt.current) / 900);
+    const finalePulse = isFinished ? Math.sin(finaleElapsed * Math.PI) : 0;
+
+    context.clearRect(0, 0, width, height);
+    canvas.dataset.transitionProgress = transition.toFixed(3);
+    if (monitorImage.current?.complete) {
+      context.drawImage(monitorImage.current, 0, 0, width, height);
+    } else {
+      context.fillStyle = "#080b10";
+      context.fillRect(0, 0, width, height);
+    }
+
+    context.save();
+    context.globalAlpha = surfaceReveal;
+    const background = context.createRadialGradient(
+      width * 0.5,
+      height * 0.42,
+      20,
+      width * 0.5,
+      height * 0.42,
+      width * 0.72,
+    );
+    background.addColorStop(0, "#142b54");
+    background.addColorStop(0.48, "#09162b");
+    background.addColorStop(1, "#03070d");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    context.strokeStyle = "rgba(117,216,255,.045)";
+    context.lineWidth = 1;
+    for (let x = 0; x <= width; x += 48) {
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+      context.stroke();
+    }
+    for (let y = 0; y <= height; y += 48) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+      context.stroke();
+    }
+
+    roundedRect(context, 18, 18, width - 36, height - 36, 24);
+    context.strokeStyle = "rgba(117,216,255,.16)";
+    context.lineWidth = 2;
+    context.stroke();
+
+    context.save();
+    context.globalAlpha = contentReveal;
+    context.direction = direction;
+    context.textAlign = "center";
+    context.fillStyle = "rgba(247,247,244,.5)";
+    context.font = '650 14px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.letterSpacing = "3.6px";
+    context.fillText("MANDEGAR  /  LIVE CANVAS", width / 2, 36);
+    context.letterSpacing = "0px";
+    context.fillStyle = "#f7f7f4";
+    context.font = '680 30px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(
+      isFinished ? copy.draw.complete : copy.stations.draw.instruction,
+      width / 2,
+      82,
+    );
+    context.fillStyle = "rgba(247,247,244,.52)";
+    context.font = '560 14px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.draw.local, width / 2, 111);
+    context.restore();
+
+    const areaLeft = drawingArea.left * width;
+    const areaTop = drawingArea.top * height;
+    const areaWidth = drawingArea.width * width;
+    const areaHeight = drawingArea.height * height;
+    roundedRect(context, areaLeft, areaTop, areaWidth, areaHeight, 22);
+    context.fillStyle = "rgba(2,9,20,.76)";
+    context.shadowColor = isFinished ? "#75d8ff" : "rgba(34,92,255,.25)";
+    context.shadowBlur = 18 + finalePulse * 28;
+    context.fill();
+    context.shadowBlur = 0;
+    context.strokeStyle = isFinished
+      ? `rgba(117,216,255,${0.48 + finalePulse * 0.28})`
+      : "rgba(117,216,255,.23)";
+    context.lineWidth = 2;
+    context.stroke();
+
+    context.save();
+    roundedRect(context, areaLeft, areaTop, areaWidth, areaHeight, 22);
+    context.clip();
+    context.globalAlpha = contentReveal;
+    context.strokeStyle = "rgba(117,216,255,.055)";
+    context.lineWidth = 1;
+    for (let x = areaLeft + 32; x < areaLeft + areaWidth; x += 48) {
+      context.beginPath();
+      context.moveTo(x, areaTop);
+      context.lineTo(x, areaTop + areaHeight);
+      context.stroke();
+    }
+    for (let y = areaTop + 32; y < areaTop + areaHeight; y += 48) {
+      context.beginPath();
+      context.moveTo(areaLeft, y);
+      context.lineTo(areaLeft + areaWidth, y);
+      context.stroke();
+    }
+
+    const strokeGradient = context.createLinearGradient(areaLeft, areaTop, areaLeft + areaWidth, areaTop + areaHeight);
+    strokeGradient.addColorStop(0, "#50c7ff");
+    strokeGradient.addColorStop(0.52, "#f7f7f4");
+    strokeGradient.addColorStop(1, "#d95cff");
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    strokes.current.forEach((stroke) => {
+      if (stroke.length === 0) return;
+      context.beginPath();
+      context.moveTo(stroke[0].x, stroke[0].y);
+      stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+      if (stroke.length === 1) {
+        context.lineTo(stroke[0].x + 0.01, stroke[0].y + 0.01);
+      }
+      context.strokeStyle = "rgba(34,92,255,.5)";
+      context.lineWidth = 24;
+      context.shadowColor = "#225cff";
+      context.shadowBlur = 26;
+      context.stroke();
+      context.strokeStyle = strokeGradient;
+      context.lineWidth = 9;
+      context.shadowColor = "#75d8ff";
+      context.shadowBlur = 12;
+      context.stroke();
+    });
+    context.shadowBlur = 0;
+
+    if (count === 0) {
+      context.direction = direction;
+      context.textAlign = "center";
+      context.fillStyle = "rgba(247,247,244,.34)";
+      context.font = '580 18px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(copy.stations.draw.instruction, width / 2, areaTop + areaHeight / 2);
+      context.strokeStyle = "rgba(117,216,255,.24)";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(width / 2, areaTop + areaHeight / 2 + 44, 12, 0, Math.PI * 2);
+      context.stroke();
+    }
+    context.restore();
+
+    const closeFocused = hoverControl.current === "close" || keyboardFocus.current === "close";
+    context.fillStyle = closeFocused ? "rgba(117,216,255,.18)" : "rgba(3,8,16,.58)";
+    context.beginPath();
+    context.arc(width * 0.945, height * 0.07, 25, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = closeFocused ? "#f7f7f4" : "rgba(247,247,244,.52)";
+    context.lineWidth = closeFocused ? 3 : 1.5;
+    context.stroke();
+    context.strokeStyle = "#f7f7f4";
+    context.lineWidth = 1.7;
+    context.beginPath();
+    context.moveTo(width * 0.945 - 6, height * 0.07 - 6);
+    context.lineTo(width * 0.945 + 6, height * 0.07 + 6);
+    context.moveTo(width * 0.945 + 6, height * 0.07 - 6);
+    context.lineTo(width * 0.945 - 6, height * 0.07 + 6);
+    context.stroke();
+
+    const labels: Record<(typeof controlDefinitions)[number]["id"], string> = {
+      undo: copy.undo,
+      clear: copy.clear,
+      finish: isFinished ? copy.continue : copy.finish,
     };
+    context.save();
+    context.globalAlpha = controlsReveal;
+    controlDefinitions.forEach(({ id, left, width: controlWidth }) => {
+      const enabled = id === "finish" ? count > 0 : count > 0 && !isFinished;
+      const focused = hoverControl.current === id || keyboardFocus.current === id;
+      const x = left * width;
+      const y = 0.83 * height;
+      const buttonWidth = controlWidth * width;
+      const buttonHeight = 0.105 * height;
+      roundedRect(context, x, y, buttonWidth, buttonHeight, buttonHeight / 2);
+      context.fillStyle = id === "finish" && enabled
+        ? "#225cff"
+        : focused
+          ? "rgba(117,216,255,.13)"
+          : "rgba(5,14,28,.94)";
+      context.shadowColor = id === "finish" && enabled ? "#225cff" : "transparent";
+      context.shadowBlur = id === "finish" && enabled ? 16 : 0;
+      context.fill();
+      context.shadowBlur = 0;
+      context.strokeStyle = focused
+        ? "#f7f7f4"
+        : enabled
+          ? "rgba(117,216,255,.76)"
+          : "rgba(117,216,255,.2)";
+      context.lineWidth = focused ? 3 : 1.5;
+      context.stroke();
+      context.direction = direction;
+      context.textAlign = "center";
+      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.32)";
+      context.font = '680 16px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(labels[id], x + buttonWidth / 2, y + buttonHeight * 0.62);
+    });
+    context.restore();
+    context.restore();
+
+    markInteractionCanvasDirty("main");
+  }, [copy]);
+
+  const schedulePaint = useCallback(() => {
+    if (renderFrame.current !== null) return;
+    renderFrame.current = window.requestAnimationFrame(() => {
+      renderFrame.current = null;
+      paint();
+    });
+  }, [paint]);
+
+  const updateStrokeCount = useCallback(() => {
+    setStrokeCount(strokes.current.length);
+    schedulePaint();
+  }, [schedulePaint]);
+
+  const cancelActiveStroke = useCallback(() => {
+    activePointer.current = null;
+    activeStroke.current = null;
   }, []);
 
-  const flushPendingPoints = useCallback(() => {
-    renderFrame.current = null;
-    const canvas = canvasRef.current;
-    const start = lastRenderedPoint.current;
-    const points = pendingPoints.current;
-    pendingPoints.current = [];
-    if (!canvas || !start || points.length === 0) return;
-    renderDrawingSegments(canvas, start, points);
-    lastRenderedPoint.current = points.at(-1) ?? start;
-  }, []);
+  const beginStroke = useCallback((point: Point, pointerId: number) => {
+    if (activePointer.current !== null || finishedRef.current) return;
+    const nextStroke = [clampDrawingPoint(point)];
+    activePointer.current = pointerId;
+    activeStroke.current = nextStroke;
+    strokes.current.push(nextStroke);
+    updateStrokeCount();
+  }, [updateStrokeCount]);
 
   const queuePoint = useCallback((point: Point) => {
-    if (!activeStroke.current) return;
-    activeStroke.current.push(point);
-    pendingPoints.current.push(point);
-    if (renderFrame.current === null) {
-      renderFrame.current = window.requestAnimationFrame(flushPendingPoints);
-    }
-  }, [flushPendingPoints]);
+    const stroke = activeStroke.current;
+    if (!stroke) return;
+    const nextPoint = clampDrawingPoint(point);
+    const previous = stroke.at(-1);
+    if (previous && Math.hypot(nextPoint.x - previous.x, nextPoint.y - previous.y) < 1.25) return;
+    stroke.push(nextPoint);
+    schedulePaint();
+  }, [schedulePaint]);
 
   const finishStroke = useCallback((pointerId: number) => {
     if (activePointer.current !== pointerId) return;
-    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
-    flushPendingPoints();
-    activePointer.current = null;
-    activeStroke.current = null;
-    lastRenderedPoint.current = null;
-  }, [flushPendingPoints]);
+    cancelActiveStroke();
+    schedulePaint();
+  }, [cancelActiveStroke, schedulePaint]);
 
-  const beginStroke = useCallback((point: Point, pointerId: number) => {
-    if (activePointer.current !== null) return;
-    activePointer.current = pointerId;
-    activeStroke.current = [point];
-    lastRenderedPoint.current = point;
-    pendingPoints.current = [];
-    strokes.current.push(activeStroke.current);
-    setStrokeCount(strokes.current.length);
-  }, []);
+  const undo = useCallback(() => {
+    if (finishedRef.current || strokes.current.length === 0) return;
+    cancelActiveStroke();
+    strokes.current.pop();
+    updateStrokeCount();
+  }, [cancelActiveStroke, updateStrokeCount]);
 
-  const redrawAll = useCallback(() => {
-    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
-    renderFrame.current = null;
-    pendingPoints.current = [];
-    activePointer.current = null;
-    activeStroke.current = null;
-    lastRenderedPoint.current = null;
-    if (canvasRef.current) renderDrawing(canvasRef.current, strokes.current);
-    setStrokeCount(strokes.current.length);
-  }, []);
+  const clear = useCallback(() => {
+    if (finishedRef.current || strokes.current.length === 0) return;
+    cancelActiveStroke();
+    strokes.current = [];
+    updateStrokeCount();
+  }, [cancelActiveStroke, updateStrokeCount]);
+
+  const startFinale = useCallback(() => {
+    if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
+    finaleStartedAt.current = performance.now();
+    const tick = () => {
+      paint();
+      if (finaleStartedAt.current !== null && performance.now() - finaleStartedAt.current < 900) {
+        finaleFrame.current = window.requestAnimationFrame(tick);
+      } else {
+        finaleFrame.current = null;
+      }
+    };
+    finaleFrame.current = window.requestAnimationFrame(tick);
+  }, [paint]);
+
+  const completeDrawing = useCallback(() => {
+    if (strokes.current.length === 0 || finishedRef.current) return;
+    cancelActiveStroke();
+    finishedRef.current = true;
+    setFinished(true);
+    startFinale();
+    if (!completionReported.current) {
+      completionReported.current = true;
+      onComplete();
+    }
+  }, [cancelActiveStroke, onComplete, startFinale]);
+
+  const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
+    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+    const from = transitionProgress.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reducedMotion ? 0 : target === 1 ? 950 : 620;
+    transitionState.current = target === 1 ? "intro" : "outro";
+    if (duration === 0 || Math.abs(target - from) < 0.001) {
+      transitionProgress.current = target;
+      transitionState.current = target === 1 ? "ready" : "outro";
+      paint();
+      onFinish?.();
+      return;
+    }
+    const startedAt = performance.now();
+    const tick = (time: number) => {
+      const elapsed = Math.min(1, (time - startedAt) / duration);
+      const eased = elapsed * elapsed * (3 - 2 * elapsed);
+      transitionProgress.current = from + (target - from) * eased;
+      paint();
+      if (elapsed < 1) {
+        transitionFrame.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      transitionFrame.current = null;
+      transitionState.current = target === 1 ? "ready" : "outro";
+      onFinish?.();
+    };
+    transitionFrame.current = window.requestAnimationFrame(tick);
+  }, [paint]);
+
+  const exitWithTransition = useCallback((callback: () => void) => {
+    if (transitionState.current === "outro") return;
+    cancelActiveStroke();
+    hoverControl.current = null;
+    animateTransition(0, callback);
+  }, [animateTransition, cancelActiveStroke]);
+
+  const handleControl = useCallback((control: DrawingControl) => {
+    if (control === "close") {
+      exitWithTransition(onClose);
+    } else if (control === "undo") {
+      undo();
+    } else if (control === "clear") {
+      clear();
+    } else if (finishedRef.current) {
+      exitWithTransition(onContinue);
+    } else {
+      completeDrawing();
+    }
+  }, [clear, completeDrawing, exitWithTransition, onClose, onContinue, undo]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    strokes.current = [];
-    renderDrawing(canvas, strokes.current);
-    registerInteractionCanvas("main", canvas);
+    let mounted = true;
+    let registered = false;
+    const image = new Image();
+    const begin = () => {
+      if (!mounted || registered) return;
+      registered = true;
+      monitorImage.current = image.naturalWidth > 0 ? image : null;
+      transitionProgress.current = 0;
+      paint();
+      registerInteractionCanvas("main", canvas);
+      animateTransition(1);
+    };
+    image.onload = begin;
+    image.onerror = begin;
+    image.src = sceneTokens.bakedScene.screens.main;
+    if (image.complete) begin();
+    void document.fonts?.ready.then(() => {
+      if (mounted) schedulePaint();
+    });
     return () => {
-      if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+      mounted = false;
+      image.onload = null;
+      image.onerror = null;
       registerInteractionCanvas("main", null);
     };
+  }, [animateTransition, paint, schedulePaint]);
+
+  useEffect(() => {
+    const handleSceneInput = (event: SceneInteractionEvent) => {
+      if (transitionState.current !== "ready" || event.phase === "activate") return;
+      const control = controlAtPoint(event.x, event.y);
+      if (event.phase === "move") {
+        if (activePointer.current === event.pointerId && activeStroke.current) {
+          queuePoint({ x: event.x * canvasWidth, y: event.y * canvasHeight });
+          return;
+        }
+        hoverControl.current = control;
+        schedulePaint();
+        return;
+      }
+      if (event.phase === "down") {
+        if (control) {
+          handleControl(control);
+          return;
+        }
+        if (pointInDrawingArea(event.x, event.y)) {
+          beginStroke(
+            { x: event.x * canvasWidth, y: event.y * canvasHeight },
+            event.pointerId,
+          );
+        }
+        return;
+      }
+      if (event.phase === "cancel") {
+        finishStroke(event.pointerId);
+        hoverControl.current = null;
+        schedulePaint();
+        return;
+      }
+      if (event.phase === "up") finishStroke(event.pointerId);
+    };
+    registerSceneInteraction("draw", handleSceneInput);
+    return () => registerSceneInteraction("draw", null);
+  }, [beginStroke, finishStroke, handleControl, queuePoint, schedulePaint]);
+
+  useEffect(() => () => {
+    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+    if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
   }, []);
 
-  useEffect(() => {
-    registerSceneInteraction("draw", (event) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const point = { x: event.x * canvas.width, y: event.y * canvas.height };
-      if (event.phase === "down") {
-        beginStroke(point, event.pointerId);
-      } else if (event.phase === "move" && activePointer.current === event.pointerId && activeStroke.current) {
-        queuePoint(point);
-      } else if (event.phase === "up" || event.phase === "cancel") {
-        finishStroke(event.pointerId);
-      }
-    });
-    return () => registerSceneInteraction("draw", null);
-  }, [beginStroke, finishStroke, queuePoint]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const pointerDown = (event: PointerEvent) => {
-      const point = pointFromEvent(event.clientX, event.clientY);
-      if (!point) return;
-      canvas.setPointerCapture(event.pointerId);
-      beginStroke(point, event.pointerId);
-    };
-    const pointerMove = (event: PointerEvent) => {
-      if (activePointer.current !== event.pointerId || !canvas.hasPointerCapture(event.pointerId)) return;
-      const samples = event.getCoalescedEvents?.() ?? [];
-      const events = samples.length > 0 ? samples : [event];
-      const bounds = canvas.getBoundingClientRect();
-      events.forEach((sample) => {
-        const point = pointFromEvent(sample.clientX, sample.clientY, bounds);
-        if (point) queuePoint(point);
-      });
-    };
-    const pointerEnd = (event: PointerEvent) => {
-      finishStroke(event.pointerId);
-      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-    };
-    canvas.addEventListener("pointerdown", pointerDown);
-    canvas.addEventListener("pointermove", pointerMove);
-    canvas.addEventListener("pointerup", pointerEnd);
-    canvas.addEventListener("pointercancel", pointerEnd);
-    return () => {
-      canvas.removeEventListener("pointerdown", pointerDown);
-      canvas.removeEventListener("pointermove", pointerMove);
-      canvas.removeEventListener("pointerup", pointerEnd);
-      canvas.removeEventListener("pointercancel", pointerEnd);
-    };
-  }, [beginStroke, finishStroke, pointFromEvent, queuePoint]);
-
-  const addPreset = () => {
-    const preset: Stroke = [];
-    for (let index = 0; index <= 80; index += 1) {
-      const angle = (index / 80) * Math.PI * 2;
-      const radius = 70 + index * 1.4;
-      preset.push({ x: 480 + Math.cos(angle * 2.1) * radius, y: 270 + Math.sin(angle * 1.7) * radius * 0.58 });
-    }
-    strokes.current.push(preset);
-    redrawAll();
+  const focusControl = (control: DrawingControl | null) => {
+    keyboardFocus.current = control;
+    schedulePaint();
   };
 
   return (
-    <div className={styles.drawingExperience}>
+    <div
+      className={styles.spatialInteractionSemantics}
+      data-drawing-spatial-controls
+      data-stroke-count={strokeCount}
+      data-drawing-finished={finished ? "true" : "false"}
+      role="region"
+      aria-label={copy.stations.draw.title}
+    >
       <canvas
         ref={canvasRef}
-        width={960}
-        height={540}
+        width={canvasWidth}
+        height={canvasHeight}
         className={styles.textureSource}
         data-drawing-canvas
-        data-stroke-count={strokeCount}
-        aria-label={copy.stations.draw.instruction}
+        aria-hidden="true"
       />
-      <p className={styles.statusText}>{copy.draw.local}</p>
-      <div className={styles.actionRow}>
-        <button type="button" onClick={() => { strokes.current.pop(); redrawAll(); }} disabled={strokeCount === 0}>{copy.undo}</button>
-        <button type="button" onClick={() => { strokes.current = []; redrawAll(); }} disabled={strokeCount === 0}>{copy.clear}</button>
-        <button type="button" onClick={addPreset}>{copy.draw.keyboardMark}</button>
-        <button type="button" disabled={strokeCount === 0 || finished} onClick={() => { setFinished(true); onComplete(); }}>{copy.finish}</button>
-      </div>
-      {finished && <div className={styles.drawingEcho} data-drawing-echo aria-hidden="true" />}
+      <p>{copy.stations.draw.instruction}</p>
+      <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
+      <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
+      <button type="button" disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
+      <button type="button" onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
+      <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
     </div>
   );
 }

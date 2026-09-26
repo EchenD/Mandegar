@@ -12,7 +12,6 @@ export type InteractionCopy = {
   reset: string;
   clear: string;
   undo: string;
-  preset: string;
   stations: Record<InteractionStation, StationCopy>;
   photo: { ready: string; capture: string; captured: string };
   touch: {
@@ -21,8 +20,15 @@ export type InteractionCopy = {
     complete: string;
   };
   stage: { beam: string; finale: string };
-  game: { action: string; result: string; hit: string; missed: string };
-  draw: { keyboardMark: string; local: string };
+  game: {
+    action: string;
+    result: string;
+    perfect: string;
+    hit: string;
+    outer: string;
+    missed: string;
+  };
+  draw: { local: string; complete: string };
 };
 
 const english: InteractionCopy = {
@@ -34,12 +40,11 @@ const english: InteractionCopy = {
   reset: "Reset",
   clear: "Clear",
   undo: "Undo",
-  preset: "Add preset mark",
   stations: {
     photo: { label: "Open photo booth", title: "Photo booth", instruction: "Create a simulated portrait moment." },
     touch: { label: "Open experience composer", title: "Experience composer", instruction: "Connect space, story and people." },
     stage: { label: "Open stage controls", title: "Stage beam control", instruction: "Build the stage look with five beams." },
-    game: { label: "Play target game", title: "Signal timing", instruction: "Press the target as it reaches the center." },
+    game: { label: "Launch the signal", title: "Signal toss", instruction: "Pull back, aim and release toward the active gate." },
     draw: { label: "Open drawing wall", title: "Drawing wall", instruction: "Draw a luminous mark on the live display." },
   },
   photo: { ready: "Ready for a simulated capture", capture: "Start capture", captured: "Preview created — no camera was used." },
@@ -49,8 +54,18 @@ const english: InteractionCopy = {
     complete: "The experience is connected.",
   },
   stage: { beam: "Beam", finale: "Stage composition complete" },
-  game: { action: "Hit target", result: "Signal session complete", hit: "In sync", missed: "Try the next pulse" },
-  draw: { keyboardMark: "Add a keyboard-accessible signature mark", local: "Your drawing stays in this browser session." },
+  game: {
+    action: "Launch signal",
+    result: "Signal run complete",
+    perfect: "Signal network connected",
+    hit: "Bullseye · 100",
+    outer: "Gate hit · 50",
+    missed: "Missed — adjust your aim",
+  },
+  draw: {
+    local: "Your drawing stays in this browser session.",
+    complete: "Your luminous mark is complete.",
+  },
 };
 
 const persian: InteractionCopy = {
@@ -63,12 +78,11 @@ const persian: InteractionCopy = {
   reset: "بازنشانی",
   clear: "پاک کردن",
   undo: "بازگشت",
-  preset: "افزودن نشان آماده",
   stations: {
     photo: { label: "ورود به غرفه عکس", title: "غرفه عکس", instruction: "یک پرتره نمایشی و شبیه‌سازی‌شده بسازید." },
     touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "فضا، روایت و مردم را به هم متصل کنید." },
     stage: { label: "کنترل نور صحنه", title: "کنترل پرتوهای صحنه", instruction: "با پنج پرتو، نمای صحنه را کامل کنید." },
-    game: { label: "شروع بازی زمان‌بندی", title: "ریتم سیگنال", instruction: "وقتی هدف به مرکز رسید آن را بزنید." },
+    game: { label: "پرتاب سیگنال", title: "پرتاب سیگنال", instruction: "سیگنال را عقب بکشید، هدف بگیرید و رها کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "دیوار طراحی", instruction: "نشانی نورانی روی نمایشگر بکشید." },
   },
   photo: { ready: "آماده ثبت نمایشی", capture: "شروع ثبت", captured: "پیش‌نمایش ساخته شد؛ هیچ دوربینی استفاده نشد." },
@@ -78,8 +92,18 @@ const persian: InteractionCopy = {
     complete: "تجربه به هم پیوست.",
   },
   stage: { beam: "پرتو", finale: "ترکیب صحنه کامل شد" },
-  game: { action: "زدن هدف", result: "تمرین سیگنال کامل شد", hit: "هم‌زمان", missed: "ضربان بعدی را امتحان کنید" },
-  draw: { keyboardMark: "افزودن نشان آماده با صفحه‌کلید", local: "طراحی فقط در همین نشست مرورگر می‌ماند." },
+  game: {
+    action: "پرتاب سیگنال",
+    result: "دور سیگنال تمام شد",
+    perfect: "شبکه سیگنال متصل شد",
+    hit: "مرکز هدف · ۱۰۰",
+    outer: "اصابت به دروازه · ۵۰",
+    missed: "خطا — جهت را تنظیم کنید",
+  },
+  draw: {
+    local: "طراحی فقط در همین نشست مرورگر می‌ماند.",
+    complete: "نشان نورانی شما کامل شد.",
+  },
 };
 
 const arabic: InteractionCopy = {
@@ -92,12 +116,11 @@ const arabic: InteractionCopy = {
   reset: "إعادة ضبط",
   clear: "مسح",
   undo: "تراجع",
-  preset: "إضافة علامة جاهزة",
   stations: {
     photo: { label: "فتح جناح الصور", title: "جناح الصور", instruction: "أنشئ لحظة بورتريه تجريبية." },
     touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "اربط المكان والقصة والناس." },
     stage: { label: "فتح تحكم المسرح", title: "تحكم أشعة المسرح", instruction: "كوّن مشهد المسرح بخمسة أشعة." },
-    game: { label: "لعب تحدي التوقيت", title: "توقيت الإشارة", instruction: "اضغط عندما يصل الهدف إلى المنتصف." },
+    game: { label: "إطلاق الإشارة", title: "إطلاق الإشارة", instruction: "اسحب الإشارة للخلف، صوّب ثم أطلقها." },
     draw: { label: "فتح جدار الرسم", title: "جدار الرسم", instruction: "ارسم علامة مضيئة على الشاشة." },
   },
   photo: { ready: "جاهز لالتقاط تجريبي", capture: "بدء الالتقاط", captured: "تم إنشاء المعاينة من دون استخدام كاميرا." },
@@ -107,8 +130,18 @@ const arabic: InteractionCopy = {
     complete: "اكتمل اتصال التجربة.",
   },
   stage: { beam: "شعاع", finale: "اكتمل مشهد المسرح" },
-  game: { action: "إصابة الهدف", result: "اكتملت جلسة الإشارة", hit: "متزامن", missed: "جرّب النبضة التالية" },
-  draw: { keyboardMark: "إضافة علامة جاهزة بلوحة المفاتيح", local: "يبقى رسمك في جلسة المتصفح الحالية فقط." },
+  game: {
+    action: "إطلاق الإشارة",
+    result: "اكتملت جولة الإشارة",
+    perfect: "تم ربط شبكة الإشارة",
+    hit: "إصابة المركز · ١٠٠",
+    outer: "إصابة البوابة · ٥٠",
+    missed: "لم تصب — عدّل اتجاهك",
+  },
+  draw: {
+    local: "يبقى رسمك في جلسة المتصفح الحالية فقط.",
+    complete: "اكتملت علامتك المضيئة.",
+  },
 };
 
 export function getInteractionCopy(locale: Locale) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sceneTokens } from "../scene-config";
+import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
 import {
   interactionRuntime,
@@ -12,8 +12,7 @@ import {
 import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
 
-const canvasWidth = 960;
-const canvasHeight = 540;
+const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.interactive.canvas;
 const center = { x: 0.5, y: 0.45 };
 const elementDefinitions = [
   { id: "space", x: 0.2, y: 0.67, color: "#50c7ff" },

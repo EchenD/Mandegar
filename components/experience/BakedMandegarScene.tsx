@@ -66,7 +66,11 @@ type BakedSceneRuntime = {
 
 function collectExcludedScreenObjects(root: THREE.Object3D) {
   const excluded = new Set<THREE.Object3D>();
-  Object.values(bakedSceneContract.exhibition.screens).forEach((name) => {
+  const names = [
+    ...Object.values(bakedSceneContract.exhibition.screens),
+    ...bakedSceneContract.exhibition.interactionAnchors.beamEmitterMeshes,
+  ];
+  names.forEach((name) => {
     root.getObjectByName(name)?.traverse((object) => excluded.add(object));
   });
   return excluded;
@@ -162,55 +166,324 @@ const screenStations: Partial<Record<BakedScreenId, InteractionStation>> = {
   main: "draw",
 };
 
+const stageBeamColors = ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"];
+
+function createBeamFadeTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 8;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "rgba(255,255,255,.06)");
+    gradient.addColorStop(0.16, "rgba(255,255,255,.56)");
+    gradient.addColorStop(0.72, "rgba(255,255,255,.32)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createRadialLightTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 31);
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.2, "rgba(255,255,255,.72)");
+    gradient.addColorStop(0.58, "rgba(255,255,255,.2)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createGameWaveTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createRadialGradient(64, 64, 37, 64, 64, 62);
+    gradient.addColorStop(0, "rgba(255,255,255,0)");
+    gradient.addColorStop(0.58, "rgba(255,255,255,0)");
+    gradient.addColorStop(0.76, "rgba(255,255,255,.9)");
+    gradient.addColorStop(0.9, "rgba(255,255,255,.22)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function InteractionBeamEffects({
   anchors,
   quality,
+  root,
 }: {
   anchors: InteractionAnchorRuntime;
   quality: SceneQuality;
+  root: THREE.Object3D;
 }) {
-  const group = useMemo(() => {
-    const next = new THREE.Group();
-    next.name = "fxInteraction_stage_beams";
+  const rig = useMemo(() => {
+    const group = new THREE.Group();
+    group.name = "fxInteraction_stage_lighting";
+    group.renderOrder = 6;
+
+    const segmentCount = quality === "full" ? 20 : 12;
+    const beamTexture = createBeamFadeTexture();
+    const radialTexture = createRadialLightTexture();
+    const beamGeometry = new THREE.CylinderGeometry(0.62, 0.025, 1, segmentCount, 1, true);
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      map: beamTexture,
+      transparent: true,
+      opacity: quality === "full" ? 0.34 : 0.25,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      toneMapped: false,
+    });
+    const beams = new THREE.InstancedMesh(beamGeometry, beamMaterial, stageBeamColors.length);
+    beams.name = "fxInteraction_stage_beam_volumes";
+    beams.frustumCulled = false;
+    beams.renderOrder = 6;
+    beams.raycast = () => {};
+    beams.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+    const poolGeometry = new THREE.CircleGeometry(0.78, segmentCount);
+    poolGeometry.rotateX(-Math.PI / 2);
+    const poolMaterial = new THREE.MeshBasicMaterial({
+      map: radialTexture,
+      transparent: true,
+      opacity: quality === "full" ? 0.9 : 0.72,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const pools = new THREE.InstancedMesh(poolGeometry, poolMaterial, stageBeamColors.length);
+    pools.name = "fxInteraction_stage_floor_pools";
+    pools.frustumCulled = false;
+    pools.renderOrder = 7;
+    pools.raycast = () => {};
+    pools.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+    const flareGeometry = new THREE.BufferGeometry();
+    const flarePositions = new Float32Array(stageBeamColors.length * 3);
+    const flareColors = new Float32Array(stageBeamColors.length * 3);
+    flareGeometry.setAttribute("position", new THREE.BufferAttribute(flarePositions, 3));
+    flareGeometry.setAttribute("color", new THREE.BufferAttribute(flareColors, 3));
+    const flareMaterial = new THREE.PointsMaterial({
+      map: radialTexture,
+      size: quality === "full" ? 0.22 : 0.17,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: quality === "full" ? 0.96 : 0.76,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      toneMapped: false,
+    });
+    const flares = new THREE.Points(flareGeometry, flareMaterial);
+    flares.name = "fxInteraction_stage_emitter_flares";
+    flares.frustumCulled = false;
+    flares.renderOrder = 8;
+    flares.raycast = () => {};
+
+    const emitterBindings: Array<{
+      mesh: THREE.Mesh;
+      originalMaterial: THREE.Material | THREE.Material[];
+      material: THREE.MeshBasicMaterial;
+      beamIndex: number;
+    }> = [];
+    bakedSceneContract.exhibition.interactionAnchors.beamEmitterMeshes.forEach((name, beamIndex) => {
+      root.getObjectByName(name)?.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const material = new THREE.MeshBasicMaterial({
+          color: 0x000000,
+          transparent: false,
+          opacity: 1,
+          depthTest: true,
+          depthWrite: true,
+          side: THREE.DoubleSide,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
+          toneMapped: false,
+        });
+        emitterBindings.push({
+          mesh: object,
+          originalMaterial: object.material,
+          material,
+          beamIndex,
+        });
+      });
+    });
+
+    const origins: THREE.Vector3[] = [];
+    const targets: THREE.Vector3[] = [];
+    const midpoints: THREE.Vector3[] = [];
+    const directions: THREE.Quaternion[] = [];
+    const lengths: number[] = [];
+    const colors = stageBeamColors.map((color) => new THREE.Color(color));
+    const up = new THREE.Vector3(0, 1, 0);
+    const initialMatrix = new THREE.Matrix4().makeScale(0.001, 0.001, 0.001);
+
     anchors.beamOrigins.forEach((origin, index) => {
       const start = origin.object.getWorldPosition(new THREE.Vector3());
       const end = anchors.beamTargets[index].object.getWorldPosition(new THREE.Vector3());
-      const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
-      const material = new THREE.LineBasicMaterial({
-        color: ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"][index],
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        toneMapped: false,
-      });
-      const line = new THREE.Line(geometry, material);
-      line.name = `fxInteraction_stage_beam_${String(index + 1).padStart(2, "0")}`;
-      line.frustumCulled = false;
-      line.raycast = () => {};
-      next.add(line);
+      const direction = end.clone().sub(start);
+      const length = direction.length();
+      origins.push(start);
+      targets.push(end.clone().add(new THREE.Vector3(0, 0.012, 0)));
+      midpoints.push(start.clone().add(end).multiplyScalar(0.5));
+      directions.push(new THREE.Quaternion().setFromUnitVectors(up, direction.normalize()));
+      lengths.push(length);
+      flarePositions.set(start.toArray(), index * 3);
+      beams.setMatrixAt(index, initialMatrix);
+      pools.setMatrixAt(index, initialMatrix);
+      beams.setColorAt(index, new THREE.Color(0));
+      pools.setColorAt(index, new THREE.Color(0));
     });
-    return next;
-  }, [anchors]);
+    beams.instanceMatrix.needsUpdate = true;
+    pools.instanceMatrix.needsUpdate = true;
+    beams.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+    pools.instanceColor!.setUsage(THREE.DynamicDrawUsage);
+    (flareGeometry.getAttribute("color") as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage);
+
+    group.add(beams, pools, flares);
+    return {
+      group,
+      beams,
+      pools,
+      flares,
+      beamGeometry,
+      beamMaterial,
+      beamTexture,
+      poolGeometry,
+      poolMaterial,
+      flareGeometry,
+      flareMaterial,
+      radialTexture,
+      origins,
+      targets,
+      midpoints,
+      directions,
+      lengths,
+      colors,
+      emitterBindings,
+      intensities: new Float32Array(stageBeamColors.length),
+      wasComplete: false,
+      finaleAge: Number.POSITIVE_INFINITY,
+      beamMatrix: new THREE.Matrix4(),
+      poolMatrix: new THREE.Matrix4(),
+      beamScale: new THREE.Vector3(),
+      poolScale: new THREE.Vector3(),
+      poolQuaternion: new THREE.Quaternion(),
+      workingColor: new THREE.Color(),
+    };
+  }, [anchors, quality, root]);
 
   useFrame((_, delta) => {
-    group.children.forEach((child, index) => {
-      const material = (child as THREE.Line).material as THREE.LineBasicMaterial;
-      const target = interactionRuntime.activeBeams[index] ? (quality === "full" ? 0.92 : 0.62) : 0;
-      material.opacity = THREE.MathUtils.damp(material.opacity, target, 12, delta);
-      child.visible = material.opacity > 0.002;
+    if (interactionRuntime.stageComplete && !rig.wasComplete) rig.finaleAge = 0;
+    rig.wasComplete = interactionRuntime.stageComplete;
+    rig.finaleAge += delta;
+    const finaleProgress = Math.min(1, rig.finaleAge / 1.05);
+    const finalePulse = rig.finaleAge < 1.05 ? Math.sin(finaleProgress * Math.PI) : 0;
+    const visibility = interactionRuntime.stageVisibility;
+    const flareColors = rig.flareGeometry.getAttribute("color") as THREE.BufferAttribute;
+    let visibleEnergy = 0;
+
+    rig.intensities.forEach((current, index) => {
+      const enabled = interactionRuntime.activeBeams[index] ?? false;
+      const target = enabled ? visibility * (quality === "full" ? 1 : 0.8) : 0;
+      const intensity = THREE.MathUtils.damp(current, target, enabled ? 10 : 14, delta);
+      rig.intensities[index] = intensity;
+      visibleEnergy += intensity;
+      const energy = intensity * (1 + finalePulse * 0.62);
+      const radiusPulse = 1 + finalePulse * 0.12;
+
+      rig.beamScale.set(radiusPulse, rig.lengths[index], radiusPulse);
+      rig.beamMatrix.compose(rig.midpoints[index], rig.directions[index], rig.beamScale);
+      rig.beams.setMatrixAt(index, rig.beamMatrix);
+      rig.workingColor.copy(rig.colors[index]).multiplyScalar(energy);
+      rig.beams.setColorAt(index, rig.workingColor);
+
+      const poolSize = Math.max(0.001, intensity * (1 + finalePulse * 0.28));
+      rig.poolScale.set(poolSize, poolSize, poolSize);
+      rig.poolMatrix.compose(rig.targets[index], rig.poolQuaternion, rig.poolScale);
+      rig.pools.setMatrixAt(index, rig.poolMatrix);
+      rig.pools.setColorAt(index, rig.workingColor);
+
+      flareColors.setXYZ(
+        index,
+        rig.workingColor.r,
+        rig.workingColor.g,
+        rig.workingColor.b,
+      );
     });
+    rig.emitterBindings.forEach(({ material, beamIndex }) => {
+      const qualityScale = quality === "full" ? 1 : 0.8;
+      const colorStrength = THREE.MathUtils.clamp(
+        rig.intensities[beamIndex] / qualityScale,
+        0,
+        1,
+      );
+      material.color.copy(rig.colors[beamIndex]).multiplyScalar(colorStrength);
+    });
+    rig.group.visible = visibleEnergy > 0.002;
+    rig.beams.instanceMatrix.needsUpdate = true;
+    rig.beams.instanceColor!.needsUpdate = true;
+    rig.pools.instanceMatrix.needsUpdate = true;
+    rig.pools.instanceColor!.needsUpdate = true;
+    flareColors.needsUpdate = true;
   });
 
-  useEffect(() => () => {
-    group.children.forEach((child) => {
-      const line = child as THREE.Line;
-      line.geometry.dispose();
-      (line.material as THREE.Material).dispose();
+  useEffect(() => {
+    rig.emitterBindings.forEach(({ mesh, material }) => {
+      mesh.material = material;
+      material.needsUpdate = true;
     });
-  }, [group]);
 
-  return <primitive object={group} />;
+    return () => {
+      rig.emitterBindings.forEach(({ mesh, originalMaterial, material }) => {
+        if (mesh.material === material) mesh.material = originalMaterial;
+        material.dispose();
+      });
+      rig.beamGeometry.dispose();
+      rig.beamMaterial.dispose();
+      rig.beamTexture.dispose();
+      rig.poolGeometry.dispose();
+      rig.poolMaterial.dispose();
+      rig.flareGeometry.dispose();
+      rig.flareMaterial.dispose();
+      rig.radialTexture.dispose();
+    };
+  }, [rig]);
+
+  return <primitive object={rig.group} />;
 }
 
 function createTouchPulseTexture() {
@@ -225,27 +498,6 @@ function createTouchPulseTexture() {
     gradient.addColorStop(1, "rgba(34,92,255,0)");
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function createTouchRingTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const context = canvas.getContext("2d");
-  if (context) {
-    context.clearRect(0, 0, 128, 128);
-    context.beginPath();
-    context.arc(64, 64, 43, 0, Math.PI * 2);
-    context.strokeStyle = "rgba(247,247,244,.95)";
-    context.lineWidth = 5;
-    context.shadowColor = "#75d8ff";
-    context.shadowBlur = 18;
-    context.stroke();
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -300,8 +552,6 @@ function InteractionTouchEffects({
   screen: THREE.Object3D | null;
 }) {
   const camera = useThree((state) => state.camera);
-  const completionAge = useRef(10);
-  const wasComplete = useRef(false);
   const group = useMemo(() => {
     const next = new THREE.Group();
     next.name = "fxInteraction_touch_composer";
@@ -320,7 +570,6 @@ function InteractionTouchEffects({
     if (normal.dot(camera.position.clone().sub(centerPoint)) < 0) normal.negate();
     next.position.copy(centerPoint).addScaledVector(normal, 0.07);
     const pulseTexture = createTouchPulseTexture();
-    const ringTexture = createTouchRingTexture();
     const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
     const pulses = colors.map((color, index) => {
       const pulseMaterial = new THREE.SpriteMaterial({
@@ -343,41 +592,16 @@ function InteractionTouchEffects({
       return pulse;
     });
 
-    const ringMaterial = new THREE.SpriteMaterial({
-      map: ringTexture,
-      color: "#75d8ff",
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      toneMapped: false,
-    });
-    const ring = new THREE.Sprite(ringMaterial);
-    ring.name = "fxInteraction_touch_completion";
-    ring.position.set(0, 0, 0);
-    ring.scale.setScalar(0.35);
-    ring.raycast = () => {};
-    ring.renderOrder = 42;
-    ring.visible = false;
-    next.add(ring);
-
     next.userData.pulses = pulses;
-    next.userData.ring = ring;
     next.userData.xAxis = xAxis;
     next.userData.yAxis = yAxis;
     next.userData.normal = normal;
     next.userData.pulseTexture = pulseTexture;
-    next.userData.ringTexture = ringTexture;
     return next;
   }, [anchors, camera, screen]);
 
   useFrame(({ clock }, delta) => {
     const complete = interactionRuntime.touchElements.every(Boolean);
-    if (complete && !wasComplete.current) completionAge.current = 0;
-    else completionAge.current += delta;
-    wasComplete.current = complete;
-
     const pulses = group.userData.pulses as THREE.Sprite[];
     const xAxis = group.userData.xAxis as THREE.Vector3;
     const yAxis = group.userData.yAxis as THREE.Vector3;
@@ -405,28 +629,307 @@ function InteractionTouchEffects({
         pulse.scale.setScalar(scale);
       }
     });
-
-    const ring = group.userData.ring as THREE.Sprite;
-    const ringMaterial = ring.material as THREE.SpriteMaterial;
-    const ringDuration = 1.25;
-    const ringProgress = THREE.MathUtils.clamp(completionAge.current / ringDuration, 0, 1);
-    ringMaterial.opacity = complete
-      ? (1 - ringProgress) * 0.82 * interactionRuntime.touchVisibility
-      : 0;
-    ring.scale.setScalar(0.38 + ringProgress * 1.35);
-    ring.visible = ringMaterial.opacity > 0.002;
   });
 
   useEffect(() => () => {
     (group.userData.pulses as THREE.Sprite[]).forEach((pulse) => {
       (pulse.material as THREE.Material).dispose();
     });
-    ((group.userData.ring as THREE.Sprite).material as THREE.Material).dispose();
     (group.userData.pulseTexture as THREE.Texture).dispose();
-    (group.userData.ringTexture as THREE.Texture).dispose();
   }, [group]);
 
   return <primitive object={group} />;
+}
+
+function InteractionGameEffects({
+  anchors,
+  quality,
+  screen,
+}: {
+  anchors: InteractionAnchorRuntime;
+  quality: SceneQuality;
+  screen: THREE.Object3D | null;
+}) {
+  const camera = useThree((state) => state.camera);
+  const rig = useMemo(() => {
+    const group = new THREE.Group();
+    group.name = "fxInteraction_game_signal_toss";
+    const fallbackCenter = anchors.stations.game.object.getWorldPosition(new THREE.Vector3());
+    const screenCenter = screen ? getWorldPointAtUv(screen, 0.5, 0.5) : null;
+    const screenRight = screen ? getWorldPointAtUv(screen, 0.6, 0.5) : null;
+    const screenDown = screen ? getWorldPointAtUv(screen, 0.5, 0.6) : null;
+    const screenLaunch = screen ? getWorldPointAtUv(screen, 0.5, 0.78) : null;
+    const xAxis = screenCenter && screenRight
+      ? screenRight.clone().sub(screenCenter).multiplyScalar(10)
+      : new THREE.Vector3(1, 0, 0);
+    const yAxis = screenCenter && screenDown
+      ? screenDown.clone().sub(screenCenter).multiplyScalar(10)
+      : new THREE.Vector3(0, -1.3, 0);
+    const center = screenCenter ?? fallbackCenter;
+    const normal = xAxis.clone().cross(yAxis).normalize();
+    if (normal.dot(camera.position.clone().sub(center)) < 0) normal.negate();
+    const screenScale = Math.max(0.2, Math.min(xAxis.length(), yAxis.length()));
+    const targetUvs = [
+      [0.2, 0.29],
+      [0.8, 0.29],
+      [0.5, 0.18],
+    ] as const;
+    const targetPositions = targetUvs.map(([u, v]) => {
+      const surfacePosition = screen ? getWorldPointAtUv(screen, u, v) : null;
+      return (surfacePosition ?? center.clone()
+        .addScaledVector(xAxis, u - 0.5)
+        .addScaledVector(yAxis, v - 0.5))
+        .addScaledVector(normal, screenScale * 0.045);
+    });
+    const launchPosition = (screenLaunch ?? center.clone().addScaledVector(yAxis, 0.28))
+      .clone()
+      .addScaledVector(normal, screenScale * 0.035);
+    const colors = ["#50c7ff", "#ef86ff", "#ffb54a"].map((color) => new THREE.Color(color));
+    const radialTexture = createRadialLightTexture();
+    const ringSize = screenScale * 0.2;
+
+    const orbMaterial = new THREE.SpriteMaterial({
+      map: radialTexture,
+      color: colors[0],
+      transparent: true,
+      opacity: 0,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    });
+    const orb = new THREE.Sprite(orbMaterial);
+    orb.name = "fxInteraction_game_launched_signal";
+    orb.position.copy(launchPosition);
+    orb.scale.setScalar(screenScale * 0.22);
+    orb.renderOrder = 17;
+    orb.frustumCulled = false;
+    orb.raycast = () => {};
+    group.add(orb);
+
+    const trailCount = quality === "full" ? 10 : 6;
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailPositions = new Float32Array(trailCount * 3);
+    const trailColors = new Float32Array(trailCount * 3);
+    trailGeometry.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
+    trailGeometry.setAttribute("color", new THREE.BufferAttribute(trailColors, 3));
+    const trailMaterial = new THREE.PointsMaterial({
+      map: radialTexture,
+      size: screenScale * (quality === "full" ? 0.11 : 0.13),
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: quality === "full" ? 0.8 : 0.66,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      toneMapped: false,
+    });
+    const trail = new THREE.Points(trailGeometry, trailMaterial);
+    trail.name = "fxInteraction_game_signal_trail";
+    trail.renderOrder = 16;
+    trail.frustumCulled = false;
+    trail.raycast = () => {};
+    trail.visible = false;
+    group.add(trail);
+
+    const waveTexture = createGameWaveTexture();
+    const impactMaterial = new THREE.SpriteMaterial({
+      map: waveTexture,
+      color: colors[0],
+      transparent: true,
+      opacity: 0,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    });
+    const impact = new THREE.Sprite(impactMaterial);
+    impact.name = "fxInteraction_game_hit_burst";
+    impact.renderOrder = 18;
+    impact.frustumCulled = false;
+    impact.raycast = () => {};
+    impact.visible = false;
+    group.add(impact);
+
+    const finaleWaves = colors.map((color, index) => {
+      const material = new THREE.SpriteMaterial({
+        map: waveTexture,
+        color,
+        transparent: true,
+        opacity: 0,
+        depthTest: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const wave = new THREE.Sprite(material);
+      wave.name = `fxInteraction_game_finale_wave_${String(index + 1).padStart(2, "0")}`;
+      wave.position.copy(center).addScaledVector(normal, screenScale * (0.05 + index * 0.012));
+      wave.scale.setScalar(screenScale * 0.3);
+      wave.renderOrder = 17 + index;
+      wave.frustumCulled = false;
+      wave.raycast = () => {};
+      wave.visible = false;
+      group.add(wave);
+      return wave;
+    });
+
+    return {
+      group,
+      xAxis,
+      yAxis,
+      normal,
+      targetPositions,
+      launchPosition,
+      colors,
+      radialTexture,
+      ringSize,
+      orb,
+      orbMaterial,
+      trail,
+      trailGeometry,
+      trailMaterial,
+      trailCount,
+      waveTexture,
+      impact,
+      impactMaterial,
+      finaleWaves,
+      screenScale,
+      observedLaunchId: interactionRuntime.gameLaunchId,
+      launchAge: Number.POSITIVE_INFINITY,
+      launchTarget: 0,
+      launchAccuracy: 1,
+      launchResult: 0 as 0 | 1 | 2,
+      launchDestination: new THREE.Vector3(),
+      wasComplete: false,
+      finaleAge: Number.POSITIVE_INFINITY,
+      controlPoint: new THREE.Vector3(),
+      curvePoint: new THREE.Vector3(),
+      curvePartA: new THREE.Vector3(),
+      curvePartB: new THREE.Vector3(),
+      curvePartC: new THREE.Vector3(),
+      workingColor: new THREE.Color(),
+    };
+  }, [anchors, camera, quality, screen]);
+
+  useFrame((_, delta) => {
+    const visibility = interactionRuntime.gameVisibility;
+    const complete = interactionRuntime.gameComplete;
+    const allConnected = interactionRuntime.gameCompletedTargets.every(Boolean);
+    const successfulComplete = complete && allConnected;
+    if (successfulComplete && !rig.wasComplete) rig.finaleAge = 0;
+    rig.wasComplete = successfulComplete;
+    rig.finaleAge += delta;
+    if (interactionRuntime.gameLaunchId !== rig.observedLaunchId) {
+      rig.observedLaunchId = interactionRuntime.gameLaunchId;
+      rig.launchAge = 0;
+      rig.launchTarget = interactionRuntime.gameLaunchTarget;
+      rig.launchAccuracy = interactionRuntime.gameLaunchAccuracy;
+      rig.launchResult = interactionRuntime.gameLaunchResult;
+      rig.launchDestination.copy(rig.targetPositions[rig.launchTarget]);
+      rig.launchDestination.addScaledVector(
+        rig.xAxis,
+        interactionRuntime.gameLaunchDestinationX,
+      );
+      rig.launchDestination.addScaledVector(
+        rig.yAxis,
+        interactionRuntime.gameLaunchDestinationY,
+      );
+      rig.orbMaterial.color.copy(rig.colors[rig.launchTarget]);
+      rig.impactMaterial.color.copy(rig.colors[rig.launchTarget]);
+    } else {
+      rig.launchAge += delta;
+    }
+
+    const flightDuration = 0.88;
+    const flightProgress = Math.min(1, rig.launchAge / flightDuration);
+    const flying = rig.launchResult > 0 && rig.launchAge < flightDuration && visibility > 0.001;
+    rig.orb.visible = flying;
+    rig.trail.visible = flying;
+    if (flying) {
+      const travel = 1 - Math.pow(1 - flightProgress, 3);
+      const destination = rig.launchDestination;
+      rig.controlPoint.copy(rig.launchPosition).lerp(destination, 0.48);
+      rig.controlPoint.addScaledVector(
+        rig.normal,
+        rig.screenScale * (0.18 + rig.launchAccuracy * 0.08),
+      );
+      const updateCurvePoint = (progress: number, target: THREE.Vector3) => {
+        const inverse = 1 - progress;
+        target.copy(rig.launchPosition).multiplyScalar(inverse * inverse);
+        rig.curvePartA.copy(rig.controlPoint).multiplyScalar(2 * inverse * progress);
+        rig.curvePartB.copy(destination).multiplyScalar(progress * progress);
+        target.add(rig.curvePartA).add(rig.curvePartB);
+      };
+      updateCurvePoint(travel, rig.curvePoint);
+      rig.orb.position.copy(rig.curvePoint);
+      rig.orbMaterial.opacity = Math.sin(flightProgress * Math.PI) * visibility;
+      rig.orb.scale.setScalar(rig.ringSize * (1.05 + Math.sin(flightProgress * Math.PI) * 0.38));
+
+      const trailPositions = rig.trailGeometry.getAttribute("position") as THREE.BufferAttribute;
+      const trailColors = rig.trailGeometry.getAttribute("color") as THREE.BufferAttribute;
+      for (let index = 0; index < rig.trailCount; index += 1) {
+        const trailProgress = Math.max(0, travel - index * (0.38 / rig.trailCount));
+        updateCurvePoint(trailProgress, rig.curvePartC);
+        trailPositions.setXYZ(index, rig.curvePartC.x, rig.curvePartC.y, rig.curvePartC.z);
+        const energy = (1 - index / rig.trailCount) * Math.sin(flightProgress * Math.PI);
+        rig.workingColor.copy(rig.colors[rig.launchTarget]).multiplyScalar(energy);
+        trailColors.setXYZ(
+          index,
+          rig.workingColor.r,
+          rig.workingColor.g,
+          rig.workingColor.b,
+        );
+      }
+      trailPositions.needsUpdate = true;
+      trailColors.needsUpdate = true;
+    } else {
+      rig.orbMaterial.opacity = 0;
+    }
+
+    const impactProgress = THREE.MathUtils.clamp((rig.launchAge - 0.48) / 0.58, 0, 1);
+    const impactActive = rig.launchResult > 0 && impactProgress > 0 && impactProgress < 1;
+    rig.impact.visible = impactActive;
+    if (impactActive) {
+      const strength = rig.launchResult === 2 ? 1 : 0.68;
+      rig.impact.position.copy(rig.launchDestination).addScaledVector(
+        rig.normal,
+        rig.screenScale * impactProgress * 0.12,
+      );
+      rig.impactMaterial.opacity = Math.sin(impactProgress * Math.PI) * strength * visibility;
+      rig.impact.scale.setScalar(
+        rig.screenScale * (0.16 + impactProgress * (rig.launchResult === 2 ? 0.92 : 0.58)),
+      );
+    } else {
+      rig.impactMaterial.opacity = 0;
+    }
+
+    rig.finaleWaves.forEach((wave, index) => {
+      const material = wave.material as THREE.SpriteMaterial;
+      const waveProgress = THREE.MathUtils.clamp((rig.finaleAge - index * 0.1) / 0.95, 0, 1);
+      const active = successfulComplete && waveProgress > 0 && waveProgress < 1;
+      wave.visible = active;
+      material.opacity = active ? Math.sin(waveProgress * Math.PI) * 0.48 * visibility : 0;
+      wave.scale.setScalar(rig.screenScale * (0.35 + waveProgress * 2.1));
+    });
+    rig.group.visible = visibility > 0.001
+      || flying
+      || impactActive
+      || (successfulComplete && rig.finaleAge < 1.25);
+  });
+
+  useEffect(() => () => {
+    rig.orbMaterial.dispose();
+    rig.trailGeometry.dispose();
+    rig.trailMaterial.dispose();
+    rig.impactMaterial.dispose();
+    rig.finaleWaves.forEach((wave) => (wave.material as THREE.Material).dispose());
+    rig.waveTexture.dispose();
+    rig.radialTexture.dispose();
+  }, [rig]);
+
+  return <primitive object={rig.group} />;
 }
 
 function createCueTexture() {
@@ -469,7 +972,7 @@ function InteractionSceneCues({ anchors }: { anchors: InteractionAnchorRuntime }
       toneMapped: false,
     });
     (Object.entries(anchors.stations) as Array<[InteractionStation, InteractionAnchorRuntime["stations"][InteractionStation]]>)
-      .filter(([station]) => station !== "touch")
+      .filter(([station]) => station !== "touch" && station !== "stage" && station !== "game")
       .forEach(([station, anchor]) => {
         const sprite = new THREE.Sprite(material);
         sprite.name = `fxInteraction_cue_${station}`;
@@ -965,11 +1468,16 @@ export function BakedMandegarScene({
       <BakedScreenController root={exhibition} projects={projects} />
       <InteractionSceneCues anchors={interactionAnchors} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
-      <InteractionBeamEffects anchors={interactionAnchors} quality={quality} />
+      <InteractionBeamEffects anchors={interactionAnchors} quality={quality} root={exhibition} />
       <InteractionTouchEffects
         anchors={interactionAnchors}
         quality={quality}
         screen={exhibition.getObjectByName(bakedSceneContract.exhibition.screens.interactive) ?? null}
+      />
+      <InteractionGameEffects
+        anchors={interactionAnchors}
+        quality={quality}
+        screen={exhibition.getObjectByName(bakedSceneContract.exhibition.screens.game) ?? null}
       />
       <TransitionParticleField
         environment={environment}

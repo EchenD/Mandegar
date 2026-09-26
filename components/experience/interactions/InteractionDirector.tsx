@@ -7,7 +7,6 @@ import { DrawingInteraction } from "./DrawingInteraction";
 import { GameInteraction } from "./GameInteraction";
 import { getInteractionCopy } from "./interaction-copy";
 import { InteractionChrome } from "./InteractionChrome";
-import { InteractionHotspot, positionInteractionHotspot } from "./InteractionHotspot";
 import { getStationForPhase } from "./interaction-registry";
 import {
   interactionRuntime,
@@ -71,7 +70,11 @@ export const InteractionDirector = memo(function InteractionDirector({
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ));
   const previousFocus = useRef<HTMLElement | null>(null);
+  const photoAutoStarted = useRef(false);
   const touchAutoStarted = useRef(false);
+  const stageAutoStarted = useRef(false);
+  const gameAutoStarted = useRef(false);
+  const drawAutoStarted = useRef(false);
   const savedScroll = useRef(0);
   const savedScrollProgress = useRef<{
     distance: number;
@@ -80,14 +83,10 @@ export const InteractionDirector = memo(function InteractionDirector({
   } | null>(null);
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
-  const hotspotElement = useRef<HTMLButtonElement>(null);
   const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
   const expectedStation = getStationForPhase(activePhase);
 
   const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
-    const hotspot = hotspotElement.current;
-    const station = hotspot?.dataset.interactionHotspot as InteractionStation | undefined;
-    if (hotspot && station) positionInteractionHotspot(hotspot, frame.stations[station]);
     interactionStationNames.forEach((name) => {
       const element = debugAnchorElements.current[name];
       if (!element) return;
@@ -159,6 +158,23 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   useEffect(() => {
+    if (expectedStation !== "photo") {
+      photoAutoStarted.current = false;
+      return;
+    }
+    if (
+      (runtime !== "adaptive" && runtime !== "full")
+      || settledPhase !== activePhase
+      || state.availableStation !== "photo"
+      || state.activeStation
+      || photoAutoStarted.current
+    ) return;
+    photoAutoStarted.current = true;
+    const frame = window.requestAnimationFrame(() => enter("photo", "automatic"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+
+  useEffect(() => {
     if (expectedStation !== "touch") {
       touchAutoStarted.current = false;
       return;
@@ -172,6 +188,57 @@ export const InteractionDirector = memo(function InteractionDirector({
     ) return;
     touchAutoStarted.current = true;
     const frame = window.requestAnimationFrame(() => enter("touch", "automatic"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+
+  useEffect(() => {
+    if (expectedStation !== "stage") {
+      stageAutoStarted.current = false;
+      return;
+    }
+    if (
+      (runtime !== "adaptive" && runtime !== "full")
+      || settledPhase !== activePhase
+      || state.availableStation !== "stage"
+      || state.activeStation
+      || stageAutoStarted.current
+    ) return;
+    stageAutoStarted.current = true;
+    const frame = window.requestAnimationFrame(() => enter("stage", "automatic"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+
+  useEffect(() => {
+    if (expectedStation !== "game") {
+      gameAutoStarted.current = false;
+      return;
+    }
+    if (
+      (runtime !== "adaptive" && runtime !== "full")
+      || settledPhase !== activePhase
+      || state.availableStation !== "game"
+      || state.activeStation
+      || gameAutoStarted.current
+    ) return;
+    gameAutoStarted.current = true;
+    const frame = window.requestAnimationFrame(() => enter("game", "automatic"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+
+  useEffect(() => {
+    if (expectedStation !== "draw") {
+      drawAutoStarted.current = false;
+      return;
+    }
+    if (
+      (runtime !== "adaptive" && runtime !== "full")
+      || settledPhase !== activePhase
+      || state.availableStation !== "draw"
+      || state.activeStation
+      || drawAutoStarted.current
+    ) return;
+    drawAutoStarted.current = true;
+    const frame = window.requestAnimationFrame(() => enter("draw", "automatic"));
     return () => window.cancelAnimationFrame(frame);
   }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
 
@@ -385,17 +452,6 @@ export const InteractionDirector = memo(function InteractionDirector({
       data-scroll-locked={station ? "true" : "false"}
       data-runtime={runtime}
     >
-      {state.availableStation && !station && (
-        <InteractionHotspot
-          station={state.availableStation}
-          label={copy.stations[state.availableStation].label}
-          point={initialAnchors.stations[state.availableStation]}
-          completed={state.completed[state.availableStation]}
-          onEnter={(input) => enter(state.availableStation!, input)}
-          elementRef={hotspotElement}
-        />
-      )}
-
       {station === "touch" && (
         <TouchComposerInteraction
           copy={copy}
@@ -405,7 +461,35 @@ export const InteractionDirector = memo(function InteractionDirector({
         />
       )}
 
-      {station && station !== "touch" && (
+      {station === "stage" && (
+        <StageBeamInteraction
+          copy={copy}
+          onClose={() => exit(true)}
+          onComplete={() => complete("stage")}
+          onContinue={() => exit(false)}
+        />
+      )}
+
+      {station === "game" && (
+        <GameInteraction
+          copy={copy}
+          reducedMotion={reducedMotion}
+          onClose={() => exit(true)}
+          onComplete={() => complete("game")}
+          onContinue={() => exit(false)}
+        />
+      )}
+
+      {station === "draw" && (
+        <DrawingInteraction
+          copy={copy}
+          onClose={() => exit(true)}
+          onComplete={() => complete("draw")}
+          onContinue={() => exit(false)}
+        />
+      )}
+
+      {station === "photo" && (
         <div className={styles.activeLayer}>
           <InteractionChrome
             station={station}
@@ -414,10 +498,7 @@ export const InteractionDirector = memo(function InteractionDirector({
             onClose={() => exit(true)}
             onContinue={() => exit(false)}
           >
-            {station === "photo" && <PhotoBoothInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("photo")} />}
-            {station === "stage" && <StageBeamInteraction copy={copy} onComplete={() => complete("stage")} />}
-            {station === "game" && <GameInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("game")} />}
-            {station === "draw" && <DrawingInteraction copy={copy} onComplete={() => complete("draw")} />}
+            <PhotoBoothInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("photo")} />
           </InteractionChrome>
         </div>
       )}

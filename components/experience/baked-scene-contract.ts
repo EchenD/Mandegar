@@ -139,6 +139,13 @@ export const bakedSceneContract = {
         "fxAnchor_stage_beam_target_04",
         "fxAnchor_stage_beam_target_05",
       ],
+      beamEmitterMeshes: [
+        "fxMesh_stage_beam_origin_01",
+        "fxMesh_stage_beam_origin_02",
+        "fxMesh_stage_beam_origin_03",
+        "fxMesh_stage_beam_origin_04",
+        "fxMesh_stage_beam_origin_05",
+      ],
     },
   },
   crowd: {
@@ -215,4 +222,5 @@ export const requiredExhibitionNodes = [
   bakedSceneContract.exhibition.sections.right.revealAnchor,
   bakedSceneContract.exhibition.sections.right.signalAnchor,
   ...Object.values(bakedSceneContract.exhibition.screens),
+  ...bakedSceneContract.exhibition.interactionAnchors.beamEmitterMeshes,
 ] as const;

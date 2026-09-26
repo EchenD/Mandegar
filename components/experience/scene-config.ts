@@ -25,6 +25,27 @@ export type CameraKeyframe = {
   ease: "calm" | "reveal" | "loop";
 };
 
+// Canvas backing sizes follow the measured display surfaces in the authored GLB.
+// Keeping the ratios here prevents live interaction textures from being stretched.
+export const interactionSurfaceSizes = {
+  videoWall: {
+    model: { width: 26.693, height: 6.90186 },
+    canvas: { width: 1740, height: 450 },
+  },
+  interactive: {
+    model: { width: 2.6682, height: 1.3973 },
+    canvas: { width: 1031, height: 540 },
+  },
+  game: {
+    model: { width: 2.61765, height: 3.76422 },
+    canvas: { width: 501, height: 720 },
+  },
+  main: {
+    model: { width: 3.74633, height: 2.80175 },
+    canvas: { width: 960, height: 718 },
+  },
+} as const;
+
 export const sceneTokens = {
   rendering: {
     pipeline: "baked-modular",
