@@ -179,7 +179,11 @@ export function MandegarExperience({
     narrativeScore.findIndex((phase) => phase.id === activePhase),
   );
   useLayoutEffect(() => {
-    const previousRestoration = window.history.scrollRestoration;
+    const declaredRestoration = document.documentElement.dataset.mandegarPreviousScrollRestoration;
+    const previousRestoration = declaredRestoration === "auto" || declaredRestoration === "manual"
+      ? declaredRestoration
+      : window.history.scrollRestoration;
+    delete document.documentElement.dataset.mandegarPreviousScrollRestoration;
     const previousBehavior = document.documentElement.style.scrollBehavior;
     window.history.scrollRestoration = "manual";
     document.documentElement.style.scrollBehavior = "auto";
@@ -188,13 +192,18 @@ export function MandegarExperience({
     const handlePageShow = () => resetScroll();
     resetScroll();
     window.addEventListener("pageshow", handlePageShow);
+    let secondFrame: number | undefined;
     const firstFrame = window.requestAnimationFrame(() => {
       resetScroll();
-      document.documentElement.style.scrollBehavior = previousBehavior;
+      secondFrame = window.requestAnimationFrame(() => {
+        resetScroll();
+        document.documentElement.style.scrollBehavior = previousBehavior;
+      });
     });
 
     return () => {
       window.cancelAnimationFrame(firstFrame);
+      if (secondFrame !== undefined) window.cancelAnimationFrame(secondFrame);
       window.removeEventListener("pageshow", handlePageShow);
       window.history.scrollRestoration = previousRestoration;
       document.documentElement.style.scrollBehavior = previousBehavior;
@@ -220,12 +229,39 @@ export function MandegarExperience({
   }, []);
 
   useEffect(() => {
-    document.documentElement.style.removeProperty("overflow");
-    document.documentElement.toggleAttribute("data-experience-scroll-lock", !interactionReady);
+    const html = document.documentElement;
+    if (!interactionReady) {
+      html.setAttribute("data-experience-scroll-lock", "");
+      return;
+    }
+    const requestedPhase = new URLSearchParams(window.location.search).get("phase");
+    html.removeAttribute("data-experience-scroll-lock");
+    if (requestedPhase) return;
+
+    const previousBehavior = html.style.scrollBehavior;
+    const resetScroll = () => {
+      html.style.scrollBehavior = "auto";
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    };
+    resetScroll();
+    let secondFrame: number | undefined;
+    const firstFrame = window.requestAnimationFrame(() => {
+      resetScroll();
+      secondFrame = window.requestAnimationFrame(() => {
+        resetScroll();
+        html.style.scrollBehavior = previousBehavior;
+      });
+    });
     return () => {
-      document.documentElement.removeAttribute("data-experience-scroll-lock");
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame !== undefined) window.cancelAnimationFrame(secondFrame);
+      html.style.scrollBehavior = previousBehavior;
     };
   }, [interactionReady]);
+
+  useEffect(() => () => {
+    document.documentElement.removeAttribute("data-experience-scroll-lock");
+  }, []);
 
   useEffect(() => {
     let frame: number | undefined;

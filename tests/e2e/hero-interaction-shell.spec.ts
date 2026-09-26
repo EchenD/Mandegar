@@ -37,7 +37,8 @@ test.describe("hero interaction shell", () => {
     await expect.poll(() => page.evaluate(() => ({
       body: document.body.style.overflow,
       html: document.documentElement.style.overflow,
-    }))).toEqual({ body: "hidden", html: "hidden" });
+    }))).toEqual({ body: "", html: "" });
+    await expect(page.locator("[data-experience-canvas='true']")).toHaveCSS("touch-action", "none");
     await page.evaluate(() => window.scrollBy({ top: 300, behavior: "auto" }));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
     await page.keyboard.press("Escape");
@@ -45,8 +46,9 @@ test.describe("hero interaction shell", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
     await expect.poll(() => page.evaluate(() => ({
       body: document.body.style.overflow,
+      canvasTouchAction: document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']")?.style.touchAction,
       html: document.documentElement.style.overflow,
-    }))).toEqual({ body: "", html: "" });
+    }))).toEqual({ body: "", canvasTouchAction: "", html: "" });
   });
 
   test("legacy hover UI and invisible scene navigation are absent", async ({ page }) => {

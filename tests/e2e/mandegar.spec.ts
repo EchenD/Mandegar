@@ -512,7 +512,9 @@ test.describe("Mandegar responsive layout", () => {
     });
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1_000);
 
-    await page.reload({ waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    expect(Math.round(await page.evaluate(() => window.scrollY))).toBe(0);
+    await page.waitForLoadState("networkidle");
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-native-progress")).toBe("0.0000");
   });

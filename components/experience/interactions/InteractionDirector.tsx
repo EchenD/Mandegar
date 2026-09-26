@@ -73,6 +73,11 @@ export const InteractionDirector = memo(function InteractionDirector({
   const previousFocus = useRef<HTMLElement | null>(null);
   const touchAutoStarted = useRef(false);
   const savedScroll = useRef(0);
+  const savedScrollProgress = useRef<{
+    distance: number;
+    progress: number;
+    rootTop: number;
+  } | null>(null);
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
   const hotspotElement = useRef<HTMLButtonElement>(null);
@@ -124,9 +129,31 @@ export const InteractionDirector = memo(function InteractionDirector({
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
     if (interactionRuntime.availableStation !== station) return;
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
+    const distance = root ? Math.max(1, root.offsetHeight - window.innerHeight) : 1;
+    const nativeProgress = Number(root?.dataset.nativeProgress);
+    const progress = Number.isFinite(nativeProgress)
+      ? Math.max(0, Math.min(1, nativeProgress))
+      : Math.max(0, Math.min(1, (window.scrollY - rootTop) / distance));
+    const canonicalScroll = root
+      ? Math.max(0, Math.min(
+        document.documentElement.scrollHeight - window.innerHeight,
+        rootTop + distance * progress,
+      ))
+      : window.scrollY;
+    savedScroll.current = Math.abs(window.scrollY - canonicalScroll) <= 2
+      ? window.scrollY
+      : canonicalScroll;
+    savedScrollProgress.current = root
+      ? {
+        distance,
+        progress,
+        rootTop,
+      }
+      : null;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    document.querySelector<HTMLElement>("[data-experience-root]")
-      ?.setAttribute("data-interaction-active", station);
+    root?.setAttribute("data-interaction-active", station);
     dispatch({ type: "ENTER", station, input });
     interactionRuntime.activeStation = station;
   }, []);
@@ -190,24 +217,38 @@ export const InteractionDirector = memo(function InteractionDirector({
 
   useEffect(() => {
     if (!state.activeStation) return;
-    savedScroll.current = window.scrollY;
     const html = document.documentElement;
     const body = document.body;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+    const snapshot = savedScrollProgress.current;
+    if (root && snapshot) {
+      const canonicalScroll = snapshot.rootTop + snapshot.distance * snapshot.progress;
+      if (Math.abs(window.scrollY - canonicalScroll) <= 2) savedScroll.current = window.scrollY;
+    }
     const previous = {
-      bodyOverflow: body.style.overflow,
       bodyOverscrollBehavior: body.style.overscrollBehavior,
-      htmlOverflow: html.style.overflow,
+      canvasTouchAction: canvas?.style.touchAction ?? "",
       htmlOverscrollBehavior: html.style.overscrollBehavior,
-      scrollbarGutter: html.style.getPropertyValue("scrollbar-gutter"),
+      rootOverflowAnchor: root?.style.overflowAnchor ?? "",
     };
-    html.style.overflow = "hidden";
     html.style.overscrollBehavior = "none";
-    html.style.setProperty("scrollbar-gutter", "stable");
-    body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
+    if (canvas) canvas.style.touchAction = "none";
+    if (root) root.style.overflowAnchor = "none";
     root?.setAttribute("data-interaction-active", state.activeStation);
 
+    const getRestoredScrollPosition = () => {
+      const snapshot = savedScrollProgress.current;
+      if (!root || !snapshot) return savedScroll.current;
+      const rootTop = root.getBoundingClientRect().top + window.scrollY;
+      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
+      const layoutChanged = Math.abs(distance - snapshot.distance) > 1
+        || Math.abs(rootTop - snapshot.rootTop) > 1;
+      return layoutChanged
+        ? rootTop + distance * snapshot.progress
+        : savedScroll.current;
+    };
     const holdScrollPosition = () => {
       if (Math.abs(window.scrollY - savedScroll.current) < 0.5) return;
       window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
@@ -237,45 +278,89 @@ export const InteractionDirector = memo(function InteractionDirector({
         }
         return;
       }
-      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
         const target = event.target as HTMLElement | null;
-        if (!target?.closest("[data-interaction-panel]")) event.preventDefault();
+        const editable = target?.closest(
+          "input, select, textarea, [contenteditable='true']",
+        );
+        if (editable) return;
+        if (event.key === " " && target?.closest("button")) return;
+        event.preventDefault();
+        const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
+        if (!scroller) return;
+        const pageStep = Math.max(48, scroller.clientHeight * .8);
+        const delta = event.key === "ArrowUp" ? -40
+          : event.key === "ArrowDown" ? 40
+            : event.key === "PageUp" ? -pageStep
+              : event.key === "PageDown" || event.key === " " ? pageStep
+                : 0;
+        if (event.key === "Home") scroller.scrollTo({ top: 0, behavior: "auto" });
+        else if (event.key === "End") scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
+        else scroller.scrollBy({ top: delta, behavior: "auto" });
       }
     };
     const cancelForWebglLoss = () => exit(true);
     const preventWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) event.preventDefault();
+      if (event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      const target = event.target as HTMLElement | null;
+      const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
+      if (scroller && scroller.scrollHeight > scroller.clientHeight) {
+        scroller.scrollBy({ top: event.deltaY, left: event.deltaX, behavior: "auto" });
+      }
+    };
+    let previousTouchY: number | null = null;
+    const rememberTouchPosition = (event: TouchEvent) => {
+      previousTouchY = event.touches[0]?.clientY ?? null;
     };
     const preventTouchScroll = (event: TouchEvent) => {
       const target = event.target as HTMLElement | null;
-      if (!target?.closest(`.${styles.experienceBody}`)) event.preventDefault();
+      const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
+      const currentTouchY = event.touches[0]?.clientY;
+      const deltaY = currentTouchY !== undefined && previousTouchY !== null
+        ? previousTouchY - currentTouchY
+        : 0;
+      previousTouchY = currentTouchY ?? null;
+      const maxScroll = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
+      const canScrollInside = Boolean(scroller)
+        && maxScroll > 1
+        && ((deltaY > 0 && scroller!.scrollTop < maxScroll - 1)
+          || (deltaY < 0 && scroller!.scrollTop > 1));
+      if (!canScrollInside) event.preventDefault();
     };
+    const forgetTouchPosition = () => { previousTouchY = null; };
     window.addEventListener("keydown", preventScrollKeys);
-    window.addEventListener("wheel", preventWheel, { passive: false });
-    window.addEventListener("touchmove", preventTouchScroll, { passive: false });
+    window.addEventListener("wheel", preventWheel, { capture: true, passive: false });
+    window.addEventListener("touchstart", rememberTouchPosition, { capture: true, passive: true });
+    window.addEventListener("touchmove", preventTouchScroll, { capture: true, passive: false });
+    window.addEventListener("touchend", forgetTouchPosition, true);
+    window.addEventListener("touchcancel", forgetTouchPosition, true);
     window.addEventListener("scroll", holdScrollPosition, { passive: true });
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
+    holdScrollPosition();
     if (state.input !== "automatic") {
       window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
     }
 
     return () => {
       window.removeEventListener("keydown", preventScrollKeys);
-      window.removeEventListener("wheel", preventWheel);
-      window.removeEventListener("touchmove", preventTouchScroll);
+      window.removeEventListener("wheel", preventWheel, true);
+      window.removeEventListener("touchstart", rememberTouchPosition, true);
+      window.removeEventListener("touchmove", preventTouchScroll, true);
+      window.removeEventListener("touchend", forgetTouchPosition, true);
+      window.removeEventListener("touchcancel", forgetTouchPosition, true);
       window.removeEventListener("scroll", holdScrollPosition);
       document.removeEventListener("webglcontextlost", cancelForWebglLoss, true);
-      html.style.overflow = previous.htmlOverflow;
       html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
-      if (previous.scrollbarGutter) {
-        html.style.setProperty("scrollbar-gutter", previous.scrollbarGutter);
-      } else {
-        html.style.removeProperty("scrollbar-gutter");
-      }
-      body.style.overflow = previous.bodyOverflow;
       body.style.overscrollBehavior = previous.bodyOverscrollBehavior;
-      window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
+      if (canvas) canvas.style.touchAction = previous.canvasTouchAction;
+      if (root) root.style.overflowAnchor = previous.rootOverflowAnchor;
+      const restoredScroll = getRestoredScrollPosition();
+      if (Math.abs(window.scrollY - restoredScroll) >= 0.5) {
+        window.scrollTo({ top: restoredScroll, left: 0, behavior: "auto" });
+      }
       root?.removeAttribute("data-interaction-active");
+      savedScrollProgress.current = null;
       window.requestAnimationFrame(() => previousFocus.current?.focus());
     };
   }, [exit, state.activeStation, state.input]);
