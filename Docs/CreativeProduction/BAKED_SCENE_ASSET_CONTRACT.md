@@ -105,7 +105,11 @@ npm run assets:textures -- "D:\Projects\Navid\mandegar3d\Texture\Update" --textu
 
 The script requires Khronos KTX-Software (`toktx` and `ktx`) and generates a
 complete mip chain. It normalizes source color to 8-bit sRGB before producing
-4K desktop WebP/KTX2 files:
+4K desktop WebP/KTX2 files. Desktop KTX2 uses UASTC quality 3 without RDO to
+avoid visible rate-distortion artifacts. Mobile uses UASTC quality 2 with RDO
+lambda 0.75 to control transfer size. The atlases remain opaque RGB so they do
+not consume an unnecessary alpha channel. Runtime sampling uses 8x desktop and
+4x mobile anisotropy, capped by device support.
 
 ```text
 public/textures/mandegar/baked/env_quiet.webp

@@ -467,7 +467,11 @@ export function BakedMandegarScene({
     () => resolveInteractionAnchors(exhibition),
     [exhibition],
   );
-  const textures = useMemo(() => loadedTextures.map(prepareBakedTexture), [loadedTextures]);
+  const textures = useMemo(() => {
+    const maximum = gl.capabilities.getMaxAnisotropy();
+    const anisotropy = Math.min(maximum, quality === "full" ? 8 : 4);
+    return loadedTextures.map((texture) => prepareBakedTexture(texture, anisotropy));
+  }, [gl, loadedTextures, quality]);
   const runtimeRef = useRef<BakedSceneRuntime | null>(null);
 
   useEffect(() => {

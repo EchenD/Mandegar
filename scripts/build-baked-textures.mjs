@@ -119,15 +119,19 @@ async function writeWebp(input, output, quality) {
     .toFile(output);
 }
 
-function writeKtx2(toktx, input, output) {
-  run(toktx, [
+function writeKtx2(toktx, input, output, { quality, rdoLambda }) {
+  const argumentsList = [
     "--t2",
     "--2d",
     "--genmipmap",
     "--filter", "lanczos4",
     "--encode", "uastc",
-    "--uastc_quality", "2",
-    "--uastc_rdo_l", "0.75",
+    "--uastc_quality", String(quality),
+  ];
+  if (rdoLambda !== null) {
+    argumentsList.push("--uastc_rdo_l", String(rdoLambda));
+  }
+  argumentsList.push(
     "--zcmp", "18",
     "--assign_oetf", "srgb",
     "--assign_primaries", "srgb",
@@ -135,7 +139,8 @@ function writeKtx2(toktx, input, output) {
     "--",
     output,
     input,
-  ]);
+  );
+  run(toktx, argumentsList);
 }
 
 async function main() {
@@ -168,8 +173,14 @@ async function main() {
         writeWebp(desktopPng, desktopWebp, 90),
         writeWebp(mobilePng, mobileWebp, 86),
       ]);
-      writeKtx2(toktx, desktopPng, desktopKtx2);
-      writeKtx2(toktx, mobilePng, mobileKtx2);
+      writeKtx2(toktx, desktopPng, desktopKtx2, {
+        quality: 3,
+        rdoLambda: null,
+      });
+      writeKtx2(toktx, mobilePng, mobileKtx2, {
+        quality: 2,
+        rdoLambda: 0.75,
+      });
       if (existsSync(ktx)) {
         run(ktx, ["validate", desktopKtx2]);
         run(ktx, ["validate", mobileKtx2]);

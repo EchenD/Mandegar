@@ -100,7 +100,7 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function prepareBakedTexture(texture: THREE.Texture) {
+export function prepareBakedTexture(texture: THREE.Texture, anisotropy = 1) {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = false;
   texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -109,6 +109,7 @@ export function prepareBakedTexture(texture: THREE.Texture) {
     && !(texture instanceof THREE.CompressedTexture);
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
+  texture.anisotropy = anisotropy;
   texture.needsUpdate = true;
   return texture;
 }
