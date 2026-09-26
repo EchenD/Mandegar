@@ -191,13 +191,27 @@ export const InteractionDirector = memo(function InteractionDirector({
   useEffect(() => {
     if (!state.activeStation) return;
     savedScroll.current = window.scrollY;
+    const html = document.documentElement;
     const body = document.body;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const previous = {
-      overscrollBehavior: body.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
+      scrollbarGutter: html.style.getPropertyValue("scrollbar-gutter"),
     };
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    html.style.setProperty("scrollbar-gutter", "stable");
+    body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
     root?.setAttribute("data-interaction-active", state.activeStation);
+
+    const holdScrollPosition = () => {
+      if (Math.abs(window.scrollY - savedScroll.current) < 0.5) return;
+      window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
+    };
 
     const preventScrollKeys = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -239,6 +253,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     window.addEventListener("keydown", preventScrollKeys);
     window.addEventListener("wheel", preventWheel, { passive: false });
     window.addEventListener("touchmove", preventTouchScroll, { passive: false });
+    window.addEventListener("scroll", holdScrollPosition, { passive: true });
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
     if (state.input !== "automatic") {
       window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
@@ -248,10 +263,19 @@ export const InteractionDirector = memo(function InteractionDirector({
       window.removeEventListener("keydown", preventScrollKeys);
       window.removeEventListener("wheel", preventWheel);
       window.removeEventListener("touchmove", preventTouchScroll);
+      window.removeEventListener("scroll", holdScrollPosition);
       document.removeEventListener("webglcontextlost", cancelForWebglLoss, true);
-      body.style.overscrollBehavior = previous.overscrollBehavior;
-      root?.removeAttribute("data-interaction-active");
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
+      if (previous.scrollbarGutter) {
+        html.style.setProperty("scrollbar-gutter", previous.scrollbarGutter);
+      } else {
+        html.style.removeProperty("scrollbar-gutter");
+      }
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscrollBehavior;
       window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
+      root?.removeAttribute("data-interaction-active");
       window.requestAnimationFrame(() => previousFocus.current?.focus());
     };
   }, [exit, state.activeStation, state.input]);

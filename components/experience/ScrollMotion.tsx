@@ -102,6 +102,7 @@ export function ScrollMotion({
     let smooth: Lenis | undefined;
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
+    let interactionObserver: MutationObserver | undefined;
     let activePhase: ScenePhaseId = "arrival";
 
     const showPhaseRail = () => {
@@ -187,6 +188,20 @@ export function ScrollMotion({
       smooth.on("scroll", lenisScroll);
       lenisTick = (time) => smooth?.raf(time * 1000);
       gsap.ticker.add(lenisTick);
+      const syncInteractionLock = () => {
+        if (root.hasAttribute("data-interaction-active")) {
+          smooth?.stop();
+          return;
+        }
+        smooth?.scrollTo(window.scrollY, { immediate: true, force: true });
+        smooth?.start();
+      };
+      interactionObserver = new MutationObserver(syncInteractionLock);
+      interactionObserver.observe(root, {
+        attributes: true,
+        attributeFilter: ["data-interaction-active"],
+      });
+      syncInteractionLock();
     }
 
     const playhead = { progress: 0 };
@@ -257,6 +272,7 @@ export function ScrollMotion({
     return () => {
       window.cancelAnimationFrame(initialFrame);
       window.cancelAnimationFrame(restoreBehaviorFrame);
+      interactionObserver?.disconnect();
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);
       smooth?.destroy();

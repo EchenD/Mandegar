@@ -34,9 +34,19 @@ test.describe("hero interaction shell", () => {
     await page.mouse.click(cue.x, cue.y);
     await expect(director).toHaveAttribute("data-scroll-locked", "true");
     await expect(page.locator("[data-interaction-panel='photo']")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => ({
+      body: document.body.style.overflow,
+      html: document.documentElement.style.overflow,
+    }))).toEqual({ body: "hidden", html: "hidden" });
+    await page.evaluate(() => window.scrollBy({ top: 300, behavior: "auto" }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
     await page.keyboard.press("Escape");
     await expect(page.locator("[data-interaction-panel]")).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+    await expect.poll(() => page.evaluate(() => ({
+      body: document.body.style.overflow,
+      html: document.documentElement.style.overflow,
+    }))).toEqual({ body: "", html: "" });
   });
 
   test("legacy hover UI and invisible scene navigation are absent", async ({ page }) => {
