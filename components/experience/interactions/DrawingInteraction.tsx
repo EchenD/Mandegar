@@ -12,6 +12,15 @@ import styles from "./HeroInteractions.module.css";
 type Point = { x: number; y: number };
 type Stroke = Point[];
 
+function configureDrawingContext(context: CanvasRenderingContext2D) {
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = 11;
+  context.strokeStyle = "#75d8ff";
+  context.shadowColor = "#225cff";
+  context.shadowBlur = 22;
+}
+
 function renderDrawing(canvas: HTMLCanvasElement, strokes: Stroke[]) {
   const context = canvas.getContext("2d");
   if (!context) return;
@@ -20,20 +29,38 @@ function renderDrawing(canvas: HTMLCanvasElement, strokes: Stroke[]) {
   background.addColorStop(1, "#101c35");
   context.fillStyle = background;
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.lineWidth = 11;
-  context.strokeStyle = "#75d8ff";
-  context.shadowColor = "#225cff";
-  context.shadowBlur = 22;
+  configureDrawingContext(context);
   strokes.forEach((stroke) => {
     if (stroke.length === 0) return;
     context.beginPath();
     context.moveTo(stroke[0].x, stroke[0].y);
-    stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+    for (let index = 1; index < stroke.length; index += 1) {
+      context.lineTo(stroke[index].x, stroke[index].y);
+    }
     context.stroke();
   });
   context.shadowBlur = 0;
+  canvas.dataset.fullRenderCount = String(Number(canvas.dataset.fullRenderCount ?? 0) + 1);
+  markInteractionCanvasDirty("main");
+}
+
+function renderDrawingSegments(
+  canvas: HTMLCanvasElement,
+  start: Point,
+  points: readonly Point[],
+) {
+  if (points.length === 0) return;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  configureDrawingContext(context);
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  points.forEach((point) => context.lineTo(point.x, point.y));
+  context.stroke();
+  context.shadowBlur = 0;
+  canvas.dataset.incrementalRenderCount = String(
+    Number(canvas.dataset.incrementalRenderCount ?? 0) + 1,
+  );
   markInteractionCanvasDirty("main");
 }
 
@@ -42,8 +69,75 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
   const strokes = useRef<Stroke[]>([]);
   const activeStroke = useRef<Stroke | null>(null);
   const activePointer = useRef<number | null>(null);
+  const lastRenderedPoint = useRef<Point | null>(null);
+  const pendingPoints = useRef<Point[]>([]);
+  const renderFrame = useRef<number | null>(null);
   const [strokeCount, setStrokeCount] = useState(0);
   const [finished, setFinished] = useState(false);
+
+  const pointFromEvent = useCallback((
+    clientX: number,
+    clientY: number,
+    bounds?: DOMRect,
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const canvasBounds = bounds ?? canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - canvasBounds.left) / canvasBounds.width) * canvas.width,
+      y: ((clientY - canvasBounds.top) / canvasBounds.height) * canvas.height,
+    };
+  }, []);
+
+  const flushPendingPoints = useCallback(() => {
+    renderFrame.current = null;
+    const canvas = canvasRef.current;
+    const start = lastRenderedPoint.current;
+    const points = pendingPoints.current;
+    pendingPoints.current = [];
+    if (!canvas || !start || points.length === 0) return;
+    renderDrawingSegments(canvas, start, points);
+    lastRenderedPoint.current = points.at(-1) ?? start;
+  }, []);
+
+  const queuePoint = useCallback((point: Point) => {
+    if (!activeStroke.current) return;
+    activeStroke.current.push(point);
+    pendingPoints.current.push(point);
+    if (renderFrame.current === null) {
+      renderFrame.current = window.requestAnimationFrame(flushPendingPoints);
+    }
+  }, [flushPendingPoints]);
+
+  const finishStroke = useCallback((pointerId: number) => {
+    if (activePointer.current !== pointerId) return;
+    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+    flushPendingPoints();
+    activePointer.current = null;
+    activeStroke.current = null;
+    lastRenderedPoint.current = null;
+  }, [flushPendingPoints]);
+
+  const beginStroke = useCallback((point: Point, pointerId: number) => {
+    if (activePointer.current !== null) return;
+    activePointer.current = pointerId;
+    activeStroke.current = [point];
+    lastRenderedPoint.current = point;
+    pendingPoints.current = [];
+    strokes.current.push(activeStroke.current);
+    setStrokeCount(strokes.current.length);
+  }, []);
+
+  const redrawAll = useCallback(() => {
+    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+    renderFrame.current = null;
+    pendingPoints.current = [];
+    activePointer.current = null;
+    activeStroke.current = null;
+    lastRenderedPoint.current = null;
+    if (canvasRef.current) renderDrawing(canvasRef.current, strokes.current);
+    setStrokeCount(strokes.current.length);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,22 +145,10 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
     strokes.current = [];
     renderDrawing(canvas, strokes.current);
     registerInteractionCanvas("main", canvas);
-    return () => registerInteractionCanvas("main", null);
-  }, []);
-
-  const pointFromEvent = useCallback((clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const bounds = canvas.getBoundingClientRect();
-    return {
-      x: ((clientX - bounds.left) / bounds.width) * canvas.width,
-      y: ((clientY - bounds.top) / bounds.height) * canvas.height,
+    return () => {
+      if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+      registerInteractionCanvas("main", null);
     };
-  }, []);
-
-  const refresh = useCallback(() => {
-    if (canvasRef.current) renderDrawing(canvasRef.current, strokes.current);
-    setStrokeCount(strokes.current.length);
   }, []);
 
   useEffect(() => {
@@ -75,20 +157,15 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
       if (!canvas) return;
       const point = { x: event.x * canvas.width, y: event.y * canvas.height };
       if (event.phase === "down") {
-        activePointer.current = event.pointerId;
-        activeStroke.current = [point];
-        strokes.current.push(activeStroke.current);
-        refresh();
+        beginStroke(point, event.pointerId);
       } else if (event.phase === "move" && activePointer.current === event.pointerId && activeStroke.current) {
-        activeStroke.current.push(point);
-        refresh();
+        queuePoint(point);
       } else if (event.phase === "up" || event.phase === "cancel") {
-        activePointer.current = null;
-        activeStroke.current = null;
+        finishStroke(event.pointerId);
       }
     });
     return () => registerSceneInteraction("draw", null);
-  }, [refresh]);
+  }, [beginStroke, finishStroke, queuePoint]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -97,19 +174,20 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
       const point = pointFromEvent(event.clientX, event.clientY);
       if (!point) return;
       canvas.setPointerCapture(event.pointerId);
-      activeStroke.current = [point];
-      strokes.current.push(activeStroke.current);
-      refresh();
+      beginStroke(point, event.pointerId);
     };
     const pointerMove = (event: PointerEvent) => {
-      if (!activeStroke.current || !canvas.hasPointerCapture(event.pointerId)) return;
-      const point = pointFromEvent(event.clientX, event.clientY);
-      if (!point) return;
-      activeStroke.current.push(point);
-      refresh();
+      if (activePointer.current !== event.pointerId || !canvas.hasPointerCapture(event.pointerId)) return;
+      const samples = event.getCoalescedEvents?.() ?? [];
+      const events = samples.length > 0 ? samples : [event];
+      const bounds = canvas.getBoundingClientRect();
+      events.forEach((sample) => {
+        const point = pointFromEvent(sample.clientX, sample.clientY, bounds);
+        if (point) queuePoint(point);
+      });
     };
     const pointerEnd = (event: PointerEvent) => {
-      activeStroke.current = null;
+      finishStroke(event.pointerId);
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     };
     canvas.addEventListener("pointerdown", pointerDown);
@@ -122,7 +200,7 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
       canvas.removeEventListener("pointerup", pointerEnd);
       canvas.removeEventListener("pointercancel", pointerEnd);
     };
-  }, [pointFromEvent, refresh]);
+  }, [beginStroke, finishStroke, pointFromEvent, queuePoint]);
 
   const addPreset = () => {
     const preset: Stroke = [];
@@ -132,7 +210,7 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
       preset.push({ x: 480 + Math.cos(angle * 2.1) * radius, y: 270 + Math.sin(angle * 1.7) * radius * 0.58 });
     }
     strokes.current.push(preset);
-    refresh();
+    redrawAll();
   };
 
   return (
@@ -148,8 +226,8 @@ export function DrawingInteraction({ copy, onComplete }: { copy: InteractionCopy
       />
       <p className={styles.statusText}>{copy.draw.local}</p>
       <div className={styles.actionRow}>
-        <button type="button" onClick={() => { strokes.current.pop(); refresh(); }} disabled={strokeCount === 0}>{copy.undo}</button>
-        <button type="button" onClick={() => { strokes.current = []; refresh(); }} disabled={strokeCount === 0}>{copy.clear}</button>
+        <button type="button" onClick={() => { strokes.current.pop(); redrawAll(); }} disabled={strokeCount === 0}>{copy.undo}</button>
+        <button type="button" onClick={() => { strokes.current = []; redrawAll(); }} disabled={strokeCount === 0}>{copy.clear}</button>
         <button type="button" onClick={addPreset}>{copy.draw.keyboardMark}</button>
         <button type="button" disabled={strokeCount === 0 || finished} onClick={() => { setFinished(true); onComplete(); }}>{copy.finish}</button>
       </div>
