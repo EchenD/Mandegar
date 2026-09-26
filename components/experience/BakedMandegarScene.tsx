@@ -514,7 +514,11 @@ function createTouchPulseTexture() {
   return texture;
 }
 
-function getWorldPointAtUv(root: THREE.Object3D, targetU: number, targetV: number) {
+function getWorldPointAtUv(
+  root: THREE.Object3D,
+  targetU: number,
+  targetV: number,
+): THREE.Vector3 | null {
   let result: THREE.Vector3 | null = null;
   root.updateWorldMatrix(true, true);
   root.traverse((object) => {

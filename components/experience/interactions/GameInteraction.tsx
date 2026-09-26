@@ -17,6 +17,7 @@ const maxAttempts = 5;
 const targetOrder = [0, 1, 2] as const;
 const targetColors = ["#50c7ff", "#ef86ff", "#ffb54a"] as const;
 const targetRadii = [48, 40, 34] as const;
+type GamePoint = { x: number; y: number };
 const targetCenters = [
   { x: 0.2, y: 0.29 },
   { x: 0.8, y: 0.29 },
@@ -176,16 +177,16 @@ export function GameInteraction({
   const keyboardFocus = useRef<"close" | "reset" | "continue" | "launch" | null>(null);
   const flightStartedAt = useRef<number | null>(null);
   const flightDuration = useRef(reducedMotion ? 240 : 880);
-  const flightStart = useRef({ ...launcher });
-  const flightControl = useRef({ x: 0.5, y: 0.38 });
-  const flightEnd = useRef({ ...targetCenters[0] });
-  const flightTargetCenter = useRef({ ...targetCenters[0] });
+  const flightStart = useRef<GamePoint>({ ...launcher });
+  const flightControl = useRef<GamePoint>({ x: 0.5, y: 0.38 });
+  const flightEnd = useRef<GamePoint>({ ...targetCenters[0] });
+  const flightTargetCenter = useRef<GamePoint>({ ...targetCenters[0] });
   const flightTarget = useRef(0);
   const flightAccuracy = useRef(1);
   const flightResult = useRef<0 | 1 | 2>(0);
   const attemptsRef = useRef(0);
   const scoreRef = useRef(0);
-  const gameStartedAt = useRef(typeof performance === "undefined" ? 0 : performance.now());
+  const gameStartedAt = useRef(0);
   const pausedTotal = useRef(0);
   const pausedAt = useRef<number | null>(null);
   const completionReported = useRef(false);
@@ -525,7 +526,7 @@ export function GameInteraction({
     context.restore();
     context.restore();
     markInteractionCanvasDirty("game");
-  }, [copy, syncRuntime]);
+  }, [copy, getElapsedSeconds, reducedMotion, syncRuntime]);
 
   const schedulePaint = useCallback(() => {
     if (renderFrame.current !== null) return;
@@ -733,6 +734,7 @@ export function GameInteraction({
       if (!mounted || registered) return;
       registered = true;
       monitorImage.current = image.naturalWidth > 0 ? image : null;
+      gameStartedAt.current = performance.now();
       transitionProgress.current = 0;
       interactionRuntime.gameVisibility = 0;
       paint();
