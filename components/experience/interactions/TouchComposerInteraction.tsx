@@ -179,6 +179,11 @@ export function TouchComposerInteraction({
       context.shadowBlur = 0;
     });
 
+    context.fillStyle = "#07152b";
+    context.beginPath();
+    context.arc(centerX, centerY, 62, 0, Math.PI * 2);
+    context.fill();
+
     const ringGradient = context.createRadialGradient(centerX, centerY, 8, centerX, centerY, 100);
     ringGradient.addColorStop(0, isComplete ? "rgba(247,247,244,.28)" : "rgba(34,92,255,.16)");
     ringGradient.addColorStop(1, "rgba(34,92,255,0)");
@@ -236,6 +241,10 @@ export function TouchComposerInteraction({
       const y = (dragging ? pointer.y : definition.y) * height;
       const active = selectedElements[index];
       const focused = hoverElement.current === index || keyboardFocus.current === index;
+      context.fillStyle = "#061224";
+      context.beginPath();
+      context.arc(x, y, 57, 0, Math.PI * 2);
+      context.fill();
       const nodeFill = context.createRadialGradient(x, y, 4, x, y, 58);
       nodeFill.addColorStop(0, active ? `${definition.color}42` : "rgba(16,31,58,.98)");
       nodeFill.addColorStop(1, active ? `${definition.color}16` : "rgba(3,8,16,.98)");

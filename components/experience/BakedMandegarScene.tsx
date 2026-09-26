@@ -253,19 +253,72 @@ function createTouchRingTexture() {
   return texture;
 }
 
+function getWorldPointAtUv(root: THREE.Object3D, targetU: number, targetV: number) {
+  let result: THREE.Vector3 | null = null;
+  root.updateWorldMatrix(true, true);
+  root.traverse((object) => {
+    if (result || !(object instanceof THREE.Mesh)) return;
+    const positions = object.geometry.getAttribute("position");
+    const uvs = object.geometry.getAttribute("uv");
+    if (!positions || !uvs) return;
+    const indices = object.geometry.index;
+    const triangleCount = indices ? indices.count : positions.count;
+    for (let offset = 0; offset <= triangleCount - 3; offset += 3) {
+      const a = indices ? indices.getX(offset) : offset;
+      const b = indices ? indices.getX(offset + 1) : offset + 1;
+      const c = indices ? indices.getX(offset + 2) : offset + 2;
+      const au = uvs.getX(a);
+      const av = uvs.getY(a);
+      const bu = uvs.getX(b);
+      const bv = uvs.getY(b);
+      const cu = uvs.getX(c);
+      const cv = uvs.getY(c);
+      const denominator = (bv - cv) * (au - cu) + (cu - bu) * (av - cv);
+      if (Math.abs(denominator) < 1e-8) continue;
+      const weightA = ((bv - cv) * (targetU - cu) + (cu - bu) * (targetV - cv)) / denominator;
+      const weightB = ((cv - av) * (targetU - cu) + (au - cu) * (targetV - cv)) / denominator;
+      const weightC = 1 - weightA - weightB;
+      if (weightA < -1e-4 || weightB < -1e-4 || weightC < -1e-4) continue;
+      result = new THREE.Vector3(
+        positions.getX(a) * weightA + positions.getX(b) * weightB + positions.getX(c) * weightC,
+        positions.getY(a) * weightA + positions.getY(b) * weightB + positions.getY(c) * weightC,
+        positions.getZ(a) * weightA + positions.getZ(b) * weightB + positions.getZ(c) * weightC,
+      ).applyMatrix4(object.matrixWorld);
+      break;
+    }
+  });
+  return result;
+}
+
 function InteractionTouchEffects({
   anchors,
   quality,
+  screen,
 }: {
   anchors: InteractionAnchorRuntime;
   quality: SceneQuality;
+  screen: THREE.Object3D | null;
 }) {
+  const camera = useThree((state) => state.camera);
   const completionAge = useRef(10);
   const wasComplete = useRef(false);
   const group = useMemo(() => {
     const next = new THREE.Group();
     next.name = "fxInteraction_touch_composer";
-    next.position.copy(anchors.stations.touch.object.getWorldPosition(new THREE.Vector3()));
+    const fallbackCenter = anchors.stations.touch.object.getWorldPosition(new THREE.Vector3());
+    const screenCenter = screen ? getWorldPointAtUv(screen, 0.5, 0.45) : null;
+    const screenRight = screen ? getWorldPointAtUv(screen, 0.6, 0.45) : null;
+    const screenDown = screen ? getWorldPointAtUv(screen, 0.5, 0.55) : null;
+    const xAxis = screenCenter && screenRight
+      ? screenRight.clone().sub(screenCenter).multiplyScalar(10)
+      : new THREE.Vector3(1, 0, 0);
+    const yAxis = screenCenter && screenDown
+      ? screenDown.clone().sub(screenCenter).multiplyScalar(10)
+      : new THREE.Vector3(0, -1, 0);
+    const normal = xAxis.clone().cross(yAxis).normalize();
+    const centerPoint = screenCenter ?? fallbackCenter;
+    if (normal.dot(camera.position.clone().sub(centerPoint)) < 0) normal.negate();
+    next.position.copy(centerPoint).addScaledVector(normal, 0.07);
     const pulseTexture = createTouchPulseTexture();
     const ringTexture = createTouchRingTexture();
     const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
@@ -302,7 +355,7 @@ function InteractionTouchEffects({
     });
     const ring = new THREE.Sprite(ringMaterial);
     ring.name = "fxInteraction_touch_completion";
-    ring.position.set(0, 0.16, 0.15);
+    ring.position.set(0, 0, 0);
     ring.scale.setScalar(0.35);
     ring.raycast = () => {};
     ring.renderOrder = 42;
@@ -311,10 +364,13 @@ function InteractionTouchEffects({
 
     next.userData.pulses = pulses;
     next.userData.ring = ring;
+    next.userData.xAxis = xAxis;
+    next.userData.yAxis = yAxis;
+    next.userData.normal = normal;
     next.userData.pulseTexture = pulseTexture;
     next.userData.ringTexture = ringTexture;
     return next;
-  }, [anchors]);
+  }, [anchors, camera, screen]);
 
   useFrame(({ clock }, delta) => {
     const complete = interactionRuntime.touchElements.every(Boolean);
@@ -323,6 +379,9 @@ function InteractionTouchEffects({
     wasComplete.current = complete;
 
     const pulses = group.userData.pulses as THREE.Sprite[];
+    const xAxis = group.userData.xAxis as THREE.Vector3;
+    const yAxis = group.userData.yAxis as THREE.Vector3;
+    const normal = group.userData.normal as THREE.Vector3;
     pulses.forEach((pulse, index) => {
       const pulseMaterial = pulse.material as THREE.SpriteMaterial;
       const active = interactionRuntime.touchElements[index];
@@ -335,12 +394,10 @@ function InteractionTouchEffects({
       pulse.visible = pulseMaterial.opacity > 0.002;
       if (pulse.visible) {
         const angle = clock.elapsedTime * (complete ? 0.95 : 0.68) + index * Math.PI * 2 / 3;
-        const radius = complete ? 0.46 : 0.62;
-        pulse.position.set(
-          Math.cos(angle) * radius,
-          0.16 + Math.sin(angle) * radius * 0.48,
-          0.15 + Math.sin(angle * 1.4) * 0.05,
-        );
+        const radius = complete ? 0.82 : 1;
+        pulse.position.copy(xAxis).multiplyScalar(Math.cos(angle) * 0.095 * radius);
+        pulse.position.addScaledVector(yAxis, Math.sin(angle) * 0.17 * radius);
+        pulse.position.addScaledVector(normal, Math.sin(angle * 1.4) * 0.025);
         const scale = (complete ? 0.32 : 0.27) + Math.sin(clock.elapsedTime * 5 + index) * 0.025;
         pulse.scale.setScalar(scale);
       }
@@ -903,7 +960,11 @@ export function BakedMandegarScene({
       <InteractionSceneCues anchors={interactionAnchors} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} />
-      <InteractionTouchEffects anchors={interactionAnchors} quality={quality} />
+      <InteractionTouchEffects
+        anchors={interactionAnchors}
+        quality={quality}
+        screen={exhibition.getObjectByName(bakedSceneContract.exhibition.screens.interactive) ?? null}
+      />
       <TransitionParticleField
         environment={environment}
         exhibition={exhibition}
