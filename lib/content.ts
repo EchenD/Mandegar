@@ -81,6 +81,11 @@ export const media = {
     ar: "زائر يتفاعل مع جدار رقمي",
   }),
   photo: placeholder("/media/placeholders/photo-experience.webp", {
+    fa: "پرتره کم‌جزئیات یک بازدیدکننده در نور گرم غرفه عکس",
+    en: "A low-poly portrait of a visitor in the warm photo booth light",
+    ar: "صورة منخفضة التفاصيل لزائر داخل إضاءة كشك التصوير الدافئة",
+  }),
+  projectPhoto: placeholder("/media/placeholders/project-photo-experience.webp", {
     fa: "دو نفر در یک تجربه تصویری نورانی",
     en: "Two people enjoying a luminous photo experience",
     ar: "شخصان يستمتعان بتجربة تصوير مضيئة",
@@ -249,8 +254,8 @@ export const projects: Project[] = [
       ar: "نموذج مؤقت يحوّل مشاركة الزائر إلى تذكار بصري شخصي.",
     },
     category: { fa: "تجربه تصویری", en: "Photo experience", ar: "تجربة تصويرية" },
-    media: media.photo,
-    gallery: [media.photo, media.spark, media.interactive],
+    media: media.projectPhoto,
+    gallery: [media.projectPhoto, media.spark, media.interactive],
   },
   {
     ...coreProjects[1],
