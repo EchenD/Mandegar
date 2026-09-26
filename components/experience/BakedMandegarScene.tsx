@@ -7,6 +7,7 @@ import { useFrame, useLoader, useThree, type ThreeEvent } from "@react-three/fib
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { publicAssetPath } from "@/lib/public-asset-path";
 import {
   bakedSceneContract,
   requiredEnvironmentNodes,
@@ -946,7 +947,10 @@ function InteractionGameEffects({
 }
 
 function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntime }) {
-  const portraitSource = useLoader(THREE.TextureLoader, "/media/placeholders/photo-experience.webp");
+  const portraitSource = useLoader(
+    THREE.TextureLoader,
+    publicAssetPath("/media/placeholders/photo-experience.webp"),
+  );
   const group = useMemo(() => {
     const next = new THREE.Group();
     next.name = "fxInteraction_photo_result";
