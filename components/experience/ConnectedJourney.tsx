@@ -79,12 +79,17 @@ function spatialMediaSource(src: string, mobile: boolean) {
   return url.toString();
 }
 
+function isHeroPhotoResult(src: string) {
+  return src.split(/[?#]/, 1)[0].endsWith("/media/placeholders/photo-experience.webp");
+}
+
 export function ConnectedJourney({ locale, projects, copy, clients = emptyClients, aboutHref }: Props) {
   const root = useRef<HTMLElement>(null);
   const [reduced, setReduced] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [spatialEnabled, setSpatialEnabled] = useState(true);
   const [partnerCanvasMounted, setPartnerCanvasMounted] = useState(false);
+  const [partnerMediaSeed, setPartnerMediaSeed] = useState<number | null>(null);
   const partnerCanvasMountedRef = useRef(false);
   const partnerFinaleBridge = useRef<PartnerFinaleBridge>({ progress: 0, ready: false });
   const selected = useMemo(() => projects.filter(project => project.mediaSrc).slice(0, 8), [projects]);
@@ -110,7 +115,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         kind: item.kind,
         poster: item.poster,
       })),
-    ]).flatMap((item) => {
+    ]).filter((item) => !isHeroPhotoResult(item.src)).flatMap((item) => {
       const video = item.kind === "video" || /\.(mp4|webm|mov)(?:$|\?)/i.test(item.src);
       if (mobile && video) {
         return item.poster
@@ -134,6 +139,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const typing = aboutTyping[locale];
   const firstPartnerImage = partnerFinaleMedia.find((item) => item.kind !== "video"
     && !/\.(mp4|webm|mov)(?:$|\?)/i.test(item.src));
+
+  useEffect(() => {
+    const value = new Uint32Array(1);
+    window.crypto.getRandomValues(value);
+    setPartnerMediaSeed(value[0] || 1);
+  }, []);
 
   useEffect(() => {
     const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
@@ -811,10 +822,11 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
             sizes="100vw"
           />
         </div> : null}
-        {partnerCanvasMounted && spatialEnabled && !reduced ? <PartnerFinaleCanvas
+        {partnerCanvasMounted && partnerMediaSeed !== null && spatialEnabled && !reduced ? <PartnerFinaleCanvas
           className={styles.partnerFinaleCanvas}
           bridge={partnerFinaleBridge}
           media={partnerFinaleMedia}
+          mediaSeed={partnerMediaSeed}
           logoSrc={logo}
           mobile={mobile}
         /> : null}

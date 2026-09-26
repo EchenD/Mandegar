@@ -111,6 +111,42 @@ function isVideoMedia(media: PartnerFinaleMedia) {
   return media.kind === "video" || /\.(mp4|webm|mov)(?:$|\?)/i.test(media.src);
 }
 
+function seededRandom(seed: number) {
+  let value = seed >>> 0;
+  return () => {
+    value += 0x6d2b79f5;
+    let result = value;
+    result = Math.imul(result ^ result >>> 15, result | 1);
+    result ^= result + Math.imul(result ^ result >>> 7, result | 61);
+    return ((result ^ result >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledMedia(media: PartnerFinaleMedia[], seed: number) {
+  const random = seededRandom(seed);
+  const shuffled = [...media];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function buildMediaSequence(media: PartnerFinaleMedia[], length: number, seed: number) {
+  if (!media.length) return [];
+  const sequence: PartnerFinaleMedia[] = [];
+  let pass = 0;
+  while (sequence.length < length) {
+    const batch = shuffledMedia(media, seed + pass * 0x9e3779b9);
+    if (batch.length > 1 && sequence.at(-1)?.src === batch[0].src) {
+      [batch[0], batch[1]] = [batch[1], batch[0]];
+    }
+    sequence.push(...batch);
+    pass += 1;
+  }
+  return sequence.slice(0, length);
+}
+
 function visibleFrame(distance: number, aspect: number) {
   const height = 2 * Math.tan(THREE.MathUtils.degToRad(cameraFov * .5)) * distance;
   return { width: height * aspect, height };
@@ -466,11 +502,13 @@ function LogoGate({
 function PartnerFinaleWorld({
   bridge,
   media,
+  mediaSeed,
   logoSrc,
   mobile,
 }: {
   bridge: MutableRefObject<PartnerFinaleBridge>;
   media: PartnerFinaleMedia[];
+  mediaSeed: number;
   logoSrc: string;
   mobile: boolean;
 }) {
@@ -483,10 +521,19 @@ function PartnerFinaleWorld({
     // The planes never travel through one another. They occupy fixed depth lanes,
     // sized so their projections resolve into a full mosaic at the logo gate.
     const overscan = 1.006;
-    const images = media.filter((item) => !isVideoMedia(item)).slice(0, mobile ? 5 : 8);
+    const images = shuffledMedia(
+      media.filter((item) => !isVideoMedia(item)),
+      mediaSeed,
+    ).slice(0, mobile ? 5 : 8);
     const video = mobile ? undefined : media.find(isVideoMedia);
     const fallbackMedia = images.length ? images : media;
-    const videoSlot = Math.min(slots.length - 1, centerIndex + 1);
+    const featuredMedia = video || fallbackMedia[0] || null;
+    const supportingMedia = buildMediaSequence(
+      fallbackMedia,
+      Math.max(0, slots.length - 1),
+      mediaSeed ^ 0xa511e9b3,
+    );
+    let supportingIndex = 0;
 
     return slots.map((slot, index) => {
       const center = index === centerIndex;
@@ -501,12 +548,8 @@ function PartnerFinaleWorld({
       const width = projectedFrame.width * slot.width * overscan;
       const height = projectedFrame.height * slot.height * overscan;
       const mediaItem = center
-        ? fallbackMedia[0] || null
-        : index === videoSlot && video
-          ? video
-          : fallbackMedia.length
-            ? fallbackMedia[(index * 5 + (video ? 0 : 2)) % fallbackMedia.length]
-            : null;
+        ? featuredMedia
+        : supportingMedia[supportingIndex++] || null;
 
       return {
         index,
@@ -520,7 +563,7 @@ function PartnerFinaleWorld({
         video: Boolean(mediaItem && isVideoMedia(mediaItem)),
       } satisfies PlaneLayout;
     });
-  }, [media, mobile, size.height, size.width]);
+  }, [media, mediaSeed, mobile, size.height, size.width]);
   const renderLayouts = useMemo(
     () => [...layouts].sort((left, right) => Number(right.center) - Number(left.center)),
     [layouts],
@@ -584,12 +627,14 @@ export function PartnerFinaleCanvas({
   className,
   bridge,
   media,
+  mediaSeed,
   logoSrc,
   mobile,
 }: {
   className?: string;
   bridge: MutableRefObject<PartnerFinaleBridge>;
   media: PartnerFinaleMedia[];
+  mediaSeed: number;
   logoSrc: string;
   mobile: boolean;
 }) {
@@ -608,7 +653,13 @@ export function PartnerFinaleCanvas({
         gl.toneMapping = THREE.NoToneMapping;
       }}
     >
-      <PartnerFinaleWorld bridge={bridge} media={media} logoSrc={logoSrc} mobile={mobile} />
+      <PartnerFinaleWorld
+        bridge={bridge}
+        media={media}
+        mediaSeed={mediaSeed}
+        logoSrc={logoSrc}
+        mobile={mobile}
+      />
     </Canvas>
   );
 }
