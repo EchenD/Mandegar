@@ -7,19 +7,48 @@ import sharp from "sharp";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
-const sourceDirectory = path.resolve(
-  process.argv[2]
-    ?? process.env.MANDEGAR_TEXTURE_SOURCE
-    ?? path.join(projectRoot, "..", "mandegar3d", "Texture", "Update"),
-);
-const outputDirectory = path.join(projectRoot, "public", "textures", "mandegar", "baked");
-const mobileDirectory = path.join(outputDirectory, "mobile");
-const textureNames = [
+const availableTextureNames = [
   "env_quiet",
   "env_peak",
   "exhibit_quiet",
   "exhibit_peak",
 ];
+const selectedTextureNames = [];
+let sourceOverride;
+
+for (let index = 2; index < process.argv.length; index += 1) {
+  const argument = process.argv[index];
+  if (argument === "--texture") {
+    const textureName = process.argv[index + 1];
+    if (!textureName) throw new Error("--texture requires a texture name.");
+    selectedTextureNames.push(textureName);
+    index += 1;
+  } else if (!sourceOverride) {
+    sourceOverride = argument;
+  } else {
+    throw new Error(`Unexpected argument: ${argument}`);
+  }
+}
+
+const unknownTextureNames = selectedTextureNames.filter(
+  (name) => !availableTextureNames.includes(name),
+);
+if (unknownTextureNames.length > 0) {
+  throw new Error(
+    `Unknown texture name(s): ${unknownTextureNames.join(", ")}. Expected one of: ${availableTextureNames.join(", ")}.`,
+  );
+}
+
+const sourceDirectory = path.resolve(
+  sourceOverride
+    ?? process.env.MANDEGAR_TEXTURE_SOURCE
+    ?? path.join(projectRoot, "..", "mandegar3d", "Texture", "Update"),
+);
+const outputDirectory = path.join(projectRoot, "public", "textures", "mandegar", "baked");
+const mobileDirectory = path.join(outputDirectory, "mobile");
+const textureNames = selectedTextureNames.length > 0
+  ? [...new Set(selectedTextureNames)]
+  : availableTextureNames;
 
 function findExecutable(name) {
   const explicit = process.env.KTX_TOKTX_PATH;

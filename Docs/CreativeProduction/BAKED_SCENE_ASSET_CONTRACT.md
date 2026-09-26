@@ -96,6 +96,13 @@ Run the reproducible conversion pipeline from the repository root:
 npm run assets:textures -- "D:\Projects\Navid\mandegar3d\Texture\Update"
 ```
 
+For a single updated source, append its contract name so the other maps are not
+re-encoded:
+
+```powershell
+npm run assets:textures -- "D:\Projects\Navid\mandegar3d\Texture\Update" --texture env_quiet
+```
+
 The script requires Khronos KTX-Software (`toktx` and `ktx`) and generates a
 complete mip chain. It normalizes source color to 8-bit sRGB before producing
 4K desktop WebP/KTX2 files:
