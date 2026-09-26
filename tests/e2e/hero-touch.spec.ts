@@ -20,10 +20,21 @@ test("touch composer lives on the 3D screen and completes a three-part compositi
 
   const viewport = page.viewportSize();
   if (!viewport) throw new Error("A fixed viewport is required for the 3D touch test");
+  await page.mouse.click(viewport.width * 0.633, viewport.height * 0.205);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+
+  await enterStationWithKeyboard(page, "touch");
   await page.mouse.click(viewport.width * 0.445, viewport.height * 0.35);
   await expect(controls).toHaveAttribute("data-touch-selected-count", "1");
   await activateWithKeyboard(controls.getByRole("button", { name: "Story" }));
   await expect(controls).toHaveAttribute("data-touch-selected-count", "2");
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("blur"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect(controls).toHaveAttribute("data-touch-selected-count", "2");
+  await expect(director).toHaveAttribute("data-active-station", "touch");
   await activateWithKeyboard(controls.getByRole("button", { name: "Reset" }));
   await expect(controls).toHaveAttribute("data-touch-selected-count", "0");
 
@@ -33,6 +44,6 @@ test("touch composer lives on the 3D screen and completes a three-part compositi
   await expect(controls).toHaveAttribute("data-touch-complete", "true");
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   await expect(controls.getByRole("button", { name: "Continue journey" })).toBeEnabled();
-  await activateWithKeyboard(controls.getByRole("button", { name: "Continue journey" }));
+  await page.mouse.click(viewport.width * 0.606, viewport.height * 0.405);
   await expect(director).toHaveAttribute("data-active-station", "none");
 });

@@ -210,9 +210,6 @@ export const InteractionDirector = memo(function InteractionDirector({
         if (!target?.closest("[data-interaction-panel]")) event.preventDefault();
       }
     };
-    const cancelForVisibility = () => {
-      if (document.hidden) exit(true);
-    };
     const cancelForWebglLoss = () => exit(true);
     const preventWheel = (event: WheelEvent) => {
       if (!event.ctrlKey && !event.metaKey) event.preventDefault();
@@ -224,7 +221,6 @@ export const InteractionDirector = memo(function InteractionDirector({
     window.addEventListener("keydown", preventScrollKeys);
     window.addEventListener("wheel", preventWheel, { passive: false });
     window.addEventListener("touchmove", preventTouchScroll, { passive: false });
-    document.addEventListener("visibilitychange", cancelForVisibility);
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
     window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
 
@@ -232,7 +228,6 @@ export const InteractionDirector = memo(function InteractionDirector({
       window.removeEventListener("keydown", preventScrollKeys);
       window.removeEventListener("wheel", preventWheel);
       window.removeEventListener("touchmove", preventTouchScroll);
-      document.removeEventListener("visibilitychange", cancelForVisibility);
       document.removeEventListener("webglcontextlost", cancelForWebglLoss, true);
       body.style.overscrollBehavior = previous.overscrollBehavior;
       root?.removeAttribute("data-interaction-active");

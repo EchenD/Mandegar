@@ -11,7 +11,7 @@ Steps 1–2 and 8–11 retain their existing narrative meaning and scene behavio
 | Phase | Station | Delivered interaction |
 | --- | --- | --- |
 | `activation` | Photo | Explicit booth entry, countdown, restrained flash, prepared local portrait result, phone/result treatment, replay, and continue. No camera, upload, or network request is used. |
-| `engagement` | Touch | A three-part Experience Composer rendered entirely on the authored 3D monitor: visitors connect Space, Story, and People by touch, pointer, or keyboard; each element releases a signal path into the pavilion before the final synthesis. |
+| `engagement` | Touch | A three-part Experience Composer rendered entirely on the authored 3D monitor: visitors connect Space, Story, and People by touch, pointer, or keyboard; each element joins a compact orbit around the display before the final synthesis pulse. |
 | `reveal` | Stage | Five independently previewable/activatable beam controls, accumulated stage look, additive scene-space beam lines, monitor finale, and reduced-motion stable presentation. |
 | `experiences` | Game | Eight-second timing interaction using pointer, touch, or keyboard, immediate non-competitive feedback, visibility pause/resume, replay, and continue. Reduced motion uses a shorter stable session. |
 | `connection` | Drawing | Genuine pointer-captured freehand drawing, live GLB monitor texture, undo, clear, keyboard-accessible preset mark, finish echo, local-only session state, and continue. |
@@ -53,7 +53,7 @@ Focused tests were added in the seven files specified by the plan: `hero-interac
 | 2 — Anchors | Integrated and validated all 17 exact authored nodes from the revised GLB, including matching beam pairs, projection, cleanup, deterministic damaged-asset fallbacks, and development-only `?anchors=1` visualization. |
 | 3 — Shared shell | Added the shared reducer/director, registry, scene-space entry cue, compact accessible dock, localized controls, focus trap/restore, explicit input tracking, scroll/camera hold, exact restoration, session flags, and teardown paths. |
 | 4 — Photo | Complete local simulated-capture sequence with timer cleanup, reduced-motion path, local demo portrait, flash, phone result, replay, cancel, and continue. |
-| 5 — Touch | Complete Space/Story/People composer with direct scene-UV input, frame-coalesced monitor updates, forgiving tap/drag activation, reset/continue/close controls on the monitor, semantic keyboard parity, and three scene-space signal paths. |
+| 5 — Touch | Complete Space/Story/People composer with direct scene-UV input, frame-coalesced monitor updates, forgiving tap/drag activation, reset/continue/close controls on the monitor, semantic keyboard parity, three localized scene-space signals, and a completion pulse. |
 | 6 — Stage | Complete five-beam control with anchor pairs, focus/hover preview, accumulation, monitor finale, additive rendering, adaptive/reduced behavior, and no runtime relighting or autoplay sound. |
 | 7 — Game | Complete short timing game, pointer/keyboard parity, pause/resume, animation-frame cleanup, non-persistent result, functional replay, and continue. |
 | 8 — Drawing | Complete freehand pointer/touch drawing with pointer capture, correct canvas mapping, undo, clear, preset mark, finish echo, and listener/texture cleanup. |

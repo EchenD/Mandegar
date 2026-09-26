@@ -54,16 +54,26 @@ test.describe("hero interaction shell", () => {
     }))).toEqual({ body: "", html: "" });
   });
 
-  test("visibility teardown cancels active mode", async ({ page }) => {
+  test("browser blur and tab visibility preserve active mode", async ({ page }) => {
     await page.goto("/en?intro=0&phase=activation", { waitUntil: "networkidle" });
     await enterStationWithKeyboard(page, "photo");
-    await expect(page.locator("[data-interaction-panel='photo']")).toBeVisible();
+    const panel = page.locator("[data-interaction-panel='photo']");
+    const director = page.locator("[data-interaction-director]");
+    await expect(panel).toBeVisible();
     await page.evaluate(() => {
+      window.dispatchEvent(new Event("blur"));
       Object.defineProperty(document, "hidden", { configurable: true, value: true });
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    await expect(page.locator("[data-interaction-panel]")).toHaveCount(0);
-    await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-scroll-locked", "false");
+    await expect(panel).toBeVisible();
+    await expect(director).toHaveAttribute("data-active-station", "photo");
+    await expect(director).toHaveAttribute("data-scroll-locked", "true");
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: false });
+      document.dispatchEvent(new Event("visibilitychange"));
+      window.dispatchEvent(new Event("focus"));
+    });
+    await expect(panel).toBeVisible();
   });
 
   test("WebGL context loss cancels active mode", async ({ page }) => {

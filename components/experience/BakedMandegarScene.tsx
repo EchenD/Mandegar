@@ -232,6 +232,27 @@ function createTouchPulseTexture() {
   return texture;
 }
 
+function createTouchRingTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    context.clearRect(0, 0, 128, 128);
+    context.beginPath();
+    context.arc(64, 64, 43, 0, Math.PI * 2);
+    context.strokeStyle = "rgba(247,247,244,.95)";
+    context.lineWidth = 5;
+    context.shadowColor = "#75d8ff";
+    context.shadowBlur = 18;
+    context.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function InteractionTouchEffects({
   anchors,
   quality,
@@ -239,40 +260,19 @@ function InteractionTouchEffects({
   anchors: InteractionAnchorRuntime;
   quality: SceneQuality;
 }) {
+  const completionAge = useRef(10);
+  const wasComplete = useRef(false);
   const group = useMemo(() => {
     const next = new THREE.Group();
     next.name = "fxInteraction_touch_composer";
-    const texture = createTouchPulseTexture();
-    const start = anchors.stations.touch.object.getWorldPosition(new THREE.Vector3());
-    const targets = [
-      anchors.stations.stage.object,
-      anchors.stations.photo.object,
-      anchors.stations.draw.object,
-    ];
+    next.position.copy(anchors.stations.touch.object.getWorldPosition(new THREE.Vector3()));
+    const pulseTexture = createTouchPulseTexture();
+    const ringTexture = createTouchRingTexture();
     const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
-    targets.forEach((target, index) => {
-      const end = target.getWorldPosition(new THREE.Vector3());
-      const control = start.clone().lerp(end, 0.5);
-      control.y += 1.35 + index * 0.18;
-      const curve = new THREE.QuadraticBezierCurve3(start.clone(), control, end);
-      const material = new THREE.LineBasicMaterial({
-        color: colors[index],
-        transparent: true,
-        opacity: 0,
-        depthTest: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        toneMapped: false,
-      });
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(curve.getPoints(quality === "full" ? 36 : 20)),
-        material,
-      );
-      line.raycast = () => {};
-      line.renderOrder = 42;
+    const pulses = colors.map((color, index) => {
       const pulseMaterial = new THREE.SpriteMaterial({
-        map: texture,
-        color: colors[index],
+        map: pulseTexture,
+        color,
         transparent: true,
         opacity: 0,
         depthTest: true,
@@ -281,58 +281,87 @@ function InteractionTouchEffects({
         toneMapped: false,
       });
       const pulse = new THREE.Sprite(pulseMaterial);
-      pulse.scale.setScalar(0.34);
+      pulse.name = `fxInteraction_touch_signal_${index + 1}`;
+      pulse.scale.setScalar(0.28);
       pulse.raycast = () => {};
       pulse.renderOrder = 43;
       pulse.visible = false;
-      const path = new THREE.Group();
-      path.name = `fxInteraction_touch_path_${index + 1}`;
-      path.userData.curve = curve;
-      path.userData.line = line;
-      path.userData.pulse = pulse;
-      path.add(line, pulse);
-      next.add(path);
+      next.add(pulse);
+      return pulse;
     });
-    next.userData.pulseTexture = texture;
+
+    const ringMaterial = new THREE.SpriteMaterial({
+      map: ringTexture,
+      color: "#75d8ff",
+      transparent: true,
+      opacity: 0,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    });
+    const ring = new THREE.Sprite(ringMaterial);
+    ring.name = "fxInteraction_touch_completion";
+    ring.position.set(0, 0.16, 0.15);
+    ring.scale.setScalar(0.35);
+    ring.raycast = () => {};
+    ring.renderOrder = 42;
+    ring.visible = false;
+    next.add(ring);
+
+    next.userData.pulses = pulses;
+    next.userData.ring = ring;
+    next.userData.pulseTexture = pulseTexture;
+    next.userData.ringTexture = ringTexture;
     return next;
-  }, [anchors, quality]);
+  }, [anchors]);
 
   useFrame(({ clock }, delta) => {
     const complete = interactionRuntime.touchElements.every(Boolean);
-    group.children.forEach((path, index) => {
-      const line = path.userData.line as THREE.Line;
-      const pulse = path.userData.pulse as THREE.Sprite;
-      const curve = path.userData.curve as THREE.QuadraticBezierCurve3;
-      const lineMaterial = line.material as THREE.LineBasicMaterial;
+    if (complete && !wasComplete.current) completionAge.current = 0;
+    else completionAge.current += delta;
+    wasComplete.current = complete;
+
+    const pulses = group.userData.pulses as THREE.Sprite[];
+    pulses.forEach((pulse, index) => {
       const pulseMaterial = pulse.material as THREE.SpriteMaterial;
       const active = interactionRuntime.touchElements[index];
-      const targetOpacity = active ? (quality === "full" ? 0.78 : 0.58) : 0;
-      lineMaterial.opacity = THREE.MathUtils.damp(lineMaterial.opacity, targetOpacity, 9, delta);
       pulseMaterial.opacity = THREE.MathUtils.damp(
         pulseMaterial.opacity,
-        active ? (complete ? 0.95 : 0.76) : 0,
+        active ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64) : 0,
         11,
         delta,
       );
-      line.visible = lineMaterial.opacity > 0.002;
       pulse.visible = pulseMaterial.opacity > 0.002;
       if (pulse.visible) {
-        curve.getPoint((clock.elapsedTime * 0.32 + index * 0.27) % 1, pulse.position);
-        const scale = (complete ? 0.42 : 0.32) + Math.sin(clock.elapsedTime * 5 + index) * 0.035;
+        const angle = clock.elapsedTime * (complete ? 0.95 : 0.68) + index * Math.PI * 2 / 3;
+        const radius = complete ? 0.46 : 0.62;
+        pulse.position.set(
+          Math.cos(angle) * radius,
+          0.16 + Math.sin(angle) * radius * 0.48,
+          0.15 + Math.sin(angle * 1.4) * 0.05,
+        );
+        const scale = (complete ? 0.32 : 0.27) + Math.sin(clock.elapsedTime * 5 + index) * 0.025;
         pulse.scale.setScalar(scale);
       }
     });
+
+    const ring = group.userData.ring as THREE.Sprite;
+    const ringMaterial = ring.material as THREE.SpriteMaterial;
+    const ringDuration = 1.25;
+    const ringProgress = THREE.MathUtils.clamp(completionAge.current / ringDuration, 0, 1);
+    ringMaterial.opacity = complete ? (1 - ringProgress) * 0.82 : 0;
+    ring.scale.setScalar(0.38 + ringProgress * 1.35);
+    ring.visible = ringMaterial.opacity > 0.002;
   });
 
   useEffect(() => () => {
-    group.children.forEach((path) => {
-      const line = path.userData.line as THREE.Line;
-      const pulse = path.userData.pulse as THREE.Sprite;
-      line.geometry.dispose();
-      (line.material as THREE.Material).dispose();
+    (group.userData.pulses as THREE.Sprite[]).forEach((pulse) => {
       (pulse.material as THREE.Material).dispose();
     });
+    ((group.userData.ring as THREE.Sprite).material as THREE.Material).dispose();
     (group.userData.pulseTexture as THREE.Texture).dispose();
+    (group.userData.ringTexture as THREE.Texture).dispose();
   }, [group]);
 
   return <primitive object={group} />;
@@ -687,6 +716,10 @@ export function BakedMandegarScene({
     projected: Array.from({ length: 17 }, () => new THREE.Vector3()),
     frame: 0,
   });
+  const suppressedScreenClick = useRef<{
+    station: InteractionStation;
+    until: number;
+  } | null>(null);
 
   const clearInteraction = useCallback(() => {
     document.body.style.cursor = "";
@@ -729,6 +762,12 @@ export function BakedMandegarScene({
       pointerId: event.pointerId,
       input: event.pointerType === "touch" ? "touch" : "pointer",
     });
+    if (interactionRuntime.activeStation !== station) {
+      suppressedScreenClick.current = {
+        station,
+        until: performance.now() + 500,
+      };
+    }
   }, []);
   const handlePointerEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
     const screenId = findScreenId(event.object);
@@ -761,6 +800,12 @@ export function BakedMandegarScene({
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || !event.uv) return;
+    const suppressed = suppressedScreenClick.current;
+    suppressedScreenClick.current = null;
+    if (suppressed?.station === station && performance.now() <= suppressed.until) {
+      event.stopPropagation();
+      return;
+    }
     if (interactionRuntime.activeStation === station) {
       event.stopPropagation();
       dispatchSceneInteraction(station, {
