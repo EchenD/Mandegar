@@ -123,10 +123,10 @@ public/textures/mandegar/baked/exhibit_peak.ktx2
 ```
 
 It also generates equivalent 2048x2048 files under
-`public/textures/mandegar/baked/mobile/`. Full quality loads the 4K KTX2 set;
-adaptive quality loads the 2K KTX2 set. WebP files remain checked-in companion
-and inspection assets; the runtime does not switch to them automatically. Do
-not export the 16-bit source directly to runtime:
+`public/textures/mandegar/baked/mobile/`. Full quality loads the 4K WebP set;
+adaptive quality loads the 2K WebP set. KTX2 files remain checked-in fallback
+assets so device testing can switch the runtime back without regenerating the
+atlases. Do not export the 16-bit source directly to runtime:
 all four members of the set must use the same color and bit-depth pipeline.
 
 The quiet/peak pair for each atlas must retain identical dimensions and UV

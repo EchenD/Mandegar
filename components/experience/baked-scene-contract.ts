@@ -36,42 +36,42 @@ export const bakedSceneContract = {
   textures: {
     environmentQuiet: {
       desktop: {
-        runtime: "/textures/mandegar/baked/env_quiet.ktx2",
-        webp: "/textures/mandegar/baked/env_quiet.webp",
+        runtime: "/textures/mandegar/baked/env_quiet.webp",
+        ktx2: "/textures/mandegar/baked/env_quiet.ktx2",
       },
       mobile: {
-        runtime: "/textures/mandegar/baked/mobile/env_quiet.ktx2",
-        webp: "/textures/mandegar/baked/mobile/env_quiet.webp",
+        runtime: "/textures/mandegar/baked/mobile/env_quiet.webp",
+        ktx2: "/textures/mandegar/baked/mobile/env_quiet.ktx2",
       },
     },
     environmentPeak: {
       desktop: {
-        runtime: "/textures/mandegar/baked/env_peak.ktx2",
-        webp: "/textures/mandegar/baked/env_peak.webp",
+        runtime: "/textures/mandegar/baked/env_peak.webp",
+        ktx2: "/textures/mandegar/baked/env_peak.ktx2",
       },
       mobile: {
-        runtime: "/textures/mandegar/baked/mobile/env_peak.ktx2",
-        webp: "/textures/mandegar/baked/mobile/env_peak.webp",
+        runtime: "/textures/mandegar/baked/mobile/env_peak.webp",
+        ktx2: "/textures/mandegar/baked/mobile/env_peak.ktx2",
       },
     },
     exhibitionQuiet: {
       desktop: {
-        runtime: "/textures/mandegar/baked/exhibit_quiet.ktx2",
-        webp: "/textures/mandegar/baked/exhibit_quiet.webp",
+        runtime: "/textures/mandegar/baked/exhibit_quiet.webp",
+        ktx2: "/textures/mandegar/baked/exhibit_quiet.ktx2",
       },
       mobile: {
-        runtime: "/textures/mandegar/baked/mobile/exhibit_quiet.ktx2",
-        webp: "/textures/mandegar/baked/mobile/exhibit_quiet.webp",
+        runtime: "/textures/mandegar/baked/mobile/exhibit_quiet.webp",
+        ktx2: "/textures/mandegar/baked/mobile/exhibit_quiet.ktx2",
       },
     },
     exhibitionPeak: {
       desktop: {
-        runtime: "/textures/mandegar/baked/exhibit_peak.ktx2",
-        webp: "/textures/mandegar/baked/exhibit_peak.webp",
+        runtime: "/textures/mandegar/baked/exhibit_peak.webp",
+        ktx2: "/textures/mandegar/baked/exhibit_peak.ktx2",
       },
       mobile: {
-        runtime: "/textures/mandegar/baked/mobile/exhibit_peak.ktx2",
-        webp: "/textures/mandegar/baked/mobile/exhibit_peak.webp",
+        runtime: "/textures/mandegar/baked/mobile/exhibit_peak.webp",
+        ktx2: "/textures/mandegar/baked/mobile/exhibit_peak.ktx2",
       },
     },
   },

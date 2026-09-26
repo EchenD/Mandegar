@@ -251,7 +251,6 @@ export const assetSlots = {
   environment: publicAssetPath("/models/mandegar/mandegar_environment.glb"),
   exhibition: publicAssetPath("/models/mandegar/mandegar_exhibition.glb"),
   crowd: publicAssetPath("/models/mandegar/mandegar_crowd.glb"),
-  basisTranscoder: publicAssetPath("/basis/"),
   bakedTextures: {
     full: {
       environmentQuiet: publicAssetPath(bakedSceneContract.textures.environmentQuiet.desktop.runtime),

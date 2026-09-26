@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   bakedSceneContract,
@@ -437,17 +436,12 @@ export function BakedMandegarScene({
   const environmentGltf = useLoader(GLTFLoader, assetSlots.environment);
   const exhibitionGltf = useLoader(GLTFLoader, assetSlots.exhibition);
   const textureAssets = assetSlots.bakedTextures[quality];
-  const loadedTextures = useLoader(KTX2Loader, [
+  const loadedTextures = useLoader(THREE.TextureLoader, [
     textureAssets.environmentQuiet,
     textureAssets.environmentPeak,
     textureAssets.exhibitionQuiet,
     textureAssets.exhibitionPeak,
-  ], (loader) => {
-    loader
-      .setTranscoderPath(assetSlots.basisTranscoder)
-      .setWorkerLimit(2)
-      .detectSupport(gl);
-  });
+  ]);
   const firstFrame = useRef(false);
   const warmupFrameRendered = useRef(false);
   const bakedBackground = useMemo(() => new THREE.Color(sceneTokens.bakedScene.background), []);

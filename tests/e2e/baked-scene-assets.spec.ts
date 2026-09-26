@@ -57,9 +57,9 @@ test.describe("baked scene assets", () => {
     Object.entries(bakedSceneContract.textures).forEach(([id, texture]) => {
       Object.entries({ desktop: texture.desktop, mobile: texture.mobile }).forEach(
         ([variant, assets]) => {
-          expect(assets.runtime, `${id} ${variant} must use KTX2 at runtime`).toMatch(/\.ktx2$/i);
-          expect(assets.webp, `${id} ${variant} must retain its WebP companion`).toMatch(/\.webp$/i);
-          [assets.runtime, assets.webp].forEach((assetPath) => {
+          expect(assets.runtime, `${id} ${variant} must use WebP at runtime`).toMatch(/\.webp$/i);
+          expect(assets.ktx2, `${id} ${variant} must retain its KTX2 fallback`).toMatch(/\.ktx2$/i);
+          [assets.runtime, assets.ktx2].forEach((assetPath) => {
             expect(
               existsSync(resolvePublicAsset(assetPath)),
               `${id} ${variant} texture is missing: ${assetPath}`,
@@ -72,7 +72,7 @@ test.describe("baked scene assets", () => {
     expect(existsSync(resolvePublicAsset("/basis/basis_transcoder.wasm"))).toBe(true);
   });
 
-  test("loads the KTX2 tier selected for the viewport", async ({ page }) => {
+  test("loads only the WebP tier selected for the viewport", async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, "hardwareConcurrency", { configurable: true, get: () => 8 });
       Object.defineProperty(navigator, "deviceMemory", { configurable: true, get: () => 8 });
@@ -80,29 +80,35 @@ test.describe("baked scene assets", () => {
     const requestedAssets: string[] = [];
     page.on("response", (response) => {
       const pathname = new URL(response.url()).pathname;
-      if (/\.(?:ktx2|wasm)$/i.test(pathname)) requestedAssets.push(pathname);
+      if (
+        pathname.startsWith("/textures/mandegar/baked/")
+        || pathname.endsWith("/basis_transcoder.wasm")
+      ) requestedAssets.push(pathname);
     });
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0&phase=reveal", { waitUntil: "networkidle" });
     await expect(page.locator("[data-experience-canvas='true']")).toBeVisible();
-    expect(requestedAssets.filter((asset) => asset.endsWith(".ktx2")).sort()).toEqual([
-      "/textures/mandegar/baked/env_peak.ktx2",
-      "/textures/mandegar/baked/env_quiet.ktx2",
-      "/textures/mandegar/baked/exhibit_peak.ktx2",
-      "/textures/mandegar/baked/exhibit_quiet.ktx2",
+    expect(requestedAssets.filter((asset) => asset.endsWith(".webp")).sort()).toEqual([
+      "/textures/mandegar/baked/env_peak.webp",
+      "/textures/mandegar/baked/env_quiet.webp",
+      "/textures/mandegar/baked/exhibit_peak.webp",
+      "/textures/mandegar/baked/exhibit_quiet.webp",
     ]);
-    expect(requestedAssets.some((asset) => asset.endsWith("/basis_transcoder.wasm"))).toBe(true);
+    expect(requestedAssets.some((asset) => asset.endsWith(".ktx2"))).toBe(false);
+    expect(requestedAssets.some((asset) => asset.endsWith("/basis_transcoder.wasm"))).toBe(false);
 
     requestedAssets.length = 0;
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "networkidle" });
     await expect(page.locator("[data-experience-canvas='true']")).toBeVisible();
-    expect(requestedAssets.filter((asset) => asset.endsWith(".ktx2")).sort()).toEqual([
-      "/textures/mandegar/baked/mobile/env_peak.ktx2",
-      "/textures/mandegar/baked/mobile/env_quiet.ktx2",
-      "/textures/mandegar/baked/mobile/exhibit_peak.ktx2",
-      "/textures/mandegar/baked/mobile/exhibit_quiet.ktx2",
+    expect(requestedAssets.filter((asset) => asset.endsWith(".webp")).sort()).toEqual([
+      "/textures/mandegar/baked/mobile/env_peak.webp",
+      "/textures/mandegar/baked/mobile/env_quiet.webp",
+      "/textures/mandegar/baked/mobile/exhibit_peak.webp",
+      "/textures/mandegar/baked/mobile/exhibit_quiet.webp",
     ]);
+    expect(requestedAssets.some((asset) => asset.endsWith(".ktx2"))).toBe(false);
+    expect(requestedAssets.some((asset) => asset.endsWith("/basis_transcoder.wasm"))).toBe(false);
   });
 });
