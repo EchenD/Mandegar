@@ -17,6 +17,7 @@ export const interactionRuntime: {
   availableStation: InteractionStation | null;
   activeStation: InteractionStation | null;
   activeBeams: boolean[];
+  touchElements: boolean[];
   photoStep: "idle" | "ready" | "countdown" | "captured";
   monitorEntries: Partial<Record<BakedScreenId, MonitorEntry>>;
   sceneHandlers: Partial<Record<InteractionStation, SceneInteractionHandler>>;
@@ -24,6 +25,7 @@ export const interactionRuntime: {
   availableStation: null,
   activeStation: null,
   activeBeams: [false, false, false, false, false],
+  touchElements: [false, false, false],
   photoStep: "idle",
   monitorEntries: {},
   sceneHandlers: {},
@@ -83,6 +85,7 @@ export function resetInteractionRuntime() {
   interactionRuntime.availableStation = null;
   interactionRuntime.activeStation = null;
   interactionRuntime.activeBeams = [false, false, false, false, false];
+  interactionRuntime.touchElements = [false, false, false];
   interactionRuntime.photoStep = "idle";
   interactionRuntime.monitorEntries = {};
   interactionRuntime.sceneHandlers = {};

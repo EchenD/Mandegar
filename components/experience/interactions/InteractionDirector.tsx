@@ -272,7 +272,16 @@ export const InteractionDirector = memo(function InteractionDirector({
         />
       )}
 
-      {station && (
+      {station === "touch" && (
+        <TouchComposerInteraction
+          copy={copy}
+          onClose={() => exit(true)}
+          onComplete={() => complete("touch")}
+          onContinue={() => exit(false)}
+        />
+      )}
+
+      {station && station !== "touch" && (
         <div className={styles.activeLayer}>
           <InteractionChrome
             station={station}
@@ -282,7 +291,6 @@ export const InteractionDirector = memo(function InteractionDirector({
             onContinue={() => exit(false)}
           >
             {station === "photo" && <PhotoBoothInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("photo")} />}
-            {station === "touch" && <TouchComposerInteraction copy={copy} onComplete={() => complete("touch")} />}
             {station === "stage" && <StageBeamInteraction copy={copy} onComplete={() => complete("stage")} />}
             {station === "game" && <GameInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("game")} />}
             {station === "draw" && <DrawingInteraction copy={copy} onComplete={() => complete("draw")} />}

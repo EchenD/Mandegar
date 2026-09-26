@@ -1,20 +1,38 @@
-import { expect, test } from "@playwright/test";
-import { enterStationWithKeyboard, getSceneScreenPoint } from "./hero-interaction-helpers";
+import { expect, test, type Locator } from "@playwright/test";
+import { enterStationWithKeyboard } from "./hero-interaction-helpers";
 
-test("touch composer supports presets, drag, reset and completion", async ({ page }) => {
+async function activateWithKeyboard(button: Locator) {
+  await button.focus();
+  await button.press("Enter");
+}
+
+test("touch composer lives on the 3D screen and completes a three-part composition", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "networkidle" });
-  const screenPoint = await getSceneScreenPoint(page);
   await enterStationWithKeyboard(page, "touch");
+
+  const director = page.locator("[data-interaction-director]");
+  const controls = page.locator("[data-touch-spatial-controls]");
   const canvas = page.locator("[data-composer-canvas]");
+  await expect(controls).toBeAttached();
   await expect(canvas).toBeAttached();
-  await expect(page.getByRole("button", { name: "Finish" })).toBeDisabled();
-  await page.mouse.move(screenPoint.x - 35, screenPoint.y - 12);
-  await page.mouse.down();
-  await page.mouse.move(screenPoint.x + 35, screenPoint.y + 12, { steps: 8 });
-  await page.mouse.up();
-  await expect(page.getByRole("button", { name: "Finish" })).toBeEnabled();
-  await page.getByRole("button", { name: "Magenta field" }).click();
-  await expect(page.getByRole("button", { name: "Magenta field" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Finish" }).click();
-  await expect(page.locator("[data-interaction-panel='touch']")).toHaveAttribute("data-lifecycle", "complete");
+  await expect(page.locator("[data-interaction-panel='touch']")).toHaveCount(0);
+
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error("A fixed viewport is required for the 3D touch test");
+  await page.mouse.click(viewport.width * 0.445, viewport.height * 0.35);
+  await expect(controls).toHaveAttribute("data-touch-selected-count", "1");
+  await activateWithKeyboard(controls.getByRole("button", { name: "Story" }));
+  await expect(controls).toHaveAttribute("data-touch-selected-count", "2");
+  await activateWithKeyboard(controls.getByRole("button", { name: "Reset" }));
+  await expect(controls).toHaveAttribute("data-touch-selected-count", "0");
+
+  await activateWithKeyboard(controls.getByRole("button", { name: "Space" }));
+  await activateWithKeyboard(controls.getByRole("button", { name: "Story" }));
+  await activateWithKeyboard(controls.getByRole("button", { name: "People" }));
+  await expect(controls).toHaveAttribute("data-touch-complete", "true");
+  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await expect(controls.getByRole("button", { name: "Continue journey" })).toBeEnabled();
+  await activateWithKeyboard(controls.getByRole("button", { name: "Continue journey" }));
+  await expect(director).toHaveAttribute("data-active-station", "none");
 });

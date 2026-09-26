@@ -213,6 +213,131 @@ function InteractionBeamEffects({
   return <primitive object={group} />;
 }
 
+function createTouchPulseTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const gradient = context.createRadialGradient(32, 32, 2, 32, 32, 30);
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.22, "rgba(117,216,255,.95)");
+    gradient.addColorStop(1, "rgba(34,92,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 64, 64);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function InteractionTouchEffects({
+  anchors,
+  quality,
+}: {
+  anchors: InteractionAnchorRuntime;
+  quality: SceneQuality;
+}) {
+  const group = useMemo(() => {
+    const next = new THREE.Group();
+    next.name = "fxInteraction_touch_composer";
+    const texture = createTouchPulseTexture();
+    const start = anchors.stations.touch.object.getWorldPosition(new THREE.Vector3());
+    const targets = [
+      anchors.stations.stage.object,
+      anchors.stations.photo.object,
+      anchors.stations.draw.object,
+    ];
+    const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
+    targets.forEach((target, index) => {
+      const end = target.getWorldPosition(new THREE.Vector3());
+      const control = start.clone().lerp(end, 0.5);
+      control.y += 1.35 + index * 0.18;
+      const curve = new THREE.QuadraticBezierCurve3(start.clone(), control, end);
+      const material = new THREE.LineBasicMaterial({
+        color: colors[index],
+        transparent: true,
+        opacity: 0,
+        depthTest: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(curve.getPoints(quality === "full" ? 36 : 20)),
+        material,
+      );
+      line.raycast = () => {};
+      line.renderOrder = 42;
+      const pulseMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        color: colors[index],
+        transparent: true,
+        opacity: 0,
+        depthTest: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const pulse = new THREE.Sprite(pulseMaterial);
+      pulse.scale.setScalar(0.34);
+      pulse.raycast = () => {};
+      pulse.renderOrder = 43;
+      pulse.visible = false;
+      const path = new THREE.Group();
+      path.name = `fxInteraction_touch_path_${index + 1}`;
+      path.userData.curve = curve;
+      path.userData.line = line;
+      path.userData.pulse = pulse;
+      path.add(line, pulse);
+      next.add(path);
+    });
+    next.userData.pulseTexture = texture;
+    return next;
+  }, [anchors, quality]);
+
+  useFrame(({ clock }, delta) => {
+    const complete = interactionRuntime.touchElements.every(Boolean);
+    group.children.forEach((path, index) => {
+      const line = path.userData.line as THREE.Line;
+      const pulse = path.userData.pulse as THREE.Sprite;
+      const curve = path.userData.curve as THREE.QuadraticBezierCurve3;
+      const lineMaterial = line.material as THREE.LineBasicMaterial;
+      const pulseMaterial = pulse.material as THREE.SpriteMaterial;
+      const active = interactionRuntime.touchElements[index];
+      const targetOpacity = active ? (quality === "full" ? 0.78 : 0.58) : 0;
+      lineMaterial.opacity = THREE.MathUtils.damp(lineMaterial.opacity, targetOpacity, 9, delta);
+      pulseMaterial.opacity = THREE.MathUtils.damp(
+        pulseMaterial.opacity,
+        active ? (complete ? 0.95 : 0.76) : 0,
+        11,
+        delta,
+      );
+      line.visible = lineMaterial.opacity > 0.002;
+      pulse.visible = pulseMaterial.opacity > 0.002;
+      if (pulse.visible) {
+        curve.getPoint((clock.elapsedTime * 0.32 + index * 0.27) % 1, pulse.position);
+        const scale = (complete ? 0.42 : 0.32) + Math.sin(clock.elapsedTime * 5 + index) * 0.035;
+        pulse.scale.setScalar(scale);
+      }
+    });
+  });
+
+  useEffect(() => () => {
+    group.children.forEach((path) => {
+      const line = path.userData.line as THREE.Line;
+      const pulse = path.userData.pulse as THREE.Sprite;
+      line.geometry.dispose();
+      (line.material as THREE.Material).dispose();
+      (pulse.material as THREE.Material).dispose();
+    });
+    (group.userData.pulseTexture as THREE.Texture).dispose();
+  }, [group]);
+
+  return <primitive object={group} />;
+}
+
 function createCueTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 128;
@@ -733,6 +858,7 @@ export function BakedMandegarScene({
       <InteractionSceneCues anchors={interactionAnchors} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} />
+      <InteractionTouchEffects anchors={interactionAnchors} quality={quality} />
       <TransitionParticleField
         environment={environment}
         exhibition={exhibition}

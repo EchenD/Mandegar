@@ -102,6 +102,19 @@
 .actionRow { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; margin-block-start: 1rem; }
 .statusText { margin: .85rem auto 0; color: rgba(247,247,244,.72); font-size: .74rem; text-align: center; }
 
+/* Visible touch-composer controls live on the authored 3D screen. This compact
+   semantic mirror preserves keyboard and assistive-technology operation. */
+.spatialInteractionSemantics {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .photoExperience { text-align: start; }
 .photoFrame { position: relative; width: min(26rem, 78vw); aspect-ratio: 4 / 3; margin-inline: auto; overflow: visible; }
 .photoReady,

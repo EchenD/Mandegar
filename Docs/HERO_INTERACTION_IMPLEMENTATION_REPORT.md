@@ -11,12 +11,12 @@ Steps 1–2 and 8–11 retain their existing narrative meaning and scene behavio
 | Phase | Station | Delivered interaction |
 | --- | --- | --- |
 | `activation` | Photo | Explicit booth entry, countdown, restrained flash, prepared local portrait result, phone/result treatment, replay, and continue. No camera, upload, or network request is used. |
-| `engagement` | Touch | Pointer/touch composition canvas, immediate monitor texture updates, three keyboard-accessible presets, reset, finish, cancel, and continue. |
+| `engagement` | Touch | A three-part Experience Composer rendered entirely on the authored 3D monitor: visitors connect Space, Story, and People by touch, pointer, or keyboard; each element releases a signal path into the pavilion before the final synthesis. |
 | `reveal` | Stage | Five independently previewable/activatable beam controls, accumulated stage look, additive scene-space beam lines, monitor finale, and reduced-motion stable presentation. |
 | `experiences` | Game | Eight-second timing interaction using pointer, touch, or keyboard, immediate non-competitive feedback, visibility pause/resume, replay, and continue. Reduced motion uses a shorter stable session. |
 | `connection` | Drawing | Genuine pointer-captured freehand drawing, live GLB monitor texture, undo, clear, keyboard-accessible preset mark, finish echo, local-only session state, and continue. |
 
-Station entry is explicit; hover never starts an experience. The authored 3D cue or underlying GLB screen can request entry only for the currently available station. Once active, the touch, stage, game, and drawing screens receive normalized scene UV events directly. Availability is delayed until the camera has settled, and active mode freezes narrative progress, prevents accidental wheel/touch scrolling without breaking the sticky WebGL composition, preserves browser zoom shortcuts, traps focus in the accessible dock, supports `Escape`, restores exact scroll position, and cleans up on cancel, completion, phase exit, client route change, tab visibility change, or scene teardown.
+Station entry is explicit; hover never starts an experience. The authored 3D cue or underlying GLB screen can request entry only for the currently available station. Once active, the touch, stage, game, and drawing screens receive normalized scene UV events directly. Touch now keeps its visible controls on the 3D monitor and exposes only a visually hidden semantic keyboard/screen-reader mirror; the other stations retain the accessible dock. Availability is delayed until the camera has settled, and active mode freezes narrative progress, prevents accidental wheel/touch scrolling without breaking the sticky WebGL composition, preserves browser zoom shortcuts, supports `Escape`, restores exact scroll position, and cleans up on cancel, completion, phase exit, client route change, tab visibility change, or scene teardown.
 
 ## Architecture and files
 
@@ -53,7 +53,7 @@ Focused tests were added in the seven files specified by the plan: `hero-interac
 | 2 — Anchors | Integrated and validated all 17 exact authored nodes from the revised GLB, including matching beam pairs, projection, cleanup, deterministic damaged-asset fallbacks, and development-only `?anchors=1` visualization. |
 | 3 — Shared shell | Added the shared reducer/director, registry, scene-space entry cue, compact accessible dock, localized controls, focus trap/restore, explicit input tracking, scroll/camera hold, exact restoration, session flags, and teardown paths. |
 | 4 — Photo | Complete local simulated-capture sequence with timer cleanup, reduced-motion path, local demo portrait, flash, phone result, replay, cancel, and continue. |
-| 5 — Touch | Complete drag/touch composer, coalesced canvas updates, presets, reset, cleanup, and live authored-monitor mapping. |
+| 5 — Touch | Complete Space/Story/People composer with direct scene-UV input, frame-coalesced monitor updates, forgiving tap/drag activation, reset/continue/close controls on the monitor, semantic keyboard parity, and three scene-space signal paths. |
 | 6 — Stage | Complete five-beam control with anchor pairs, focus/hover preview, accumulation, monitor finale, additive rendering, adaptive/reduced behavior, and no runtime relighting or autoplay sound. |
 | 7 — Game | Complete short timing game, pointer/keyboard parity, pause/resume, animation-frame cleanup, non-persistent result, functional replay, and continue. |
 | 8 — Drawing | Complete freehand pointer/touch drawing with pointer capture, correct canvas mapping, undo, clear, preset mark, finish echo, and listener/texture cleanup. |

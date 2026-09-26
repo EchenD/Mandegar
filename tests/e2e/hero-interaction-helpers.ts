@@ -17,7 +17,10 @@ export async function enterStationWithKeyboard(page: Page, station: string) {
   await expect(hotspot).toBeAttached();
   await hotspot.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(`[data-interaction-panel='${station}']`)).toBeVisible();
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute(
+    "data-active-station",
+    station,
+  );
 }
 
 export async function getSceneScreenPoint(page: Page, yRatio = 0.38) {
