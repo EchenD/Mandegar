@@ -242,11 +242,15 @@ export const InteractionDirector = memo(function InteractionDirector({
       canvasTouchAction: canvas?.style.touchAction ?? "",
       htmlOverscrollBehavior: html.style.overscrollBehavior,
       rootOverflowAnchor: root?.style.overflowAnchor ?? "",
+      rootLenisPrevent: root?.getAttribute("data-lenis-prevent") ?? null,
     };
     html.style.overscrollBehavior = "none";
     body.style.overscrollBehavior = "none";
     if (canvas) canvas.style.touchAction = "none";
-    if (root) root.style.overflowAnchor = "none";
+    if (root) {
+      root.style.overflowAnchor = "none";
+      root.setAttribute("data-lenis-prevent", "");
+    }
     root?.setAttribute("data-interaction-active", state.activeStation);
 
     const getRestoredScrollPosition = () => {
@@ -337,7 +341,7 @@ export const InteractionDirector = memo(function InteractionDirector({
         && maxScroll > 1
         && ((deltaY > 0 && scroller!.scrollTop < maxScroll - 1)
           || (deltaY < 0 && scroller!.scrollTop > 1));
-      if (!canScrollInside) event.preventDefault();
+      if (!canScrollInside && event.cancelable) event.preventDefault();
     };
     const forgetTouchPosition = () => { previousTouchY = null; };
     window.addEventListener("keydown", preventScrollKeys);
@@ -365,7 +369,11 @@ export const InteractionDirector = memo(function InteractionDirector({
       html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
       body.style.overscrollBehavior = previous.bodyOverscrollBehavior;
       if (canvas) canvas.style.touchAction = previous.canvasTouchAction;
-      if (root) root.style.overflowAnchor = previous.rootOverflowAnchor;
+      if (root) {
+        root.style.overflowAnchor = previous.rootOverflowAnchor;
+        if (previous.rootLenisPrevent === null) root.removeAttribute("data-lenis-prevent");
+        else root.setAttribute("data-lenis-prevent", previous.rootLenisPrevent);
+      }
       const restoredScroll = getRestoredScrollPosition();
       if (Math.abs(window.scrollY - restoredScroll) >= 0.5) {
         window.scrollTo({ top: restoredScroll, left: 0, behavior: "auto" });

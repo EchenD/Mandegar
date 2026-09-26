@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import * as THREE from "three";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { publicAssetPath } from "@/lib/public-asset-path";
+import { hasWebGLSupport } from "@/lib/webgl-support";
 import styles from "./ConnectedJourney.module.css";
 import {
   PartnerFinaleCanvas,
@@ -163,7 +164,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     const sync = () => {
       const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
       const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
-      const supportsWebGL = Boolean(document.createElement("canvas").getContext("webgl2") || document.createElement("canvas").getContext("webgl"));
+      const supportsWebGL = hasWebGLSupport();
       const nextSpatialEnabled = !motion.matches && !saveData && supportsWebGL && deviceMemory > 2;
       setReduced(motion.matches);
       setMobile(size.matches);

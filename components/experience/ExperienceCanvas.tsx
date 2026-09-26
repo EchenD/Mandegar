@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import { hasWebGLSupport } from "@/lib/webgl-support";
 import { BakedMandegarScene } from "./BakedMandegarScene";
 import { CameraRig } from "./CameraRig";
 import { experienceState } from "./experience-state";
@@ -78,10 +79,7 @@ export function ExperienceCanvas({
     const frame = window.requestAnimationFrame(() => {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
-      const supportsWebGL = Boolean(
-        document.createElement("canvas").getContext("webgl2")
-        || document.createElement("canvas").getContext("webgl"),
-      );
+      const supportsWebGL = hasWebGLSupport();
       const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
       const adaptive = window.matchMedia("(max-width: 760px)").matches
         || (navigator.hardwareConcurrency || 8) <= 4

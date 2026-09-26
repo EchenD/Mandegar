@@ -10,7 +10,6 @@ export default function RootPage() {
     return (
       <main>
         <meta httpEquiv="refresh" content={`0;url=${destination}`} />
-        <script dangerouslySetInnerHTML={{ __html: `window.location.replace(${JSON.stringify(destination)});` }} />
         <a href={destination}>Continue to Mandegar</a>
       </main>
     );
