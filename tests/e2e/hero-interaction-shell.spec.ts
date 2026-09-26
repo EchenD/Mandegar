@@ -15,6 +15,11 @@ test.describe("hero interaction shell", () => {
       await page.goto(`/en?intro=0&phase=${phase}`, { waitUntil: "networkidle" });
       const director = page.locator("[data-interaction-director]");
       await expect(director).toHaveAttribute("data-available-station", station);
+      if (station === "touch") {
+        await expect(director).toHaveAttribute("data-active-station", "touch");
+        await expect(page.locator("[data-interaction-hotspot]")).toHaveCount(0);
+        return;
+      }
       await expect(page.locator("[data-interaction-hotspot]")).toHaveCount(1);
       await expect(page.locator(`[data-interaction-hotspot='${station}']`)).toBeAttached();
     });

@@ -387,7 +387,10 @@ function InteractionTouchEffects({
       const active = interactionRuntime.touchElements[index];
       pulseMaterial.opacity = THREE.MathUtils.damp(
         pulseMaterial.opacity,
-        active ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64) : 0,
+        active
+          ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64)
+            * interactionRuntime.touchVisibility
+          : 0,
         11,
         delta,
       );
@@ -407,7 +410,9 @@ function InteractionTouchEffects({
     const ringMaterial = ring.material as THREE.SpriteMaterial;
     const ringDuration = 1.25;
     const ringProgress = THREE.MathUtils.clamp(completionAge.current / ringDuration, 0, 1);
-    ringMaterial.opacity = complete ? (1 - ringProgress) * 0.82 : 0;
+    ringMaterial.opacity = complete
+      ? (1 - ringProgress) * 0.82 * interactionRuntime.touchVisibility
+      : 0;
     ring.scale.setScalar(0.38 + ringProgress * 1.35);
     ring.visible = ringMaterial.opacity > 0.002;
   });
@@ -464,6 +469,7 @@ function InteractionSceneCues({ anchors }: { anchors: InteractionAnchorRuntime }
       toneMapped: false,
     });
     (Object.entries(anchors.stations) as Array<[InteractionStation, InteractionAnchorRuntime["stations"][InteractionStation]]>)
+      .filter(([station]) => station !== "touch")
       .forEach(([station, anchor]) => {
         const sprite = new THREE.Sprite(material);
         sprite.name = `fxInteraction_cue_${station}`;

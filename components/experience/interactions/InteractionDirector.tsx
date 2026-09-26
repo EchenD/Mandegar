@@ -71,6 +71,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ));
   const previousFocus = useRef<HTMLElement | null>(null);
+  const touchAutoStarted = useRef(false);
   const savedScroll = useRef(0);
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
@@ -129,6 +130,23 @@ export const InteractionDirector = memo(function InteractionDirector({
     dispatch({ type: "ENTER", station, input });
     interactionRuntime.activeStation = station;
   }, []);
+
+  useEffect(() => {
+    if (expectedStation !== "touch") {
+      touchAutoStarted.current = false;
+      return;
+    }
+    if (
+      (runtime !== "adaptive" && runtime !== "full")
+      || settledPhase !== activePhase
+      || state.availableStation !== "touch"
+      || state.activeStation
+      || touchAutoStarted.current
+    ) return;
+    touchAutoStarted.current = true;
+    const frame = window.requestAnimationFrame(() => enter("touch", "automatic"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
 
   const complete = useCallback((station: InteractionStation) => {
     dispatch({ type: "COMPLETING" });
@@ -222,7 +240,9 @@ export const InteractionDirector = memo(function InteractionDirector({
     window.addEventListener("wheel", preventWheel, { passive: false });
     window.addEventListener("touchmove", preventTouchScroll, { passive: false });
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
-    window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
+    if (state.input !== "automatic") {
+      window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
+    }
 
     return () => {
       window.removeEventListener("keydown", preventScrollKeys);
@@ -234,7 +254,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
       window.requestAnimationFrame(() => previousFocus.current?.focus());
     };
-  }, [exit, state.activeStation]);
+  }, [exit, state.activeStation, state.input]);
 
   useEffect(() => {
     if (state.lifecycle !== "cancelled") return;

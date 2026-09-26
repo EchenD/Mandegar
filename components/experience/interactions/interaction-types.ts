@@ -8,7 +8,7 @@ export type InteractionLifecycle =
   | "completing"
   | "complete"
   | "cancelled";
-export type InteractionInput = "keyboard" | "pointer" | "touch";
+export type InteractionInput = "automatic" | "keyboard" | "pointer" | "touch";
 export type SceneInteractionPhase = "down" | "move" | "up" | "cancel" | "activate";
 
 export type SceneInteractionEvent = {

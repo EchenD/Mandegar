@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
 import {
   interactionRuntime,
@@ -62,6 +63,11 @@ function scenePoint(event: SceneInteractionEvent) {
   };
 }
 
+function revealProgress(progress: number, start: number, end: number) {
+  const value = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  return value * value * (3 - 2 * value);
+}
+
 export function TouchComposerInteraction({
   copy,
   onClose,
@@ -75,6 +81,10 @@ export function TouchComposerInteraction({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderFrame = useRef<number | null>(null);
+  const transitionFrame = useRef<number | null>(null);
+  const transitionProgress = useRef(0);
+  const transitionState = useRef<"intro" | "ready" | "outro">("intro");
+  const monitorImage = useRef<HTMLImageElement | null>(null);
   const completionTimer = useRef<number | null>(null);
   const sceneInputCount = useRef(0);
   const activePointer = useRef<ComposerPointer | null>(null);
@@ -97,8 +107,26 @@ export function TouchComposerInteraction({
     const pointer = activePointer.current;
     const selectedCount = selectedElements.filter(Boolean).length;
     const isComplete = selectedCount === elementDefinitions.length;
+    const transition = transitionProgress.current;
+    const surfaceOpacity = revealProgress(transition, 0, 0.34);
+    const centerReveal = revealProgress(transition, 0.18, 0.58);
+    const elementReveals = elementDefinitions.map((_, index) => (
+      revealProgress(transition, 0.34 + index * 0.09, 0.68 + index * 0.09)
+    ));
+    const controlsReveal = revealProgress(transition, 0.72, 1);
+    interactionRuntime.touchVisibility = transition;
 
     context.clearRect(0, 0, width, height);
+    canvas.dataset.transitionProgress = transition.toFixed(3);
+    if (monitorImage.current?.complete) {
+      context.drawImage(monitorImage.current, 0, 0, width, height);
+    } else {
+      context.fillStyle = "#ede2da";
+      context.fillRect(0, 0, width, height);
+    }
+
+    context.save();
+    context.globalAlpha = surfaceOpacity;
     const background = context.createRadialGradient(
       width * center.x,
       height * center.y,
@@ -152,11 +180,14 @@ export function TouchComposerInteraction({
     headerRule.addColorStop(1, "rgba(117,216,255,0)");
     context.fillStyle = headerRule;
     context.fillRect(56, 99, width - 112, 1);
+    context.restore();
 
     const centerX = center.x * width;
     const centerY = center.y * height;
     elementDefinitions.forEach((definition, index) => {
       if (!selectedElements[index]) return;
+      context.save();
+      context.globalAlpha = surfaceOpacity * centerReveal * elementReveals[index];
       const sourceX = definition.x * width;
       const sourceY = definition.y * height;
       const gradient = context.createLinearGradient(sourceX, sourceY, centerX, centerY);
@@ -177,8 +208,11 @@ export function TouchComposerInteraction({
       );
       context.stroke();
       context.shadowBlur = 0;
+      context.restore();
     });
 
+    context.save();
+    context.globalAlpha = surfaceOpacity * centerReveal;
     context.fillStyle = "#07152b";
     context.beginPath();
     context.arc(centerX, centerY, 62, 0, Math.PI * 2);
@@ -234,6 +268,7 @@ export function TouchComposerInteraction({
       context.font = '650 13px "Vazirmatn Variable", Tahoma, sans-serif';
       context.fillText("/ 03", centerX, centerY + 29);
     }
+    context.restore();
 
     elementDefinitions.forEach((definition, index) => {
       const dragging = pointer?.elementIndex === index;
@@ -241,6 +276,12 @@ export function TouchComposerInteraction({
       const y = (dragging ? pointer.y : definition.y) * height;
       const active = selectedElements[index];
       const focused = hoverElement.current === index || keyboardFocus.current === index;
+      const elementReveal = elementReveals[index];
+      context.save();
+      context.globalAlpha = surfaceOpacity * elementReveal;
+      context.translate(x, y);
+      context.scale(0.82 + elementReveal * 0.18, 0.82 + elementReveal * 0.18);
+      context.translate(-x, -y);
       context.fillStyle = "#061224";
       context.beginPath();
       context.arc(x, y, 57, 0, Math.PI * 2);
@@ -282,8 +323,11 @@ export function TouchComposerInteraction({
       context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
       context.fillText(copy.touch.elements[index], x, y + 7);
+      context.restore();
     });
 
+    context.save();
+    context.globalAlpha = surfaceOpacity;
     const closeX = width * 0.94;
     const closeY = height * 0.09;
     const closeFocused = keyboardFocus.current === 5 || hoverControl.current === "close";
@@ -304,6 +348,7 @@ export function TouchComposerInteraction({
     context.lineTo(closeX - 7, closeY + 7);
     context.stroke();
     context.lineCap = "butt";
+    context.restore();
 
     const drawButton = (
       left: number,
@@ -353,6 +398,8 @@ export function TouchComposerInteraction({
         context.lineJoin = "miter";
       }
     };
+    context.save();
+    context.globalAlpha = surfaceOpacity * controlsReveal;
     drawButton(
       width * 0.055,
       copy.reset,
@@ -366,6 +413,7 @@ export function TouchComposerInteraction({
       keyboardFocus.current === 4 || hoverControl.current === "continue",
       true,
     );
+    context.restore();
 
     markInteractionCanvasDirty("interactive");
   }, [copy]);
@@ -377,6 +425,53 @@ export function TouchComposerInteraction({
       paint();
     });
   }, [paint]);
+
+  const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
+    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+    const from = transitionProgress.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reducedMotion ? 0 : target === 1 ? 1150 : 700;
+    transitionState.current = target === 1 ? "intro" : "outro";
+    if (duration === 0 || Math.abs(target - from) < 0.001) {
+      transitionProgress.current = target;
+      transitionState.current = target === 1 ? "ready" : "outro";
+      paint();
+      onFinish?.();
+      return;
+    }
+    const startedAt = performance.now();
+    const tick = (time: number) => {
+      const elapsed = Math.min(1, (time - startedAt) / duration);
+      transitionProgress.current = from + (target - from) * elapsed;
+      paint();
+      if (elapsed < 1) {
+        transitionFrame.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      transitionFrame.current = null;
+      transitionState.current = target === 1 ? "ready" : "outro";
+      onFinish?.();
+    };
+    transitionFrame.current = window.requestAnimationFrame(tick);
+  }, [paint]);
+
+  const exitWithTransition = useCallback((callback: () => void) => {
+    if (transitionState.current === "outro") return;
+    activePointer.current = null;
+    hoverElement.current = null;
+    hoverControl.current = null;
+    animateTransition(0, callback);
+  }, [animateTransition]);
+
+  const closeWithTransition = useCallback(() => {
+    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
+    completionTimer.current = null;
+    exitWithTransition(onClose);
+  }, [exitWithTransition, onClose]);
+
+  const continueWithTransition = useCallback(() => {
+    exitWithTransition(onContinue);
+  }, [exitWithTransition, onContinue]);
 
   const reset = useCallback(() => {
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
@@ -412,17 +507,32 @@ export function TouchComposerInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    registerInteractionCanvas("interactive", canvas);
-    paint();
     let active = true;
+    let registered = false;
+    const image = new Image();
+    const begin = () => {
+      if (!active || registered) return;
+      registered = true;
+      monitorImage.current = image.naturalWidth > 0 ? image : null;
+      transitionProgress.current = 0;
+      paint();
+      registerInteractionCanvas("interactive", canvas);
+      animateTransition(1);
+    };
+    image.onload = begin;
+    image.onerror = begin;
+    image.src = sceneTokens.bakedScene.screens.interactive;
+    if (image.complete) begin();
     void document.fonts?.ready.then(() => {
       if (active) schedulePaint();
     });
     return () => {
       active = false;
+      image.onload = null;
+      image.onerror = null;
       registerInteractionCanvas("interactive", null);
     };
-  }, [paint, schedulePaint]);
+  }, [animateTransition, paint, schedulePaint]);
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
@@ -430,6 +540,7 @@ export function TouchComposerInteraction({
       if (canvasRef.current) {
         canvasRef.current.dataset.sceneInputCount = String(sceneInputCount.current);
       }
+      if (transitionState.current !== "ready") return;
       const point = scenePoint(event);
       if (event.phase === "move") {
         const pointer = activePointer.current;
@@ -459,7 +570,7 @@ export function TouchComposerInteraction({
 
       if (event.phase === "down") {
         if (distance(point.x, point.y, 0.94, 0.09) <= 0.1) {
-          onClose();
+          closeWithTransition();
           return;
         }
         if (hitRect(point.x, point.y, 0.02, 0.8, 0.32, 0.2)) {
@@ -470,7 +581,7 @@ export function TouchComposerInteraction({
           completeRef.current
           && hitRect(point.x, point.y, 0.66, 0.8, 0.34, 0.2)
         ) {
-          onContinue();
+          continueWithTransition();
           return;
         }
         const elementIndex = elementDefinitions.findIndex((definition, index) => (
@@ -513,12 +624,14 @@ export function TouchComposerInteraction({
     };
     registerSceneInteraction("touch", handleSceneInput);
     return () => registerSceneInteraction("touch", null);
-  }, [activateElement, onClose, onContinue, reset, schedulePaint]);
+  }, [activateElement, closeWithTransition, continueWithTransition, reset, schedulePaint]);
 
   useEffect(() => () => {
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
     interactionRuntime.touchElements = [false, false, false];
+    interactionRuntime.touchVisibility = 0;
   }, []);
 
   const focusControl = (index: number | null) => {
@@ -571,7 +684,7 @@ export function TouchComposerInteraction({
         disabled={!complete}
         onFocus={() => focusControl(4)}
         onBlur={() => focusControl(null)}
-        onClick={onContinue}
+        onClick={continueWithTransition}
       >
         {copy.continue}
       </button>
@@ -579,7 +692,7 @@ export function TouchComposerInteraction({
         type="button"
         onFocus={() => focusControl(5)}
         onBlur={() => focusControl(null)}
-        onClick={onClose}
+        onClick={closeWithTransition}
       >
         {copy.close}
       </button>
