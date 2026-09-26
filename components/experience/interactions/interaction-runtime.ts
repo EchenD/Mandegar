@@ -11,6 +11,11 @@ type MonitorEntry = {
   revision: number;
 };
 
+type PhotoSurfaceEntry = {
+  canvas: HTMLCanvasElement;
+  revision: number;
+};
+
 type SceneInteractionHandler = (event: SceneInteractionEvent) => void;
 
 export const interactionRuntime: {
@@ -34,6 +39,9 @@ export const interactionRuntime: {
   touchElements: boolean[];
   touchVisibility: number;
   photoStep: "idle" | "ready" | "countdown" | "captured";
+  photoCount: number;
+  photoVisibility: number;
+  photoSurface: PhotoSurfaceEntry | null;
   monitorEntries: Partial<Record<BakedScreenId, MonitorEntry>>;
   sceneHandlers: Partial<Record<InteractionStation, SceneInteractionHandler>>;
 } = {
@@ -57,6 +65,9 @@ export const interactionRuntime: {
   touchElements: [false, false, false],
   touchVisibility: 0,
   photoStep: "idle",
+  photoCount: 3,
+  photoVisibility: 0,
+  photoSurface: null,
   monitorEntries: {},
   sceneHandlers: {},
 };
@@ -87,6 +98,14 @@ export function registerInteractionCanvas(
 export function markInteractionCanvasDirty(screen: BakedScreenId) {
   const entry = interactionRuntime.monitorEntries[screen];
   if (entry) entry.revision += 1;
+}
+
+export function registerPhotoSurface(canvas: HTMLCanvasElement | null) {
+  interactionRuntime.photoSurface = canvas ? { canvas, revision: 1 } : null;
+}
+
+export function markPhotoSurfaceDirty() {
+  if (interactionRuntime.photoSurface) interactionRuntime.photoSurface.revision += 1;
 }
 
 export function registerSceneInteraction(
@@ -132,6 +151,9 @@ export function resetInteractionRuntime() {
   interactionRuntime.touchElements = [false, false, false];
   interactionRuntime.touchVisibility = 0;
   interactionRuntime.photoStep = "idle";
+  interactionRuntime.photoCount = 3;
+  interactionRuntime.photoVisibility = 0;
+  interactionRuntime.photoSurface = null;
   interactionRuntime.monitorEntries = {};
   interactionRuntime.sceneHandlers = {};
 }

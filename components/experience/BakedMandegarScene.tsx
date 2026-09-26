@@ -168,6 +168,15 @@ const screenStations: Partial<Record<BakedScreenId, InteractionStation>> = {
 
 const stageBeamColors = ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"];
 
+// Photo flash volume controls. Direction uses world-space X/Y/Z and is normalized at runtime.
+const photoFlashVolumeTuning = {
+  direction: [0, 0, 1] as const,
+  originOffset: [0, 0, 0] as const,
+  length: 3.8,
+  radius: 1,
+  opacity: 0.42,
+};
+
 function createBeamFadeTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 8;
@@ -932,121 +941,44 @@ function InteractionGameEffects({
   return <primitive object={rig.group} />;
 }
 
-function createCueTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const context = canvas.getContext("2d");
-  if (context) {
-    context.clearRect(0, 0, 128, 128);
-    context.beginPath();
-    context.arc(64, 64, 42, 0, Math.PI * 2);
-    context.strokeStyle = "rgba(117,216,255,.95)";
-    context.lineWidth = 6;
-    context.shadowColor = "#225cff";
-    context.shadowBlur = 20;
-    context.stroke();
-    context.shadowBlur = 0;
-    context.fillStyle = "#f7f7f4";
-    context.fillRect(61, 45, 6, 38);
-    context.fillRect(45, 61, 38, 6);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function InteractionSceneCues({ anchors }: { anchors: InteractionAnchorRuntime }) {
-  const group = useMemo(() => {
-    const next = new THREE.Group();
-    next.name = "fxInteraction_station_cues";
-    const texture = createCueTexture();
-    const material = new THREE.SpriteMaterial({
-      map: texture,
-      color: "#ffffff",
-      transparent: true,
-      opacity: 0.92,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    });
-    (Object.entries(anchors.stations) as Array<[InteractionStation, InteractionAnchorRuntime["stations"][InteractionStation]]>)
-      .filter(([station]) => station !== "touch" && station !== "stage" && station !== "game")
-      .forEach(([station, anchor]) => {
-        const sprite = new THREE.Sprite(material);
-        sprite.name = `fxInteraction_cue_${station}`;
-        sprite.userData.interactionStation = station;
-        sprite.position.copy(anchor.object.getWorldPosition(new THREE.Vector3()));
-        sprite.scale.setScalar(0.72);
-        sprite.renderOrder = 50;
-        sprite.visible = false;
-        next.add(sprite);
-      });
-    next.userData.cueTexture = texture;
-    next.userData.cueMaterial = material;
-    return next;
-  }, [anchors]);
-
-  useFrame(({ clock }) => {
-    const available = interactionRuntime.activeStation ? null : interactionRuntime.availableStation;
-    const pulse = 0.82 + Math.sin(clock.elapsedTime * 3.2) * 0.12;
-    (group.userData.cueMaterial as THREE.SpriteMaterial).opacity = pulse;
-    group.children.forEach((child) => {
-      child.visible = child.userData.interactionStation === available;
-      const scale = child.visible ? 0.72 + Math.sin(clock.elapsedTime * 3.2) * 0.04 : 0.72;
-      child.scale.setScalar(scale);
-    });
-  });
-
-  useEffect(() => () => {
-    (group.userData.cueMaterial as THREE.Material).dispose();
-    (group.userData.cueTexture as THREE.Texture).dispose();
-  }, [group]);
-
-  return (
-    <primitive
-      object={group}
-      onPointerMove={(event: ThreeEvent<PointerEvent>) => {
-        if (!event.object.userData.interactionStation) return;
-        event.stopPropagation();
-        document.body.style.cursor = "pointer";
-      }}
-      onPointerOut={() => { document.body.style.cursor = ""; }}
-      onClick={(event: ThreeEvent<MouseEvent>) => {
-        const station = event.object.userData.interactionStation as InteractionStation | undefined;
-        if (!station || interactionRuntime.availableStation !== station) return;
-        event.stopPropagation();
-        requestInteraction(station, "pointer");
-      }}
-    />
-  );
-}
-
-function createFlashTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const context = canvas.getContext("2d");
-  if (context) {
-    const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gradient.addColorStop(0, "rgba(255,255,255,1)");
-    gradient.addColorStop(0.18, "rgba(117,216,255,.9)");
-    gradient.addColorStop(1, "rgba(117,216,255,0)");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 128, 128);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
-}
-
 function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntime }) {
   const portraitSource = useLoader(THREE.TextureLoader, "/media/placeholders/photo-experience.webp");
   const group = useMemo(() => {
     const next = new THREE.Group();
     next.name = "fxInteraction_photo_result";
+    const interfaceOrigin = anchors.stations.photo.object.getWorldPosition(new THREE.Vector3());
+    const flashPosition = anchors.photoFlash.object.getWorldPosition(new THREE.Vector3());
+    const phoneDestination = anchors.photoPhone.object.getWorldPosition(new THREE.Vector3());
+    const interfaceResultPosition = phoneDestination.clone();
+    const photoExitPosition = phoneDestination.clone()
+      .lerp(interfaceOrigin, 0.38)
+      .add(new THREE.Vector3(0, 0.34, 0));
+    const portraitControlPoint = flashPosition.clone()
+      .lerp(phoneDestination, 0.5)
+      .add(new THREE.Vector3(0, 0.72, 0));
+    const interfaceCanvas = document.createElement("canvas");
+    interfaceCanvas.width = 2;
+    interfaceCanvas.height = 2;
+    const interfaceTexture = new THREE.CanvasTexture(interfaceCanvas);
+    interfaceTexture.colorSpace = THREE.SRGBColorSpace;
+    interfaceTexture.generateMipmaps = false;
+    interfaceTexture.minFilter = THREE.LinearFilter;
+    interfaceTexture.magFilter = THREE.LinearFilter;
+    const interfaceMaterial = new THREE.SpriteMaterial({
+      map: interfaceTexture,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const photoInterface = new THREE.Sprite(interfaceMaterial);
+    photoInterface.name = "fxInteraction_photo_interface";
+    photoInterface.position.copy(interfaceOrigin);
+    photoInterface.scale.set(0.12, 0.078, 1);
+    photoInterface.renderOrder = 54;
+    photoInterface.frustumCulled = false;
+    photoInterface.visible = false;
     const portrait = portraitSource.clone();
     portrait.colorSpace = THREE.SRGBColorSpace;
     portrait.needsUpdate = true;
@@ -1059,7 +991,7 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
       toneMapped: false,
     });
     const phoneFrameMaterial = new THREE.SpriteMaterial({
-      color: "#101419",
+      color: "#f3eee7",
       transparent: true,
       opacity: 0,
       depthTest: false,
@@ -1068,20 +1000,59 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     });
     const phoneFrame = new THREE.Sprite(phoneFrameMaterial);
     phoneFrame.name = "fxInteraction_photo_phone_frame";
-    phoneFrame.position.copy(anchors.photoPhone.object.getWorldPosition(new THREE.Vector3()));
+    phoneFrame.position.copy(flashPosition);
     phoneFrame.scale.set(0.06, 0.1, 1);
     phoneFrame.renderOrder = 52;
     phoneFrame.visible = false;
+    phoneFrame.userData.photoControl = "replay";
     const phone = new THREE.Sprite(phoneMaterial);
     phone.name = "fxInteraction_photo_phone_result";
-    phone.position.copy(anchors.photoPhone.object.getWorldPosition(new THREE.Vector3()));
+    phone.position.copy(flashPosition);
     phone.scale.set(0.05, 0.08, 1);
     phone.renderOrder = 53;
     phone.visible = false;
-    const flashTexture = createFlashTexture();
-    const flashMaterial = new THREE.SpriteMaterial({
-      map: flashTexture,
-      color: "#ffffff",
+    phone.userData.photoControl = "replay";
+    const flashVolumeTexture = createBeamFadeTexture();
+    const flashVolumeGeometry = new THREE.CylinderGeometry(
+      photoFlashVolumeTuning.radius,
+      0.02,
+      1,
+      20,
+      1,
+      true,
+    );
+    const flashVolumeMaterial = new THREE.MeshBasicMaterial({
+      map: flashVolumeTexture,
+      color: "#d8eeff",
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthTest: true,
+      depthWrite: false,
+      side: THREE.BackSide,
+      toneMapped: false,
+    });
+    const flashVolume = new THREE.Mesh(flashVolumeGeometry, flashVolumeMaterial);
+    const flashDirection = new THREE.Vector3(...photoFlashVolumeTuning.direction).normalize();
+    const flashOrigin = flashPosition.clone().add(
+      new THREE.Vector3(...photoFlashVolumeTuning.originOffset),
+    );
+    flashVolume.name = "fxInteraction_photo_flash_volume";
+    flashVolume.position.copy(flashOrigin).addScaledVector(
+      flashDirection,
+      photoFlashVolumeTuning.length * 0.5,
+    );
+    flashVolume.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), flashDirection);
+    flashVolume.scale.set(1, photoFlashVolumeTuning.length, 1);
+    flashVolume.renderOrder = 49;
+    flashVolume.frustumCulled = false;
+    flashVolume.visible = false;
+    flashVolume.raycast = () => {};
+    const trailPositions = new Float32Array(18 * 3);
+    const trailGeometry = new THREE.BufferGeometry();
+    trailGeometry.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
+    const trailMaterial = new THREE.LineBasicMaterial({
+      color: "#75d8ff",
       transparent: true,
       opacity: 0,
       blending: THREE.AdditiveBlending,
@@ -1089,58 +1060,291 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
       depthWrite: false,
       toneMapped: false,
     });
-    const flash = new THREE.Sprite(flashMaterial);
-    flash.name = "fxInteraction_photo_flash";
-    flash.position.copy(anchors.photoFlash.object.getWorldPosition(new THREE.Vector3()));
-    flash.scale.setScalar(2.4);
-    flash.renderOrder = 51;
-    flash.visible = false;
-    next.add(phoneFrame, phone, flash);
+    const portraitTrail = new THREE.Line(trailGeometry, trailMaterial);
+    portraitTrail.name = "fxInteraction_photo_portrait_trail";
+    portraitTrail.renderOrder = 51;
+    portraitTrail.frustumCulled = false;
+    portraitTrail.raycast = () => {};
+    portraitTrail.visible = false;
+    const flashLight = new THREE.PointLight("#d8eeff", 0, 4.8, 2);
+    flashLight.name = "fxInteraction_photo_flash_light";
+    flashLight.position.copy(flashPosition);
+    next.add(
+      flashVolume,
+      portraitTrail,
+      photoInterface,
+      phoneFrame,
+      phone,
+      flashLight,
+    );
+    next.userData.photoInterface = photoInterface;
+    next.userData.interfaceMaterial = interfaceMaterial;
+    next.userData.interfaceTexture = interfaceTexture;
     next.userData.phoneFrame = phoneFrame;
     next.userData.phoneFrameMaterial = phoneFrameMaterial;
     next.userData.phone = phone;
     next.userData.phoneMaterial = phoneMaterial;
     next.userData.portrait = portrait;
-    next.userData.flash = flash;
-    next.userData.flashMaterial = flashMaterial;
-    next.userData.flashTexture = flashTexture;
+    next.userData.flashVolume = flashVolume;
+    next.userData.flashVolumeGeometry = flashVolumeGeometry;
+    next.userData.flashVolumeMaterial = flashVolumeMaterial;
+    next.userData.flashVolumeTexture = flashVolumeTexture;
+    next.userData.portraitTrail = portraitTrail;
+    next.userData.trailGeometry = trailGeometry;
+    next.userData.trailMaterial = trailMaterial;
+    next.userData.trailPositions = trailPositions;
+    next.userData.flashLight = flashLight;
+    next.userData.interfaceOrigin = interfaceOrigin;
+    next.userData.interfaceResultPosition = interfaceResultPosition;
+    next.userData.flashPosition = flashPosition;
+    next.userData.phoneDestination = phoneDestination;
+    next.userData.photoExitPosition = photoExitPosition;
+    next.userData.portraitControlPoint = portraitControlPoint;
+    next.userData.workingPosition = new THREE.Vector3();
     return next;
   }, [anchors, portraitSource]);
   const previousStep = useRef(interactionRuntime.photoStep);
   const flashAge = useRef(1);
+  const captureAge = useRef(1);
+  const surfaceTexture = useRef<{
+    canvas: HTMLCanvasElement;
+    revision: number;
+    texture: THREE.CanvasTexture;
+  } | null>(null);
 
   useFrame((_, delta) => {
+    const photoInterface = group.userData.photoInterface as THREE.Sprite;
+    const interfaceMaterial = group.userData.interfaceMaterial as THREE.SpriteMaterial;
     const phone = group.userData.phone as THREE.Sprite;
     const phoneMaterial = group.userData.phoneMaterial as THREE.SpriteMaterial;
     const phoneFrame = group.userData.phoneFrame as THREE.Sprite;
     const phoneFrameMaterial = group.userData.phoneFrameMaterial as THREE.SpriteMaterial;
-    const flash = group.userData.flash as THREE.Sprite;
-    const flashMaterial = group.userData.flashMaterial as THREE.SpriteMaterial;
+    const flashVolume = group.userData.flashVolume as THREE.Mesh;
+    const flashVolumeMaterial = group.userData.flashVolumeMaterial as THREE.MeshBasicMaterial;
+    const portraitTrail = group.userData.portraitTrail as THREE.Line;
+    const trailMaterial = group.userData.trailMaterial as THREE.LineBasicMaterial;
+    const trailPositions = group.userData.trailPositions as Float32Array;
+    const trailPositionAttribute = (group.userData.trailGeometry as THREE.BufferGeometry)
+      .getAttribute("position") as THREE.BufferAttribute;
+    const flashLight = group.userData.flashLight as THREE.PointLight;
+    const surface = interactionRuntime.photoSurface;
+    if (surface && surfaceTexture.current?.canvas !== surface.canvas) {
+      surfaceTexture.current?.texture.dispose();
+      const texture = new THREE.CanvasTexture(surface.canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.generateMipmaps = false;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      surfaceTexture.current = {
+        canvas: surface.canvas,
+        revision: surface.revision,
+        texture,
+      };
+      interfaceMaterial.map = texture;
+      interfaceMaterial.needsUpdate = true;
+    } else if (surface && surfaceTexture.current?.revision !== surface.revision) {
+      surfaceTexture.current!.revision = surface.revision;
+      surfaceTexture.current!.texture.needsUpdate = true;
+    }
     const step = interactionRuntime.photoStep;
-    if (step === "captured" && previousStep.current !== "captured") flashAge.current = 0;
+    const interfaceTarget = interactionRuntime.photoVisibility;
+    const exitProgress = step === "captured"
+      ? THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(1 - interfaceTarget, 0, 1), 0, 1)
+      : 0;
+    interfaceMaterial.opacity = THREE.MathUtils.damp(
+      interfaceMaterial.opacity,
+      interfaceTarget,
+      10,
+      delta,
+    );
+    const interfaceOrigin = group.userData.interfaceOrigin as THREE.Vector3;
+    const interfaceResultPosition = group.userData.interfaceResultPosition as THREE.Vector3;
+    const photoExitPosition = group.userData.photoExitPosition as THREE.Vector3;
+    const workingPosition = group.userData.workingPosition as THREE.Vector3;
+    const targetInterfacePosition = step === "captured"
+      ? workingPosition.copy(interfaceResultPosition).lerp(photoExitPosition, exitProgress)
+      : interfaceOrigin;
+    photoInterface.position.lerp(
+      targetInterfacePosition,
+      1 - Math.exp(-8 * delta),
+    );
+    const targetInterfaceScale = step === "captured"
+      ? 0.68 * (1 - exitProgress * 0.46)
+      : step === "countdown" ? 0.74 : 0.7;
+    const interfaceScale = THREE.MathUtils.damp(
+      photoInterface.scale.y,
+      interfaceTarget > 0.001 ? targetInterfaceScale : 0.078,
+      9,
+      delta,
+    );
+    photoInterface.scale.set(interfaceScale * (800 / 520), interfaceScale, 1);
+    photoInterface.visible = interfaceMaterial.opacity > 0.002;
+    if (step === "captured" && previousStep.current !== "captured") {
+      flashAge.current = 0;
+      captureAge.current = 0;
+    }
+    if (step !== "captured" && previousStep.current === "captured") {
+      phoneMaterial.opacity = 0;
+      phoneFrameMaterial.opacity = 0;
+      phone.visible = false;
+      phoneFrame.visible = false;
+      portraitTrail.visible = false;
+      trailMaterial.opacity = 0;
+    }
     previousStep.current = step;
     const showPhone = step === "captured";
+    captureAge.current += delta;
     phone.visible = showPhone || phoneMaterial.opacity > 0.01;
     phoneFrame.visible = phone.visible;
-    phoneMaterial.opacity = THREE.MathUtils.damp(phoneMaterial.opacity, showPhone ? 1 : 0, 9, delta);
+    const phoneTargetOpacity = showPhone ? Math.pow(interfaceTarget, 1.35) : 0;
+    phoneMaterial.opacity = THREE.MathUtils.damp(phoneMaterial.opacity, phoneTargetOpacity, 11, delta);
     phoneFrameMaterial.opacity = phoneMaterial.opacity;
-    const scale = THREE.MathUtils.damp(phoneFrame.scale.y, showPhone ? 0.78 : 0.08, 8, delta);
-    phoneFrame.scale.set(scale * 0.58, scale, 1);
-    phone.scale.set(scale * 0.5, scale * 0.9, 1);
+    if (showPhone) {
+      const progress = THREE.MathUtils.smoothstep(
+        THREE.MathUtils.clamp(captureAge.current / 0.92, 0, 1),
+        0,
+        1,
+      );
+      const inverse = 1 - progress;
+      const flashPosition = group.userData.flashPosition as THREE.Vector3;
+      const control = group.userData.portraitControlPoint as THREE.Vector3;
+      const destination = group.userData.phoneDestination as THREE.Vector3;
+      workingPosition.set(0, 0, 0)
+        .addScaledVector(flashPosition, inverse * inverse)
+        .addScaledVector(control, 2 * inverse * progress)
+        .addScaledVector(destination, progress * progress);
+      workingPosition.lerp(photoExitPosition, exitProgress);
+      phone.position.copy(workingPosition);
+      phoneFrame.position.copy(workingPosition);
+      if (exitProgress > 0.001) {
+        for (let index = 0; index < 18; index += 1) {
+          const trailProgress = index / 17;
+          const positionOffset = index * 3;
+          trailPositions[positionOffset] = THREE.MathUtils.lerp(
+            destination.x,
+            workingPosition.x,
+            trailProgress,
+          );
+          trailPositions[positionOffset + 1] = THREE.MathUtils.lerp(
+            destination.y,
+            workingPosition.y,
+            trailProgress,
+          );
+          trailPositions[positionOffset + 2] = THREE.MathUtils.lerp(
+            destination.z,
+            workingPosition.z,
+            trailProgress,
+          );
+        }
+      } else {
+        const trailStart = Math.max(0, progress - 0.24);
+        for (let index = 0; index < 18; index += 1) {
+          const trailProgress = trailStart + (progress - trailStart) * (index / 17);
+          const trailInverse = 1 - trailProgress;
+          const positionOffset = index * 3;
+          trailPositions[positionOffset] = flashPosition.x * trailInverse * trailInverse
+            + control.x * 2 * trailInverse * trailProgress
+            + destination.x * trailProgress * trailProgress;
+          trailPositions[positionOffset + 1] = flashPosition.y * trailInverse * trailInverse
+            + control.y * 2 * trailInverse * trailProgress
+            + destination.y * trailProgress * trailProgress;
+          trailPositions[positionOffset + 2] = flashPosition.z * trailInverse * trailInverse
+            + control.z * 2 * trailInverse * trailProgress
+            + destination.z * trailProgress * trailProgress;
+        }
+      }
+      trailPositionAttribute.needsUpdate = true;
+      trailMaterial.opacity = exitProgress > 0.001
+        ? Math.sin(exitProgress * Math.PI) * 0.38
+        : Math.sin(progress * Math.PI) * 0.62;
+      portraitTrail.visible = exitProgress > 0.001
+        ? exitProgress < 0.99
+        : progress > 0.01 && progress < 0.99;
+      phoneMaterial.rotation = -0.035 + (1 - progress) * -0.13 + exitProgress * 0.1;
+      phoneFrameMaterial.rotation = phoneMaterial.rotation;
+    } else if (phoneMaterial.opacity < 0.02) {
+      phone.position.copy(group.userData.flashPosition as THREE.Vector3);
+      phoneFrame.position.copy(group.userData.flashPosition as THREE.Vector3);
+      portraitTrail.visible = false;
+      trailMaterial.opacity = 0;
+      phoneMaterial.rotation = 0;
+      phoneFrameMaterial.rotation = 0;
+    }
+    const travelScale = showPhone
+      ? THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(captureAge.current / 0.72, 0, 1), 0, 1)
+      : 0;
+    const exitScale = 1 - exitProgress * 0.58;
+    const scale = THREE.MathUtils.damp(
+      phoneFrame.scale.y,
+      showPhone ? (0.16 + travelScale * 0.5) * exitScale : 0.08,
+      8,
+      delta,
+    );
+    phoneFrame.scale.set(scale * 0.6, scale, 1);
+    phone.scale.set(scale * 0.52, scale * 0.92, 1);
     flashAge.current += delta;
-    flashMaterial.opacity = Math.max(0, 1 - flashAge.current * 2.4);
-    flash.visible = flashMaterial.opacity > 0.01;
+    const volumeProgress = THREE.MathUtils.clamp(flashAge.current / 0.52, 0, 1);
+    const volumeEnergy = Math.pow(1 - volumeProgress, 2);
+    flashVolumeMaterial.opacity = volumeEnergy * photoFlashVolumeTuning.opacity;
+    const volumeScale = 0.92 + volumeProgress * 0.18;
+    flashVolume.scale.set(
+      volumeScale,
+      photoFlashVolumeTuning.length,
+      volumeScale,
+    );
+    flashVolume.visible = flashVolumeMaterial.opacity > 0.002;
+    const flashProgress = THREE.MathUtils.clamp(flashAge.current / 0.32, 0, 1);
+    flashLight.intensity = Math.pow(1 - flashProgress, 2) * 38;
   });
 
   useEffect(() => () => {
+    surfaceTexture.current?.texture.dispose();
+    (group.userData.interfaceMaterial as THREE.Material).dispose();
+    (group.userData.interfaceTexture as THREE.Texture).dispose();
     (group.userData.phoneMaterial as THREE.Material).dispose();
     (group.userData.phoneFrameMaterial as THREE.Material).dispose();
     (group.userData.portrait as THREE.Texture).dispose();
-    (group.userData.flashMaterial as THREE.Material).dispose();
-    (group.userData.flashTexture as THREE.Texture).dispose();
+    (group.userData.flashVolumeGeometry as THREE.BufferGeometry).dispose();
+    (group.userData.flashVolumeMaterial as THREE.Material).dispose();
+    (group.userData.flashVolumeTexture as THREE.Texture).dispose();
+    (group.userData.trailGeometry as THREE.BufferGeometry).dispose();
+    (group.userData.trailMaterial as THREE.Material).dispose();
   }, [group]);
 
-  return <primitive object={group} />;
+  const dispatchPhotoPointer = useCallback((
+    phase: "down" | "move" | "up" | "cancel",
+    event: ThreeEvent<PointerEvent>,
+  ) => {
+    if (interactionRuntime.activeStation !== "photo" || !event.uv) return;
+    event.stopPropagation();
+    const directControl = event.object.userData.photoControl as "replay" | undefined;
+    if (directControl && captureAge.current < 1) return;
+    dispatchSceneInteraction("photo", {
+      phase,
+      x: directControl === "replay" ? 0.2 : THREE.MathUtils.clamp(event.uv.x, 0, 1),
+      y: directControl === "replay" ? 0.83 : THREE.MathUtils.clamp(1 - event.uv.y, 0, 1),
+      pointerId: event.pointerId,
+      input: event.pointerType === "touch" ? "touch" : "pointer",
+    });
+  }, []);
+
+  return (
+    <primitive
+      object={group}
+      onPointerMove={(event: ThreeEvent<PointerEvent>) => {
+        document.body.style.cursor = "pointer";
+        dispatchPhotoPointer("move", event);
+      }}
+      onPointerDown={(event: ThreeEvent<PointerEvent>) => dispatchPhotoPointer("down", event)}
+      onPointerUp={(event: ThreeEvent<PointerEvent>) => dispatchPhotoPointer("up", event)}
+      onPointerCancel={(event: ThreeEvent<PointerEvent>) => dispatchPhotoPointer("cancel", event)}
+      onPointerOut={(event: ThreeEvent<PointerEvent>) => {
+        document.body.style.cursor = "";
+        dispatchPhotoPointer("cancel", event);
+      }}
+    />
+  );
 }
 
 export function BakedMandegarScene({
@@ -1466,7 +1670,6 @@ export function BakedMandegarScene({
         onClick={handleClick}
       />
       <BakedScreenController root={exhibition} projects={projects} />
-      <InteractionSceneCues anchors={interactionAnchors} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} root={exhibition} />
       <InteractionTouchEffects

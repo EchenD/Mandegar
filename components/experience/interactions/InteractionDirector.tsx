@@ -2,11 +2,10 @@
 
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
-import type { ScenePhaseId } from "../narrative-score";
+import { narrativeScore, type ScenePhaseId } from "../narrative-score";
 import { DrawingInteraction } from "./DrawingInteraction";
 import { GameInteraction } from "./GameInteraction";
 import { getInteractionCopy } from "./interaction-copy";
-import { InteractionChrome } from "./InteractionChrome";
 import { getStationForPhase } from "./interaction-registry";
 import {
   interactionRuntime,
@@ -64,17 +63,12 @@ export const InteractionDirector = memo(function InteractionDirector({
   const copy = useMemo(() => getInteractionCopy(locale), [locale]);
   const initialAnchors = useMemo(() => fallbackFrame(), []);
   const [state, dispatch] = useReducer(interactionReducer, initialInteractionState);
-  const [settledPhase, setSettledPhase] = useState<ScenePhaseId | null>(null);
   const [showAnchorDebug, setShowAnchorDebug] = useState(false);
   const [reducedMotion] = useState(() => (
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ));
   const previousFocus = useRef<HTMLElement | null>(null);
-  const photoAutoStarted = useRef(false);
-  const touchAutoStarted = useRef(false);
-  const stageAutoStarted = useRef(false);
-  const gameAutoStarted = useRef(false);
-  const drawAutoStarted = useRef(false);
+  const autoStarted = useRef<Partial<Record<InteractionStation, boolean>>>({});
   const savedScroll = useRef(0);
   const savedScrollProgress = useRef<{
     distance: number;
@@ -108,18 +102,9 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => setSettledPhase(activePhase),
-      reducedMotion || runtime === "fallback" ? 0 : 650,
-    );
-    return () => window.clearTimeout(timer);
-  }, [activePhase, reducedMotion, runtime]);
-
-  useEffect(() => {
-    const station = settledPhase === activePhase ? expectedStation : null;
-    dispatch({ type: "AVAILABILITY", station });
-    interactionRuntime.availableStation = station;
-  }, [activePhase, expectedStation, settledPhase]);
+    dispatch({ type: "AVAILABILITY", station: expectedStation });
+    interactionRuntime.availableStation = expectedStation;
+  }, [expectedStation]);
 
   const exit = useCallback((cancelled: boolean) => {
     dispatch({ type: "EXIT", cancelled });
@@ -158,89 +143,48 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   useEffect(() => {
-    if (expectedStation !== "photo") {
-      photoAutoStarted.current = false;
-      return;
-    }
-    if (
-      (runtime !== "adaptive" && runtime !== "full")
-      || settledPhase !== activePhase
-      || state.availableStation !== "photo"
-      || state.activeStation
-      || photoAutoStarted.current
-    ) return;
-    photoAutoStarted.current = true;
-    const frame = window.requestAnimationFrame(() => enter("photo", "automatic"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+    if (expectedStation) autoStarted.current[expectedStation] = false;
+  }, [expectedStation]);
 
   useEffect(() => {
-    if (expectedStation !== "touch") {
-      touchAutoStarted.current = false;
-      return;
-    }
     if (
-      (runtime !== "adaptive" && runtime !== "full")
-      || settledPhase !== activePhase
-      || state.availableStation !== "touch"
+      !expectedStation
+      || (runtime !== "adaptive" && runtime !== "full")
+      || state.availableStation !== expectedStation
       || state.activeStation
-      || touchAutoStarted.current
+      || autoStarted.current[expectedStation]
     ) return;
-    touchAutoStarted.current = true;
-    const frame = window.requestAnimationFrame(() => enter("touch", "automatic"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
-
-  useEffect(() => {
-    if (expectedStation !== "stage") {
-      stageAutoStarted.current = false;
-      return;
-    }
-    if (
-      (runtime !== "adaptive" && runtime !== "full")
-      || settledPhase !== activePhase
-      || state.availableStation !== "stage"
-      || state.activeStation
-      || stageAutoStarted.current
-    ) return;
-    stageAutoStarted.current = true;
-    const frame = window.requestAnimationFrame(() => enter("stage", "automatic"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
-
-  useEffect(() => {
-    if (expectedStation !== "game") {
-      gameAutoStarted.current = false;
-      return;
-    }
-    if (
-      (runtime !== "adaptive" && runtime !== "full")
-      || settledPhase !== activePhase
-      || state.availableStation !== "game"
-      || state.activeStation
-      || gameAutoStarted.current
-    ) return;
-    gameAutoStarted.current = true;
-    const frame = window.requestAnimationFrame(() => enter("game", "automatic"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
-
-  useEffect(() => {
-    if (expectedStation !== "draw") {
-      drawAutoStarted.current = false;
-      return;
-    }
-    if (
-      (runtime !== "adaptive" && runtime !== "full")
-      || settledPhase !== activePhase
-      || state.availableStation !== "draw"
-      || state.activeStation
-      || drawAutoStarted.current
-    ) return;
-    drawAutoStarted.current = true;
-    const frame = window.requestAnimationFrame(() => enter("draw", "automatic"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [activePhase, enter, expectedStation, runtime, settledPhase, state.activeStation, state.availableStation]);
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    const beat = narrativeScore.find((item) => item.id === activePhase);
+    if (!root || !beat) return;
+    let frame: number | undefined;
+    const triggerProgress = beat.preview;
+    const tolerance = (beat.end - beat.start) * 0.12;
+    const checkArrival = () => {
+      if (
+        root.dataset.storyStage !== beat.id
+        || interactionRuntime.activeStation
+        || autoStarted.current[expectedStation]
+      ) {
+        frame = window.requestAnimationFrame(checkArrival);
+        return;
+      }
+      const narrativeProgress = Number(root.dataset.narrativeProgress);
+      if (
+        !Number.isFinite(narrativeProgress)
+        || Math.abs(narrativeProgress - triggerProgress) > tolerance
+      ) {
+        frame = window.requestAnimationFrame(checkArrival);
+        return;
+      }
+      autoStarted.current[expectedStation] = true;
+      enter(expectedStation, "automatic");
+    };
+    frame = window.requestAnimationFrame(checkArrival);
+    return () => {
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+    };
+  }, [activePhase, enter, expectedStation, runtime, state.activeStation, state.availableStation]);
 
   const complete = useCallback((station: InteractionStation) => {
     dispatch({ type: "COMPLETING" });
@@ -490,17 +434,12 @@ export const InteractionDirector = memo(function InteractionDirector({
       )}
 
       {station === "photo" && (
-        <div className={styles.activeLayer}>
-          <InteractionChrome
-            station={station}
-            lifecycle={state.lifecycle}
-            copy={copy}
-            onClose={() => exit(true)}
-            onContinue={() => exit(false)}
-          >
-            <PhotoBoothInteraction copy={copy} reducedMotion={reducedMotion} onComplete={() => complete("photo")} />
-          </InteractionChrome>
-        </div>
+        <PhotoBoothInteraction
+          copy={copy}
+          reducedMotion={reducedMotion}
+          onComplete={() => complete("photo")}
+          onContinue={() => exit(false)}
+        />
       )}
 
       {showAnchorDebug && (
