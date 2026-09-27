@@ -55,11 +55,13 @@ function controlAtPoint(step: PhotoStep, x: number, y: number): PhotoControl | n
 export function PhotoBoothInteraction({
   copy,
   reducedMotion,
+  onClose,
   onComplete,
   onContinue,
 }: {
   copy: InteractionCopy;
   reducedMotion: boolean;
+  onClose: () => void;
   onComplete: () => void;
   onContinue: () => void;
 }) {
@@ -346,6 +348,7 @@ export function PhotoBoothInteraction({
       <button type="button" disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
       <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
       <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => handleControl("continue")}>{copy.continue}</button>
+      <button type="button" data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
       <span role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
     </div>
   );

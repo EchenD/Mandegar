@@ -947,6 +947,7 @@ export function GameInteraction({
       </button>
       <button
         type="button"
+        data-interaction-dismiss
         onFocus={() => focusControl("close")}
         onBlur={() => focusControl(null)}
         onClick={closeWithTransition}

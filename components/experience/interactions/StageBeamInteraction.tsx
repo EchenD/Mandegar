@@ -613,6 +613,7 @@ export function StageBeamInteraction({
       </button>
       <button
         type="button"
+        data-interaction-dismiss
         onFocus={() => focusControl(7)}
         onBlur={() => focusControl(null)}
         onClick={closeWithTransition}

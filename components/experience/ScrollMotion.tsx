@@ -133,8 +133,8 @@ export function ScrollMotion({
 
     const syncExperience = (progress: number) => {
       if (root.hasAttribute("data-interaction-active")) return;
-      const timelineProgress = clamp01(progress);
-      const nativeProgress = reduced || saveData ? timelineProgress : getNativeProgress();
+      const timelineProgress = clamp01(reduced || saveData ? progress : getNativeProgress());
+      const nativeProgress = timelineProgress;
       const safeProgress = reduced ? timelineProgress : warpNarrativeProgress(timelineProgress);
       const narrative = directNarrative(safeProgress);
       const phase = narrative.phase;
@@ -250,7 +250,7 @@ export function ScrollMotion({
     const onNativeScroll = () => {
       if (root.hasAttribute("data-interaction-active")) return;
       const currentProgress = getNativeProgress();
-      syncNativePresentation(currentProgress);
+      syncExperience(currentProgress);
       if (currentProgress > 0.0008) showPhaseRail();
     };
     window.addEventListener("scroll", onNativeScroll, { passive: true });

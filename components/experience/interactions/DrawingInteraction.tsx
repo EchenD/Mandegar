@@ -555,7 +555,7 @@ export function DrawingInteraction({
       <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
       <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
       <button type="button" disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
-      <button type="button" onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
+      <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
       <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
     </div>
   );

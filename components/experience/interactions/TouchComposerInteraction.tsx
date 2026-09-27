@@ -689,6 +689,7 @@ export function TouchComposerInteraction({
       </button>
       <button
         type="button"
+        data-interaction-dismiss
         onFocus={() => focusControl(5)}
         onBlur={() => focusControl(null)}
         onClick={closeWithTransition}

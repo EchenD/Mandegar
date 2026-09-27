@@ -113,6 +113,7 @@ export const InteractionDirector = memo(function InteractionDirector({
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
     if (interactionRuntime.availableStation !== station) return;
+    autoStarted.current[station] = true;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
     const distance = root ? Math.max(1, root.offsetHeight - window.innerHeight) : 1;
@@ -158,8 +159,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     const beat = narrativeScore.find((item) => item.id === activePhase);
     if (!root || !beat) return;
     let frame: number | undefined;
-    const triggerProgress = beat.preview;
-    const tolerance = (beat.end - beat.start) * 0.12;
+    const triggerProgress = Number(beat.preview.toFixed(4));
     const checkArrival = () => {
       if (
         root.dataset.storyStage !== beat.id
@@ -172,7 +172,8 @@ export const InteractionDirector = memo(function InteractionDirector({
       const narrativeProgress = Number(root.dataset.narrativeProgress);
       if (
         !Number.isFinite(narrativeProgress)
-        || Math.abs(narrativeProgress - triggerProgress) > tolerance
+        || narrativeProgress < triggerProgress
+        || narrativeProgress >= beat.end
       ) {
         frame = window.requestAnimationFrame(checkArrival);
         return;
@@ -272,7 +273,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     const preventScrollKeys = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        exit(true);
+        panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-dismiss]")?.click();
         return;
       }
       if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -445,6 +446,7 @@ export const InteractionDirector = memo(function InteractionDirector({
         <PhotoBoothInteraction
           copy={copy}
           reducedMotion={reducedMotion}
+          onClose={() => exit(true)}
           onComplete={() => complete("photo")}
           onContinue={() => exit(false)}
         />
