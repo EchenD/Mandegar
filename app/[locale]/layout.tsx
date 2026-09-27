@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 import "@fontsource-variable/vazirmatn";
 import "@/styles/globals.css";
 import { Footer } from "@/components/layout/Footer";
@@ -43,6 +42,12 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
   })();`;
   return (
     <html lang={locale} dir={config.dir} data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        <script
+          id={`mandegar-home-scroll-reset-${locale}`}
+          dangerouslySetInnerHTML={{ __html: homeScrollResetScript }}
+        />
+      </head>
       <body>
         <div className="siteShell" lang={locale} dir={config.dir} data-locale={locale}>
           <JsonLd data={[
@@ -56,9 +61,6 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
           <Footer locale={locale} settings={settings} />
         </div>
       </body>
-      <Script id={`mandegar-home-scroll-reset-${locale}`} strategy="beforeInteractive">
-        {homeScrollResetScript}
-      </Script>
     </html>
   );
 }

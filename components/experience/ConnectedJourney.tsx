@@ -142,9 +142,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     && !/\.(mp4|webm|mov)(?:$|\?)/i.test(item.src));
 
   useEffect(() => {
-    const value = new Uint32Array(1);
-    window.crypto.getRandomValues(value);
-    setPartnerMediaSeed(value[0] || 1);
+    const frame = window.requestAnimationFrame(() => {
+      const value = new Uint32Array(1);
+      window.crypto.getRandomValues(value);
+      setPartnerMediaSeed(value[0] || 1);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
