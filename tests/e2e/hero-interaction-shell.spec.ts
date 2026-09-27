@@ -22,7 +22,7 @@ test.describe("hero interaction shell", () => {
     });
   }
 
-  test("landing after the preview still starts the current station", async ({ page }) => {
+  test("arriving late in a phase still settles on the correct interaction frame", async ({ page }) => {
     await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
     const root = page.locator("[data-experience-root]");
     await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 45_000 });
@@ -34,6 +34,108 @@ test.describe("hero interaction shell", () => {
     }, beat.end - 0.01);
     await expect(root).toHaveAttribute("data-story-stage", "activation");
     await waitForStation(page, "photo");
+    const nativeProgress = await root.evaluate((element: HTMLElement) => Number(element.dataset.nativeProgress));
+    expect(nativeProgress).toBeCloseTo(beat.preview, 3);
+  });
+
+  test("forward wheel travel opens the first interaction instead of missing it", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
+    const root = page.locator("[data-experience-root]");
+    await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 45_000 });
+    await page.mouse.wheel(0, 2_500);
+    await waitForStation(page, "photo");
+    await expect(root).toHaveAttribute("data-story-stage", "activation");
+  });
+
+  test("scrolling back through a station does not reopen or lock it", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=connection", { waitUntil: "domcontentloaded" });
+    const director = await waitForStation(page, "draw");
+    await page.keyboard.press("Escape");
+    await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
+    const root = page.locator("[data-experience-root]");
+    const proof = narrativeScore.find((item) => item.id === "proof");
+    const game = narrativeScore.find((item) => item.id === "experiences");
+    if (!proof || !game) throw new Error("Reverse-scroll checkpoints are missing");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, proof.preview);
+    await expect(root).toHaveAttribute("data-story-stage", "proof");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, game.preview);
+    await expect(root).toHaveAttribute("data-story-stage", "experiences");
+    await expect(root).toHaveAttribute("data-scroll-direction", "backward");
+    await page.waitForTimeout(500);
+    await expect(director).toHaveAttribute("data-active-station", "none");
+    await expect(root).not.toHaveAttribute("data-interaction-active");
+    await expect(director).toHaveAttribute("data-scroll-locked", "false");
+  });
+
+  test("a station can start again on a later forward pass", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
+    const director = await waitForStation(page, "photo");
+    await page.keyboard.press("Escape");
+    await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
+    const root = page.locator("[data-experience-root]");
+    const discovery = narrativeScore.find((item) => item.id === "discovery");
+    const activation = narrativeScore.find((item) => item.id === "activation");
+    if (!discovery || !activation) throw new Error("Replay checkpoints are missing");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, discovery.preview);
+    await expect(root).toHaveAttribute("data-story-stage", "discovery");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, activation.preview);
+    await waitForStation(page, "photo");
+  });
+
+  test("reverse wheel travel passes interaction phases without trapping the visitor", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=proof", { waitUntil: "domcontentloaded" });
+    const root = page.locator("[data-experience-root]");
+    const director = page.locator("[data-interaction-director]");
+    await expect(root).toHaveAttribute("data-story-stage", "proof", { timeout: 45_000 });
+    await page.mouse.wheel(0, -4_200);
+    await expect(root).toHaveAttribute("data-story-stage", "experiences", { timeout: 10_000 });
+    await page.waitForTimeout(1_000);
+    await expect(root).toHaveAttribute("data-scroll-direction", "backward");
+    await expect(director).toHaveAttribute("data-active-station", "none");
+    await expect(root).not.toHaveAttribute("data-interaction-active");
+    const before = await page.evaluate(() => window.scrollY);
+    await page.mouse.wheel(0, -250);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(before);
+  });
+
+  test("rapid phase changes never leave an orphan interaction lock", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
+    const root = page.locator("[data-experience-root]");
+    await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 45_000 });
+    const photo = narrativeScore.find((item) => item.id === "activation");
+    const discovery = narrativeScore.find((item) => item.id === "discovery");
+    if (!photo || !discovery) throw new Error("Phase checkpoints are missing");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, photo.preview - 0.015);
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, discovery.preview);
+    await expect(root).toHaveAttribute("data-story-stage", "discovery");
+    await page.waitForTimeout(500);
+    await expect(root).not.toHaveAttribute("data-interaction-active");
+    await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+    const before = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => window.scrollBy({ top: 120, behavior: "auto" }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
+  });
+
+  test("a viewport-fixed exit remains usable when scene controls are out of view", async ({ page }) => {
+    await page.goto("/fa?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
+    const director = await waitForStation(page, "photo");
+    const exitButton = page.locator("[data-interaction-escape]");
+    await expect(exitButton).toBeInViewport();
+    await exitButton.click();
+    await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
+    await expect(director).toHaveAttribute("data-scroll-locked", "false");
   });
 
   test("Escape plays the outro and restores the exact scroll position", async ({ page }) => {

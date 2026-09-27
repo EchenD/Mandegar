@@ -104,6 +104,7 @@ export function ScrollMotion({
     let lenisScroll: (() => void) | undefined;
     let interactionObserver: MutationObserver | undefined;
     let activePhase: ScenePhaseId = "arrival";
+    let previousNativeProgress: number | null = null;
 
     const showPhaseRail = () => {
       if (root.dataset.scrollEngaged === "true") return;
@@ -135,6 +136,12 @@ export function ScrollMotion({
       if (root.hasAttribute("data-interaction-active")) return;
       const timelineProgress = clamp01(reduced || saveData ? progress : getNativeProgress());
       const nativeProgress = timelineProgress;
+      if (previousNativeProgress !== null) {
+        const movement = nativeProgress - previousNativeProgress;
+        if (movement > 0.0001) root.dataset.scrollDirection = "forward";
+        else if (movement < -0.0001) root.dataset.scrollDirection = "backward";
+      }
+      previousNativeProgress = nativeProgress;
       const safeProgress = reduced ? timelineProgress : warpNarrativeProgress(timelineProgress);
       const narrative = directNarrative(safeProgress);
       const phase = narrative.phase;
@@ -243,8 +250,8 @@ export function ScrollMotion({
     };
 
     const seekExperience = (event: Event) => {
-      const requested = (event as CustomEvent<{ progress?: number }>).detail?.progress;
-      if (typeof requested === "number") goToProgress(requested);
+      const detail = (event as CustomEvent<{ progress?: number; sync?: boolean }>).detail;
+      if (typeof detail?.progress === "number") goToProgress(detail.progress, detail.sync);
     };
     root.addEventListener("mandegar:seek", seekExperience);
     const onNativeScroll = () => {
@@ -291,6 +298,7 @@ export function ScrollMotion({
       root.removeAttribute("data-story-stage");
       root.removeAttribute("data-native-progress");
       root.removeAttribute("data-narrative-progress");
+      root.removeAttribute("data-scroll-direction");
       root.removeAttribute("data-copy-progress");
       root.removeAttribute("data-arrival-enter-progress");
     };

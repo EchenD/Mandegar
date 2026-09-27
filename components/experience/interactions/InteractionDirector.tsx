@@ -112,7 +112,11 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
-    if (interactionRuntime.availableStation !== station) return;
+    if (
+      interactionRuntime.availableStation !== station
+      || state.availableStation !== station
+      || state.activeStation
+    ) return;
     autoStarted.current[station] = true;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
@@ -138,10 +142,8 @@ export const InteractionDirector = memo(function InteractionDirector({
       }
       : null;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    root?.setAttribute("data-interaction-active", station);
     dispatch({ type: "ENTER", station, input });
-    interactionRuntime.activeStation = station;
-  }, []);
+  }, [state.activeStation, state.availableStation]);
 
   useEffect(() => {
     if (expectedStation) autoStarted.current[expectedStation] = false;
@@ -164,6 +166,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       if (
         root.dataset.storyStage !== beat.id
         || interactionRuntime.activeStation
+        || interactionRuntime.availableStation !== expectedStation
         || autoStarted.current[expectedStation]
       ) {
         frame = window.requestAnimationFrame(checkArrival);
@@ -174,11 +177,14 @@ export const InteractionDirector = memo(function InteractionDirector({
         !Number.isFinite(narrativeProgress)
         || narrativeProgress < triggerProgress
         || narrativeProgress >= beat.end
+        || root.dataset.scrollDirection !== "forward"
       ) {
         frame = window.requestAnimationFrame(checkArrival);
         return;
       }
-      autoStarted.current[expectedStation] = true;
+      root.dispatchEvent(new CustomEvent("mandegar:seek", {
+        detail: { progress: beat.preview, sync: true },
+      }));
       enter(expectedStation, "automatic");
     };
     frame = window.requestAnimationFrame(checkArrival);
@@ -228,12 +234,13 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, [expectedStation, exit, state.activeStation]);
 
   useEffect(() => {
-    if (!state.activeStation) return;
+    if (!state.activeStation || state.activeStation !== expectedStation) return;
     const html = document.documentElement;
     const body = document.body;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
     const snapshot = savedScrollProgress.current;
+    interactionRuntime.activeStation = state.activeStation;
     if (root && snapshot) {
       const canonicalScroll = snapshot.rootTop + snapshot.distance * snapshot.progress;
       if (Math.abs(window.scrollY - canonicalScroll) <= 2) savedScroll.current = window.scrollY;
@@ -356,10 +363,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     holdScrollPosition();
     if (state.input !== "automatic") {
       window.requestAnimationFrame(() => {
-        const firstControl = window.matchMedia("(max-width: 760px)").matches
-          ? panelRoot.current?.querySelector<HTMLElement>("[data-mobile-interaction-skip]")
-          : panelRoot.current?.querySelector<HTMLElement>("button");
-        firstControl?.focus();
+        panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus();
       });
     }
 
@@ -388,7 +392,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       savedScrollProgress.current = null;
       window.requestAnimationFrame(() => previousFocus.current?.focus());
     };
-  }, [exit, state.activeStation, state.input]);
+  }, [exit, expectedStation, state.activeStation, state.input]);
 
   useEffect(() => {
     if (state.lifecycle !== "cancelled") return;
@@ -461,6 +465,7 @@ export const InteractionDirector = memo(function InteractionDirector({
         <button
           type="button"
           className={styles.mobileSkipButton}
+          data-interaction-escape
           data-mobile-interaction-skip
           onClick={() => {
             const selector = state.lifecycle === "complete"
