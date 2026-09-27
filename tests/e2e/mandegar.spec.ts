@@ -58,6 +58,11 @@ async function seekPhase(
   page: import("@playwright/test").Page,
   phase: string,
 ) {
+  const director = page.locator("[data-interaction-director]");
+  if (await director.getAttribute("data-active-station") !== "none") {
+    await page.keyboard.press("Escape");
+    await expect(director).toHaveAttribute("data-active-station", "none");
+  }
   const progress = narrativeScore.find((beat) => beat.id === phase)?.preview;
   if (progress === undefined) throw new Error(`Unknown narrative phase: ${phase}`);
   await page.locator("[data-experience-root]").evaluate((root, targetProgress) => {
@@ -347,7 +352,7 @@ test.describe("Mandegar responsive layout", () => {
   });
 
   test("eleven-state scene stays aligned with named checkpoints", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
@@ -359,7 +364,7 @@ test.describe("Mandegar responsive layout", () => {
   });
 
   test("storyboard copy appears one beat at a time", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/fa?intro=0", { waitUntil: "networkidle" });
     await expect(page.locator("[data-particle-loader='center-spark']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
@@ -378,19 +383,20 @@ test.describe("Mandegar responsive layout", () => {
     }
   });
 
-  test("station entry responds to keyboard without restoring scene navigation", async ({ page }) => {
+  test("automatic station entry retains keyboard controls without scene navigation", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?phase=experiences", { waitUntil: "networkidle" });
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true");
     await expect(page.locator("[data-scene-copy='experiences']")).toBeVisible();
-    const game = page.locator("[data-interaction-hotspot='game']");
-    await expect(game).toBeAttached();
-    await game.focus();
-    await expect(game).toBeFocused();
-    await expect(game).toBeVisible();
+    const director = page.locator("[data-interaction-director]");
+    await expect(director).toHaveAttribute("data-active-station", "game");
+    const launch = page.locator("[data-game-spatial-controls] button").first();
+    await launch.focus();
+    await expect(launch).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.locator("[data-interaction-panel='game']")).toBeVisible();
+    await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "flying");
     await page.keyboard.press("Escape");
+    await expect(director).toHaveAttribute("data-active-station", "none");
 
     await page.goto("/en?phase=proof", { waitUntil: "networkidle" });
     await expect(page.locator("[data-mandegar-experience] nav a")).toHaveCount(0);

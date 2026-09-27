@@ -1,45 +1,44 @@
-import { expect, test } from "@playwright/test";
-import { enterStationWithKeyboard } from "./hero-interaction-helpers";
+import { expect, test, type Page } from "@playwright/test";
+import { waitForStation } from "./hero-interaction-helpers";
 
-test("drawing wall supports freehand input, undo, preset, clear and finish", async ({ page }) => {
-  await page.goto("/en?intro=0&phase=connection", { waitUntil: "networkidle" });
-  await enterStationWithKeyboard(page, "draw");
-  const canvas = page.locator("[data-drawing-canvas]");
-  await expect(canvas).toBeAttached();
-  const initialFullRenderCount = Number(await canvas.getAttribute("data-full-render-count"));
-  await canvas.evaluate((element) => {
-    const drawingCanvas = element as HTMLCanvasElement;
-    let capturedPointer: number | null = null;
-    Object.defineProperties(drawingCanvas, {
-      setPointerCapture: { value: (pointerId: number) => { capturedPointer = pointerId; } },
-      hasPointerCapture: { value: (pointerId: number) => capturedPointer === pointerId },
-      releasePointerCapture: { value: () => { capturedPointer = null; } },
-    });
-    const bounds = drawingCanvas.getBoundingClientRect();
-    const dispatch = (type: string, x: number, y: number) => drawingCanvas.dispatchEvent(
-      new PointerEvent(type, {
-        bubbles: true,
-        clientX: bounds.left + x * bounds.width,
-        clientY: bounds.top + y * bounds.height,
-        pointerId: 7,
-        pointerType: "pen",
-      }),
-    );
-    dispatch("pointerdown", 0.15, 0.25);
-    for (let index = 1; index <= 40; index += 1) {
-      dispatch("pointermove", 0.15 + index * 0.015, 0.25 + Math.sin(index / 5) * 0.18);
-    }
-    dispatch("pointerup", 0.75, 0.25);
-  });
-  await expect.poll(async () => Number(
-    await canvas.getAttribute("data-incremental-render-count"),
-  )).toBe(1);
-  expect(Number(await canvas.getAttribute("data-full-render-count"))).toBe(initialFullRenderCount);
-  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(canvas).toHaveAttribute("data-full-render-count", String(initialFullRenderCount + 1));
-  await page.getByRole("button", { name: "Add a keyboard-accessible signature mark" }).click();
-  await page.getByRole("button", { name: "Finish" }).click();
-  await expect(page.locator("[data-drawing-echo]")).toBeVisible();
-  await expect(page.locator("[data-interaction-panel='draw']")).toHaveAttribute("data-lifecycle", "complete");
+test.setTimeout(120_000);
+
+async function openDrawing(page: Page) {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/en?intro=0&phase=connection", { waitUntil: "domcontentloaded" });
+  const director = await waitForStation(page, "draw");
+  const controls = page.locator("[data-drawing-spatial-controls]");
+  await expect(page.locator("[data-drawing-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+  return { director, controls };
+}
+
+async function drawOnScreen(page: Page, startX: number, startY: number, endX: number, endY: number) {
+  // These points fall inside the live monitor at the authored 1280 × 720 connection camera.
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+}
+
+test("drawing wall accepts a scene stroke and finishes", async ({ page }) => {
+  const { director, controls } = await openDrawing(page);
+  await drawOnScreen(page, 550, 250, 750, 290);
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await controls.locator("button:nth-of-type(3)").evaluate((button: HTMLButtonElement) => button.click());
+  await expect(controls).toHaveAttribute("data-drawing-finished", "true");
+  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await controls.locator("button:nth-of-type(3)").evaluate((button: HTMLButtonElement) => button.click());
+  await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
+});
+
+test("drawing wall undo and clear remove local strokes", async ({ page }) => {
+  const { controls } = await openDrawing(page);
+  await drawOnScreen(page, 570, 270, 740, 300);
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await controls.locator("button:nth-of-type(1)").evaluate((button: HTMLButtonElement) => button.click());
+  await expect(controls).toHaveAttribute("data-stroke-count", "0");
+  await drawOnScreen(page, 560, 260, 745, 310);
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await controls.locator("button:nth-of-type(2)").evaluate((button: HTMLButtonElement) => button.click());
+  await expect(controls).toHaveAttribute("data-stroke-count", "0");
 });

@@ -185,6 +185,7 @@ test.describe("baked scene contract validation", () => {
     await page.goto("/en?intro=0&phase=reveal&anchors=1", { waitUntil: "networkidle" });
     const director = page.locator("[data-interaction-director]");
     await expect(director).toHaveAttribute("data-available-station", "stage");
+    await expect(director).toHaveAttribute("data-active-station", "stage");
     const result = await director.evaluate((element) => {
       const before = Number((element as HTMLElement).dataset.reactRenderCount);
       const point = (x: number, y: number) => ({ x, y, visible: true, fallback: false });
@@ -206,13 +207,10 @@ test.describe("baked scene contract validation", () => {
       for (let index = 0; index < 12; index += 1) {
         window.dispatchEvent(new CustomEvent("mandegar:interaction-anchors", { detail }));
       }
-      const hotspot = element.querySelector<HTMLElement>("[data-interaction-hotspot='stage']");
       const debugPoint = element.querySelector<HTMLElement>("[data-anchor-debug-point='stage']");
       return {
         before,
         after: Number((element as HTMLElement).dataset.reactRenderCount),
-        hotspotX: hotspot?.style.getPropertyValue("--hotspot-x"),
-        hotspotY: hotspot?.style.getPropertyValue("--hotspot-y"),
         debugLeft: debugPoint?.style.left,
         debugTop: debugPoint?.style.top,
       };
@@ -220,8 +218,6 @@ test.describe("baked scene contract validation", () => {
 
     expect(result.after).toBe(result.before);
     expect(result).toMatchObject({
-      hotspotX: "321px",
-      hotspotY: "222px",
       debugLeft: "321px",
       debugTop: "222px",
     });
