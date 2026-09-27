@@ -15,9 +15,9 @@ import styles from "./HeroInteractions.module.css";
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.interactive.canvas;
 const center = { x: 0.5, y: 0.45 };
 const elementDefinitions = [
-  { id: "space", x: 0.2, y: 0.67, color: "#50c7ff" },
-  { id: "story", x: 0.5, y: 0.71, color: "#d95cff" },
-  { id: "people", x: 0.8, y: 0.67, color: "#ffb54a" },
+  { id: "space", x: 0.2, y: 0.67 },
+  { id: "story", x: 0.5, y: 0.71 },
+  { id: "people", x: 0.8, y: 0.67 },
 ] as const;
 
 type ComposerPointer = {
@@ -126,59 +126,33 @@ export function TouchComposerInteraction({
 
     context.save();
     context.globalAlpha = surfaceOpacity;
-    const background = context.createRadialGradient(
-      width * center.x,
-      height * center.y,
-      12,
-      width * center.x,
-      height * center.y,
-      width * 0.72,
-    );
-    background.addColorStop(0, "#102453");
-    background.addColorStop(0.5, "#081225");
-    background.addColorStop(1, "#03070d");
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#fafaf7");
+    background.addColorStop(1, "#e8eceb");
     context.fillStyle = background;
     context.fillRect(0, 0, width, height);
 
-    context.strokeStyle = "rgba(117,216,255,.055)";
-    context.lineWidth = 1;
-    for (let x = 0; x <= width; x += 48) {
-      context.beginPath();
-      context.moveTo(x, 0);
-      context.lineTo(x, height);
-      context.stroke();
-    }
-    for (let y = 0; y <= height; y += 48) {
-      context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(width, y);
-      context.stroke();
-    }
-
     roundedRect(context, 14, 14, width - 28, height - 28, 22);
-    context.strokeStyle = "rgba(117,216,255,.15)";
-    context.lineWidth = 2;
+    context.strokeStyle = "rgba(22,25,29,.12)";
+    context.lineWidth = 1;
     context.stroke();
 
     context.save();
     context.direction = direction;
     context.textAlign = "center";
-    context.fillStyle = "rgba(247,247,244,.5)";
-    context.font = '650 14px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.letterSpacing = "3.6px";
-    context.fillText("MANDEGAR  /  EXPERIENCE COMPOSER", width / 2, 32);
-    context.letterSpacing = "0px";
-    context.fillStyle = "#f7f7f4";
-    context.font = '680 31px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(isComplete ? copy.touch.complete : copy.touch.instruction, width / 2, 75);
+    context.fillStyle = "#225cff";
+    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText("MANDEGAR", width / 2, 37);
+    context.fillStyle = "#16191d";
+    context.font = '620 38px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.stations.touch.title, width / 2, 78, width - 180);
+    context.fillStyle = "rgba(22,25,29,.6)";
+    context.font = '500 22px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(isComplete ? copy.touch.complete : copy.touch.instruction, width / 2, 109, width - 150);
     context.restore();
 
-    const headerRule = context.createLinearGradient(56, 0, width - 56, 0);
-    headerRule.addColorStop(0, "rgba(117,216,255,0)");
-    headerRule.addColorStop(0.5, "rgba(117,216,255,.32)");
-    headerRule.addColorStop(1, "rgba(117,216,255,0)");
-    context.fillStyle = headerRule;
-    context.fillRect(56, 99, width - 112, 1);
+    context.fillStyle = "rgba(22,25,29,.12)";
+    context.fillRect(56, 126, width - 112, 1);
     context.restore();
 
     const centerX = center.x * width;
@@ -189,14 +163,8 @@ export function TouchComposerInteraction({
       context.globalAlpha = surfaceOpacity * centerReveal * elementReveals[index];
       const sourceX = definition.x * width;
       const sourceY = definition.y * height;
-      const gradient = context.createLinearGradient(sourceX, sourceY, centerX, centerY);
-      gradient.addColorStop(0, `${definition.color}28`);
-      gradient.addColorStop(0.55, definition.color);
-      gradient.addColorStop(1, "#f7f7f4");
-      context.strokeStyle = gradient;
-      context.lineWidth = 4;
-      context.shadowColor = definition.color;
-      context.shadowBlur = 16;
+      context.strokeStyle = "rgba(34,92,255,.58)";
+      context.lineWidth = 3;
       context.beginPath();
       context.moveTo(sourceX, sourceY);
       context.quadraticCurveTo(
@@ -206,35 +174,35 @@ export function TouchComposerInteraction({
         centerY,
       );
       context.stroke();
-      context.shadowBlur = 0;
       context.restore();
     });
 
     context.save();
     context.globalAlpha = surfaceOpacity * centerReveal;
-    context.fillStyle = "#07152b";
+    context.fillStyle = "#fff";
+    context.shadowColor = "rgba(22,25,29,.1)";
+    context.shadowBlur = 30;
     context.beginPath();
     context.arc(centerX, centerY, 62, 0, Math.PI * 2);
     context.fill();
+    context.shadowBlur = 0;
 
     const ringGradient = context.createRadialGradient(centerX, centerY, 8, centerX, centerY, 100);
-    ringGradient.addColorStop(0, isComplete ? "rgba(247,247,244,.28)" : "rgba(34,92,255,.16)");
+    ringGradient.addColorStop(0, isComplete ? "rgba(34,92,255,.15)" : "rgba(34,92,255,.07)");
     ringGradient.addColorStop(1, "rgba(34,92,255,0)");
     context.fillStyle = ringGradient;
     context.beginPath();
     context.arc(centerX, centerY, 100, 0, Math.PI * 2);
     context.fill();
 
-    elementDefinitions.forEach((definition, index) => {
+    elementDefinitions.forEach((_, index) => {
       const segmentSize = Math.PI * 2 / elementDefinitions.length;
       const start = -Math.PI / 2 + index * segmentSize + 0.12;
       const end = start + segmentSize - 0.24;
       const active = selectedElements[index];
-      context.strokeStyle = active ? definition.color : "rgba(117,216,255,.16)";
-      context.lineWidth = active ? 8 : 5;
+      context.strokeStyle = active ? "#225cff" : "rgba(22,25,29,.12)";
+      context.lineWidth = active ? 6 : 4;
       context.lineCap = "round";
-      context.shadowColor = definition.color;
-      context.shadowBlur = active ? 18 : 0;
       context.beginPath();
       context.arc(centerX, centerY, 66, start, end);
       context.stroke();
@@ -242,13 +210,13 @@ export function TouchComposerInteraction({
     context.lineCap = "butt";
     context.beginPath();
     context.shadowBlur = 0;
-    context.strokeStyle = isComplete ? "rgba(247,247,244,.75)" : "rgba(117,216,255,.3)";
-    context.lineWidth = 2;
+    context.strokeStyle = isComplete ? "#225cff" : "rgba(22,25,29,.2)";
+    context.lineWidth = 1.5;
     context.arc(centerX, centerY, 50, 0, Math.PI * 2);
     context.stroke();
     if (isComplete) {
-      context.strokeStyle = "#f7f7f4";
-      context.lineWidth = 7;
+      context.strokeStyle = "#225cff";
+      context.lineWidth = 6;
       context.lineCap = "round";
       context.lineJoin = "round";
       context.beginPath();
@@ -259,11 +227,11 @@ export function TouchComposerInteraction({
       context.lineCap = "butt";
       context.lineJoin = "miter";
     } else {
-      context.fillStyle = "#f7f7f4";
+      context.fillStyle = "#16191d";
       context.font = '720 38px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
       context.fillText(String(selectedCount), centerX, centerY + 8);
-      context.fillStyle = "rgba(247,247,244,.46)";
+      context.fillStyle = "rgba(22,25,29,.48)";
       context.font = '650 13px "Vazirmatn Variable", Tahoma, sans-serif';
       context.fillText("/ 03", centerX, centerY + 29);
     }
@@ -281,33 +249,26 @@ export function TouchComposerInteraction({
       context.translate(x, y);
       context.scale(0.82 + elementReveal * 0.18, 0.82 + elementReveal * 0.18);
       context.translate(-x, -y);
-      context.fillStyle = "#061224";
-      context.beginPath();
-      context.arc(x, y, 57, 0, Math.PI * 2);
-      context.fill();
-      const nodeFill = context.createRadialGradient(x, y, 4, x, y, 58);
-      nodeFill.addColorStop(0, active ? `${definition.color}42` : "rgba(16,31,58,.98)");
-      nodeFill.addColorStop(1, active ? `${definition.color}16` : "rgba(3,8,16,.98)");
-      context.fillStyle = nodeFill;
-      context.strokeStyle = definition.color;
-      context.lineWidth = focused || dragging ? 5 : active ? 4 : 2;
-      context.shadowColor = definition.color;
-      context.shadowBlur = active || focused || dragging ? 26 : 9;
+      context.fillStyle = active ? "#e9eeff" : "#fff";
+      context.strokeStyle = active || focused || dragging ? "#225cff" : "rgba(22,25,29,.2)";
+      context.lineWidth = focused || dragging ? 4 : active ? 3 : 1.5;
+      context.shadowColor = "rgba(22,25,29,.11)";
+      context.shadowBlur = focused || dragging ? 26 : 16;
       context.beginPath();
       context.arc(x, y, 56, 0, Math.PI * 2);
       context.fill();
       context.stroke();
       context.shadowBlur = 0;
-      context.fillStyle = active ? definition.color : "rgba(247,247,244,.38)";
+      context.fillStyle = active ? "#225cff" : "rgba(22,25,29,.42)";
       context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
       context.fillText(String(index + 1).padStart(2, "0"), x, y - 72);
       if (active) {
-        context.fillStyle = definition.color;
+        context.fillStyle = "#225cff";
         context.beginPath();
         context.arc(x + 39, y - 39, 13, 0, Math.PI * 2);
         context.fill();
-        context.strokeStyle = "#03070d";
+        context.strokeStyle = "#fff";
         context.lineWidth = 3;
         context.lineCap = "round";
         context.beginPath();
@@ -318,10 +279,10 @@ export function TouchComposerInteraction({
         context.lineCap = "butt";
       }
       context.direction = direction;
-      context.fillStyle = "#f7f7f4";
-      context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillStyle = "#16191d";
+      context.font = '700 26px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(copy.touch.elements[index], x, y + 7);
+      context.fillText(copy.touch.elements[index], x, y + 7, 98);
       context.restore();
     });
 
@@ -330,14 +291,14 @@ export function TouchComposerInteraction({
     const closeX = width * 0.94;
     const closeY = height * 0.09;
     const closeFocused = keyboardFocus.current === 5 || hoverControl.current === "close";
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.16)" : "rgba(3,8,16,.5)";
+    context.fillStyle = closeFocused ? "#e9eeff" : "rgba(255,255,255,.88)";
     context.beginPath();
     context.arc(closeX, closeY, 24, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = closeFocused ? "#f7f7f4" : "rgba(247,247,244,.5)";
-    context.lineWidth = closeFocused ? 4 : 2;
+    context.strokeStyle = closeFocused ? "#225cff" : "rgba(22,25,29,.28)";
+    context.lineWidth = closeFocused ? 3 : 1.5;
     context.stroke();
-    context.strokeStyle = "#f7f7f4";
+    context.strokeStyle = "#16191d";
     context.lineWidth = 2;
     context.lineCap = "round";
     context.beginPath();
@@ -360,31 +321,25 @@ export function TouchComposerInteraction({
       const buttonWidth = width * 0.235;
       const buttonHeight = height * 0.105;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      const buttonFill = context.createLinearGradient(left, top, left + buttonWidth, top);
-      buttonFill.addColorStop(0, primary && enabled ? "#1747d3" : "rgba(7,16,32,.95)");
-      buttonFill.addColorStop(1, primary && enabled ? "#286aff" : "rgba(12,28,52,.95)");
-      context.fillStyle = buttonFill;
-      context.shadowColor = primary && enabled ? "#225cff" : "transparent";
-      context.shadowBlur = primary && enabled ? 18 : 0;
+      context.fillStyle = primary && enabled ? "#225cff" : "rgba(255,255,255,.86)";
       context.fill();
-      context.shadowBlur = 0;
       context.strokeStyle = focused
-        ? "#f7f7f4"
+        ? "#225cff"
         : enabled
-          ? "rgba(117,216,255,.85)"
-          : "rgba(117,216,255,.2)";
-      context.lineWidth = focused ? 4 : 2;
+          ? "rgba(22,25,29,.28)"
+          : "rgba(22,25,29,.12)";
+      context.lineWidth = focused ? 3 : 1.5;
       context.stroke();
-      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.32)";
+      context.fillStyle = primary && enabled ? "#fff" : enabled ? "#16191d" : "rgba(22,25,29,.38)";
       context.direction = direction;
-      context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.64);
+      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.64, buttonWidth - 38);
       if (primary && enabled) {
         const directionSign = direction === "rtl" ? -1 : 1;
         const arrowX = direction === "rtl" ? left + 25 : left + buttonWidth - 25;
         const arrowY = top + buttonHeight / 2;
-        context.strokeStyle = "#f7f7f4";
+        context.strokeStyle = "#fff";
         context.lineWidth = 2;
         context.lineCap = "round";
         context.lineJoin = "round";
@@ -680,6 +635,7 @@ export function TouchComposerInteraction({
       </button>
       <button
         type="button"
+        data-interaction-continue
         disabled={!complete}
         onFocus={() => focusControl(4)}
         onBlur={() => focusControl(null)}

@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { publicAssetPath } from "@/lib/public-asset-path";
 import type { InteractionCopy } from "./interaction-copy";
 import {
   interactionRuntime,
@@ -16,6 +18,10 @@ type PhotoControl = "capture" | "replay" | "continue";
 
 const canvasWidth = 800;
 const canvasHeight = 520;
+const capturedControls = {
+  replay: { x: 0.3, y: 0.8, width: 0.25, height: 0.11 },
+  continue: { x: 0.56, y: 0.8, width: 0.34, height: 0.11 },
+} as const;
 
 function roundedRect(
   context: CanvasRenderingContext2D,
@@ -46,8 +52,11 @@ function revealProgress(progress: number, start: number, end: number) {
 
 function controlAtPoint(step: PhotoStep, x: number, y: number): PhotoControl | null {
   if (step === "captured") {
+    const replay = capturedControls.replay;
+    const next = capturedControls.continue;
     if (hitRect(x, y, 0.24, 0.1, 0.38, 0.64)) return "replay";
-    if (hitRect(x, y, 0.58, 0.78, 0.34, 0.13)) return "continue";
+    if (hitRect(x, y, replay.x - 0.02, replay.y - 0.02, replay.width + 0.04, replay.height + 0.04)) return "replay";
+    if (hitRect(x, y, next.x - 0.02, next.y - 0.02, next.width + 0.04, next.height + 0.04)) return "continue";
   }
   return null;
 }
@@ -127,7 +136,7 @@ export function PhotoBoothInteraction({
       context.font = '780 142px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
       context.shadowColor = "#ffb56d";
-      context.shadowBlur = 32;
+      context.shadowBlur = 14;
       context.fillText(String(currentCount), centerX, centerY + 48);
       context.shadowBlur = 0;
       context.restore();
@@ -144,25 +153,25 @@ export function PhotoBoothInteraction({
     ) => {
       const focused = hoverControl.current === control || keyboardFocus.current === control;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary ? "#225cff" : focused ? "rgba(117,216,255,.14)" : "rgba(5,14,28,.94)";
-      context.shadowColor = primary ? "#225cff" : "transparent";
-      context.shadowBlur = primary ? 18 : 0;
+      context.fillStyle = primary ? "#225cff" : focused ? "#e9eeff" : "rgba(247,247,244,.96)";
       context.fill();
-      context.shadowBlur = 0;
-      context.strokeStyle = focused ? "#f7f7f4" : "rgba(117,216,255,.76)";
+      context.strokeStyle = focused ? "#225cff" : primary ? "#225cff" : "rgba(22,25,29,.26)";
       context.lineWidth = focused ? 3 : 1.5;
       context.stroke();
       context.direction = direction;
       context.textAlign = "center";
-      context.fillStyle = "#f7f7f4";
-      context.font = '680 16px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.62);
+      context.fillStyle = primary ? "#fff" : "#16191d";
+      context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.62, buttonWidth - 24);
     };
 
     context.save();
     context.globalAlpha = controlsReveal;
     if (currentStep === "captured") {
-      drawButton("continue", width * 0.57, height * 0.8, width * 0.35, height * 0.11, copy.continue, true);
+      const replay = capturedControls.replay;
+      const next = capturedControls.continue;
+      drawButton("replay", width * replay.x, height * replay.y, width * replay.width, height * replay.height, copy.replay, false);
+      drawButton("continue", width * next.x, height * next.y, width * next.width, height * next.height, copy.continue, true);
     }
     context.restore();
     context.restore();
@@ -335,21 +344,41 @@ export function PhotoBoothInteraction({
   };
 
   return (
-    <div
-      className={styles.spatialInteractionSemantics}
-      data-photo-spatial-controls
-      data-photo-state={step}
-      data-photo-count={count}
-      role="region"
-      aria-label={copy.stations.photo.title}
-    >
-      <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} aria-hidden="true" />
-      <p>{step === "captured" ? copy.photo.captured : copy.photo.ready}</p>
-      <button type="button" disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
-      <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
-      <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => handleControl("continue")}>{copy.continue}</button>
-      <button type="button" data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
-      <span role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
-    </div>
+    <>
+      <div
+        className={styles.spatialInteractionSemantics}
+        data-photo-spatial-controls
+        data-photo-state={step}
+        data-photo-count={count}
+        role="region"
+        aria-label={copy.stations.photo.title}
+      >
+        <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} aria-hidden="true" />
+        <p>{step === "captured" ? copy.photo.captured : copy.photo.ready}</p>
+        <button type="button" disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
+        <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
+        <button type="button" data-interaction-continue disabled={step !== "captured"} onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => handleControl("continue")}>{copy.continue}</button>
+        <button type="button" data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
+        <span role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
+      </div>
+      {step === "captured" && (
+        <>
+          <figure className={styles.mobilePhotoResult} data-mobile-photo-result role="status">
+            <span>MANDEGAR</span>
+            <Image
+              src={publicAssetPath("/media/placeholders/photo-experience.webp")}
+              width={116}
+              height={206}
+              alt={copy.photo.captured}
+              unoptimized
+            />
+            <figcaption>{copy.photo.captured}</figcaption>
+          </figure>
+          <button type="button" className={styles.mobilePhotoReplay} data-mobile-photo-replay onClick={replay}>
+            {copy.replay}
+          </button>
+        </>
+      )}
+    </>
   );
 }

@@ -15,8 +15,12 @@ import styles from "./HeroInteractions.module.css";
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.game.canvas;
 const maxAttempts = 5;
 const targetOrder = [0, 1, 2] as const;
-const targetColors = ["#50c7ff", "#ef86ff", "#ffb54a"] as const;
+const targetColors = ["#75d8ff", "#4383ff", "#a5d9ee"] as const;
 const targetRadii = [48, 40, 34] as const;
+const gameControls = {
+  reset: { x: 0.14, y: 0.895, width: 0.3, height: 0.065 },
+  continue: { x: 0.56, y: 0.895, width: 0.3, height: 0.065 },
+} as const;
 type GamePoint = { x: number; y: number };
 const targetCenters = [
   { x: 0.2, y: 0.29 },
@@ -144,6 +148,11 @@ function hitRect(x: number, y: number, left: number, top: number, width: number,
   return x >= left && x <= left + width && y >= top && y <= top + height;
 }
 
+function hitGameControl(x: number, y: number, control: keyof typeof gameControls) {
+  const bounds = gameControls[control];
+  return hitRect(x, y, bounds.x - 0.02, bounds.y - 0.035, bounds.width + 0.04, bounds.height + 0.07);
+}
+
 export function GameInteraction({
   copy,
   reducedMotion,
@@ -247,70 +256,40 @@ export function GameInteraction({
 
     context.save();
     context.globalAlpha = surfaceReveal;
-    const background = context.createRadialGradient(width * 0.5, height * 0.36, 10, width * 0.5, height * 0.45, height * 0.78);
-    background.addColorStop(0, "#102340");
-    background.addColorStop(0.52, "#07111f");
-    background.addColorStop(1, "#020509");
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#151a20");
+    background.addColorStop(1, "#090d12");
     context.fillStyle = background;
     context.fillRect(0, 0, width, height);
 
-    context.strokeStyle = "rgba(117,216,255,.1)";
-    context.lineWidth = 1;
-    const vanishingX = width * 0.5;
-    const vanishingY = height * 0.35;
-    for (let index = -5; index <= 5; index += 1) {
-      context.beginPath();
-      context.moveTo(vanishingX, vanishingY);
-      context.lineTo(width * (0.5 + index * 0.18), height * 0.88);
-      context.stroke();
-    }
-    for (let index = 0; index < 7; index += 1) {
-      const progress = index / 6;
-      const eased = progress * progress;
-      const y = vanishingY + eased * height * 0.53;
-      context.beginPath();
-      context.moveTo(width * (0.5 - eased * 0.72), y);
-      context.lineTo(width * (0.5 + eased * 0.72), y);
-      context.stroke();
-    }
-
     roundedRect(context, 12, 12, width - 24, height - 24, 24);
-    context.strokeStyle = "rgba(117,216,255,.19)";
-    context.lineWidth = 2;
+    context.strokeStyle = "rgba(247,247,244,.14)";
+    context.lineWidth = 1;
     context.stroke();
 
     context.save();
     context.direction = direction;
     context.textAlign = "center";
-    context.fillStyle = "rgba(247,247,244,.5)";
-    context.font = '650 11px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.letterSpacing = "3px";
-    context.fillText("MANDEGAR  /  SIGNAL TOSS", width / 2, 30);
-    context.letterSpacing = "0px";
+    context.fillStyle = "#75d8ff";
+    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText("MANDEGAR", width / 2, 29);
     context.fillStyle = "#f7f7f4";
-    context.font = '700 23px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = '620 27px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.stations.game.title, width / 2, 61, width - 68);
+    context.fillStyle = "rgba(247,247,244,.7)";
+    context.font = '500 16px "Vazirmatn Variable", Tahoma, sans-serif';
     context.fillText(
       activeStatus === "complete"
         ? completedRef.current.every(Boolean) ? copy.game.perfect : copy.game.result
         : feedbackRef.current || copy.stations.game.instruction,
       width / 2,
-      62,
-    );
-    context.fillStyle = "rgba(247,247,244,.55)";
-    context.font = '700 12px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(
-      `${completedRef.current.filter(Boolean).length} / 3   ·   ${scoreRef.current} PTS   ·   ${attemptsRef.current} / ${maxAttempts}`,
-      width / 2,
-      84,
+      86,
+      width - 68,
     );
     context.restore();
 
-    const connection = context.createLinearGradient(width * 0.2, 0, width * 0.8, 0);
-    connection.addColorStop(0, `${targetColors[0]}55`);
-    connection.addColorStop(0.5, `${targetColors[2]}55`);
-    connection.addColorStop(1, `${targetColors[1]}55`);
-    context.strokeStyle = connection;
-    context.lineWidth = activeStatus === "complete" ? 4 : 1.5;
+    context.strokeStyle = activeStatus === "complete" ? "rgba(117,216,255,.62)" : "rgba(117,216,255,.22)";
+    context.lineWidth = activeStatus === "complete" ? 2.5 : 1.5;
     context.beginPath();
     context.moveTo(targetCenters[0].x * width, targetCenters[0].y * height);
     context.lineTo(targetCenters[2].x * width, targetCenters[2].y * height);
@@ -331,20 +310,15 @@ export function GameInteraction({
       const radius = isCurrent ? baseRadius + pulse * 5 : isComplete ? baseRadius : baseRadius * 0.82;
       context.save();
       context.shadowColor = color;
-      context.shadowBlur = isComplete ? 26 : isCurrent ? 18 + pulse * 10 : 0;
-      context.strokeStyle = isComplete || isCurrent ? color : "rgba(247,247,244,.16)";
-      context.lineWidth = isComplete ? 5 : isCurrent ? 3 : 1.5;
+      context.shadowBlur = isComplete ? 12 : isCurrent ? 8 : 0;
+      context.strokeStyle = isComplete || isCurrent ? color : "rgba(247,247,244,.22)";
+      context.lineWidth = isComplete ? 4 : isCurrent ? 3 : 1.5;
       context.beginPath();
       context.arc(x, y, radius, 0, Math.PI * 2);
       context.stroke();
       context.shadowBlur = 0;
-      context.strokeStyle = isCurrent ? `${color}99` : `${color}33`;
-      context.lineWidth = 1;
-      context.beginPath();
-      context.arc(x, y, radius + 10, now * 0.0014 + index, now * 0.0014 + index + Math.PI * 1.22);
-      context.stroke();
-      context.fillStyle = isComplete ? color : isCurrent ? "#f7f7f4" : "rgba(247,247,244,.3)";
-      context.font = '800 13px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillStyle = isComplete || isCurrent ? "#f7f7f4" : "rgba(247,247,244,.46)";
+      context.font = '750 17px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
       context.fillText(isComplete ? "✓" : String(index + 1).padStart(2, "0"), x, y + 5);
       context.restore();
@@ -461,11 +435,11 @@ export function GameInteraction({
     const closeX = width * 0.92;
     const closeY = height * 0.062;
     const closeFocused = hoverControl.current === "close" || keyboardFocus.current === "close";
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.18)" : "rgba(3,8,16,.58)";
+    context.fillStyle = closeFocused ? "rgba(117,216,255,.12)" : "rgba(247,247,244,.06)";
     context.beginPath();
     context.arc(closeX, closeY, 18, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = closeFocused ? "#f7f7f4" : "rgba(247,247,244,.55)";
+    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.32)";
     context.lineWidth = closeFocused ? 3 : 1.5;
     context.stroke();
     context.strokeStyle = "#f7f7f4";
@@ -485,39 +459,36 @@ export function GameInteraction({
       focused: boolean,
       primary = false,
     ) => {
-      const top = height * 0.895;
-      const buttonHeight = height * 0.065;
+      const top = height * gameControls.reset.y;
+      const buttonHeight = height * gameControls.reset.height;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary && enabled ? "#225cff" : "rgba(5,14,28,.96)";
-      context.shadowColor = primary && enabled ? "#225cff" : "transparent";
-      context.shadowBlur = primary && enabled ? 16 : 0;
+      context.fillStyle = primary && enabled ? "#225cff" : "rgba(247,247,244,.04)";
       context.fill();
-      context.shadowBlur = 0;
       context.strokeStyle = focused
-        ? "#f7f7f4"
+        ? "#75d8ff"
         : enabled
-          ? "rgba(117,216,255,.82)"
-          : "rgba(117,216,255,.2)";
+          ? "rgba(247,247,244,.42)"
+          : "rgba(247,247,244,.17)";
       context.lineWidth = focused ? 3 : 1.5;
       context.stroke();
       context.direction = direction;
-      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.34)";
-      context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.38)";
+      context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63);
+      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63, buttonWidth - 22);
     };
     context.save();
     context.globalAlpha = surfaceReveal * controlsReveal;
     drawButton(
-      width * 0.045,
-      width * 0.32,
+      width * gameControls.reset.x,
+      width * gameControls.reset.width,
       activeStatus === "complete" ? copy.replay : copy.reset,
       activeStatus !== "flying" && (completedRef.current.some(Boolean) || activeStatus === "complete"),
       hoverControl.current === "reset" || keyboardFocus.current === "reset",
     );
     drawButton(
-      width * 0.635,
-      width * 0.32,
+      width * gameControls.continue.x,
+      width * gameControls.continue.width,
       copy.continue,
       activeStatus === "complete",
       hoverControl.current === "continue" || keyboardFocus.current === "continue",
@@ -792,9 +763,9 @@ export function GameInteraction({
         }
         hoverControl.current = distance(point.x, point.y, 0.92, 0.062) <= 0.075
           ? "close"
-          : hitRect(point.x, point.y, 0.025, 0.86, 0.38, 0.14)
+          : hitGameControl(point.x, point.y, "reset")
             ? "reset"
-            : hitRect(point.x, point.y, 0.595, 0.86, 0.405, 0.14)
+            : hitGameControl(point.x, point.y, "continue")
               ? "continue"
               : distance(point.x, point.y, launcher.x, launcher.y) <= 0.2
                 ? "launch"
@@ -808,11 +779,11 @@ export function GameInteraction({
           closeWithTransition();
           return;
         }
-        if (hitRect(point.x, point.y, 0.025, 0.86, 0.38, 0.14)) {
+        if (hitGameControl(point.x, point.y, "reset")) {
           if (statusRef.current !== "flying" && (completedRef.current.some(Boolean) || statusRef.current === "complete")) reset();
           return;
         }
-        if (hitRect(point.x, point.y, 0.595, 0.86, 0.405, 0.14)) {
+        if (hitGameControl(point.x, point.y, "continue")) {
           if (statusRef.current === "complete") continueWithTransition();
           return;
         }
@@ -938,6 +909,7 @@ export function GameInteraction({
       </button>
       <button
         type="button"
+        data-interaction-continue
         disabled={status !== "complete"}
         onFocus={() => focusControl("continue")}
         onBlur={() => focusControl(null)}

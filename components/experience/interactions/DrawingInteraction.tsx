@@ -130,100 +130,55 @@ export function DrawingInteraction({
 
     context.save();
     context.globalAlpha = surfaceReveal;
-    const background = context.createRadialGradient(
-      width * 0.5,
-      height * 0.42,
-      20,
-      width * 0.5,
-      height * 0.42,
-      width * 0.72,
-    );
-    background.addColorStop(0, "#142b54");
-    background.addColorStop(0.48, "#09162b");
-    background.addColorStop(1, "#03070d");
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#151a20");
+    background.addColorStop(1, "#090d12");
     context.fillStyle = background;
     context.fillRect(0, 0, width, height);
 
-    context.strokeStyle = "rgba(117,216,255,.045)";
-    context.lineWidth = 1;
-    for (let x = 0; x <= width; x += 48) {
-      context.beginPath();
-      context.moveTo(x, 0);
-      context.lineTo(x, height);
-      context.stroke();
-    }
-    for (let y = 0; y <= height; y += 48) {
-      context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(width, y);
-      context.stroke();
-    }
-
     roundedRect(context, 18, 18, width - 36, height - 36, 24);
-    context.strokeStyle = "rgba(117,216,255,.16)";
-    context.lineWidth = 2;
+    context.strokeStyle = "rgba(247,247,244,.14)";
+    context.lineWidth = 1;
     context.stroke();
 
     context.save();
     context.globalAlpha = contentReveal;
     context.direction = direction;
     context.textAlign = "center";
-    context.fillStyle = "rgba(247,247,244,.5)";
-    context.font = '650 14px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.letterSpacing = "3.6px";
-    context.fillText("MANDEGAR  /  LIVE CANVAS", width / 2, 36);
-    context.letterSpacing = "0px";
+    context.fillStyle = "#75d8ff";
+    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText("MANDEGAR", width / 2, 37);
     context.fillStyle = "#f7f7f4";
-    context.font = '680 30px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(
-      isFinished ? copy.draw.complete : copy.stations.draw.instruction,
-      width / 2,
-      82,
-    );
-    context.fillStyle = "rgba(247,247,244,.52)";
-    context.font = '560 14px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(copy.draw.local, width / 2, 111);
+    context.font = '620 30px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(isFinished ? copy.draw.complete : copy.stations.draw.title, width / 2, 78, width - 170);
+    context.fillStyle = "rgba(247,247,244,.56)";
+    context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.draw.local, width / 2, 107, width - 170);
     context.restore();
+
+    context.fillStyle = "rgba(247,247,244,.14)";
+    context.fillRect(56, 126, width - 112, 1);
 
     const areaLeft = drawingArea.left * width;
     const areaTop = drawingArea.top * height;
     const areaWidth = drawingArea.width * width;
     const areaHeight = drawingArea.height * height;
     roundedRect(context, areaLeft, areaTop, areaWidth, areaHeight, 22);
-    context.fillStyle = "rgba(2,9,20,.76)";
-    context.shadowColor = isFinished ? "#75d8ff" : "rgba(34,92,255,.25)";
-    context.shadowBlur = 18 + finalePulse * 28;
+    context.fillStyle = "rgba(3,7,12,.48)";
+    context.shadowColor = isFinished ? "rgba(117,216,255,.3)" : "transparent";
+    context.shadowBlur = finalePulse * 22;
     context.fill();
     context.shadowBlur = 0;
     context.strokeStyle = isFinished
-      ? `rgba(117,216,255,${0.48 + finalePulse * 0.28})`
-      : "rgba(117,216,255,.23)";
-    context.lineWidth = 2;
+      ? `rgba(117,216,255,${0.4 + finalePulse * 0.3})`
+      : "rgba(247,247,244,.2)";
+    context.lineWidth = 1.5;
     context.stroke();
 
     context.save();
     roundedRect(context, areaLeft, areaTop, areaWidth, areaHeight, 22);
     context.clip();
     context.globalAlpha = contentReveal;
-    context.strokeStyle = "rgba(117,216,255,.055)";
-    context.lineWidth = 1;
-    for (let x = areaLeft + 32; x < areaLeft + areaWidth; x += 48) {
-      context.beginPath();
-      context.moveTo(x, areaTop);
-      context.lineTo(x, areaTop + areaHeight);
-      context.stroke();
-    }
-    for (let y = areaTop + 32; y < areaTop + areaHeight; y += 48) {
-      context.beginPath();
-      context.moveTo(areaLeft, y);
-      context.lineTo(areaLeft + areaWidth, y);
-      context.stroke();
-    }
-
-    const strokeGradient = context.createLinearGradient(areaLeft, areaTop, areaLeft + areaWidth, areaTop + areaHeight);
-    strokeGradient.addColorStop(0, "#50c7ff");
-    strokeGradient.addColorStop(0.52, "#f7f7f4");
-    strokeGradient.addColorStop(1, "#d95cff");
     context.lineCap = "round";
     context.lineJoin = "round";
     strokes.current.forEach((stroke) => {
@@ -234,15 +189,15 @@ export function DrawingInteraction({
       if (stroke.length === 1) {
         context.lineTo(stroke[0].x + 0.01, stroke[0].y + 0.01);
       }
-      context.strokeStyle = "rgba(34,92,255,.5)";
-      context.lineWidth = 24;
+      context.strokeStyle = "rgba(34,92,255,.36)";
+      context.lineWidth = 16;
       context.shadowColor = "#225cff";
-      context.shadowBlur = 26;
+      context.shadowBlur = 14;
       context.stroke();
-      context.strokeStyle = strokeGradient;
-      context.lineWidth = 9;
-      context.shadowColor = "#75d8ff";
-      context.shadowBlur = 12;
+      context.strokeStyle = "#e7f7ff";
+      context.lineWidth = 5;
+      context.shadowColor = "transparent";
+      context.shadowBlur = 0;
       context.stroke();
     });
     context.shadowBlur = 0;
@@ -250,11 +205,11 @@ export function DrawingInteraction({
     if (count === 0) {
       context.direction = direction;
       context.textAlign = "center";
-      context.fillStyle = "rgba(247,247,244,.34)";
-      context.font = '580 18px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(copy.stations.draw.instruction, width / 2, areaTop + areaHeight / 2);
-      context.strokeStyle = "rgba(117,216,255,.24)";
-      context.lineWidth = 2;
+      context.fillStyle = "rgba(247,247,244,.42)";
+      context.font = '500 19px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(copy.stations.draw.instruction, width / 2, areaTop + areaHeight / 2, areaWidth - 100);
+      context.strokeStyle = "rgba(117,216,255,.48)";
+      context.lineWidth = 1.5;
       context.beginPath();
       context.arc(width / 2, areaTop + areaHeight / 2 + 44, 12, 0, Math.PI * 2);
       context.stroke();
@@ -262,11 +217,11 @@ export function DrawingInteraction({
     context.restore();
 
     const closeFocused = hoverControl.current === "close" || keyboardFocus.current === "close";
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.18)" : "rgba(3,8,16,.58)";
+    context.fillStyle = closeFocused ? "rgba(117,216,255,.15)" : "rgba(247,247,244,.06)";
     context.beginPath();
     context.arc(width * 0.945, height * 0.07, 25, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = closeFocused ? "#f7f7f4" : "rgba(247,247,244,.52)";
+    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.3)";
     context.lineWidth = closeFocused ? 3 : 1.5;
     context.stroke();
     context.strokeStyle = "#f7f7f4";
@@ -296,24 +251,21 @@ export function DrawingInteraction({
       context.fillStyle = id === "finish" && enabled
         ? "#225cff"
         : focused
-          ? "rgba(117,216,255,.13)"
-          : "rgba(5,14,28,.94)";
-      context.shadowColor = id === "finish" && enabled ? "#225cff" : "transparent";
-      context.shadowBlur = id === "finish" && enabled ? 16 : 0;
+          ? "rgba(117,216,255,.1)"
+          : "rgba(247,247,244,.04)";
       context.fill();
-      context.shadowBlur = 0;
       context.strokeStyle = focused
-        ? "#f7f7f4"
+        ? "#75d8ff"
         : enabled
-          ? "rgba(117,216,255,.76)"
-          : "rgba(117,216,255,.2)";
-      context.lineWidth = focused ? 3 : 1.5;
+          ? "rgba(247,247,244,.42)"
+          : "rgba(247,247,244,.17)";
+      context.lineWidth = focused ? 2.5 : 1.5;
       context.stroke();
       context.direction = direction;
       context.textAlign = "center";
-      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.32)";
-      context.font = '680 16px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(labels[id], x + buttonWidth / 2, y + buttonHeight * 0.62);
+      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.38)";
+      context.font = '680 21px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(labels[id], x + buttonWidth / 2, y + buttonHeight * 0.62, buttonWidth - 24);
     });
     context.restore();
     context.restore();
@@ -535,28 +487,41 @@ export function DrawingInteraction({
   };
 
   return (
-    <div
-      className={styles.spatialInteractionSemantics}
-      data-drawing-spatial-controls
-      data-stroke-count={strokeCount}
-      data-drawing-finished={finished ? "true" : "false"}
-      role="region"
-      aria-label={copy.stations.draw.title}
-    >
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        className={styles.textureSource}
-        data-drawing-canvas
-        aria-hidden="true"
-      />
-      <p>{copy.stations.draw.instruction}</p>
-      <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
-      <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
-      <button type="button" disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
-      <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
-      <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
-    </div>
+    <>
+      <div
+        className={styles.spatialInteractionSemantics}
+        data-drawing-spatial-controls
+        data-stroke-count={strokeCount}
+        data-drawing-finished={finished ? "true" : "false"}
+        role="region"
+        aria-label={copy.stations.draw.title}
+      >
+        <canvas
+          ref={canvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          className={styles.textureSource}
+          data-drawing-canvas
+          aria-hidden="true"
+        />
+        <p>{copy.stations.draw.instruction}</p>
+        <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
+        <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
+        <button type="button" data-interaction-continue disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
+        <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
+        <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
+      </div>
+      <div className={styles.mobileDrawingDock} data-mobile-drawing-dock role="group" aria-label={copy.stations.draw.title}>
+        <div className={styles.mobileDrawingDockHeader}>
+          <strong>{copy.stations.draw.title}</strong>
+          <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
+        </div>
+        <div className={styles.mobileDrawingActions}>
+          <button type="button" disabled={strokeCount === 0 || finished} onClick={undo}>{copy.undo}</button>
+          <button type="button" disabled={strokeCount === 0 || finished} onClick={clear}>{copy.clear}</button>
+          <button type="button" data-mobile-drawing-finish disabled={strokeCount === 0} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
+        </div>
+      </div>
+    </>
   );
 }

@@ -6,6 +6,7 @@ type StationCopy = { label: string; title: string; instruction: string };
 export type InteractionCopy = {
   preview: string;
   close: string;
+  skip: string;
   continue: string;
   replay: string;
   finish: string;
@@ -34,6 +35,7 @@ export type InteractionCopy = {
 const english: InteractionCopy = {
   preview: "Experience preview",
   close: "Close experience",
+  skip: "Skip interaction",
   continue: "Continue journey",
   replay: "Replay",
   finish: "Finish",
@@ -72,6 +74,7 @@ const persian: InteractionCopy = {
   ...english,
   preview: "پیش‌نمایش تجربه",
   close: "بستن تجربه",
+  skip: "رد کردن تعامل",
   continue: "ادامه مسیر",
   replay: "تکرار",
   finish: "پایان",
@@ -110,6 +113,7 @@ const arabic: InteractionCopy = {
   ...english,
   preview: "معاينة التجربة",
   close: "إغلاق التجربة",
+  skip: "تخطي التفاعل",
   continue: "متابعة الرحلة",
   replay: "إعادة",
   finish: "إنهاء",

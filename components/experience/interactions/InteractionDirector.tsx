@@ -355,7 +355,12 @@ export const InteractionDirector = memo(function InteractionDirector({
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
     holdScrollPosition();
     if (state.input !== "automatic") {
-      window.requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("button")?.focus());
+      window.requestAnimationFrame(() => {
+        const firstControl = window.matchMedia("(max-width: 760px)").matches
+          ? panelRoot.current?.querySelector<HTMLElement>("[data-mobile-interaction-skip]")
+          : panelRoot.current?.querySelector<HTMLElement>("button");
+        firstControl?.focus();
+      });
     }
 
     return () => {
@@ -450,6 +455,22 @@ export const InteractionDirector = memo(function InteractionDirector({
           onComplete={() => complete("photo")}
           onContinue={() => exit(false)}
         />
+      )}
+
+      {station && (
+        <button
+          type="button"
+          className={styles.mobileSkipButton}
+          data-mobile-interaction-skip
+          onClick={() => {
+            const selector = state.lifecycle === "complete"
+              ? "[data-interaction-continue]"
+              : "[data-interaction-dismiss]";
+            panelRoot.current?.querySelector<HTMLButtonElement>(selector)?.click();
+          }}
+        >
+          {state.lifecycle === "complete" ? copy.continue : copy.skip}
+        </button>
       )}
 
       {showAnchorDebug && (

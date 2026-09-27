@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
+import { stageBeamColors } from "./interaction-palette";
 import {
   interactionRuntime,
   markInteractionCanvasDirty,
@@ -13,7 +14,6 @@ import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.videoWall.canvas;
-const beamColors = ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"] as const;
 const beamCenters = [0.12, 0.31, 0.5, 0.69, 0.88] as const;
 
 type StagePointer = {
@@ -107,7 +107,7 @@ export function StageBeamInteraction({
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const activeBeams = activeRef.current;
     const activeCount = activeBeams.filter(Boolean).length;
-    const complete = activeCount === beamColors.length;
+    const complete = activeCount === stageBeamColors.length;
     const transition = transitionProgress.current;
     const surfaceReveal = revealProgress(transition, 0, 0.34);
     const controlsReveal = revealProgress(transition, 0.62, 1);
@@ -129,58 +129,39 @@ export function StageBeamInteraction({
 
     context.save();
     context.globalAlpha = surfaceReveal;
-    const background = context.createLinearGradient(0, 0, 0, height);
-    background.addColorStop(0, "#071225");
-    background.addColorStop(0.58, "#050b15");
-    background.addColorStop(1, "#020509");
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#fafaf7");
+    background.addColorStop(1, "#e8eceb");
     context.fillStyle = background;
     context.fillRect(0, 0, width, height);
 
-    context.strokeStyle = "rgba(117,216,255,.045)";
-    context.lineWidth = 1;
-    for (let x = 0; x <= width; x += 50) {
-      context.beginPath();
-      context.moveTo(x, 0);
-      context.lineTo(x, height);
-      context.stroke();
-    }
-    for (let y = 0; y <= height; y += 50) {
-      context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(width, y);
-      context.stroke();
-    }
-
     roundedRect(context, 13, 13, width - 26, height - 26, 20);
-    context.strokeStyle = "rgba(117,216,255,.17)";
-    context.lineWidth = 2;
+    context.strokeStyle = "rgba(22,25,29,.12)";
+    context.lineWidth = 1;
     context.stroke();
 
     context.save();
     context.direction = direction;
     context.textAlign = "center";
-    context.fillStyle = "rgba(247,247,244,.48)";
-    context.font = '650 12px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.letterSpacing = "3.4px";
-    context.fillText("MANDEGAR  /  STAGE COMPOSER", width / 2, 28);
-    context.letterSpacing = "0px";
-    context.fillStyle = "#f7f7f4";
-    context.font = '680 27px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(complete ? copy.stage.finale : copy.stations.stage.instruction, width / 2, 63);
-    context.fillStyle = complete ? "#f7f7f4" : "rgba(247,247,244,.56)";
+    context.fillStyle = "#225cff";
     context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(`${String(activeCount).padStart(2, "0")} / 05`, width / 2, 88);
+    context.fillText("MANDEGAR", width / 2, 30);
+    context.fillStyle = "#16191d";
+    context.font = '620 34px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.stations.stage.title, width / 2, 68, width - 180);
+    context.fillStyle = "rgba(22,25,29,.6)";
+    context.font = '500 18px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(complete ? copy.stage.finale : copy.stations.stage.instruction, width / 2, 94, width - 180);
+    context.fillStyle = "#225cff";
+    context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(`${String(activeCount).padStart(2, "0")} / 05`, width / 2, 115);
     context.restore();
 
-    const headerRule = context.createLinearGradient(55, 0, width - 55, 0);
-    headerRule.addColorStop(0, "rgba(117,216,255,0)");
-    headerRule.addColorStop(0.5, "rgba(117,216,255,.28)");
-    headerRule.addColorStop(1, "rgba(117,216,255,0)");
-    context.fillStyle = headerRule;
-    context.fillRect(55, 101, width - 110, 1);
+    context.fillStyle = "rgba(22,25,29,.12)";
+    context.fillRect(55, 126, width - 110, 1);
 
-    context.strokeStyle = "rgba(247,247,244,.12)";
-    context.lineWidth = 2;
+    context.strokeStyle = "rgba(22,25,29,.16)";
+    context.lineWidth = 1.5;
     context.beginPath();
     context.moveTo(56, 326);
     context.lineTo(width - 56, 326);
@@ -191,38 +172,37 @@ export function StageBeamInteraction({
       const enabled = activeBeams[index];
       const focused = hoverBeam.current === index || keyboardFocus.current === index;
       const reveal = revealProgress(transition, 0.18 + index * 0.07, 0.54 + index * 0.07);
-      const strength = enabled ? 1 : focused ? 0.5 : 0.12;
-      const color = beamColors[index];
+      const color = stageBeamColors[index];
       context.save();
       context.globalAlpha = surfaceReveal * reveal;
 
-      const cone = context.createLinearGradient(x, 133, x, 318);
-      cone.addColorStop(0, `${color}${enabled ? "8c" : focused ? "52" : "12"}`);
-      cone.addColorStop(0.72, `${color}${enabled ? "32" : focused ? "20" : "04"}`);
+      const cone = context.createLinearGradient(x, 162, x, 318);
+      cone.addColorStop(0, `${color}${enabled ? "5c" : focused ? "32" : "0c"}`);
+      cone.addColorStop(0.72, `${color}${enabled ? "22" : focused ? "10" : "03"}`);
       cone.addColorStop(1, `${color}00`);
       context.fillStyle = cone;
       context.beginPath();
-      context.moveTo(x - 9, 139);
+      context.moveTo(x - 9, 168);
       context.lineTo(x - 58, 316);
       context.lineTo(x + 58, 316);
-      context.lineTo(x + 9, 139);
+      context.lineTo(x + 9, 168);
       context.closePath();
       context.fill();
 
-      context.shadowColor = color;
-      context.shadowBlur = (enabled ? 24 : focused ? 16 : 5) + finalePulse * 18;
-      context.fillStyle = enabled ? color : focused ? `${color}b8` : "rgba(247,247,244,.18)";
-      roundedRect(context, x - 37, 116, 74, 31, 12);
+      context.fillStyle = enabled ? color : focused ? "#e9eeff" : "#fff";
+      context.strokeStyle = enabled || focused ? color : "rgba(22,25,29,.22)";
+      context.lineWidth = focused ? 3 : 1.5;
+      roundedRect(context, x - 37, 148, 74, 34, 17);
       context.fill();
-      context.shadowBlur = 0;
-      context.fillStyle = "#03070d";
-      context.font = '800 12px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.stroke();
+      context.fillStyle = enabled ? "#fff" : "#16191d";
+      context.font = '750 17px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(String(index + 1).padStart(2, "0"), x, 136);
+      context.fillText(String(index + 1).padStart(2, "0"), x, 171);
 
       const pool = context.createRadialGradient(x, 315, 2, x, 315, 61 + finalePulse * 9);
-      pool.addColorStop(0, `${color}${enabled ? "d9" : focused ? "8a" : "28"}`);
-      pool.addColorStop(0.36, `${color}${enabled ? "61" : focused ? "3d" : "12"}`);
+      pool.addColorStop(0, `${color}${enabled ? "8a" : focused ? "50" : "14"}`);
+      pool.addColorStop(0.36, `${color}${enabled ? "38" : focused ? "20" : "08"}`);
       pool.addColorStop(1, `${color}00`);
       context.fillStyle = pool;
       context.beginPath();
@@ -230,11 +210,11 @@ export function StageBeamInteraction({
       context.fill();
 
       context.direction = direction;
-      context.fillStyle = enabled ? "#f7f7f4" : `rgba(247,247,244,${0.35 + strength * 0.35})`;
-      context.font = '680 13px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(`${copy.stage.beam} ${index + 1}`, x, 351);
+      context.fillStyle = enabled ? "#16191d" : "rgba(22,25,29,.58)";
+      context.font = '650 18px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(`${copy.stage.beam} ${index + 1}`, x, 351, width * 0.16);
       if (enabled) {
-        context.strokeStyle = color;
+        context.strokeStyle = "#225cff";
         context.lineWidth = 2.5;
         context.lineCap = "round";
         context.beginPath();
@@ -249,14 +229,14 @@ export function StageBeamInteraction({
     const closeX = width * 0.965;
     const closeY = height * 0.085;
     const closeFocused = hoverControl.current === "close" || keyboardFocus.current === 7;
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.17)" : "rgba(3,8,16,.52)";
+    context.fillStyle = closeFocused ? "#e9eeff" : "rgba(255,255,255,.88)";
     context.beginPath();
     context.arc(closeX, closeY, 19, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = closeFocused ? "#f7f7f4" : "rgba(247,247,244,.52)";
+    context.strokeStyle = closeFocused ? "#225cff" : "rgba(22,25,29,.28)";
     context.lineWidth = closeFocused ? 3 : 1.5;
     context.stroke();
-    context.strokeStyle = "#f7f7f4";
+    context.strokeStyle = "#16191d";
     context.lineWidth = 1.7;
     context.lineCap = "round";
     context.beginPath();
@@ -278,23 +258,20 @@ export function StageBeamInteraction({
       const buttonWidth = width * 0.205;
       const buttonHeight = height * 0.09;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary && enabled ? "#225cff" : "rgba(5,14,28,.96)";
-      context.shadowColor = primary && enabled ? "#225cff" : "transparent";
-      context.shadowBlur = primary && enabled ? 16 : 0;
+      context.fillStyle = primary && enabled ? "#225cff" : "rgba(255,255,255,.88)";
       context.fill();
-      context.shadowBlur = 0;
       context.strokeStyle = focused
-        ? "#f7f7f4"
+        ? "#225cff"
         : enabled
-          ? "rgba(117,216,255,.84)"
-          : "rgba(117,216,255,.22)";
+          ? "rgba(22,25,29,.3)"
+          : "rgba(22,25,29,.14)";
       context.lineWidth = focused ? 3 : 1.5;
       context.stroke();
       context.direction = direction;
-      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.34)";
-      context.font = '700 14px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillStyle = primary && enabled ? "#fff" : enabled ? "#16191d" : "rgba(22,25,29,.38)";
+      context.font = '700 18px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63);
+      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63, buttonWidth - 24);
     };
     context.save();
     context.globalAlpha = surfaceReveal * controlsReveal;
@@ -557,72 +534,98 @@ export function StageBeamInteraction({
 
   const focusControl = (index: number | null) => {
     keyboardFocus.current = index;
-    hoverBeam.current = index !== null && index < beamColors.length ? index : null;
+    hoverBeam.current = index !== null && index < stageBeamColors.length ? index : null;
     syncSceneBeams();
     schedulePaint();
   };
 
   return (
-    <div
-      className={styles.spatialInteractionSemantics}
-      data-stage-spatial-controls
-      data-stage-active-count={active.filter(Boolean).length}
-      data-stage-complete={active.every(Boolean) ? "true" : "false"}
-      role="region"
-      aria-label={copy.stations.stage.title}
-    >
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        className={styles.textureSource}
-        data-stage-canvas
-        aria-hidden="true"
-      />
-      <p>{copy.stations.stage.instruction}</p>
-      {beamColors.map((color, index) => (
+    <>
+      <div
+        className={styles.spatialInteractionSemantics}
+        data-stage-spatial-controls
+        data-stage-active-count={active.filter(Boolean).length}
+        data-stage-complete={active.every(Boolean) ? "true" : "false"}
+        role="region"
+        aria-label={copy.stations.stage.title}
+      >
+        <canvas
+          ref={canvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          className={styles.textureSource}
+          data-stage-canvas
+          aria-hidden="true"
+        />
+        <p>{copy.stations.stage.instruction}</p>
+        {stageBeamColors.map((color, index) => (
+          <button
+            key={color}
+            type="button"
+            data-stage-beam={index + 1}
+            aria-pressed={active[index]}
+            onFocus={() => focusControl(index)}
+            onBlur={() => focusControl(null)}
+            onClick={() => toggleBeam(index)}
+          >
+            {copy.stage.beam} {index + 1}
+          </button>
+        ))}
         <button
-          key={color}
           type="button"
-          data-stage-beam={index + 1}
-          aria-pressed={active[index]}
-          onFocus={() => focusControl(index)}
+          disabled={!active.some(Boolean)}
+          onFocus={() => focusControl(5)}
           onBlur={() => focusControl(null)}
-          onClick={() => toggleBeam(index)}
+          onClick={reset}
         >
-          {copy.stage.beam} {index + 1}
+          {copy.reset}
         </button>
-      ))}
-      <button
-        type="button"
-        disabled={!active.some(Boolean)}
-        onFocus={() => focusControl(5)}
-        onBlur={() => focusControl(null)}
-        onClick={reset}
-      >
-        {copy.reset}
-      </button>
-      <button
-        type="button"
-        disabled={!active.every(Boolean)}
-        onFocus={() => focusControl(6)}
-        onBlur={() => focusControl(null)}
-        onClick={continueWithTransition}
-      >
-        {copy.continue}
-      </button>
-      <button
-        type="button"
-        data-interaction-dismiss
-        onFocus={() => focusControl(7)}
-        onBlur={() => focusControl(null)}
-        onClick={closeWithTransition}
-      >
-        {copy.close}
-      </button>
-      <span role="status" aria-live="polite">
-        {active.every(Boolean) ? copy.stage.finale : `${active.filter(Boolean).length} / 5`}
-      </span>
-    </div>
+        <button
+          type="button"
+          data-interaction-continue
+          disabled={!active.every(Boolean)}
+          onFocus={() => focusControl(6)}
+          onBlur={() => focusControl(null)}
+          onClick={continueWithTransition}
+        >
+          {copy.continue}
+        </button>
+        <button
+          type="button"
+          data-interaction-dismiss
+          onFocus={() => focusControl(7)}
+          onBlur={() => focusControl(null)}
+          onClick={closeWithTransition}
+        >
+          {copy.close}
+        </button>
+        <span role="status" aria-live="polite">
+          {active.every(Boolean) ? copy.stage.finale : `${active.filter(Boolean).length} / 5`}
+        </span>
+      </div>
+      <div className={styles.mobileStageDock} data-mobile-stage-dock role="group" aria-label={copy.stations.stage.title}>
+        <div className={styles.mobileStageDockHeader}>
+          <strong>{copy.stations.stage.title}</strong>
+          <button type="button" disabled={!active.some(Boolean)} onClick={reset}>{copy.reset}</button>
+          <span aria-live="polite">{active.filter(Boolean).length} / 5</span>
+        </div>
+        <div className={styles.mobileStageBeams}>
+          {stageBeamColors.map((color, index) => (
+            <button
+              key={color}
+              type="button"
+              data-mobile-stage-beam={index + 1}
+              aria-label={`${copy.stage.beam} ${index + 1}`}
+              aria-pressed={active[index]}
+              onFocus={() => focusControl(index)}
+              onBlur={() => focusControl(null)}
+              onClick={() => toggleBeam(index)}
+            >
+              {String(index + 1).padStart(2, "0")}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

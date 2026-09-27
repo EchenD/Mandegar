@@ -35,6 +35,7 @@ import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { resolveInteractionAnchors, type InteractionAnchorRuntime } from "./interactions/interaction-anchors";
+import { stageBeamColors } from "./interactions/interaction-palette";
 import {
   dispatchSceneInteraction,
   interactionRuntime,
@@ -166,8 +167,6 @@ const screenStations: Partial<Record<BakedScreenId, InteractionStation>> = {
   game: "game",
   main: "draw",
 };
-
-const stageBeamColors = ["#50c7ff", "#d95cff", "#ffb54a", "#75d8ff", "#ef86ff"];
 
 // Photo flash volume controls. Direction uses world-space X/Y/Z and is normalized at runtime.
 const photoFlashVolumeTuning = {
