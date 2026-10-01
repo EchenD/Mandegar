@@ -325,7 +325,7 @@ test.describe("Mandegar responsive layout", () => {
     expect(settledProgress).toBeCloseTo(0.27, 2);
   });
 
-  test("opening copy breath follows physical scroll rather than sinus progress", async ({ page }) => {
+  test("opening copy is readable before scrolling and exits with physical scroll", async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0", { waitUntil: "networkidle" });
@@ -333,7 +333,6 @@ test.describe("Mandegar responsive layout", () => {
     const arrival = page.locator("[data-scene-copy='arrival']");
     await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect(root).not.toHaveAttribute("data-intro-active", "true", { timeout: 10_000 });
-    const enterProgress = Number(await root.getAttribute("data-arrival-enter-progress"));
     const scrollToProgress = (progress: number) => root.evaluate((element, nextProgress) => {
       const rootElement = element as HTMLElement;
       window.scrollTo({
@@ -343,12 +342,23 @@ test.describe("Mandegar responsive layout", () => {
       });
     }, progress);
 
-    await scrollToProgress(Math.max(0, enterProgress - 0.004));
-    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeLessThan(enterProgress);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await expect(arrival.locator("h2")).toBeVisible();
+    await expect(arrival.locator("p")).toBeVisible();
+    await expect(arrival.locator("p")).not.toBeEmpty();
+
+    await scrollToProgress(0.02);
+    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeCloseTo(0.02, 3);
+    await expect(arrival.locator("h2")).toBeVisible();
+    await expect(arrival.locator("p")).toBeVisible();
+
+    await scrollToProgress(narrativeScore[0].end);
+    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeCloseTo(narrativeScore[0].end, 3);
     await expect(arrival).toBeHidden();
-    await scrollToProgress(enterProgress + 0.01);
-    await expect.poll(async () => Number(await root.getAttribute("data-copy-progress"))).toBeGreaterThan(enterProgress);
-    await expect(arrival).toBeVisible();
+    await expect(page.locator("[data-scene-copy='discovery']")).toBeHidden();
+
+    await seekPhase(page, "discovery");
+    await expect(page.locator("[data-scene-copy='discovery']")).toBeVisible();
   });
 
   test("eleven-state scene stays aligned with named checkpoints", async ({ page }) => {

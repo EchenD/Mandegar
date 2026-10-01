@@ -6,6 +6,7 @@ import { ensureLocale, localizedPath, type Locale } from "@/lib/i18n";
 const fallbackCopy: Record<Locale, ExperienceCopy> = {
   fa: {
     arrivalLabel: "فضایی آرام، در انتظار زنده‌شدن.",
+    arrivalBody: "رویدادها، نمایشگاه‌ها و تجربه‌های تعاملی را طراحی و اجرا می‌کنیم.",
     discoveryEyebrow: "کشف / ۰۲",
     discoveryTitle: "از فضای خالی تا لحظه‌ای که شکل می‌گیرد.",
     discoveryBody: "نور، مسیر را نشان می‌دهد و هسته‌ی منـدگار آرام‌آرام از دل نمایشگاه نمایان می‌شود.",
@@ -45,6 +46,7 @@ const fallbackCopy: Record<Locale, ExperienceCopy> = {
   },
   en: {
     arrivalLabel: "A quiet space, waiting to come alive.",
+    arrivalBody: "We design and deliver events, exhibitions and interactive experiences.",
     discoveryEyebrow: "02 / Discovery",
     discoveryTitle: "From empty space to a moment taking shape.",
     discoveryBody: "A light path reveals the Mandegar zone and draws the hall toward one clear centre.",
@@ -84,6 +86,7 @@ const fallbackCopy: Record<Locale, ExperienceCopy> = {
   },
   ar: {
     arrivalLabel: "مساحة هادئة تنتظر أن تنبض بالحياة.",
+    arrivalBody: "نصمم الفعاليات والمعارض والتجارب التفاعلية وننفذها.",
     discoveryEyebrow: "٠٢ / الاكتشاف",
     discoveryTitle: "من مساحة فارغة إلى لحظة تتشكل.",
     discoveryBody: "يكشف مسار الضوء منطقة منـدگار ويقود المعرض نحو مركز واضح.",

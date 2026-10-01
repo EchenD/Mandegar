@@ -29,6 +29,7 @@ const CreativePanel = process.env.NODE_ENV === "development"
 
 type ExperienceCopy = {
   arrivalLabel: string;
+  arrivalBody: string;
   discoveryEyebrow: string;
   discoveryTitle: string;
   discoveryBody: string;
@@ -412,6 +413,7 @@ export function MandegarExperience({
             <section className={`${styles.sceneCopy} ${styles.arrivalCopy}`} data-scene-copy="arrival" data-cinematic-beat>
               <span data-copy-line>01 / {copy.phases.arrival}</span>
               <h2 data-copy-line>{copy.arrivalLabel}</h2>
+              <p data-copy-line>{copy.arrivalBody}</p>
             </section>
 
             <section className={`${styles.sceneCopy} ${styles.discoveryCopy}`} data-scene-copy="discovery" data-cinematic-beat>
@@ -498,7 +500,7 @@ export function MandegarExperience({
 
       <div className={styles.semanticFallback} data-semantic-fallback data-cinematic-beat>
         {[
-          [`01 / ${copy.phases.arrival}`, copy.arrivalLabel, ""],
+          [`01 / ${copy.phases.arrival}`, copy.arrivalLabel, copy.arrivalBody],
           [copy.discoveryEyebrow, copy.discoveryTitle, copy.discoveryBody],
           [copy.activationEyebrow, copy.activationTitle, copy.activationBody],
           [copy.engagementEyebrow, copy.engagementTitle, copy.engagementBody],

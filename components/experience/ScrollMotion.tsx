@@ -47,7 +47,10 @@ function renderCopyState(state: CopyState, progress: number) {
     const sequence = state.lines.length > 1 ? index / (state.lines.length - 1) : 0;
     const enterOffset = sequence * timing.enterStagger;
     const exitOffset = sequence * timing.exitStagger;
-    const entered = ease(rangeProgress(progress, timing.enterStart + enterOffset, timing.enterEnd));
+    // The intro reveals the opening message; reading it needs no extra scroll.
+    const entered = state.phase === "arrival"
+      ? 1
+      : ease(rangeProgress(progress, timing.enterStart + enterOffset, timing.enterEnd));
     const exited = ease(rangeProgress(progress, timing.exitStart + exitOffset, timing.exitEnd));
     const opacity = entered * (1 - exited);
     const y = (1 - entered) * 24 - exited * 15;
@@ -98,7 +101,6 @@ export function ScrollMotion({
       lines: Array.from(copy.querySelectorAll<HTMLElement>("[data-copy-line]")),
       phase: copy.dataset.sceneCopy as ScenePhaseId,
     }));
-    root.dataset.arrivalEnterProgress = getNarrativeCopyTiming("arrival").enterStart.toFixed(4);
     let smooth: Lenis | undefined;
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
@@ -300,7 +302,6 @@ export function ScrollMotion({
       root.removeAttribute("data-narrative-progress");
       root.removeAttribute("data-scroll-direction");
       root.removeAttribute("data-copy-progress");
-      root.removeAttribute("data-arrival-enter-progress");
     };
   }, { scope, dependencies: [enabled, lenisEnabled, onPhaseChange] });
 
