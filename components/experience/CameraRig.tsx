@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { experienceState } from "./experience-state";
+import { interactionRuntime } from "./interactions/interaction-runtime";
 import { cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
 import { getCameraLoopSampleProgress } from "./stage-presets";
 
@@ -144,6 +145,7 @@ export function CameraRig({ source }: { source: string }) {
     const progress = experienceState.progress;
     const cameraProgress = getCameraLoopSampleProgress(progress);
     const introActive = experienceState.sequence === "intro";
+    const interactionActive = interactionRuntime.activeStation !== null;
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
     let baseNear = fallbackProjection.current.near;
@@ -152,8 +154,8 @@ export function CameraRig({ source }: { source: string }) {
     const pointerMotion = sceneTokens.cameraMotion.pointer;
     const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
     cameraPointerInput.current.set(
-      introActive ? 0 : experienceState.pointerX * pointerInputScale,
-      introActive ? 0 : experienceState.pointerY * pointerInputScale,
+      introActive || interactionActive ? 0 : experienceState.pointerX * pointerInputScale,
+      introActive || interactionActive ? 0 : experienceState.pointerY * pointerInputScale,
     );
     const springDelta = Math.min(delta, pointerMotion.maximumDelta);
     const springDamping = Math.exp(-pointerMotion.damping * springDelta);
@@ -218,9 +220,10 @@ export function CameraRig({ source }: { source: string }) {
 
     const breathing = sceneTokens.cameraMotion.breathing;
     const stage = experienceState.stage;
+    // Let controls settle while preserving the authored shot and easing motion back after exit.
     cameraLifeBlend.current = introActive
       ? 0
-      : THREE.MathUtils.damp(cameraLifeBlend.current, 1, 1, springDelta);
+      : THREE.MathUtils.damp(cameraLifeBlend.current, interactionActive ? 0 : 1, interactionActive ? 8 : 1, springDelta);
     const lifeBlend = cameraLifeBlend.current;
     const heroPresence = 1 - handoffProgress;
     const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife * heroPresence;
