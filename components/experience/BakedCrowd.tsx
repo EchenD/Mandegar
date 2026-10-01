@@ -25,6 +25,8 @@ import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { experienceState } from "./experience-state";
 import { assetSlots, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
+import { interactionRuntime } from "./interactions/interaction-runtime";
+import { getVisitorCreation } from "./interactions/visitor-creation";
 
 type CrowdRuntime = {
   material: THREE.ShaderMaterial;
@@ -119,6 +121,7 @@ function updateCrowdUniforms(
 ) {
   uniforms.uRevealProgress.value = presence;
   uniforms.uPeakMix.value = Math.max(
+    (interactionRuntime.activeStation === "touch" ? interactionRuntime.touchElements : getVisitorCreation().composer)[2] ? 0.75 : 0,
     production.centralPeak,
     production.leftPeak,
     production.rightPeak,

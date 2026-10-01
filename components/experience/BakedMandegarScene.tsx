@@ -36,6 +36,7 @@ import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { resolveInteractionAnchors, type InteractionAnchorRuntime } from "./interactions/interaction-anchors";
 import { stageBeamColors } from "./interactions/interaction-palette";
+import { getVisitorCreation } from "./interactions/visitor-creation";
 import {
   dispatchSceneInteraction,
   interactionRuntime,
@@ -416,17 +417,19 @@ function InteractionBeamEffects({
   }, [anchors, quality, root]);
 
   useFrame((_, delta) => {
-    if (interactionRuntime.stageComplete && !rig.wasComplete) rig.finaleAge = 0;
+    if (interactionRuntime.stageComplete && interactionRuntime.activeBeams.every(Boolean) && !rig.wasComplete) rig.finaleAge = 0;
     rig.wasComplete = interactionRuntime.stageComplete;
     rig.finaleAge += delta;
     const finaleProgress = Math.min(1, rig.finaleAge / 1.05);
     const finalePulse = rig.finaleAge < 1.05 ? Math.sin(finaleProgress * Math.PI) : 0;
-    const visibility = interactionRuntime.stageVisibility;
+    const inStage = interactionRuntime.activeStation === "stage";
+    const lighting = inStage ? interactionRuntime.activeBeams : getVisitorCreation().lighting;
+    const visibility = inStage ? interactionRuntime.stageVisibility : 0.45;
     const flareColors = rig.flareGeometry.getAttribute("color") as THREE.BufferAttribute;
     let visibleEnergy = 0;
 
     rig.intensities.forEach((current, index) => {
-      const enabled = interactionRuntime.activeBeams[index] ?? false;
+      const enabled = lighting[index] ?? false;
       const target = enabled ? visibility * (quality === "full" ? 1 : 0.8) : 0;
       const intensity = THREE.MathUtils.damp(current, target, enabled ? 10 : 14, delta);
       rig.intensities[index] = intensity;
@@ -583,10 +586,24 @@ function InteractionTouchEffects({
     if (normal.dot(camera.position.clone().sub(centerPoint)) < 0) normal.negate();
     next.position.copy(centerPoint).addScaledVector(normal, 0.07);
     const pulseTexture = createTouchPulseTexture();
+    const storyCanvas = document.createElement("canvas");
+    storyCanvas.width = storyCanvas.height = 256;
+    const storyContext = storyCanvas.getContext("2d");
+    if (storyContext) {
+      storyContext.strokeStyle = "#fff";
+      storyContext.lineWidth = 5;
+      for (let index = 0; index < 5; index += 1) {
+        storyContext.beginPath();
+        storyContext.moveTo(16, 64 + index * 28);
+        storyContext.bezierCurveTo(90, index * 18, 166, 256 - index * 18, 240, 64 + index * 28);
+        storyContext.stroke();
+      }
+    }
+    const storyTexture = new THREE.CanvasTexture(storyCanvas);
     const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
     const pulses = colors.map((color, index) => {
       const pulseMaterial = new THREE.SpriteMaterial({
-        map: pulseTexture,
+        map: index === 1 ? storyTexture : pulseTexture,
         color,
         transparent: true,
         opacity: 0,
@@ -610,23 +627,26 @@ function InteractionTouchEffects({
     next.userData.yAxis = yAxis;
     next.userData.normal = normal;
     next.userData.pulseTexture = pulseTexture;
+    next.userData.storyTexture = storyTexture;
     return next;
   }, [anchors, camera, screen]);
 
   useFrame(({ clock }, delta) => {
-    const complete = interactionRuntime.touchElements.every(Boolean);
+    const inComposer = interactionRuntime.activeStation === "touch";
+    const elements = inComposer ? interactionRuntime.touchElements : getVisitorCreation().composer;
+    const complete = elements.every(Boolean);
     const pulses = group.userData.pulses as THREE.Sprite[];
     const xAxis = group.userData.xAxis as THREE.Vector3;
     const yAxis = group.userData.yAxis as THREE.Vector3;
     const normal = group.userData.normal as THREE.Vector3;
     pulses.forEach((pulse, index) => {
       const pulseMaterial = pulse.material as THREE.SpriteMaterial;
-      const active = interactionRuntime.touchElements[index];
+      const active = elements[index];
       pulseMaterial.opacity = THREE.MathUtils.damp(
         pulseMaterial.opacity,
         active
           ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64)
-            * interactionRuntime.touchVisibility
+            * (inComposer ? interactionRuntime.touchVisibility : 0.35)
           : 0,
         11,
         delta,
@@ -638,7 +658,8 @@ function InteractionTouchEffects({
         pulse.position.copy(xAxis).multiplyScalar(Math.cos(angle) * 0.095 * radius);
         pulse.position.addScaledVector(yAxis, Math.sin(angle) * 0.17 * radius);
         pulse.position.addScaledVector(normal, Math.sin(angle * 1.4) * 0.025);
-        const scale = (complete ? 0.32 : 0.27) + Math.sin(clock.elapsedTime * 5 + index) * 0.025;
+        if (index === 1) pulse.position.set(0, 0, 0);
+        const scale = index === 1 ? 0.55 : (complete ? 0.32 : 0.27) + Math.sin(clock.elapsedTime * 5 + index) * 0.025;
         pulse.scale.setScalar(scale);
       }
     });
@@ -649,6 +670,7 @@ function InteractionTouchEffects({
       (pulse.material as THREE.Material).dispose();
     });
     (group.userData.pulseTexture as THREE.Texture).dispose();
+    (group.userData.storyTexture as THREE.Texture).dispose();
   }, [group]);
 
   return <primitive object={group} />;
@@ -1134,6 +1156,12 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     const trailPositionAttribute = (group.userData.trailGeometry as THREE.BufferGeometry)
       .getAttribute("position") as THREE.BufferAttribute;
     const flashLight = group.userData.flashLight as THREE.PointLight;
+    const warm = interactionRuntime.photoLook === "warm";
+    phoneMaterial.color.set(warm ? "#fff0db" : "#e0efff");
+    phoneFrameMaterial.color.set(warm ? "#f3e3ce" : "#d9e7ff");
+    flashVolumeMaterial.color.set(warm ? "#ffe5ba" : "#d8eeff");
+    trailMaterial.color.set(warm ? "#ffc985" : "#75d8ff");
+    flashLight.color.set(warm ? "#ffe5ba" : "#d8eeff");
     const surface = interactionRuntime.photoSurface;
     if (surface && surfaceTexture.current?.canvas !== surface.canvas) {
       surfaceTexture.current?.texture.dispose();

@@ -314,8 +314,8 @@
 .root[data-interaction-active] .phaseRail,
 .root[data-interaction-active] .scrollCue,
 .root[data-interaction-active] .soundControl {
-  opacity: 0;
-  visibility: hidden;
+  opacity: 0 !important;
+  visibility: hidden !important;
   pointer-events: none;
 }
 

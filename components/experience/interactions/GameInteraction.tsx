@@ -10,6 +10,7 @@ import {
   registerSceneInteraction,
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
+import { getVisitorCreation, saveGameResult } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.game.canvas;
@@ -197,6 +198,7 @@ export function GameInteraction({
   const flightResult = useRef<0 | 1 | 2>(0);
   const attemptsRef = useRef(0);
   const scoreRef = useRef(0);
+  const bestRef = useRef(0);
   const gameStartedAt = useRef(0);
   const pausedTotal = useRef(0);
   const pausedAt = useRef<number | null>(null);
@@ -207,6 +209,12 @@ export function GameInteraction({
   const [completed, setCompleted] = useState([false, false, false]);
   const [attempts, setAttempts] = useState(0);
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(0);
+
+  useEffect(() => {
+    bestRef.current = getVisitorCreation().gameBest;
+    setBest(bestRef.current);
+  }, []);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -430,6 +438,23 @@ export function GameInteraction({
       context.beginPath();
       context.arc(width * 0.5, height * 0.52, width * 0.38, 0, Math.PI * 2);
       context.fill();
+      context.save();
+      roundedRect(context, width * 0.17, height * 0.42, width * 0.66, height * 0.28, 20);
+      context.fillStyle = "rgba(8,11,16,.92)";
+      context.fill();
+      context.direction = direction;
+      context.textAlign = "center";
+      context.fillStyle = "#75d8ff";
+      context.font = '650 18px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(copy.game.score, width / 2, height * 0.465, width * 0.58);
+      context.fillStyle = "#f7f7f4";
+      context.font = '750 58px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(String(scoreRef.current), width / 2, height * 0.55);
+      context.font = '500 20px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(`${copy.game.throws}: ${attemptsRef.current} / ${maxAttempts}`, width / 2, height * 0.61, width * 0.58);
+      context.fillStyle = "#75d8ff";
+      context.fillText(`${copy.game.best}: ${bestRef.current}`, width / 2, height * 0.66, width * 0.58);
+      context.restore();
     }
 
     for (let index = 0; index < maxAttempts; index += 1) {
@@ -546,6 +571,8 @@ export function GameInteraction({
     const allConnected = nextCompleted.every(Boolean);
     const outOfShots = nextAttempts >= maxAttempts;
     if (allConnected || outOfShots) {
+      bestRef.current = saveGameResult(nextScore);
+      setBest(bestRef.current);
       updateStatus("complete");
       interactionRuntime.gameComplete = true;
       schedulePaint();
@@ -662,7 +689,7 @@ export function GameInteraction({
   const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
-    const duration = reducedMotion ? 0 : target === 1 ? 900 : 560;
+    const duration = reducedMotion ? 0 : target === 1 ? 600 : 560;
     transitionState.current = target === 1 ? "intro" : "outro";
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
@@ -882,67 +909,81 @@ export function GameInteraction({
   };
 
   return (
-    <div
-      className={styles.spatialInteractionSemantics}
-      data-game-spatial-controls
-      data-game-status={status}
-      data-game-completed-count={completed.filter(Boolean).length}
-      data-game-attempts={attempts}
-      data-game-score={score}
-      role="region"
-      aria-label={copy.stations.game.title}
-    >
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        className={styles.textureSource}
-        data-game-canvas
-        aria-hidden="true"
-      />
-      <p>{copy.stations.game.instruction}</p>
-      <button
-        type="button"
-        disabled={status === "flying" || status === "complete"}
-        onFocus={() => focusControl("launch")}
-        onBlur={() => focusControl(null)}
-        onClick={() => launch(null)}
+    <>
+      <div
+        className={styles.spatialInteractionSemantics}
+        data-game-spatial-controls
+        data-game-status={status}
+        data-game-completed-count={completed.filter(Boolean).length}
+        data-game-attempts={attempts}
+        data-game-score={score}
+        data-game-best={best}
+        role="region"
+        aria-label={copy.stations.game.title}
       >
-        {copy.game.action}
-      </button>
-      <button
-        type="button"
-        disabled={status === "flying" || (!completed.some(Boolean) && status !== "complete")}
-        onFocus={() => focusControl("reset")}
-        onBlur={() => focusControl(null)}
-        onClick={reset}
-      >
-        {status === "complete" ? copy.replay : copy.reset}
-      </button>
-      <button
-        type="button"
-        data-interaction-continue
-        disabled={status !== "complete"}
-        onFocus={() => focusControl("continue")}
-        onBlur={() => focusControl(null)}
-        onClick={continueWithTransition}
-      >
-        {copy.continue}
-      </button>
-      <button
-        type="button"
-        data-interaction-dismiss
-        onFocus={() => focusControl("close")}
-        onBlur={() => focusControl(null)}
-        onClick={closeWithTransition}
-      >
-        {copy.close}
-      </button>
-      <span role="status" aria-live="polite">
-        {status === "complete"
-          ? completed.every(Boolean) ? copy.game.perfect : copy.game.result
-          : `${completed.filter(Boolean).length} / 3 · ${score} · ${attempts} / ${maxAttempts}`}
-      </span>
-    </div>
+        <canvas
+          ref={canvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          className={styles.textureSource}
+          data-game-canvas
+          aria-hidden="true"
+        />
+        <p>{copy.stations.game.instruction}</p>
+        <button
+          type="button"
+          disabled={status === "flying" || status === "complete"}
+          onFocus={() => focusControl("launch")}
+          onBlur={() => focusControl(null)}
+          onClick={() => launch(null)}
+        >
+          {copy.game.action}
+        </button>
+        <button
+          type="button"
+          disabled={status === "flying" || (!completed.some(Boolean) && status !== "complete")}
+          onFocus={() => focusControl("reset")}
+          onBlur={() => focusControl(null)}
+          onClick={reset}
+        >
+          {status === "complete" ? copy.replay : copy.reset}
+        </button>
+        <button
+          type="button"
+          data-interaction-continue
+          disabled={status !== "complete"}
+          onFocus={() => focusControl("continue")}
+          onBlur={() => focusControl(null)}
+          onClick={continueWithTransition}
+        >
+          {copy.continue}
+        </button>
+        <button
+          type="button"
+          data-interaction-dismiss
+          onFocus={() => focusControl("close")}
+          onBlur={() => focusControl(null)}
+          onClick={closeWithTransition}
+        >
+          {copy.close}
+        </button>
+        <span role="status" aria-live="polite">
+          {status === "complete"
+            ? `${completed.every(Boolean) ? copy.game.perfect : copy.game.result}. ${copy.game.score}: ${score}. ${copy.game.throws}: ${attempts}. ${copy.game.best}: ${best}.`
+            : `${completed.filter(Boolean).length} / 3 · ${score} · ${attempts} / ${maxAttempts}`}
+        </span>
+      </div>
+      {status === "complete" && (
+        <aside className={styles.gameResult} data-game-result>
+          <strong>{completed.every(Boolean) ? copy.game.perfect : copy.game.result}</strong>
+          <dl className={styles.gameResultStats}>
+            <div><dt>{copy.game.score}</dt><dd><bdi>{score}</bdi></dd></div>
+            <div><dt>{copy.game.throws}</dt><dd><bdi>{attempts} / {maxAttempts}</bdi></dd></div>
+            <div><dt>{copy.game.best}</dt><dd><bdi>{best}</bdi></dd></div>
+          </dl>
+          <button type="button" data-game-result-replay onClick={reset}>{copy.replay}</button>
+        </aside>
+      )}
+    </>
   );
 }

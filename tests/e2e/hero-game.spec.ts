@@ -26,6 +26,14 @@ test("signal game completes and exits with keyboard controls", async ({ page }) 
   await finishSignalRun(page);
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   await expect(controls.locator("button:nth-of-type(3)")).toBeEnabled();
+  const score = Number(await controls.getAttribute("data-game-score"));
+  const attempts = Number(await controls.getAttribute("data-game-attempts"));
+  const result = page.locator("[data-game-result]");
+  await expect(result).toBeVisible();
+  await expect(result.locator("dl > div").nth(0).locator("dd")).toHaveText(String(score));
+  await expect(result.locator("dl > div").nth(1).locator("dd")).toHaveText(`${attempts} / 5`);
+  await expect(result.locator("dl > div").nth(2).locator("dd")).toHaveText(String(score));
+  await expect(controls).toHaveAttribute("data-game-best", String(score));
 
   await activateWithKeyboard(page, "[data-game-spatial-controls] button:nth-of-type(3)");
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
@@ -49,8 +57,13 @@ test("signal game can be skipped after resetting a completed run", async ({ page
   const controls = page.locator("[data-game-spatial-controls]");
   await finishSignalRun(page);
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await activateWithKeyboard(page, "[data-game-spatial-controls] button:nth-of-type(2)");
+  const firstBest = await controls.getAttribute("data-game-best");
+  await activateWithKeyboard(page, "[data-game-result-replay]");
   await expect(controls).toHaveAttribute("data-game-status", "ready");
+  await expect(controls).toHaveAttribute("data-game-score", "0");
+  await expect(controls).toHaveAttribute("data-game-attempts", "0");
+  await expect(controls).toHaveAttribute("data-game-best", firstBest!);
+  await expect(page.locator("[data-game-result]")).toHaveCount(0);
   await expect(director).toHaveAttribute("data-lifecycle", "active");
   const exit = page.locator("[data-interaction-escape]");
   await expect(exit).toHaveText("Skip interaction");

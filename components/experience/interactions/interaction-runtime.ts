@@ -39,6 +39,7 @@ export const interactionRuntime: {
   touchElements: boolean[];
   touchVisibility: number;
   photoStep: "idle" | "ready" | "countdown" | "captured";
+  photoLook: "warm" | "cool";
   photoCount: number;
   photoVisibility: number;
   photoSurface: PhotoSurfaceEntry | null;
@@ -65,6 +66,7 @@ export const interactionRuntime: {
   touchElements: [false, false, false],
   touchVisibility: 0,
   photoStep: "idle",
+  photoLook: "warm",
   photoCount: 3,
   photoVisibility: 0,
   photoSurface: null,
@@ -151,6 +153,7 @@ export function resetInteractionRuntime() {
   interactionRuntime.touchElements = [false, false, false];
   interactionRuntime.touchVisibility = 0;
   interactionRuntime.photoStep = "idle";
+  interactionRuntime.photoLook = "warm";
   interactionRuntime.photoCount = 3;
   interactionRuntime.photoVisibility = 0;
   interactionRuntime.photoSurface = null;

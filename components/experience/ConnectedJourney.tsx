@@ -20,6 +20,7 @@ export type JourneyProject = {
   slug: string;
   title: string;
   eyebrow: string;
+  category?: string;
   summary: string;
   mediaSrc: string;
   mediaKind?: "image" | "video" | "video-placeholder";
@@ -827,8 +828,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       {selected.map((project, index) => <article className={styles.projectCopy} key={project.slug} data-project-copy={index} data-layer>
         <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
         <div className={styles.titlePosition}>
+          <small className={styles.projectCategory} data-project-category>
+            {project.category ? `${project.isPlaceholder ? `${ui.demo} / ` : ""}${project.category}` : project.eyebrow || (project.isPlaceholder ? ui.demo : "")}
+          </small>
           <Link href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title}>
             <h2><span data-project-title>{project.title}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
+            <span className={styles.projectAction} data-project-action>{copy.viewProject}<span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></span>
           </Link>
         </div>
       </article>)}

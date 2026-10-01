@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
 
@@ -41,4 +41,27 @@ test("drawing wall undo and clear remove local strokes", async ({ page }) => {
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
   await controls.locator("button:nth-of-type(2)").evaluate((button: HTMLButtonElement) => button.click());
   await expect(controls).toHaveAttribute("data-stroke-count", "0");
+});
+
+test("drawing wall can create and finish a mark entirely with the keyboard", async ({ page }) => {
+  const { director, controls } = await openDrawing(page);
+  const canvas = page.locator("[data-drawing-canvas]");
+  await expect(canvas).toHaveAttribute("tabindex", "0");
+  await expect(canvas).toHaveAccessibleName(/Space.*arrow keys/i);
+  const before = await page.evaluate(() => window.scrollY);
+  await canvas.focus();
+  await expect(canvas).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  for (const key of ["ArrowRight", "ArrowRight", "ArrowDown", "ArrowDown", "ArrowLeft"]) {
+    await page.keyboard.press(key);
+  }
+  await page.keyboard.press("Space");
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
+  await expect(controls).toHaveAttribute("data-drawing-finished", "true");
+  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
+  await expect(director).toHaveAttribute("data-active-station", "none");
 });

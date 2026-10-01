@@ -42,10 +42,15 @@ test("touch-capable mobile viewport opens the photo step automatically", async (
   }));
   expect(Math.abs(progress.native - progress.narrative)).toBeLessThan(0.01);
   await expect(page.locator("[data-photo-spatial-controls]")).toBeAttached();
+  const capture = page.locator("[data-mobile-photo-capture]");
+  await expect(capture).toBeInViewport();
+  await expect(capture).toBeEnabled();
+  await expect(page.locator("[data-mobile-photo-look='warm']")).toBeInViewport();
+  await expect(page.locator("[data-mobile-photo-look='cool']")).toBeInViewport();
   await context.close();
 });
 
-test("mobile photo replay stays reachable beside the journey action", async ({ browser }) => {
+test("mobile photo replay stays reachable beside the journey action", async ({ browser }, testInfo) => {
   const context = await browser.newContext({
     hasTouch: true,
     viewport: { width: 390, height: 844 },
@@ -54,41 +59,79 @@ test("mobile photo replay stays reachable beside the journey action", async ({ b
   await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "photo");
   const controls = page.locator("[data-photo-spatial-controls]");
+  await expect(controls).toHaveAttribute("data-photo-state", "ready");
+  await page.locator("[data-mobile-photo-look='cool']").tap();
+  await expect(controls).toHaveAttribute("data-photo-look", "cool");
+  await expect(page.locator("[data-mobile-photo-preview]")).toHaveCSS("opacity", "1");
+  await page.screenshot({ path: testInfo.outputPath("mobile-photo-ready.png"), animations: "disabled" });
+  await page.locator("[data-mobile-photo-capture]").tap();
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
   const result = page.locator("[data-mobile-photo-result]");
   await expect(result).toHaveCSS("opacity", "1");
   await expect(result).toBeInViewport();
   await expect(result.locator("img")).toHaveJSProperty("complete", true);
+  await page.screenshot({ path: testInfo.outputPath("mobile-photo-captured.png"), animations: "disabled" });
   const replay = page.locator("[data-mobile-photo-replay]");
   await expect(replay).toBeInViewport();
   await replay.tap();
-  await expect(controls).toHaveAttribute("data-photo-state", "countdown", { timeout: 3_000 });
+  await expect(controls).toHaveAttribute("data-photo-state", "ready");
+  await expect(controls).toHaveAttribute("data-photo-look", "cool");
+  await expect(page.locator("[data-mobile-photo-capture]")).toBeInViewport();
+  await controls.evaluate((element: HTMLElement) => {
+    const canvas = element.querySelector("canvas");
+    if (!canvas) throw new Error("Photo canvas is missing");
+    element.dataset.photoCountdownObserved = "false";
+    const observer = new MutationObserver((records) => {
+      if (element.dataset.photoState !== "countdown" && canvas.dataset.paintedPhotoState !== "countdown"
+        && !records.some((record) => record.oldValue === "countdown")) return;
+      element.dataset.photoCountdownObserved = "true";
+      observer.disconnect();
+    });
+    observer.observe(element, { attributes: true, attributeOldValue: true, attributeFilter: ["data-photo-state"] });
+    observer.observe(canvas, { attributes: true, attributeOldValue: true, attributeFilter: ["data-painted-photo-state"] });
+  });
+  await page.locator("[data-mobile-photo-capture]").tap();
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
+  await expect(controls).toHaveAttribute("data-photo-countdown-observed", "true");
   await page.locator("[data-mobile-interaction-skip]").tap();
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
   await context.close();
 });
 
-test("short mobile photo preview leaves room for replay", async ({ browser }) => {
-  const context = await browser.newContext({
-    hasTouch: true,
-    viewport: { width: 360, height: 568 },
+for (const height of [568, 640]) {
+  test(`short mobile photo preview leaves room for replay at ${height}px`, async ({ browser }, testInfo) => {
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 360, height },
+    });
+    const page = await context.newPage();
+    await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
+    await waitForStation(page, "photo");
+    const preview = page.locator("[data-mobile-photo-preview]");
+    const capture = page.locator("[data-mobile-photo-capture]");
+    const choices = page.locator("[data-photo-choice-dock]");
+    await expect(preview).toBeInViewport();
+    await expect(capture).toBeInViewport();
+    await expect(choices).toBeInViewport();
+    const previewBox = await preview.boundingBox();
+    const choicesBox = await choices.boundingBox();
+    expect(previewBox && choicesBox && previewBox.y + previewBox.height < choicesBox.y).toBeTruthy();
+    await page.screenshot({ path: testInfo.outputPath(`mobile-photo-ready-${height}.png`), animations: "disabled" });
+    await capture.tap();
+    await expect(page.locator("[data-photo-spatial-controls]")).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
+    const result = page.locator("[data-mobile-photo-result]");
+    const replay = page.locator("[data-mobile-photo-replay]");
+    await expect(result).toHaveCSS("opacity", "1");
+    await expect(result).toBeInViewport();
+    await expect(replay).toBeInViewport();
+    const resultBox = await result.boundingBox();
+    const replayBox = await replay.boundingBox();
+    expect(resultBox && replayBox && resultBox.y + resultBox.height < replayBox.y).toBeTruthy();
+    await context.close();
   });
-  const page = await context.newPage();
-  await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
-  await waitForStation(page, "photo");
-  const result = page.locator("[data-mobile-photo-result]");
-  const replay = page.locator("[data-mobile-photo-replay]");
-  await expect(result).toHaveCSS("opacity", "1");
-  await expect(result).toBeInViewport();
-  await expect(replay).toBeInViewport();
-  const resultBox = await result.boundingBox();
-  const replayBox = await replay.boundingBox();
-  expect(resultBox && replayBox && resultBox.y + resultBox.height < replayBox.y).toBeTruthy();
-  await context.close();
-});
+}
 
-test("mobile touch composition remains playable before continuing", async ({ browser }) => {
+test("mobile touch composition remains playable before continuing", async ({ browser }, testInfo) => {
   const context = await browser.newContext({
     hasTouch: true,
     viewport: { width: 390, height: 844 },
@@ -101,6 +144,7 @@ test("mobile touch composition remains playable before continuing", async ({ bro
     await page.touchscreen.tap(x, 300);
   }
   await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-touch-complete", "true");
+  await page.screenshot({ path: testInfo.outputPath("mobile-composer-complete.png"), animations: "disabled" });
   await page.locator("[data-mobile-interaction-skip]").tap();
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
   await context.close();
@@ -126,7 +170,7 @@ test("mobile stage can be skipped before activating any beams", async ({ browser
   await context.close();
 });
 
-test("mobile stage beams remain playable in Persian", async ({ browser }) => {
+test("mobile stage beams remain playable in Persian", async ({ browser }, testInfo) => {
   const context = await browser.newContext({
     hasTouch: true,
     viewport: { width: 390, height: 844 },
@@ -139,9 +183,13 @@ test("mobile stage beams remain playable in Persian", async ({ browser }) => {
   for (let index = 1; index <= 5; index += 1) {
     await dock.locator(`[data-mobile-stage-beam='${index}']`).tap();
   }
+  await expect(page.locator("[data-stage-spatial-controls]")).toHaveAttribute("data-stage-complete", "false");
+  await expect(dock.locator("[data-mobile-stage-finish]")).toBeInViewport();
+  await dock.locator("[data-mobile-stage-finish]").tap();
   await expect(page.locator("[data-stage-spatial-controls]")).toHaveAttribute("data-stage-complete", "true");
   const continueButton = page.locator("[data-mobile-interaction-skip]");
   await expect(continueButton).toHaveText("ادامه مسیر");
+  await page.screenshot({ path: testInfo.outputPath("fa-mobile-stage-finished.png"), animations: "disabled" });
   await continueButton.tap();
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
   await context.close();

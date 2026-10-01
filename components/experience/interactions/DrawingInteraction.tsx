@@ -10,6 +10,7 @@ import {
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
+import { clearDrawing, getVisitorCreation, saveDrawing } from "./visitor-creation";
 
 type Point = { x: number; y: number };
 type Stroke = Point[];
@@ -22,6 +23,24 @@ const controlDefinitions = [
   { id: "clear", left: 0.28, width: 0.21 },
   { id: "finish", left: 0.68, width: 0.265 },
 ] as const;
+
+function paintStroke(context: CanvasRenderingContext2D, stroke: Stroke) {
+  if (!stroke.length) return;
+  context.beginPath();
+  context.moveTo(stroke[0].x, stroke[0].y);
+  stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  if (stroke.length === 1) context.lineTo(stroke[0].x + .01, stroke[0].y + .01);
+  context.strokeStyle = "rgba(34,92,255,.36)";
+  context.lineWidth = 16;
+  context.shadowColor = "#225cff";
+  context.shadowBlur = 14;
+  context.stroke();
+  context.strokeStyle = "#e7f7ff";
+  context.lineWidth = 5;
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.stroke();
+}
 
 function roundedRect(
   context: CanvasRenderingContext2D,
@@ -98,6 +117,9 @@ export function DrawingInteraction({
   const keyboardFocus = useRef<DrawingControl | null>(null);
   const finishedRef = useRef(false);
   const completionReported = useRef(false);
+  const replayProgress = useRef(1);
+  const savedWall = useRef<HTMLCanvasElement | null>(null);
+  const keyboardPoint = useRef<Point>({ x: canvasWidth / 2, y: canvasHeight / 2 });
   const [strokeCount, setStrokeCount] = useState(0);
   const [finished, setFinished] = useState(false);
 
@@ -150,7 +172,7 @@ export function DrawingInteraction({
     context.fillText("MANDEGAR", width / 2, 37);
     context.fillStyle = "#f7f7f4";
     context.font = '620 30px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(isFinished ? copy.draw.complete : copy.stations.draw.title, width / 2, 78, width - 170);
+    context.fillText(isFinished ? finaleStartedAt.current !== null ? copy.draw.replaying : copy.draw.complete : copy.stations.draw.title, width / 2, 78, width - 170);
     context.fillStyle = "rgba(247,247,244,.56)";
     context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
     context.fillText(copy.draw.local, width / 2, 107, width - 170);
@@ -181,26 +203,22 @@ export function DrawingInteraction({
     context.globalAlpha = contentReveal;
     context.lineCap = "round";
     context.lineJoin = "round";
+    let remaining = Math.ceil(strokes.current.reduce((total, stroke) => total + stroke.length, 0) * replayProgress.current);
     strokes.current.forEach((stroke) => {
-      if (stroke.length === 0) return;
-      context.beginPath();
-      context.moveTo(stroke[0].x, stroke[0].y);
-      stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
-      if (stroke.length === 1) {
-        context.lineTo(stroke[0].x + 0.01, stroke[0].y + 0.01);
-      }
-      context.strokeStyle = "rgba(34,92,255,.36)";
-      context.lineWidth = 16;
-      context.shadowColor = "#225cff";
-      context.shadowBlur = 14;
-      context.stroke();
-      context.strokeStyle = "#e7f7ff";
-      context.lineWidth = 5;
-      context.shadowColor = "transparent";
-      context.shadowBlur = 0;
-      context.stroke();
+      const visible = remaining >= stroke.length ? stroke : stroke.slice(0, remaining);
+      remaining = Math.max(0, remaining - stroke.length);
+      paintStroke(context, visible);
     });
     context.shadowBlur = 0;
+
+    if (document.activeElement === canvas && !isFinished) {
+      const point = keyboardPoint.current;
+      context.strokeStyle = "#75d8ff";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(point.x, point.y, 10, 0, Math.PI * 2);
+      context.stroke();
+    }
 
     if (count === 0) {
       context.direction = direction;
@@ -293,6 +311,10 @@ export function DrawingInteraction({
 
   const beginStroke = useCallback((point: Point, pointerId: number) => {
     if (activePointer.current !== null || finishedRef.current) return;
+    if (!strokes.current.length) {
+      clearDrawing();
+      savedWall.current = null;
+    }
     const nextStroke = [clampDrawingPoint(point)];
     activePointer.current = pointerId;
     activeStroke.current = nextStroke;
@@ -327,18 +349,29 @@ export function DrawingInteraction({
     if (finishedRef.current || strokes.current.length === 0) return;
     cancelActiveStroke();
     strokes.current = [];
+    clearDrawing();
+    savedWall.current = null;
     updateStrokeCount();
   }, [cancelActiveStroke, updateStrokeCount]);
 
   const startFinale = useCallback(() => {
     if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
-    finaleStartedAt.current = performance.now();
-    const tick = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      replayProgress.current = 1;
       paint();
-      if (finaleStartedAt.current !== null && performance.now() - finaleStartedAt.current < 900) {
+      return;
+    }
+    finaleStartedAt.current = performance.now();
+    replayProgress.current = 0;
+    const tick = () => {
+      replayProgress.current = Math.min(1, (performance.now() - (finaleStartedAt.current ?? 0)) / 700);
+      paint();
+      if (replayProgress.current < 1) {
         finaleFrame.current = window.requestAnimationFrame(tick);
       } else {
         finaleFrame.current = null;
+        finaleStartedAt.current = null;
+        paint();
       }
     };
     finaleFrame.current = window.requestAnimationFrame(tick);
@@ -349,6 +382,27 @@ export function DrawingInteraction({
     cancelActiveStroke();
     finishedRef.current = true;
     setFinished(true);
+    const artwork = document.createElement("canvas");
+    artwork.width = Math.round(drawingArea.width * canvasWidth);
+    artwork.height = Math.round(drawingArea.height * canvasHeight);
+    const context = artwork.getContext("2d");
+    if (context) {
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.translate(-drawingArea.left * canvasWidth, -drawingArea.top * canvasHeight);
+      strokes.current.forEach((stroke) => paintStroke(context, stroke));
+      const wall = document.createElement("canvas");
+      wall.width = canvasWidth;
+      wall.height = canvasHeight;
+      const wallContext = wall.getContext("2d");
+      if (wallContext) {
+        wallContext.fillStyle = "#090d12";
+        wallContext.fillRect(0, 0, canvasWidth, canvasHeight);
+        wallContext.drawImage(artwork, drawingArea.left * canvasWidth, drawingArea.top * canvasHeight);
+        savedWall.current = wall;
+        saveDrawing(artwork, wall);
+      }
+    }
     startFinale();
     if (!completionReported.current) {
       completionReported.current = true;
@@ -360,7 +414,7 @@ export function DrawingInteraction({
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 0 : target === 1 ? 950 : 620;
+    const duration = reducedMotion ? 0 : target === 1 ? 550 : 380;
     transitionState.current = target === 1 ? "intro" : "outro";
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
@@ -389,6 +443,9 @@ export function DrawingInteraction({
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
     cancelActiveStroke();
+    if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
+    finaleFrame.current = null;
+    replayProgress.current = 1;
     hoverControl.current = null;
     animateTransition(0, callback);
   }, [animateTransition, cancelActiveStroke]);
@@ -410,6 +467,7 @@ export function DrawingInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    savedWall.current = getVisitorCreation().drawingWall;
     let mounted = true;
     let registered = false;
     const image = new Image();
@@ -433,7 +491,7 @@ export function DrawingInteraction({
       mounted = false;
       image.onload = null;
       image.onerror = null;
-      registerInteractionCanvas("main", null);
+      registerInteractionCanvas("main", savedWall.current);
     };
   }, [animateTransition, paint, schedulePaint]);
 
@@ -502,7 +560,26 @@ export function DrawingInteraction({
           height={canvasHeight}
           className={styles.textureSource}
           data-drawing-canvas
-          aria-hidden="true"
+          tabIndex={0}
+          aria-label={copy.draw.keyboard}
+          onFocus={schedulePaint}
+          onBlur={() => { finishStroke(-1); schedulePaint(); }}
+          onKeyDown={(event) => {
+            if (finishedRef.current || transitionState.current !== "ready") return;
+            if (event.key === " " || event.key === "Enter") {
+              event.preventDefault();
+              if (event.repeat) return;
+              if (activePointer.current === -1) finishStroke(-1);
+              else beginStroke(keyboardPoint.current, -1);
+              return;
+            }
+            const offset = { ArrowLeft: [-18, 0], ArrowRight: [18, 0], ArrowUp: [0, -18], ArrowDown: [0, 18] }[event.key];
+            if (!offset) return;
+            event.preventDefault();
+            keyboardPoint.current = clampDrawingPoint({ x: keyboardPoint.current.x + offset[0], y: keyboardPoint.current.y + offset[1] });
+            if (activePointer.current === -1) queuePoint(keyboardPoint.current);
+            schedulePaint();
+          }}
         />
         <p>{copy.stations.draw.instruction}</p>
         <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>

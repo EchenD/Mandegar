@@ -11,6 +11,7 @@ import {
   registerSceneInteraction,
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
+import { getVisitorCreation, saveLightingLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.videoWall.canvas;
@@ -78,21 +79,24 @@ export function StageBeamInteraction({
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
   const finaleFrame = useRef<number | null>(null);
-  const completionTimer = useRef<number | null>(null);
+  const showFrame = useRef<number | null>(null);
+  const showStartedAt = useRef<number | null>(null);
   const transitionProgress = useRef(0);
   const transitionState = useRef<"intro" | "ready" | "outro">("intro");
   const finaleStartedAt = useRef<number | null>(null);
   const monitorImage = useRef<HTMLImageElement | null>(null);
   const activePointer = useRef<StagePointer | null>(null);
-  const activeRef = useRef([false, false, false, false, false]);
+  const [active, setActive] = useState(() => [...getVisitorCreation().lighting]);
+  const activeRef = useRef(active);
   const hoverBeam = useRef<number | null>(null);
-  const hoverControl = useRef<"close" | "reset" | "continue" | null>(null);
+  const hoverControl = useRef<"close" | "reset" | "play" | "finish" | null>(null);
   const keyboardFocus = useRef<number | null>(null);
   const completionReported = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onResetRef = useRef(onReset);
   const sceneInputCount = useRef(0);
-  const [active, setActive] = useState([false, false, false, false, false]);
+  const [finished, setFinished] = useState(false);
+  const [showing, setShowing] = useState(false);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -101,10 +105,14 @@ export function StageBeamInteraction({
 
   const syncSceneBeams = useCallback(() => {
     const preview = hoverControl.current === null ? hoverBeam.current : null;
-    interactionRuntime.activeBeams = activeRef.current.map(
-      (enabled, index) => enabled || preview === index,
-    );
-    interactionRuntime.stageComplete = activeRef.current.every(Boolean);
+    const selected = activeRef.current.flatMap((enabled, index) => enabled ? [index] : []);
+    const elapsed = showStartedAt.current === null ? null : performance.now() - showStartedAt.current;
+    interactionRuntime.activeBeams = activeRef.current.map((enabled, index) => {
+      if (elapsed === null) return enabled || preview === index;
+      const beat = Math.min(selected.length - 1, Math.floor(elapsed / 300));
+      return enabled && (elapsed >= selected.length * 300 || selected.indexOf(index) <= beat);
+    });
+    interactionRuntime.stageComplete = completionReported.current;
   }, []);
 
   const paint = useCallback(() => {
@@ -116,14 +124,15 @@ export function StageBeamInteraction({
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const activeBeams = activeRef.current;
     const activeCount = activeBeams.filter(Boolean).length;
-    const complete = activeCount === stageBeamColors.length;
+    const complete = completionReported.current;
+    const isShowing = showStartedAt.current !== null;
     const transition = transitionProgress.current;
     const surfaceReveal = revealProgress(transition, 0, 0.34);
     const controlsReveal = revealProgress(transition, 0.62, 1);
     const finaleElapsed = finaleStartedAt.current === null
       ? 1
       : Math.min(1, (performance.now() - finaleStartedAt.current) / 950);
-    const finalePulse = complete ? Math.sin(finaleElapsed * Math.PI) : 0;
+    const finalePulse = complete && activeBeams.every(Boolean) ? Math.sin(finaleElapsed * Math.PI) : 0;
     interactionRuntime.stageVisibility = transition;
     syncSceneBeams();
 
@@ -160,10 +169,15 @@ export function StageBeamInteraction({
     context.fillText(copy.stations.stage.title, width / 2, 68, width - 180);
     context.fillStyle = "rgba(22,25,29,.6)";
     context.font = '500 18px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(complete ? copy.stage.finale : copy.stations.stage.instruction, width / 2, 94, width - 180);
+    context.fillText(
+      isShowing ? copy.stage.showing : complete ? copy.stage.finale : activeCount > 0 ? copy.stage.ready : copy.stations.stage.instruction,
+      width / 2,
+      94,
+      width - 180,
+    );
     context.fillStyle = "#225cff";
     context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(`${String(activeCount).padStart(2, "0")} / 05`, width / 2, 115);
+    context.fillText(String(activeCount).padStart(2, "0"), width / 2, 115);
     context.restore();
 
     context.fillStyle = "rgba(22,25,29,.12)";
@@ -237,7 +251,7 @@ export function StageBeamInteraction({
 
     const closeX = width * 0.965;
     const closeY = height * 0.085;
-    const closeFocused = hoverControl.current === "close" || keyboardFocus.current === 7;
+    const closeFocused = hoverControl.current === "close" || keyboardFocus.current === 8;
     context.fillStyle = closeFocused ? "#e9eeff" : "rgba(255,255,255,.88)";
     context.beginPath();
     context.arc(closeX, closeY, 19, 0, Math.PI * 2);
@@ -291,10 +305,16 @@ export function StageBeamInteraction({
       hoverControl.current === "reset" || keyboardFocus.current === 5,
     );
     drawButton(
+      width * 0.3975,
+      copy.stage.play,
+      activeCount > 0 && !isShowing,
+      hoverControl.current === "play" || keyboardFocus.current === 6,
+    );
+    drawButton(
       width * 0.76,
-      copy.continue,
-      complete,
-      hoverControl.current === "continue" || keyboardFocus.current === 6,
+      complete ? copy.continue : copy.finish,
+      activeCount > 0,
+      hoverControl.current === "finish" || keyboardFocus.current === 7,
       true,
     );
     context.restore();
@@ -310,6 +330,40 @@ export function StageBeamInteraction({
       paint();
     });
   }, [paint]);
+
+  const stopShow = useCallback(() => {
+    if (showFrame.current !== null) window.cancelAnimationFrame(showFrame.current);
+    showFrame.current = null;
+    showStartedAt.current = null;
+    setShowing(false);
+    schedulePaint();
+  }, [schedulePaint]);
+
+  const playShow = useCallback(() => {
+    if (!activeRef.current.some(Boolean) || showStartedAt.current !== null) return;
+    hoverBeam.current = null;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      saveLightingLook(activeRef.current);
+      schedulePaint();
+      return;
+    }
+    showStartedAt.current = performance.now();
+    setShowing(true);
+    const duration = Math.max(1200, activeRef.current.filter(Boolean).length * 300 + 300);
+    const tick = () => {
+      paint();
+      if (showStartedAt.current !== null && performance.now() - showStartedAt.current < duration) {
+        showFrame.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      showFrame.current = null;
+      showStartedAt.current = null;
+      saveLightingLook(activeRef.current);
+      setShowing(false);
+      paint();
+    };
+    showFrame.current = window.requestAnimationFrame(tick);
+  }, [paint, schedulePaint]);
 
   const startFinaleAnimation = useCallback(() => {
     if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
@@ -329,7 +383,7 @@ export function StageBeamInteraction({
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 0 : target === 1 ? 1050 : 650;
+    const duration = reducedMotion ? 0 : target === 1 ? 550 : 450;
     transitionState.current = target === 1 ? "intro" : "outro";
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
@@ -357,15 +411,14 @@ export function StageBeamInteraction({
 
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
+    stopShow();
     activePointer.current = null;
     hoverBeam.current = null;
     hoverControl.current = null;
     animateTransition(0, callback);
-  }, [animateTransition]);
+  }, [animateTransition, stopShow]);
 
   const closeWithTransition = useCallback(() => {
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    completionTimer.current = null;
     exitWithTransition(onClose);
   }, [exitWithTransition, onClose]);
 
@@ -373,32 +426,35 @@ export function StageBeamInteraction({
     exitWithTransition(onContinue);
   }, [exitWithTransition, onContinue]);
 
+  const finishLook = useCallback(() => {
+    if (!activeRef.current.some(Boolean) || completionReported.current) return;
+    stopShow();
+    completionReported.current = true;
+    interactionRuntime.stageComplete = true;
+    setFinished(true);
+    saveLightingLook(activeRef.current);
+    if (activeRef.current.every(Boolean)) startFinaleAnimation();
+    schedulePaint();
+    onCompleteRef.current();
+  }, [schedulePaint, startFinaleAnimation, stopShow]);
+
   const commitBeams = useCallback((next: boolean[]) => {
-    const complete = next.every(Boolean);
+    stopShow();
+    if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
+    finaleFrame.current = null;
+    finaleStartedAt.current = null;
     activeRef.current = next;
     hoverBeam.current = null;
     interactionRuntime.activeBeams = [...next];
-    interactionRuntime.stageComplete = complete;
+    interactionRuntime.stageComplete = false;
     setActive(next);
     schedulePaint();
-    if (!complete && completionReported.current) {
-      if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-      completionTimer.current = null;
-      if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
-      finaleFrame.current = null;
-      finaleStartedAt.current = null;
+    if (completionReported.current) {
       completionReported.current = false;
+      setFinished(false);
       onResetRef.current();
     }
-    if (complete && !completionReported.current) {
-      completionReported.current = true;
-      startFinaleAnimation();
-      completionTimer.current = window.setTimeout(() => {
-        completionTimer.current = null;
-        onCompleteRef.current();
-      }, 320);
-    }
-  }, [schedulePaint, startFinaleAnimation]);
+  }, [schedulePaint, stopShow]);
 
   const toggleBeam = useCallback((index: number) => {
     const next = [...activeRef.current];
@@ -414,8 +470,6 @@ export function StageBeamInteraction({
   }, [commitBeams]);
 
   const reset = useCallback(() => {
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    completionTimer.current = null;
     finaleStartedAt.current = null;
     activePointer.current = null;
     commitBeams([false, false, false, false, false]);
@@ -481,9 +535,11 @@ export function StageBeamInteraction({
           ? "close"
           : hitRect(point.x, point.y, 0.02, 0.82, 0.25, 0.18)
             ? "reset"
-            : hitRect(point.x, point.y, 0.73, 0.82, 0.27, 0.18)
-              ? "continue"
-              : null;
+            : hitRect(point.x, point.y, 0.38, 0.82, 0.24, 0.18)
+              ? "play"
+              : hitRect(point.x, point.y, 0.73, 0.82, 0.27, 0.18)
+                ? "finish"
+                : null;
         const index = hoverControl.current === null ? beamAtPoint(point.x, point.y) : -1;
         hoverBeam.current = index >= 0 ? index : null;
         syncSceneBeams();
@@ -501,7 +557,12 @@ export function StageBeamInteraction({
           return;
         }
         if (hitRect(point.x, point.y, 0.73, 0.82, 0.27, 0.18)) {
-          if (activeRef.current.every(Boolean)) continueWithTransition();
+          if (completionReported.current) continueWithTransition();
+          else finishLook();
+          return;
+        }
+        if (hitRect(point.x, point.y, 0.38, 0.82, 0.24, 0.18)) {
+          playShow();
           return;
         }
         const index = beamAtPoint(point.x, point.y);
@@ -539,14 +600,14 @@ export function StageBeamInteraction({
     };
     registerSceneInteraction("stage", handleSceneInput);
     return () => registerSceneInteraction("stage", null);
-  }, [activateBeam, closeWithTransition, continueWithTransition, reset, schedulePaint, syncSceneBeams, toggleBeam]);
+  }, [activateBeam, closeWithTransition, continueWithTransition, finishLook, playShow, reset, schedulePaint, syncSceneBeams, toggleBeam]);
 
   useEffect(() => () => {
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    interactionRuntime.activeBeams = [false, false, false, false, false];
+    if (showFrame.current !== null) window.cancelAnimationFrame(showFrame.current);
+    interactionRuntime.activeBeams = [...getVisitorCreation().lighting];
     interactionRuntime.stageComplete = false;
     interactionRuntime.stageVisibility = 0;
   }, []);
@@ -564,7 +625,8 @@ export function StageBeamInteraction({
         className={styles.spatialInteractionSemantics}
         data-stage-spatial-controls
         data-stage-active-count={active.filter(Boolean).length}
-        data-stage-complete={active.every(Boolean) ? "true" : "false"}
+        data-stage-complete={finished ? "true" : "false"}
+        data-stage-showing={showing ? "true" : "false"}
         role="region"
         aria-label={copy.stations.stage.title}
       >
@@ -592,6 +654,7 @@ export function StageBeamInteraction({
         ))}
         <button
           type="button"
+          data-stage-reset
           disabled={!active.some(Boolean)}
           onFocus={() => focusControl(5)}
           onBlur={() => focusControl(null)}
@@ -601,9 +664,29 @@ export function StageBeamInteraction({
         </button>
         <button
           type="button"
-          data-interaction-continue
-          disabled={!active.every(Boolean)}
+          data-stage-play
+          disabled={!active.some(Boolean) || showing}
           onFocus={() => focusControl(6)}
+          onBlur={() => focusControl(null)}
+          onClick={playShow}
+        >
+          {copy.stage.play}
+        </button>
+        <button
+          type="button"
+          data-stage-finish
+          disabled={!active.some(Boolean) || finished}
+          onFocus={() => focusControl(7)}
+          onBlur={() => focusControl(null)}
+          onClick={finishLook}
+        >
+          {copy.finish}
+        </button>
+        <button
+          type="button"
+          data-interaction-continue
+          disabled={!finished}
+          onFocus={() => focusControl(7)}
           onBlur={() => focusControl(null)}
           onClick={continueWithTransition}
         >
@@ -612,21 +695,21 @@ export function StageBeamInteraction({
         <button
           type="button"
           data-interaction-dismiss
-          onFocus={() => focusControl(7)}
+          onFocus={() => focusControl(8)}
           onBlur={() => focusControl(null)}
           onClick={closeWithTransition}
         >
           {copy.close}
         </button>
         <span role="status" aria-live="polite">
-          {active.every(Boolean) ? copy.stage.finale : `${active.filter(Boolean).length} / 5`}
+          {showing ? copy.stage.showing : finished ? copy.stage.finale : active.some(Boolean) ? copy.stage.ready : copy.stations.stage.instruction}
         </span>
       </div>
       <div className={styles.mobileStageDock} data-mobile-stage-dock role="group" aria-label={copy.stations.stage.title}>
         <div className={styles.mobileStageDockHeader}>
           <strong>{copy.stations.stage.title}</strong>
           <button type="button" disabled={!active.some(Boolean)} onClick={reset}>{copy.reset}</button>
-          <span aria-live="polite">{active.filter(Boolean).length} / 5</span>
+          <span aria-live="polite">{showing ? copy.stage.showing : finished ? copy.stage.finale : String(active.filter(Boolean).length).padStart(2, "0")}</span>
         </div>
         <div className={styles.mobileStageBeams}>
           {stageBeamColors.map((color, index) => (
@@ -643,6 +726,24 @@ export function StageBeamInteraction({
               {String(index + 1).padStart(2, "0")}
             </button>
           ))}
+        </div>
+        <div className={styles.mobileStageActions}>
+          <button
+            type="button"
+            data-mobile-stage-play
+            disabled={!active.some(Boolean) || showing}
+            onClick={playShow}
+          >
+            {copy.stage.play}
+          </button>
+          <button
+            type="button"
+            data-mobile-stage-finish
+            disabled={!active.some(Boolean)}
+            onClick={finished ? continueWithTransition : finishLook}
+          >
+            {finished ? copy.continue : copy.finish}
+          </button>
         </div>
       </div>
     </>

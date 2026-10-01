@@ -15,6 +15,7 @@ import {
 } from "./baked-material-binding";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { prepareBakedTexture } from "./baked-scene-material";
+import { getVisitorCreation } from "./interactions/visitor-creation";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { sceneTokens } from "./scene-config";
@@ -280,8 +281,9 @@ export function BakedScreenController({
       runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
-      const liveEntry = interactionRuntime.monitorEntries[runtime.id];
-      if (liveEntry?.canvas !== runtime.liveCanvas) {
+      const savedWall = runtime.id === "main" ? getVisitorCreation().drawingWall : null;
+      const liveEntry = interactionRuntime.monitorEntries[runtime.id] ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
+      if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
         runtime.liveTexture?.dispose();
         runtime.liveCanvas = liveEntry?.canvas ?? null;
         runtime.liveRevision = 0;

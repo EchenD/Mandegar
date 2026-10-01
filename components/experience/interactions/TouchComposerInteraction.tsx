@@ -10,6 +10,7 @@ import {
   registerSceneInteraction,
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
+import { getVisitorCreation, saveComposer } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.interactive.canvas;
@@ -393,7 +394,7 @@ export function TouchComposerInteraction({
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 0 : target === 1 ? 1150 : 700;
+    const duration = reducedMotion ? 0 : target === 1 ? 550 : 380;
     transitionState.current = target === 1 ? "intro" : "outro";
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
@@ -442,6 +443,7 @@ export function TouchComposerInteraction({
     const wasComplete = completeRef.current;
     selectedRef.current = [false, false, false];
     interactionRuntime.touchElements = [false, false, false];
+    saveComposer([false, false, false]);
     completeRef.current = false;
     activePointer.current = null;
     setSelected([false, false, false]);
@@ -456,6 +458,7 @@ export function TouchComposerInteraction({
     next[index] = true;
     selectedRef.current = next;
     interactionRuntime.touchElements = [...next];
+    saveComposer(next);
     setSelected(next);
     const finished = next.every(Boolean);
     if (finished && !completeRef.current) {
@@ -472,6 +475,7 @@ export function TouchComposerInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    interactionRuntime.touchElements = [...selectedRef.current];
     let active = true;
     let registered = false;
     const image = new Image();
@@ -595,7 +599,7 @@ export function TouchComposerInteraction({
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    interactionRuntime.touchElements = [false, false, false];
+    interactionRuntime.touchElements = [...getVisitorCreation().composer];
     interactionRuntime.touchVisibility = 0;
   }, []);
 

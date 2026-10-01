@@ -18,9 +18,9 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
   const { locale } = await params;
   const [projects, editorial] = await Promise.all([getProjects(locale), getEditorialPage(locale, "projects")]);
   const text = {
-    fa: { kicker: "آرشیو پروژه‌ها", title: "ایده‌ها وقتی واقعی می‌شوند، ماندگارترند.", body: "این آرشیو به‌صورت کامل از CMS تغذیه می‌شود. نمونه‌های فعلی placeholder هستند تا ساختار جایگزینی رسانه و محتوا آماده باشد." },
-    en: { kicker: "Project archive", title: "Ideas last longer when they become real.", body: "This archive is designed to be fully CMS-driven. Current entries are placeholders so the media and content replacement system is ready." },
-    ar: { kicker: "أرشيف المشاريع", title: "تبقى الأفكار أطول عندما تصبح حقيقية.", body: "تم تصميم هذا الأرشيف ليعمل بالكامل عبر CMS. الإدخالات الحالية مؤقتة حتى يصبح نظام استبدال الوسائط والمحتوى جاهزاً." },
+    fa: { kicker: "آرشیو پروژه‌ها", title: "ایده‌ها وقتی واقعی می‌شوند، ماندگارترند.", body: "ایده‌هایی برای فضا، رویداد و مشارکت را ببینید. نمونه‌های مفهومی با برچسب روشن مشخص شده‌اند." },
+    en: { kicker: "Project archive", title: "Ideas last longer when they become real.", body: "Explore ideas for spaces, events and participation. Concept studies are clearly labelled." },
+    ar: { kicker: "أرشيف المشاريع", title: "تبقى الأفكار أطول عندما تصبح حقيقية.", body: "استكشف أفكاراً للمساحات والفعاليات والمشاركة. النماذج المفاهيمية موسومة بوضوح." },
   }[locale];
   if (editorial) {
     text.kicker = getText(editorial.heroKicker, locale) || text.kicker;

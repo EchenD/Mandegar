@@ -29,9 +29,12 @@
 .wordMask { display: inline-block; overflow: hidden; vertical-align: top; margin-inline-end: .19em; padding-block: .1em .13em; margin-block: -.1em -.13em; }
 .wordMask > span { display: inline-block; transform-origin: bottom; will-change: transform; }
 .projectCopy { position: absolute; inset: 0; z-index: 4; color: #1d2026; pointer-events: none; }
-.titlePosition { position: absolute; top: calc(50% + 27svh); inset-inline: 5vw; height: 5.5rem; overflow: hidden; padding-top: 1rem; text-align: center; }
+.titlePosition { position: absolute; top: calc(50% + 27svh); inset-inline: 5vw; min-height: 5.5rem; overflow: hidden; padding-top: 1rem; text-align: center; }
 .titlePosition a { display: inline-block; max-width: 90vw; color: inherit; pointer-events: auto; text-decoration: none; }
 .titlePosition h2 { display: block; overflow: hidden; margin: 0; font-size: clamp(1.15rem, 2vw, 2.1rem); line-height: 1.35; letter-spacing: -.025em; font-weight: 540; text-overflow: ellipsis; white-space: nowrap; will-change: transform, clip-path; }
+.projectCategory { position: absolute; top: 0; inset-inline: 0; overflow: hidden; color: #56616a; font-size: .6875rem; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.projectAction { display: flex; align-items: center; justify-content: center; gap: .6rem; margin-top: .4rem; color: #225cff; font-size: .7rem; line-height: 1.4; }
+.projectAction > span { font-size: .85rem; }
 :global([dir="rtl"]) .titlePosition h2 { letter-spacing: 0; line-height: 1.55; }
 .projectDetail { position: absolute; inset-inline-end: 6vw; top: 15svh; width: min(27vw, 25rem); }
 .copyMask { overflow: hidden; }
@@ -93,7 +96,7 @@
   .kicker { font-size: .55rem; }
   .projectsWorld { perspective: 900px; }
   .orbitCard { width: 64vw; height: 45svh; border-radius: clamp(1.35rem, 7vw, 2.6rem); }
-  .titlePosition { top: calc(50% + 22.5svh); inset-inline: 5vw; width: auto; height: 4.8rem; padding-top: .85rem; }
+  .titlePosition { top: calc(50% + 22.5svh); inset-inline: 5vw; width: auto; min-height: 4.8rem; padding-top: 1rem; }
   .titlePosition h2 { font-size: clamp(1rem, 5vw, 1.45rem); line-height: 1.45; }
   .projectCopy .projectDetail { width: 86vw; inset-inline: 7vw; top: auto; bottom: 8svh; text-align: start; }
   .projectDetail p { display: none; }
@@ -121,6 +124,9 @@
 .root[data-motion="reduced"] .staticPhoto { display: block; width: 100%; height: 50svh; object-fit: cover; margin-bottom: 2rem; }
 .root[data-motion="reduced"] :is(.titlePosition, .projectDetail, .logo, .finaleDetail) { position: relative; inset: auto; width: auto; visibility: visible; }
 .root[data-motion="reduced"] .titlePosition h2 { font-size: clamp(2rem, 6vw, 5rem); }
+.root[data-motion="reduced"] .titlePosition { height: auto; overflow: visible; padding-top: 0; text-align: start; color: var(--ink); }
+.root[data-motion="reduced"] .projectCategory { position: static; display: block; margin-bottom: .6rem; color: #c2c8cb; }
+.root[data-motion="reduced"] .projectAction { justify-content: flex-start; color: var(--blue); }
 .root[data-motion="reduced"] .projectNumber { display: none; }
 .root[data-motion="reduced"] .about { background: var(--bg); }
 .root[data-motion="reduced"] .aboutBackdrop { display: none; }

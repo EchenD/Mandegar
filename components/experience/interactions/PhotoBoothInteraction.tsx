@@ -11,13 +11,20 @@ import {
   registerSceneInteraction,
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
+import { getVisitorCreation, savePhotoLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
 type PhotoStep = "ready" | "countdown" | "captured";
-type PhotoControl = "capture" | "replay" | "continue";
+type PhotoLook = "warm" | "cool";
+type PhotoControl = "capture" | "replay" | "continue" | PhotoLook;
 
 const canvasWidth = 800;
 const canvasHeight = 520;
+const readyControls = {
+  warm: { x: 0.22, y: 0.63, width: 0.26, height: 0.1 },
+  cool: { x: 0.52, y: 0.63, width: 0.26, height: 0.1 },
+  capture: { x: 0.3, y: 0.8, width: 0.4, height: 0.11 },
+} as const;
 const capturedControls = {
   replay: { x: 0.3, y: 0.8, width: 0.25, height: 0.11 },
   continue: { x: 0.56, y: 0.8, width: 0.34, height: 0.11 },
@@ -51,6 +58,12 @@ function revealProgress(progress: number, start: number, end: number) {
 }
 
 function controlAtPoint(step: PhotoStep, x: number, y: number): PhotoControl | null {
+  if (step === "ready") {
+    for (const control of ["warm", "cool", "capture"] as const) {
+      const area = readyControls[control];
+      if (hitRect(x, y, area.x, area.y, area.width, area.height)) return control;
+    }
+  }
   if (step === "captured") {
     const replay = capturedControls.replay;
     const next = capturedControls.continue;
@@ -77,7 +90,7 @@ export function PhotoBoothInteraction({
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timers = useRef<number[]>([]);
+  const previewImage = useRef<HTMLImageElement | null>(null);
   const countdownFrame = useRef<number | null>(null);
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
@@ -90,8 +103,10 @@ export function PhotoBoothInteraction({
   const completionReported = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onResetRef = useRef(onReset);
+  const lookRef = useRef<PhotoLook>("warm");
   const [step, setStep] = useState<PhotoStep>("ready");
   const [count, setCount] = useState(3);
+  const [look, setLook] = useState<PhotoLook>("warm");
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -99,8 +114,6 @@ export function PhotoBoothInteraction({
   }, [onComplete, onReset]);
 
   const clearTimers = useCallback(() => {
-    timers.current.forEach((timer) => window.clearTimeout(timer));
-    timers.current = [];
     if (countdownFrame.current !== null) {
       window.cancelAnimationFrame(countdownFrame.current);
       countdownFrame.current = null;
@@ -123,16 +136,45 @@ export function PhotoBoothInteraction({
 
     interactionRuntime.photoStep = currentStep;
     interactionRuntime.photoCount = currentCount;
+    interactionRuntime.photoLook = lookRef.current;
     interactionRuntime.photoVisibility = transition;
     context.clearRect(0, 0, width, height);
     canvas.dataset.paintedPhotoState = currentStep;
     canvas.dataset.paintedPhotoCount = String(currentCount);
+    canvas.dataset.photoLook = lookRef.current;
     canvas.dataset.transitionProgress = transition.toFixed(3);
 
     context.save();
     context.globalAlpha = surfaceReveal;
     const centerX = width / 2;
     const centerY = height * 0.42;
+    if (currentStep === "ready") {
+      context.save();
+      context.globalAlpha = contentReveal;
+      context.direction = direction;
+      context.textAlign = "center";
+      context.fillStyle = "#f7f7f4";
+      context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(copy.photo.ready, centerX, 25, width - 64);
+      const previewWidth = 130;
+      const previewHeight = 230;
+      const previewX = centerX - previewWidth / 2;
+      const previewY = 48;
+      roundedRect(context, previewX - 8, previewY - 8, previewWidth + 16, previewHeight + 16, 12);
+      context.fillStyle = lookRef.current === "warm" ? "#fff2df" : "#e8f2ff";
+      context.fill();
+      if (previewImage.current?.complete && previewImage.current.naturalWidth > 0) {
+        context.filter = lookRef.current === "warm" ? "sepia(.2) saturate(.9)" : "saturate(.8) hue-rotate(8deg)";
+        context.drawImage(previewImage.current, previewX, previewY, previewWidth, previewHeight);
+        context.filter = "none";
+      }
+      context.direction = direction;
+      context.textAlign = "center";
+      context.fillStyle = "#f7f7f4";
+      context.font = '600 20px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(copy.photo.choose, centerX, height * 0.59, width - 80);
+      context.restore();
+    }
     if (currentStep === "countdown") {
       context.save();
       context.globalAlpha = contentReveal;
@@ -156,22 +198,30 @@ export function PhotoBoothInteraction({
       primary: boolean,
     ) => {
       const focused = hoverControl.current === control || keyboardFocus.current === control;
+      const selected = control === lookRef.current;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary ? "#225cff" : focused ? "#e9eeff" : "rgba(247,247,244,.96)";
+      context.fillStyle = primary || selected ? "#225cff" : focused ? "#e9eeff" : "rgba(247,247,244,.96)";
       context.fill();
-      context.strokeStyle = focused ? "#225cff" : primary ? "#225cff" : "rgba(22,25,29,.26)";
+      context.strokeStyle = focused ? "#75d8ff" : primary || selected ? "#225cff" : "rgba(22,25,29,.26)";
       context.lineWidth = focused ? 3 : 1.5;
       context.stroke();
       context.direction = direction;
       context.textAlign = "center";
-      context.fillStyle = primary ? "#fff" : "#16191d";
+      context.fillStyle = primary || selected ? "#fff" : "#16191d";
       context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
       context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.62, buttonWidth - 24);
     };
 
     context.save();
     context.globalAlpha = controlsReveal;
-    if (currentStep === "captured") {
+    if (currentStep === "ready") {
+      for (const [index, control] of (["warm", "cool"] as const).entries()) {
+        const area = readyControls[control];
+        drawButton(control, width * area.x, height * area.y, width * area.width, height * area.height, copy.photo.looks[index], false);
+      }
+      const area = readyControls.capture;
+      drawButton("capture", width * area.x, height * area.y, width * area.width, height * area.height, copy.photo.capture, true);
+    } else if (currentStep === "captured") {
       const replay = capturedControls.replay;
       const next = capturedControls.continue;
       drawButton("replay", width * replay.x, height * replay.y, width * replay.width, height * replay.height, copy.replay, false);
@@ -214,6 +264,7 @@ export function PhotoBoothInteraction({
 
   const capture = useCallback(() => {
     if (stepRef.current !== "ready") return;
+    savePhotoLook(lookRef.current);
     clearTimers();
     commitCount(3);
     if (reducedMotion) {
@@ -248,13 +299,20 @@ export function PhotoBoothInteraction({
       completionReported.current = false;
       onResetRef.current();
     }
-    timers.current.push(window.setTimeout(capture, 700));
-  }, [capture, clearTimers, commitCount, commitStep]);
+  }, [clearTimers, commitCount, commitStep]);
+
+  const chooseLook = useCallback((nextLook: PhotoLook) => {
+    if (stepRef.current !== "ready") return;
+    lookRef.current = nextLook;
+    interactionRuntime.photoLook = nextLook;
+    setLook(nextLook);
+    paint();
+  }, [paint]);
 
   const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
-    const duration = reducedMotion ? 0 : target === 1 ? 900 : 560;
+    const duration = reducedMotion ? 0 : target === 1 ? 600 : 560;
     transitionState.current = target === 1 ? "intro" : "outro";
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
@@ -292,7 +350,8 @@ export function PhotoBoothInteraction({
     if (control === "capture") capture();
     else if (control === "replay") replay();
     else if (control === "continue") exitWithTransition(onContinue);
-  }, [capture, exitWithTransition, onContinue, replay]);
+    else chooseLook(control);
+  }, [capture, chooseLook, exitWithTransition, onContinue, replay]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -302,15 +361,16 @@ export function PhotoBoothInteraction({
     transitionState.current = "intro";
     stepRef.current = "ready";
     countRef.current = 3;
+    lookRef.current = getVisitorCreation().photoLook ?? "warm";
     completionReported.current = false;
     setStep("ready");
     setCount(3);
+    setLook(lookRef.current);
     interactionRuntime.photoStep = "ready";
     interactionRuntime.photoCount = 3;
     interactionRuntime.photoVisibility = 0;
     registerPhotoSurface(canvas);
     paint();
-    capture();
     animateTransition(1);
     void document.fonts?.ready.then(schedulePaint);
     return () => {
@@ -319,7 +379,23 @@ export function PhotoBoothInteraction({
       interactionRuntime.photoCount = 3;
       interactionRuntime.photoVisibility = 0;
     };
-  }, [animateTransition, capture, clearTimers, paint, schedulePaint]);
+  }, [animateTransition, clearTimers, paint, schedulePaint]);
+
+  useEffect(() => {
+    const image = new window.Image();
+    let mounted = true;
+    image.onload = () => {
+      if (!mounted) return;
+      previewImage.current = image;
+      schedulePaint();
+    };
+    image.src = publicAssetPath("/media/placeholders/photo-experience.webp");
+    return () => {
+      mounted = false;
+      image.onload = null;
+      previewImage.current = null;
+    };
+  }, [schedulePaint]);
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
@@ -358,34 +434,49 @@ export function PhotoBoothInteraction({
         data-photo-spatial-controls
         data-photo-state={step}
         data-photo-count={count}
+        data-photo-look={look}
         role="region"
         aria-label={copy.stations.photo.title}
       >
         <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} aria-hidden="true" />
         <p>{step === "captured" ? copy.photo.captured : copy.photo.ready}</p>
-        <button type="button" disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
-        <button type="button" disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
+        <div role="group" aria-label={copy.photo.choose}>
+          {(["warm", "cool"] as const).map((option, index) => (
+            <button key={option} type="button" data-photo-look-choice={option} aria-pressed={look === option} disabled={step !== "ready"} onFocus={() => focusControl(option)} onBlur={() => focusControl(null)} onClick={() => chooseLook(option)}>{copy.photo.looks[index]}</button>
+          ))}
+        </div>
+        <button type="button" data-photo-capture disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
+        <button type="button" data-photo-replay disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
         <button type="button" data-interaction-continue disabled={step !== "captured"} onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => handleControl("continue")}>{copy.continue}</button>
         <button type="button" data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
         <span role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
       </div>
+      <figure className={styles.mobilePhotoResult} data-mobile-photo-result={step === "captured" ? "" : undefined} data-mobile-photo-preview={step !== "captured" ? "" : undefined} data-photo-look={look} role="status">
+        <span>MANDEGAR</span>
+        <Image
+          src={publicAssetPath("/media/placeholders/photo-experience.webp")}
+          width={116}
+          height={206}
+          alt={copy.photo.ready}
+          unoptimized
+        />
+        <figcaption>{step === "captured" ? copy.photo.captured : copy.photo.ready}</figcaption>
+      </figure>
+      {step !== "captured" && (
+        <div className={styles.photoChoiceDock} data-photo-choice-dock data-photo-look={look}>
+          <span>{copy.photo.choose}</span>
+          <div className={styles.photoLookChoices} role="group" aria-label={copy.photo.choose}>
+            {(["warm", "cool"] as const).map((option, index) => (
+              <button key={option} type="button" data-mobile-photo-look={option} aria-pressed={look === option} disabled={step !== "ready"} onClick={() => chooseLook(option)}>{copy.photo.looks[index]}</button>
+            ))}
+          </div>
+          <button type="button" className={styles.photoCaptureButton} data-mobile-photo-capture disabled={step !== "ready"} onClick={capture}>{step === "countdown" ? count : copy.photo.capture}</button>
+        </div>
+      )}
       {step === "captured" && (
-        <>
-          <figure className={styles.mobilePhotoResult} data-mobile-photo-result role="status">
-            <span>MANDEGAR</span>
-            <Image
-              src={publicAssetPath("/media/placeholders/photo-experience.webp")}
-              width={116}
-              height={206}
-              alt={copy.photo.captured}
-              unoptimized
-            />
-            <figcaption>{copy.photo.captured}</figcaption>
-          </figure>
-          <button type="button" className={styles.mobilePhotoReplay} data-mobile-photo-replay onClick={replay}>
-            {copy.replay}
-          </button>
-        </>
+        <button type="button" className={styles.mobilePhotoReplay} data-mobile-photo-replay onClick={replay}>
+          {copy.replay}
+        </button>
       )}
     </>
   );

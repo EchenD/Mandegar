@@ -1,0 +1,29 @@
+.control {
+  position: fixed;
+  left: clamp(3.5rem, 4vw, 4.5rem);
+  bottom: 5.25rem;
+  z-index: 11;
+  max-width: calc(100vw - 2rem);
+}
+.control button {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 2.75rem;
+  padding: .6rem .85rem;
+  border: 1px solid rgba(34,92,255,.25);
+  border-radius: .5rem;
+  color: #225cff;
+  background: rgba(247,247,244,.94);
+  font: inherit;
+  font-size: .75rem;
+  cursor: pointer;
+}
+.control button:focus-visible { outline: 2px solid #225cff; outline-offset: 3px; }
+.control button:disabled { opacity: .6; cursor: wait; }
+.control > span { display: block; margin-top: .3rem; font-size: .7rem; }
+:global(html:has([data-interaction-active])) .control,
+:global(html:has([data-intro-active="true"])) .control { visibility: hidden; pointer-events: none; }
+@media (max-width: 640px) {
+  .control { left: 1rem; bottom: calc(7.25rem + env(safe-area-inset-bottom)); }
+}

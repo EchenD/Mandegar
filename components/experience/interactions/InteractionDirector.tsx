@@ -146,10 +146,6 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, [state.activeStation, state.availableStation]);
 
   useEffect(() => {
-    if (expectedStation) autoStarted.current[expectedStation] = false;
-  }, [expectedStation]);
-
-  useEffect(() => {
     if (
       !expectedStation
       || (runtime !== "adaptive" && runtime !== "full")
@@ -478,12 +474,19 @@ export const InteractionDirector = memo(function InteractionDirector({
         />
       )}
 
+      {station && state.lifecycle !== "complete" && (
+        <p className={styles.interactionHint} data-interaction-hint role="status">
+          {copy.stations[station].instruction}
+        </p>
+      )}
+
       {station && (
         <button
           type="button"
           className={styles.mobileSkipButton}
           data-interaction-escape
           data-mobile-interaction-skip
+          data-complete={state.lifecycle === "complete" ? "true" : "false"}
           onClick={() => {
             const continueControl = panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-continue]");
             const exitControl = state.lifecycle === "complete" && continueControl && !continueControl.disabled

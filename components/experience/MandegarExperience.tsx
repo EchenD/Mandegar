@@ -11,6 +11,7 @@ import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
+import { VisitorPostcard } from "./interactions/VisitorPostcard";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -77,6 +78,7 @@ export type ExperienceProject = {
   slug: string;
   title: string;
   eyebrow: string;
+  category?: string;
   summary: string;
   mediaSrc: string;
   mediaKind?: "image" | "video" | "video-placeholder";
@@ -108,8 +110,8 @@ const postExperienceCopy = {
   fa: {
     viewWork: "مشاهده کارها",
     projectsKicker: "پروژه‌ها / منتخب",
-    projectsTitle: "این‌ها تجربه‌هایی هستند که پیش‌تر برای دیگران ساخته‌ایم.",
-    projectsBody: "مسیر در هر پروژه مکث می‌کند تا کار را ببینید و با حرکت نشانگر جزئیات آن را کشف کنید. هر جایگاه برای پروژه‌های تأییدشده CMS آماده است.",
+    projectsTitle: "ایده‌ها، فضاها و تجربه‌ها را کشف کنید.",
+    projectsBody: "طرح‌های مفهومی، نگاه ما به ترکیب فضا، فناوری و مردم را نشان می‌دهند.",
     viewProject: "مشاهده پروژه",
     projectsEmpty: "پروژه‌های تأییدشده پس از انتشار در این بخش نمایش داده می‌شوند.",
     aboutKicker: "درباره ما",
@@ -123,8 +125,8 @@ const postExperienceCopy = {
   en: {
     viewWork: "View work",
     projectsKicker: "Projects / Selected",
-    projectsTitle: "Here is what we have already built with others.",
-    projectsBody: "The journey pauses at every project so you can see the work and inspect it with the pointer. Every position is ready for approved CMS work.",
+    projectsTitle: "Explore ideas, spaces and experiences.",
+    projectsBody: "Concept studies show how we bring space, technology and people together.",
     viewProject: "View project",
     projectsEmpty: "Approved projects will appear here when they are published.",
     aboutKicker: "About us",
@@ -138,8 +140,8 @@ const postExperienceCopy = {
   ar: {
     viewWork: "شاهد أعمالنا",
     projectsKicker: "المشاريع / مختارات",
-    projectsTitle: "هذه تجارب سبق أن بنيناها مع الآخرين.",
-    projectsBody: "تتوقّف الرحلة عند كل مشروع لتشاهد العمل وتستكشف تفاصيله بالمؤشر. كل مساحة جاهزة لأعمال CMS المعتمدة.",
+    projectsTitle: "اكتشف الأفكار والأماكن والتجارب.",
+    projectsBody: "تُظهر الدراسات المفاهيمية كيف نجمع المكان والتقنية والناس.",
     viewProject: "عرض المشروع",
     projectsEmpty: "ستظهر المشاريع المعتمدة هنا عند نشرها.",
     aboutKicker: "من نحن",
@@ -531,6 +533,7 @@ export function MandegarExperience({
         ))}
       </div>
       </ScrollMotion>
+      <VisitorPostcard locale={locale} />
 
       <ConnectedJourney
         locale={locale}

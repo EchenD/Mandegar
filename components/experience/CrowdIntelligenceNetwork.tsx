@@ -7,6 +7,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { experienceState } from "./experience-state";
 import { phaseProgress, sceneTokens } from "./scene-config";
+import { interactionRuntime } from "./interactions/interaction-runtime";
+import { getVisitorCreation } from "./interactions/visitor-creation";
 
 const vertexShader = /* glsl */ `
   attribute float aKind;
@@ -226,10 +228,13 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
       sceneTokens.bakedScene.dataFlowRange,
     );
     const easedTiming = timing * timing * (3 - 2 * timing);
-    const strength = experienceState.stage.production.dataFlow
+    const inComposer = interactionRuntime.activeStation === "touch";
+    const peopleSelected = (inComposer ? interactionRuntime.touchElements : getVisitorCreation().composer)[2];
+    const audienceEnergy = peopleSelected ? (inComposer ? interactionRuntime.touchVisibility : 0.35) : 0;
+    const strength = Math.max(audienceEnergy, experienceState.stage.production.dataFlow
       * experienceState.stage.production.crowdPresence
       * easedTiming
-      * 1.35;
+      * 1.35);
     let pointerTarget = experienceState.pointerPresent && strength > 0.002 ? 1 : 0;
     if (experienceState.pointerPresent) {
       pointerNdc.current.set(experienceState.pointerX, experienceState.pointerY);

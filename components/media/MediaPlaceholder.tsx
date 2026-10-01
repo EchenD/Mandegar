@@ -18,7 +18,7 @@ export function MediaPlaceholder({ media, locale, priority = false, className = 
         </>
       )}
       {media.isPlaceholder ? <span className="mediaNotice">{locale === "fa" ? "رسانه مفهومی" : locale === "ar" ? "وسائط مفاهيمية" : "Concept media"}</span> : null}
-      {media.kind === "video-placeholder" ? <span className="videoMark">VIDEO / PLACEHOLDER</span> : null}
+      {media.kind === "video-placeholder" ? <span className="videoMark">{locale === "fa" ? "طرح مفهومی ویدیو" : locale === "ar" ? "تصور للفيديو" : "Video concept"}</span> : null}
       {caption ? <figcaption className="mediaCaption">{caption}</figcaption> : null}
     </figure>
   );

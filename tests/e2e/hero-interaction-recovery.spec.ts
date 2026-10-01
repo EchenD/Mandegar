@@ -65,16 +65,21 @@ test("mobile stage updates its exit after beam changes, recompletion and reset",
   await page.goto("/fa?intro=0&phase=reveal", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "stage");
   const dock = page.locator("[data-mobile-stage-dock]");
-  for (let index = 1; index <= 5; index += 1) {
+  const controls = page.locator("[data-stage-spatial-controls]");
+  for (const index of [1, 3]) {
     await dock.locator(`[data-mobile-stage-beam='${index}']`).tap();
   }
+  await expect(controls).toHaveAttribute("data-stage-active-count", "2");
+  await expect(director).toHaveAttribute("data-lifecycle", "active");
+  await dock.locator("[data-mobile-stage-finish]").tap();
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   const exit = page.locator("[data-interaction-escape]");
   await expect(exit).toHaveText("ادامه مسیر");
   await dock.locator("[data-mobile-stage-beam='1']").tap();
   await expect(director).toHaveAttribute("data-lifecycle", "active");
+  await expect(controls).toHaveAttribute("data-stage-active-count", "1");
   await expect(exit).toHaveText("رد کردن تعامل");
-  await dock.locator("[data-mobile-stage-beam='1']").tap();
+  await dock.locator("[data-mobile-stage-finish]").tap();
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   await expect(exit).toHaveText("ادامه مسیر");
   await dock.getByRole("button", { name: "بازنشانی", exact: true }).tap();
@@ -94,10 +99,15 @@ test("mobile photo can be skipped immediately after replaying a completed captur
   const page = await context.newPage();
   await page.goto("/ar?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "photo");
+  const controls = page.locator("[data-photo-spatial-controls]");
+  await expect(controls).toHaveAttribute("data-photo-state", "ready");
+  await page.locator("[data-mobile-photo-capture]").tap();
+  await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   const exit = page.locator("[data-interaction-escape]");
   await expect(exit).toHaveText("متابعة الرحلة");
   await page.locator("[data-mobile-photo-replay]").tap();
+  await expect(controls).toHaveAttribute("data-photo-state", "ready");
   await expect(exit).toHaveText("تخطي التفاعل");
   await exit.tap();
   await expect(director).toHaveAttribute("data-active-station", "none");

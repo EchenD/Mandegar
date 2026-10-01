@@ -71,7 +71,7 @@ test.describe("hero interaction shell", () => {
     await expect(director).toHaveAttribute("data-scroll-locked", "false");
   });
 
-  test("a station can start again on a later forward pass", async ({ page }) => {
+  test("a visited station stays closed on a later forward pass and can be reopened intentionally", async ({ page }) => {
     await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
     const director = await waitForStation(page, "photo");
     await page.keyboard.press("Escape");
@@ -87,6 +87,17 @@ test.describe("hero interaction shell", () => {
     await root.evaluate((element, progress) => {
       element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
     }, activation.preview);
+    await expect(root).toHaveAttribute("data-story-stage", "activation");
+    await expect(director).toHaveAttribute("data-available-station", "photo");
+    await page.waitForTimeout(600);
+    await expect(director).toHaveAttribute("data-active-station", "none");
+    await expect(director).toHaveAttribute("data-scroll-locked", "false");
+    await expect(root).not.toHaveAttribute("data-interaction-active");
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent("mandegar:interaction-request", {
+        detail: { station: "photo", input: "keyboard" },
+      }));
+    });
     await waitForStation(page, "photo");
   });
 

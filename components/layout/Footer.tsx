@@ -7,7 +7,7 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
   const copy = getUi(locale);
   const globalLine = settings?.globalLine ? getText(settings.globalLine, locale) : locale === "fa" ? "ریشه در ایران · آماده همکاری جهانی" : locale === "ar" ? "متجذرون في إيران · جاهزون للتعاون عالمياً" : "Iran-based · Ready to collaborate globally";
   const legal = locale === "fa" ? "حریم خصوصی و شرایط" : locale === "ar" ? "الخصوصية والشروط" : "Privacy and terms";
-  const mediaNote = locale === "fa" ? "رسانه‌های موقت تا ورود پروژه‌های تأییدشده مشخص شده‌اند." : locale === "ar" ? "تم تمييز الوسائط المؤقتة حتى إضافة المشاريع المعتمدة." : "Temporary media remains labelled until approved project assets arrive.";
+  const mediaNote = locale === "fa" ? "رسانه‌های مفهومی با برچسب مشخص شده‌اند." : locale === "ar" ? "الوسائط المفاهيمية موسومة بوضوح." : "Concept visuals are clearly labelled.";
   const navigation = settings?.navigation.length ? settings.navigation.map((item) => ({ href: cmsPath(locale, item.path), label: getText(item.label, locale) })).filter((item) => item.label) : [
     { href: localizedPath(locale, "projects"), label: copy.navigation.projects },
     { href: localizedPath(locale, "services"), label: copy.navigation.services },

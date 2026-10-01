@@ -7,11 +7,16 @@ async function expectReadableWork(page: Page) {
   const journey = page.locator("[data-connected-journey]");
   const firstProject = journey.locator("[data-project-copy='0']");
   const projectLink = firstProject.getByRole("link");
+  await expect(projectLink).toHaveCount(1);
   await expect(projectLink).toBeFocused();
   await expect(projectLink).toBeInViewport();
   await expect(firstProject.locator("[data-project-title]")).toHaveText(
     await projectLink.getAttribute("aria-label") ?? "",
   );
+  await expect(firstProject.locator("[data-project-category]")).toBeVisible();
+  await expect(firstProject.locator("[data-project-category]")).not.toHaveText("");
+  await expect(projectLink.locator("[data-project-action]")).toBeVisible();
+  await expect(projectLink.locator("[data-project-action]")).toBeInViewport();
   const director = page.locator("[data-interaction-director]");
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
