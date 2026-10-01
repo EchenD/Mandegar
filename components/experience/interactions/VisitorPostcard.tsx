@@ -92,11 +92,11 @@ async function downloadPostcard(locale: Locale) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function VisitorPostcard({ locale }: { locale: Locale }) {
+export function VisitorPostcard({ locale, enabled = true }: { locale: Locale; enabled?: boolean }) {
   const available = useSyncExternalStore(subscribe, hasCreation, () => false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
-  if (!available) return null;
+  if (!available || !enabled) return null;
   return (
     <div className={styles.control}>
       <button type="button" data-save-postcard disabled={saving} onClick={async () => {

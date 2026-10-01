@@ -65,3 +65,71 @@ test("drawing wall can create and finish a mark entirely with the keyboard", asy
   await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });
+
+test("Finish traces a highlight without clearing the completed drawing", async ({ page }) => {
+  const { controls } = await openDrawing(page);
+  const canvas = page.locator("[data-drawing-canvas]");
+  await canvas.focus();
+  await page.keyboard.press("Space");
+  for (let index = 0; index < 4; index += 1) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Space");
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+
+  const samples = await canvas.evaluate(async (element: HTMLCanvasElement) => {
+    const context = element.getContext("2d")!;
+    const button = element.parentElement!.querySelectorAll("button")[2];
+    const values: number[] = [];
+    button.click();
+    const startedAt = performance.now();
+    await new Promise<void>((resolve) => {
+      const sample = () => {
+        values.push(context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data[0]);
+        if (performance.now() - startedAt >= 850) resolve();
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    return values;
+  });
+
+  expect(samples.length).toBeGreaterThan(1);
+  expect(Math.min(...samples)).toBeGreaterThan(180);
+  await expect(controls).toHaveAttribute("data-drawing-finished", "true");
+});
+
+test("an immediate Continue fades controls into the retained drawing", async ({ page }) => {
+  const { director } = await openDrawing(page);
+  const canvas = page.locator("[data-drawing-canvas]");
+  await canvas.focus();
+  await page.keyboard.press("Space");
+  for (let index = 0; index < 4; index += 1) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Space");
+
+  const handoff = await canvas.evaluate(async (element: HTMLCanvasElement) => {
+    const context = element.getContext("2d")!;
+    const button = element.parentElement!.querySelectorAll("button")[2];
+    const values: number[] = [];
+    button.click();
+    button.click();
+    await new Promise<void>((resolve) => {
+      const sample = () => {
+        values.push(context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data[0]);
+        if (!element.isConnected) resolve();
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    return {
+      values,
+      finalProgress: element.dataset.transitionProgress,
+      background: [...context.getImageData(0, 0, 1, 1).data],
+      artwork: [...context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data],
+    };
+  });
+
+  expect(Math.min(...handoff.values)).toBeGreaterThan(180);
+  expect(handoff.finalProgress).toBe("0.000");
+  expect(handoff.background).toEqual([9, 13, 18, 255]);
+  expect(handoff.artwork).toEqual([231, 247, 255, 255]);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+});

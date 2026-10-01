@@ -24,17 +24,18 @@ const controlDefinitions = [
   { id: "finish", left: 0.68, width: 0.265 },
 ] as const;
 
-function paintStroke(context: CanvasRenderingContext2D, stroke: Stroke) {
+function paintStroke(context: CanvasRenderingContext2D, stroke: Stroke, highlight = false) {
   if (!stroke.length) return;
   context.beginPath();
   context.moveTo(stroke[0].x, stroke[0].y);
   stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
   if (stroke.length === 1) context.lineTo(stroke[0].x + .01, stroke[0].y + .01);
-  context.strokeStyle = "rgba(34,92,255,.36)";
-  context.lineWidth = 16;
+  context.strokeStyle = highlight ? "rgba(117,216,255,.2)" : "rgba(34,92,255,.36)";
+  context.lineWidth = highlight ? 22 : 16;
   context.shadowColor = "#225cff";
-  context.shadowBlur = 14;
+  context.shadowBlur = highlight ? 22 : 14;
   context.stroke();
+  if (highlight) return;
   context.strokeStyle = "#e7f7ff";
   context.lineWidth = 5;
   context.shadowColor = "transparent";
@@ -131,19 +132,23 @@ export function DrawingInteraction({
     const height = canvas.height;
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const transition = transitionProgress.current;
-    const surfaceReveal = revealProgress(transition, 0, 0.36);
-    const contentReveal = revealProgress(transition, 0.2, 0.68);
-    const controlsReveal = revealProgress(transition, 0.58, 1);
+    const retainedWall = transitionState.current === "outro" ? savedWall.current : null;
+    const interfaceProgress = retainedWall ? 1 : transition;
+    const surfaceReveal = revealProgress(interfaceProgress, 0, 0.36);
+    const contentReveal = revealProgress(interfaceProgress, 0.2, 0.68);
+    const controlsReveal = revealProgress(interfaceProgress, 0.58, 1);
     const count = strokes.current.length;
     const isFinished = finishedRef.current;
     const finaleElapsed = finaleStartedAt.current === null
       ? 1
-      : Math.min(1, (performance.now() - finaleStartedAt.current) / 900);
+      : Math.min(1, (performance.now() - finaleStartedAt.current) / 700);
     const finalePulse = isFinished ? Math.sin(finaleElapsed * Math.PI) : 0;
 
     context.clearRect(0, 0, width, height);
     canvas.dataset.transitionProgress = transition.toFixed(3);
-    if (monitorImage.current?.complete) {
+    if (retainedWall) {
+      context.drawImage(retainedWall, 0, 0, width, height);
+    } else if (monitorImage.current?.complete) {
       context.drawImage(monitorImage.current, 0, 0, width, height);
     } else {
       context.fillStyle = "#080b10";
@@ -188,11 +193,11 @@ export function DrawingInteraction({
     roundedRect(context, areaLeft, areaTop, areaWidth, areaHeight, 22);
     context.fillStyle = "rgba(3,7,12,.48)";
     context.shadowColor = isFinished ? "rgba(117,216,255,.3)" : "transparent";
-    context.shadowBlur = finalePulse * 22;
+    context.shadowBlur = isFinished ? 4 + finalePulse * 10 : 0;
     context.fill();
     context.shadowBlur = 0;
     context.strokeStyle = isFinished
-      ? `rgba(117,216,255,${0.4 + finalePulse * 0.3})`
+      ? `rgba(117,216,255,${0.4 + finalePulse * 0.1})`
       : "rgba(247,247,244,.2)";
     context.lineWidth = 1.5;
     context.stroke();
@@ -203,12 +208,17 @@ export function DrawingInteraction({
     context.globalAlpha = contentReveal;
     context.lineCap = "round";
     context.lineJoin = "round";
-    let remaining = Math.ceil(strokes.current.reduce((total, stroke) => total + stroke.length, 0) * replayProgress.current);
-    strokes.current.forEach((stroke) => {
-      const visible = remaining >= stroke.length ? stroke : stroke.slice(0, remaining);
-      remaining = Math.max(0, remaining - stroke.length);
-      paintStroke(context, visible);
-    });
+    strokes.current.forEach((stroke) => paintStroke(context, stroke));
+    if (isFinished && replayProgress.current < 1) {
+      let remaining = Math.ceil(strokes.current.reduce((total, stroke) => total + stroke.length, 0) * replayProgress.current);
+      context.globalAlpha = contentReveal * finalePulse;
+      strokes.current.forEach((stroke) => {
+        const visible = remaining >= stroke.length ? stroke : stroke.slice(0, remaining);
+        remaining = Math.max(0, remaining - stroke.length);
+        paintStroke(context, visible, true);
+      });
+      context.globalAlpha = contentReveal;
+    }
     context.shadowBlur = 0;
 
     if (document.activeElement === canvas && !isFinished) {
@@ -287,6 +297,13 @@ export function DrawingInteraction({
     });
     context.restore();
     context.restore();
+
+    if (retainedWall) {
+      context.save();
+      context.globalAlpha = 1 - transition;
+      context.drawImage(retainedWall, 0, 0, width, height);
+      context.restore();
+    }
 
     markInteractionCanvasDirty("main");
   }, [copy]);
@@ -445,6 +462,7 @@ export function DrawingInteraction({
     cancelActiveStroke();
     if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
     finaleFrame.current = null;
+    finaleStartedAt.current = null;
     replayProgress.current = 1;
     hoverControl.current = null;
     animateTransition(0, callback);

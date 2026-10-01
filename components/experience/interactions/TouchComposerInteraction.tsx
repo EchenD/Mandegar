@@ -90,15 +90,15 @@ export function TouchComposerInteraction({
   const completionTimer = useRef<number | null>(null);
   const sceneInputCount = useRef(0);
   const activePointer = useRef<ComposerPointer | null>(null);
-  const selectedRef = useRef([false, false, false]);
-  const completeRef = useRef(false);
+  const [selected, setSelected] = useState(() => [...getVisitorCreation().composer]);
+  const [complete, setComplete] = useState(() => selected.every(Boolean));
+  const selectedRef = useRef(selected);
+  const completeRef = useRef(complete);
   const onCompleteRef = useRef(onComplete);
   const onResetRef = useRef(onReset);
   const hoverElement = useRef<number | null>(null);
   const hoverControl = useRef<"close" | "reset" | "continue" | null>(null);
   const keyboardFocus = useRef<number | null>(null);
-  const [selected, setSelected] = useState([false, false, false]);
-  const [complete, setComplete] = useState(false);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -486,7 +486,9 @@ export function TouchComposerInteraction({
       transitionProgress.current = 0;
       paint();
       registerInteractionCanvas("interactive", canvas);
-      animateTransition(1);
+      animateTransition(1, () => {
+        if (completeRef.current) onCompleteRef.current();
+      });
     };
     image.onload = begin;
     image.onerror = begin;

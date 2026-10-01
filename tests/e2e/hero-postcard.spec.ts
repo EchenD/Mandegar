@@ -44,6 +44,28 @@ async function luminousDrawingPixels(page: Page, png: Buffer) {
 }
 
 test("postcard combines chosen lights and artwork and survives reopening without edits", async ({ page }, testInfo) => {
+  // Observe the actual screen shader without adding test hooks to the experience.
+  await page.addInitScript(() => {
+    const observer = window as unknown as Window & { __screenBlends: number[] };
+    observer.__screenBlends = [];
+    for (const prototype of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
+      const names = new WeakMap<WebGLUniformLocation, string>();
+      const locate = prototype.getUniformLocation;
+      const write = prototype.uniform1f;
+      prototype.getUniformLocation = function (program, name) {
+        const location = locate.call(this, program, name);
+        if (location) names.set(location, name);
+        return location;
+      };
+      prototype.uniform1f = function (location, value) {
+        if (location && names.get(location) === "uMediaBlend") {
+          observer.__screenBlends.push(value);
+          if (observer.__screenBlends.length > 200) observer.__screenBlends.shift();
+        }
+        write.call(this, location, value);
+      };
+    }
+  });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=reveal", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "stage");
@@ -82,11 +104,31 @@ test("postcard combines chosen lights and artwork and survives reopening without
   expect(after).toBeGreaterThan(before + 100);
   await testInfo.attach("visitor-postcard", { body: artworkPostcard, contentType: "image/png" });
 
+  const activation = narrativeScore.find((beat) => beat.id === "activation");
+  if (!activation) throw new Error("Opening checkpoint is missing");
+  await page.evaluate(() => {
+    (window as unknown as Window & { __screenBlends: number[] }).__screenBlends = [];
+  });
+  await root.evaluate((element, progress) => {
+    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+  }, connection.start + 0.01);
+  await expect.poll(() => page.evaluate(() => {
+    return (window as unknown as Window & { __screenBlends: number[] }).__screenBlends.some((value) => value > 0 && value < 0.9);
+  })).toBe(true);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await root.evaluate((element, progress) => {
+    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+  }, activation.preview);
+  await expect(page.locator("[data-save-postcard]")).toBeHidden();
+  await expect(director).toHaveAttribute("data-active-station", "none");
+
   await root.evaluate((element, progress) => {
     element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
   }, connection.preview);
   await expect(director).toHaveAttribute("data-available-station", "draw");
   await expect(director).toHaveAttribute("data-active-station", "none");
+  const restoredPostcard = await savePostcard(page);
+  expect(restoredPostcard.equals(artworkPostcard)).toBe(true);
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent("mandegar:interaction-request", {
       detail: { station: "draw", input: "keyboard" },

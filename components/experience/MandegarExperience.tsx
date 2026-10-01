@@ -533,7 +533,7 @@ export function MandegarExperience({
         ))}
       </div>
       </ScrollMotion>
-      <VisitorPostcard locale={locale} />
+      <VisitorPostcard locale={locale} enabled={!["arrival", "discovery", "activation"].includes(activePhase)} />
 
       <ConnectedJourney
         locale={locale}

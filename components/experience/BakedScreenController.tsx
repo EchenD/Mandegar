@@ -16,6 +16,7 @@ import {
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { prepareBakedTexture } from "./baked-scene-material";
 import { getVisitorCreation } from "./interactions/visitor-creation";
+import { getVisitorPresentation } from "./interactions/visitor-presentation";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { sceneTokens } from "./scene-config";
@@ -35,6 +36,8 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform sampler2D uMedia;
+  uniform sampler2D uBaseMedia;
+  uniform float uMediaBlend;
   uniform float uActivation;
   uniform float uHover;
   uniform float uHoverBrightness;
@@ -84,7 +87,7 @@ const fragmentShader = /* glsl */ `
       vec3(0.035, 0.15, 0.28),
       smoothstep(0.0, 1.0, vUv.x + vUv.y * 0.28)
     );
-    vec3 mediaColor = texture2D(uMedia, vUv).rgb;
+    vec3 mediaColor = mix(texture2D(uBaseMedia, vUv).rgb, texture2D(uMedia, vUv).rgb, uMediaBlend);
     vec3 poweredColor = mix(fallbackColor, mediaColor, uHasMedia);
     vec3 color = mix(offColor, poweredColor, activation);
     vec3 hoverColor = color * (1.0 + uHoverBrightness)
@@ -165,6 +168,8 @@ export function BakedScreenController({
         name: `MAT_SCREEN_${id.toUpperCase()}`,
         uniforms: {
           uMedia: { value: media },
+          uBaseMedia: { value: media },
+          uMediaBlend: { value: 1 },
           uActivation: { value: 0 },
           uHover: { value: 0 },
           uHoverBrightness: { value: 0 },
@@ -220,7 +225,8 @@ export function BakedScreenController({
         result[id].media.dispose();
         result[id].media = texture;
         result[id].video = video;
-        result[id].material.uniforms.uMedia.value = texture;
+        result[id].material.uniforms.uBaseMedia.value = texture;
+        if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
         result[id].material.uniforms.uHasMedia.value = 1;
         return;
       }
@@ -234,7 +240,8 @@ export function BakedScreenController({
           prepareBakedTexture(texture);
           result[id].media.dispose();
           result[id].media = texture;
-          result[id].material.uniforms.uMedia.value = texture;
+          result[id].material.uniforms.uBaseMedia.value = texture;
+          if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
           result[id].material.uniforms.uHasMedia.value = 1;
         },
         undefined,
@@ -276,6 +283,10 @@ export function BakedScreenController({
       const activation = getActivation(runtime.id);
       const production = experienceState.stage.production;
       runtime.material.uniforms.uActivation.value = activation;
+      runtime.material.uniforms.uBaseMedia.value = runtime.media;
+      runtime.material.uniforms.uMediaBlend.value = runtime.id === "main" && interactionRuntime.activeStation !== "draw"
+        ? getVisitorPresentation(experienceState.progress).drawingVisibility
+        : 1;
       runtime.material.uniforms.uHover.value = 0;
       runtime.material.uniforms.uTime.value = clock.elapsedTime;
       runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);

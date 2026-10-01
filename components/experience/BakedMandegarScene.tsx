@@ -37,6 +37,7 @@ import type { SceneProject } from "./experience-types";
 import { resolveInteractionAnchors, type InteractionAnchorRuntime } from "./interactions/interaction-anchors";
 import { stageBeamColors } from "./interactions/interaction-palette";
 import { getVisitorCreation } from "./interactions/visitor-creation";
+import { getVisitorPresentation } from "./interactions/visitor-presentation";
 import {
   dispatchSceneInteraction,
   interactionRuntime,
@@ -405,6 +406,7 @@ function InteractionBeamEffects({
       colors,
       emitterBindings,
       intensities: new Float32Array(stageBeamColors.length),
+      playbackAge: 0,
       wasComplete: false,
       finaleAge: Number.POSITIVE_INFINITY,
       beamMatrix: new THREE.Matrix4(),
@@ -424,13 +426,32 @@ function InteractionBeamEffects({
     const finalePulse = rig.finaleAge < 1.05 ? Math.sin(finaleProgress * Math.PI) : 0;
     const inStage = interactionRuntime.activeStation === "stage";
     const lighting = inStage ? interactionRuntime.activeBeams : getVisitorCreation().lighting;
-    const visibility = inStage ? interactionRuntime.stageVisibility : 0.45;
+    const presentation = getVisitorPresentation(experienceState.progress);
+    const showingSavedLighting = !inStage && experienceState.sequence === "loop";
+    const visibility = inStage
+      ? Math.max(interactionRuntime.stageVisibility, interactionRuntime.stageComplete ? presentation.lightingVisibility * 0.45 : 0)
+      : showingSavedLighting ? presentation.lightingVisibility * 0.45 : 0;
+    const selectedCount = lighting.reduce((count, enabled) => count + Number(enabled), 0);
+    const buildDuration = Math.max(0, selectedCount - 1) * 0.65 + 0.5;
+    const holdUntil = buildDuration + 1.5;
+    const cycleDuration = holdUntil + 1.1;
+    if (inStage) {
+      rig.playbackAge = buildDuration;
+    } else if (selectedCount > 0 && showingSavedLighting && presentation.lightingPlayback) {
+      rig.playbackAge = (rig.playbackAge + Math.min(delta, 0.1)) % cycleDuration;
+    }
+    const fade = 1 - THREE.MathUtils.smoothstep(rig.playbackAge, holdUntil, holdUntil + 0.9);
     const flareColors = rig.flareGeometry.getAttribute("color") as THREE.BufferAttribute;
     let visibleEnergy = 0;
+    let selectedIndex = 0;
 
     rig.intensities.forEach((current, index) => {
       const enabled = lighting[index] ?? false;
-      const target = enabled ? visibility * (quality === "full" ? 1 : 0.8) : 0;
+      const revealStart = selectedIndex * 0.65;
+      const reveal = THREE.MathUtils.smoothstep(rig.playbackAge, revealStart, revealStart + 0.5);
+      const playback = inStage ? 1 : 0.14 + 0.86 * reveal * fade;
+      if (enabled) selectedIndex += 1;
+      const target = enabled ? visibility * playback * (quality === "full" ? 1 : 0.8) : 0;
       const intensity = THREE.MathUtils.damp(current, target, enabled ? 10 : 14, delta);
       rig.intensities[index] = intensity;
       visibleEnergy += intensity;
@@ -646,7 +667,7 @@ function InteractionTouchEffects({
         pulseMaterial.opacity,
         active
           ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64)
-            * (inComposer ? interactionRuntime.touchVisibility : 0.35)
+            * (inComposer ? interactionRuntime.touchVisibility : 0.35 * getVisitorPresentation(experienceState.progress).composerVisibility)
           : 0,
         11,
         delta,

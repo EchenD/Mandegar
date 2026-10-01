@@ -9,6 +9,7 @@ import { experienceState } from "./experience-state";
 import { phaseProgress, sceneTokens } from "./scene-config";
 import { interactionRuntime } from "./interactions/interaction-runtime";
 import { getVisitorCreation } from "./interactions/visitor-creation";
+import { getVisitorPresentation } from "./interactions/visitor-presentation";
 
 const vertexShader = /* glsl */ `
   attribute float aKind;
@@ -230,7 +231,7 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
     const easedTiming = timing * timing * (3 - 2 * timing);
     const inComposer = interactionRuntime.activeStation === "touch";
     const peopleSelected = (inComposer ? interactionRuntime.touchElements : getVisitorCreation().composer)[2];
-    const audienceEnergy = peopleSelected ? (inComposer ? interactionRuntime.touchVisibility : 0.35) : 0;
+    const audienceEnergy = peopleSelected ? (inComposer ? interactionRuntime.touchVisibility : 0.35 * getVisitorPresentation(experienceState.progress).composerVisibility) : 0;
     const strength = Math.max(audienceEnergy, experienceState.stage.production.dataFlow
       * experienceState.stage.production.crowdPresence
       * easedTiming
