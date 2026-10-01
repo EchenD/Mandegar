@@ -36,7 +36,7 @@ export type JourneyProject = {
 export type JourneyVoice = { quote: string; person: string; role: string; organization: string; isPlaceholder?: boolean };
 export type JourneyClient = { name: string; logo?: string };
 type JourneyCopy = { projectKicker: string; projectTitle: string; projectBody: string; viewProject: string; projectsEmpty: string };
-type Props = { locale: Locale; projects: JourneyProject[]; voices?: JourneyVoice[]; clients?: JourneyClient[]; copy: JourneyCopy; aboutHref?: string };
+type Props = { locale: Locale; projects: JourneyProject[]; voices?: JourneyVoice[]; clients?: JourneyClient[]; copy: JourneyCopy; aboutHref?: string; onWorkReady?: (jump: (() => void) | null) => void };
 const emptyClients: JourneyClient[] = [];
 const prototypeLogoSources = [
   "https://upload.wikimedia.org/wikipedia/commons/8/83/Logoipsum-logo-39.svg",
@@ -84,7 +84,7 @@ function isHeroPhotoResult(src: string) {
   return src.split(/[?#]/, 1)[0].endsWith("/media/placeholders/photo-experience.webp");
 }
 
-export function ConnectedJourney({ locale, projects, copy, clients = emptyClients, aboutHref }: Props) {
+export function ConnectedJourney({ locale, projects, copy, clients = emptyClients, aboutHref, onWorkReady }: Props) {
   const root = useRef<HTMLElement>(null);
   const [reduced, setReduced] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -185,7 +185,19 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
 
   useLayoutEffect(() => {
     const node = root.current;
-    if (!node || !selected.length || reduced) return;
+    if (!node) return;
+    const focusWork = () => {
+      const link = node.querySelector<HTMLElement>("[data-project-copy='0'] a");
+      (link ?? node).focus({ preventScroll: true });
+    };
+    if (!selected.length || reduced) {
+      onWorkReady?.(() => {
+        node.scrollIntoView({ behavior: "instant", block: "start" });
+        focusWork();
+      });
+      return () => onWorkReady?.(null);
+    }
+    let jumpToWork: (() => void) | undefined;
     const partnerBridge = partnerFinaleBridge.current;
     gsap.registerPlugin(ScrollTrigger);
     const rtl = locale !== "en";
@@ -481,7 +493,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         const projectTitle = projectTitles[index];
         tl.set(project, { autoAlpha: 1 }, at)
           .set(projectTitle, { autoAlpha: 1 }, at);
-        typeText(projectTitle, selected[index].title, at + .02, .038, .92);
+        return at + .02 + typeText(projectTitle, selected[index].title, at + .02, .038, .92);
       };
       const dismissProject = (index: number, at: number) => {
         const project = chapter(index);
@@ -509,7 +521,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           cursor += 1.08;
         }
         tl.addLabel(`Project${index + 1}`, cursor);
-        revealProject(index, cursor - .08);
+        const revealedAt = revealProject(index, cursor - .08);
+        if (index === 0) tl.addLabel("Work", Math.max(handoffDuration, revealedAt) + .02);
         cursor += mobile ? 1.45 : 1.65;
       });
       tl.addLabel("Projects", tl.labels.Project1);
@@ -721,9 +734,29 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       typeText(finaleCtaText, ui.contact, mosaicStart + 10.2, .045, .92);
       tl.to({}, { duration: 1.5 });
       node.style.setProperty("--journey-height", `${Math.ceil(tl.duration() * 90 + 100)}svh`);
+      jumpToWork = () => {
+        const trigger = tl.scrollTrigger;
+        if (!trigger) return;
+        const top = trigger.labelToScroll("Work");
+        const previousBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = "auto";
+        document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(
+          new CustomEvent("mandegar:seek", { detail: { top } }),
+        );
+        window.scrollTo({ top, left: 0, behavior: "auto" });
+        ScrollTrigger.update();
+        trigger.getTween()?.progress(1);
+        tl.time(tl.labels.Work, false);
+        focusWork();
+        document.documentElement.style.scrollBehavior = previousBehavior;
+      };
     }, node);
-    const refresh = requestAnimationFrame(() => ScrollTrigger.refresh());
+    const refresh = requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+      if (jumpToWork) onWorkReady?.(jumpToWork);
+    });
     return () => {
+      onWorkReady?.(null);
       cancelAnimationFrame(refresh);
       cancelAnimationFrame(motionFrame);
       window.removeEventListener("pointermove", handlePointerMove);
@@ -766,6 +799,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     locale,
     logo,
     mobile,
+    onWorkReady,
     partnerItems,
     reduced,
     selected,
@@ -778,8 +812,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     ui.partnersLabel,
   ]);
 
-  if (!selected.length) return <section className={styles.empty}><h2>{copy.projectTitle}</h2><p>{copy.projectsEmpty}</p></section>;
-  return <section ref={root} className={styles.root} data-connected-journey data-post-experience data-motion={reduced ? "reduced" : "full"} aria-label={ui.work}>
+  if (!selected.length) return <section ref={root} tabIndex={-1} className={styles.empty}><h2>{copy.projectTitle}</h2><p>{copy.projectsEmpty}</p></section>;
+  return <section ref={root} tabIndex={-1} className={styles.root} data-connected-journey data-post-experience data-motion={reduced ? "reduced" : "full"} aria-label={ui.work}>
     <div className={styles.stage} data-journey-surface>
       <div className={styles.world} data-world data-layer aria-hidden="true"><span className={styles.orbit} /><span className={styles.worldRule} /></div>
       <div className={styles.projectsWorld} data-projects-world data-layer>

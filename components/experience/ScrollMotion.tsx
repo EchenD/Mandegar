@@ -233,16 +233,19 @@ export function ScrollMotion({
       onUpdate: () => syncExperience(playhead.progress),
     }, 0);
 
-    const goToProgress = (progress: number, syncTimeline = false) => {
-      const safeProgress = clamp01(progress);
-      const distance = Math.max(0, root.offsetHeight - window.innerHeight);
-      const target = root.offsetTop + distance * safeProgress;
+    const goToScrollTop = (target: number) => {
       if (smooth) {
         smooth.scrollTo(target, { immediate: true, force: true });
       } else {
         document.documentElement.style.scrollBehavior = "auto";
         window.scrollTo({ top: target, left: 0, behavior: "auto" });
       }
+    };
+
+    const goToProgress = (progress: number, syncTimeline = false) => {
+      const safeProgress = clamp01(progress);
+      const distance = Math.max(0, root.offsetHeight - window.innerHeight);
+      goToScrollTop(root.offsetTop + distance * safeProgress);
       if (syncTimeline) {
         playhead.progress = safeProgress;
         motionTimeline.progress(safeProgress, false);
@@ -252,8 +255,12 @@ export function ScrollMotion({
     };
 
     const seekExperience = (event: Event) => {
-      const detail = (event as CustomEvent<{ progress?: number; sync?: boolean }>).detail;
+      const detail = (event as CustomEvent<{ progress?: number; sync?: boolean; top?: number }>).detail;
       if (typeof detail?.progress === "number") goToProgress(detail.progress, detail.sync);
+      else if (typeof detail?.top === "number" && Number.isFinite(detail.top)) {
+        goToScrollTop(detail.top);
+        ScrollTrigger.update();
+      }
     };
     root.addEventListener("mandegar:seek", seekExperience);
     const onNativeScroll = () => {

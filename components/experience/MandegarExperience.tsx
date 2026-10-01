@@ -106,6 +106,7 @@ type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: typeof Au
 
 const postExperienceCopy = {
   fa: {
+    viewWork: "مشاهده کارها",
     projectsKicker: "پروژه‌ها / منتخب",
     projectsTitle: "این‌ها تجربه‌هایی هستند که پیش‌تر برای دیگران ساخته‌ایم.",
     projectsBody: "مسیر در هر پروژه مکث می‌کند تا کار را ببینید و با حرکت نشانگر جزئیات آن را کشف کنید. هر جایگاه برای پروژه‌های تأییدشده CMS آماده است.",
@@ -120,6 +121,7 @@ const postExperienceCopy = {
     testimonialsPlaceholder: "نقل‌قول‌های تأییدشده مشتریان در این قسمت قرار می‌گیرند.",
   },
   en: {
+    viewWork: "View work",
     projectsKicker: "Projects / Selected",
     projectsTitle: "Here is what we have already built with others.",
     projectsBody: "The journey pauses at every project so you can see the work and inspect it with the pointer. Every position is ready for approved CMS work.",
@@ -134,6 +136,7 @@ const postExperienceCopy = {
     testimonialsPlaceholder: "Approved client testimonials will appear here.",
   },
   ar: {
+    viewWork: "شاهد أعمالنا",
     projectsKicker: "المشاريع / مختارات",
     projectsTitle: "هذه تجارب سبق أن بنيناها مع الآخرين.",
     projectsBody: "تتوقّف الرحلة عند كل مشروع لتشاهد العمل وتستكشف تفاصيله بالمؤشر. كل مساحة جاهزة لأعمال CMS المعتمدة.",
@@ -163,6 +166,12 @@ export function MandegarExperience({
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
   const [interactionReady, setInteractionReady] = useState(false);
+  const [workReady, setWorkReady] = useState(false);
+  const workJump = useRef<(() => void) | null>(null);
+  const handleWorkReady = useCallback((jump: (() => void) | null) => {
+    workJump.current = jump;
+    setWorkReady(jump !== null);
+  }, []);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [backToTopVisible, setBackToTopVisible] = useState(false);
   const audioContext = useRef<AudioContext | undefined>(undefined);
@@ -473,6 +482,10 @@ export function MandegarExperience({
             {soundEnabled ? copy.muteSound : copy.enableSound}
           </button>
 
+          {workReady ? <button className={styles.workShortcut} type="button" data-work-shortcut onClick={() => workJump.current?.()}>
+            {pageCopy.viewWork}<span aria-hidden="true">↓</span>
+          </button> : null}
+
           <div className={styles.scrollCue} data-scroll-cue>
             <span>{copy.scroll}</span><i />
           </div>
@@ -521,6 +534,7 @@ export function MandegarExperience({
 
       <ConnectedJourney
         locale={locale}
+        onWorkReady={handleWorkReady}
         projects={projects}
         voices={testimonials}
         clients={clients}

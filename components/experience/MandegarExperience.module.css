@@ -319,6 +319,14 @@
   pointer-events: none;
 }
 
+.root[data-interaction-active] .workShortcut,
+.root[data-intro-active="true"] .workShortcut,
+.root[data-story-stage="loop"] .workShortcut {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .root[data-interaction-active] {
   transition-delay: 0s;
 }
@@ -414,6 +422,30 @@
 
 .soundControl span { color: var(--experience-accent); transition: color .25s ease; }
 .soundControl:focus-visible { outline: 2px solid #225cff; outline-offset: 2px; }
+
+.workShortcut {
+  position: absolute;
+  left: clamp(3.5rem, 4vw, 4.5rem);
+  inset-block-end: clamp(1rem, 2.2vw, 2.3rem);
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2.75rem;
+  padding: .5rem .7rem;
+  border: 0;
+  border-radius: .4rem;
+  color: var(--experience-muted);
+  background: transparent;
+  font: inherit;
+  font-size: .75rem;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+
+.workShortcut:hover { color: var(--experience-accent); }
+.workShortcut span { color: var(--experience-accent); }
+.workShortcut:focus-visible { outline: 2px solid var(--experience-accent); outline-offset: 2px; }
 
 .phaseRail {
   position: absolute;
@@ -671,6 +703,7 @@
   .primaryCta { min-height: 2.7rem; }
   .phaseRail { inset-block-end: 1rem; width: min(15rem, calc(100% - 7rem)); }
   .soundControl { right: 1rem; inset-block-end: 3.8rem; }
+  .workShortcut { left: 1rem; inset-block-end: 3.8rem; }
   .scrollCue { inset-block-end: 1rem; }
   .semanticFallback section { grid-template-columns: 1fr; }
   .semanticFallback p,
@@ -683,6 +716,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .loader,
+  .workShortcut,
   .primaryCta,
   .phaseTrack i { transition: none !important; }
   .scrollCue i::after { animation: none !important; }
