@@ -19,6 +19,7 @@ export type InteractionAction =
   | { type: "ENTER"; station: InteractionStation; input: InteractionInput }
   | { type: "COMPLETING" }
   | { type: "COMPLETE"; station: InteractionStation }
+  | { type: "RESTART"; station: InteractionStation }
   | { type: "EXIT"; cancelled: boolean }
   | { type: "RESET" };
 
@@ -50,6 +51,13 @@ export function interactionReducer(
         ...state,
         lifecycle: "complete",
         completed: { ...state.completed, [action.station]: true },
+      };
+    case "RESTART":
+      if (state.activeStation !== action.station) return state;
+      return {
+        ...state,
+        lifecycle: "active",
+        completed: { ...state.completed, [action.station]: false },
       };
     case "EXIT":
       return {

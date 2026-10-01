@@ -42,3 +42,19 @@ test("signal game resets after a launch", async ({ page }) => {
   await expect(controls).toHaveAttribute("data-game-attempts", "0");
   await expect(controls).toHaveAttribute("data-game-status", "ready");
 });
+
+test("signal game can be skipped after resetting a completed run", async ({ page }) => {
+  await page.goto("/en?intro=0&phase=experiences", { waitUntil: "domcontentloaded" });
+  const director = await waitForStation(page, "game");
+  const controls = page.locator("[data-game-spatial-controls]");
+  await finishSignalRun(page);
+  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await activateWithKeyboard(page, "[data-game-spatial-controls] button:nth-of-type(2)");
+  await expect(controls).toHaveAttribute("data-game-status", "ready");
+  await expect(director).toHaveAttribute("data-lifecycle", "active");
+  const exit = page.locator("[data-interaction-escape]");
+  await expect(exit).toHaveText("Skip interaction");
+  await exit.click();
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(director).toHaveAttribute("data-scroll-locked", "false");
+});

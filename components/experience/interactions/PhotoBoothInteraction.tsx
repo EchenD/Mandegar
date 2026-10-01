@@ -66,12 +66,14 @@ export function PhotoBoothInteraction({
   reducedMotion,
   onClose,
   onComplete,
+  onReset,
   onContinue,
 }: {
   copy: InteractionCopy;
   reducedMotion: boolean;
   onClose: () => void;
   onComplete: () => void;
+  onReset: () => void;
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,12 +89,14 @@ export function PhotoBoothInteraction({
   const keyboardFocus = useRef<PhotoControl | null>(null);
   const completionReported = useRef(false);
   const onCompleteRef = useRef(onComplete);
+  const onResetRef = useRef(onReset);
   const [step, setStep] = useState<PhotoStep>("ready");
   const [count, setCount] = useState(3);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
-  }, [onComplete]);
+    onResetRef.current = onReset;
+  }, [onComplete, onReset]);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
@@ -240,6 +244,10 @@ export function PhotoBoothInteraction({
     clearTimers();
     commitCount(3);
     commitStep("ready");
+    if (completionReported.current) {
+      completionReported.current = false;
+      onResetRef.current();
+    }
     timers.current.push(window.setTimeout(capture, 700));
   }, [capture, clearTimers, commitCount, commitStep]);
 

@@ -198,6 +198,10 @@ export const InteractionDirector = memo(function InteractionDirector({
     window.queueMicrotask(() => dispatch({ type: "COMPLETE", station }));
   }, []);
 
+  const restart = useCallback((station: InteractionStation) => {
+    dispatch({ type: "RESTART", station });
+  }, []);
+
   useEffect(() => {
     const handleRequest = (event: Event) => {
       const detail = (event as CustomEvent<{ station: InteractionStation; input: InteractionInput }>).detail;
@@ -239,6 +243,8 @@ export const InteractionDirector = memo(function InteractionDirector({
     const body = document.body;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+    const focusScope = panelRoot.current;
+    const focusToRestore = previousFocus.current;
     const snapshot = savedScrollProgress.current;
     interactionRuntime.activeStation = state.activeStation;
     if (root && snapshot) {
@@ -292,12 +298,16 @@ export const InteractionDirector = memo(function InteractionDirector({
         ).filter((element) => element.offsetParent !== null);
         const first = focusable[0];
         const last = focusable.at(-1);
-        if (first && last && event.shiftKey && document.activeElement === first) {
+        const focusIsInside = focusable.some((element) => element === document.activeElement);
+        if (first && last && !focusIsInside) {
           event.preventDefault();
-          last.focus();
+          (event.shiftKey ? last : first).focus({ preventScroll: true });
+        } else if (first && last && event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus({ preventScroll: true });
         } else if (first && last && !event.shiftKey && document.activeElement === last) {
           event.preventDefault();
-          first.focus();
+          first.focus({ preventScroll: true });
         }
         return;
       }
@@ -361,13 +371,12 @@ export const InteractionDirector = memo(function InteractionDirector({
     window.addEventListener("scroll", holdScrollPosition, { passive: true });
     document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
     holdScrollPosition();
-    if (state.input !== "automatic") {
-      window.requestAnimationFrame(() => {
-        panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus();
-      });
-    }
+    const focusFrame = window.requestAnimationFrame(() => {
+      panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus({ preventScroll: true });
+    });
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", preventScrollKeys);
       window.removeEventListener("wheel", preventWheel, true);
       window.removeEventListener("touchstart", rememberTouchPosition, true);
@@ -390,7 +399,11 @@ export const InteractionDirector = memo(function InteractionDirector({
       }
       root?.removeAttribute("data-interaction-active");
       savedScrollProgress.current = null;
-      window.requestAnimationFrame(() => previousFocus.current?.focus());
+      if (document.activeElement === body || focusScope?.contains(document.activeElement)) {
+        window.requestAnimationFrame(() => {
+          if (focusToRestore?.isConnected) focusToRestore.focus({ preventScroll: true });
+        });
+      }
     };
   }, [exit, expectedStation, state.activeStation, state.input]);
 
@@ -419,6 +432,7 @@ export const InteractionDirector = memo(function InteractionDirector({
           copy={copy}
           onClose={() => exit(true)}
           onComplete={() => complete("touch")}
+          onReset={() => restart("touch")}
           onContinue={() => exit(false)}
         />
       )}
@@ -428,6 +442,7 @@ export const InteractionDirector = memo(function InteractionDirector({
           copy={copy}
           onClose={() => exit(true)}
           onComplete={() => complete("stage")}
+          onReset={() => restart("stage")}
           onContinue={() => exit(false)}
         />
       )}
@@ -438,6 +453,7 @@ export const InteractionDirector = memo(function InteractionDirector({
           reducedMotion={reducedMotion}
           onClose={() => exit(true)}
           onComplete={() => complete("game")}
+          onReset={() => restart("game")}
           onContinue={() => exit(false)}
         />
       )}
@@ -457,6 +473,7 @@ export const InteractionDirector = memo(function InteractionDirector({
           reducedMotion={reducedMotion}
           onClose={() => exit(true)}
           onComplete={() => complete("photo")}
+          onReset={() => restart("photo")}
           onContinue={() => exit(false)}
         />
       )}
@@ -468,10 +485,11 @@ export const InteractionDirector = memo(function InteractionDirector({
           data-interaction-escape
           data-mobile-interaction-skip
           onClick={() => {
-            const selector = state.lifecycle === "complete"
-              ? "[data-interaction-continue]"
-              : "[data-interaction-dismiss]";
-            panelRoot.current?.querySelector<HTMLButtonElement>(selector)?.click();
+            const continueControl = panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-continue]");
+            const exitControl = state.lifecycle === "complete" && continueControl && !continueControl.disabled
+              ? continueControl
+              : panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-dismiss]");
+            exitControl?.click();
           }}
         >
           {state.lifecycle === "complete" ? copy.continue : copy.skip}

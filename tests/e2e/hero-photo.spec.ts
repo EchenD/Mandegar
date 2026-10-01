@@ -19,8 +19,10 @@ test("photo booth counts down, replays and exits with an outro", async ({ page }
   expect(cameraRequests).toEqual([]);
 
   await activateWithKeyboard(page, "[data-photo-spatial-controls] button:nth-of-type(2)");
+  await expect(director).toHaveAttribute("data-lifecycle", "active");
   await expect(controls).toHaveAttribute("data-photo-state", "countdown", { timeout: 2_000 });
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
+  await expect(director).toHaveAttribute("data-lifecycle", "complete");
 
   await page.evaluate(() => {
     const director = document.querySelector<HTMLElement>("[data-interaction-director]");

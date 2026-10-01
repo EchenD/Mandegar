@@ -65,11 +65,13 @@ export function StageBeamInteraction({
   copy,
   onClose,
   onComplete,
+  onReset,
   onContinue,
 }: {
   copy: InteractionCopy;
   onClose: () => void;
   onComplete: () => void;
+  onReset: () => void;
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,8 +89,15 @@ export function StageBeamInteraction({
   const hoverControl = useRef<"close" | "reset" | "continue" | null>(null);
   const keyboardFocus = useRef<number | null>(null);
   const completionReported = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onResetRef = useRef(onReset);
   const sceneInputCount = useRef(0);
   const [active, setActive] = useState([false, false, false, false, false]);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onResetRef.current = onReset;
+  }, [onComplete, onReset]);
 
   const syncSceneBeams = useCallback(() => {
     const preview = hoverControl.current === null ? hoverBeam.current : null;
@@ -365,21 +374,31 @@ export function StageBeamInteraction({
   }, [exitWithTransition, onContinue]);
 
   const commitBeams = useCallback((next: boolean[]) => {
+    const complete = next.every(Boolean);
     activeRef.current = next;
     hoverBeam.current = null;
     interactionRuntime.activeBeams = [...next];
-    interactionRuntime.stageComplete = next.every(Boolean);
+    interactionRuntime.stageComplete = complete;
     setActive(next);
     schedulePaint();
-    if (next.every(Boolean) && !completionReported.current) {
+    if (!complete && completionReported.current) {
+      if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
+      completionTimer.current = null;
+      if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
+      finaleFrame.current = null;
+      finaleStartedAt.current = null;
+      completionReported.current = false;
+      onResetRef.current();
+    }
+    if (complete && !completionReported.current) {
       completionReported.current = true;
       startFinaleAnimation();
       completionTimer.current = window.setTimeout(() => {
         completionTimer.current = null;
-        onComplete();
+        onCompleteRef.current();
       }, 320);
     }
-  }, [onComplete, schedulePaint, startFinaleAnimation]);
+  }, [schedulePaint, startFinaleAnimation]);
 
   const toggleBeam = useCallback((index: number) => {
     const next = [...activeRef.current];

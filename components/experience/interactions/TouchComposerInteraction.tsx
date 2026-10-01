@@ -71,11 +71,13 @@ export function TouchComposerInteraction({
   copy,
   onClose,
   onComplete,
+  onReset,
   onContinue,
 }: {
   copy: InteractionCopy;
   onClose: () => void;
   onComplete: () => void;
+  onReset: () => void;
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,11 +91,18 @@ export function TouchComposerInteraction({
   const activePointer = useRef<ComposerPointer | null>(null);
   const selectedRef = useRef([false, false, false]);
   const completeRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onResetRef = useRef(onReset);
   const hoverElement = useRef<number | null>(null);
   const hoverControl = useRef<"close" | "reset" | "continue" | null>(null);
   const keyboardFocus = useRef<number | null>(null);
   const [selected, setSelected] = useState([false, false, false]);
   const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onResetRef.current = onReset;
+  }, [onComplete, onReset]);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -430,6 +439,7 @@ export function TouchComposerInteraction({
   const reset = useCallback(() => {
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
     completionTimer.current = null;
+    const wasComplete = completeRef.current;
     selectedRef.current = [false, false, false];
     interactionRuntime.touchElements = [false, false, false];
     completeRef.current = false;
@@ -437,6 +447,7 @@ export function TouchComposerInteraction({
     setSelected([false, false, false]);
     setComplete(false);
     schedulePaint();
+    if (wasComplete) onResetRef.current();
   }, [schedulePaint]);
 
   const activateElement = useCallback((index: number) => {
@@ -452,11 +463,11 @@ export function TouchComposerInteraction({
       setComplete(true);
       completionTimer.current = window.setTimeout(() => {
         completionTimer.current = null;
-        onComplete();
+        onCompleteRef.current();
       }, 320);
     }
     schedulePaint();
-  }, [onComplete, schedulePaint]);
+  }, [schedulePaint]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

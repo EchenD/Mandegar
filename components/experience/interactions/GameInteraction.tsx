@@ -158,12 +158,14 @@ export function GameInteraction({
   reducedMotion,
   onClose,
   onComplete,
+  onReset,
   onContinue,
 }: {
   copy: InteractionCopy;
   reducedMotion: boolean;
   onClose: () => void;
   onComplete: () => void;
+  onReset: () => void;
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -199,10 +201,17 @@ export function GameInteraction({
   const pausedTotal = useRef(0);
   const pausedAt = useRef<number | null>(null);
   const completionReported = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onResetRef = useRef(onReset);
   const [status, setStatus] = useState<GameStatus>("ready");
   const [completed, setCompleted] = useState([false, false, false]);
   const [attempts, setAttempts] = useState(0);
   const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onResetRef.current = onReset;
+  }, [onComplete, onReset]);
 
   const updateStatus = useCallback((next: GameStatus) => {
     statusRef.current = next;
@@ -544,7 +553,7 @@ export function GameInteraction({
         completionReported.current = true;
         completionTimer.current = window.setTimeout(() => {
           completionTimer.current = null;
-          onComplete();
+          onCompleteRef.current();
         }, 260);
       }
       return;
@@ -558,7 +567,7 @@ export function GameInteraction({
       schedulePaint();
     }, reducedMotion ? 0 : 650);
     schedulePaint();
-  }, [copy.game.hit, copy.game.missed, copy.game.outer, onComplete, reducedMotion, schedulePaint, updateStatus]);
+  }, [copy.game.hit, copy.game.missed, copy.game.outer, reducedMotion, schedulePaint, updateStatus]);
 
   const startFlightAnimation = useCallback(() => {
     if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
@@ -623,11 +632,13 @@ export function GameInteraction({
   }, [getElapsedSeconds, reducedMotion, schedulePaint, startFlightAnimation, updateStatus]);
 
   const reset = useCallback(() => {
+    const wasComplete = completionReported.current;
     if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
     flightFrame.current = null;
     flightStartedAt.current = null;
     activePointer.current = null;
     clearRoundTimers();
+    completionReported.current = false;
     roundRef.current = 0;
     attemptsRef.current = 0;
     scoreRef.current = 0;
@@ -645,6 +656,7 @@ export function GameInteraction({
     interactionRuntime.gameGateOffsetX = 0;
     interactionRuntime.gameGateOffsetY = 0;
     schedulePaint();
+    if (wasComplete) onResetRef.current();
   }, [clearRoundTimers, schedulePaint, updateStatus]);
 
   const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {

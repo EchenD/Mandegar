@@ -165,13 +165,26 @@ test.describe("hero interaction shell", () => {
     await expect(page.locator("[data-experience-canvas='true']")).not.toHaveCSS("touch-action", "none");
   });
 
-  test("client route teardown clears active mode and scroll locking", async ({ page }) => {
-    await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
+  test("client route teardown clears active mode without restoring old header focus", async ({ page }) => {
+    await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
+    const root = page.locator("[data-experience-root]");
+    await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 45_000 });
+    const navigation = page.getByLabel("Primary navigation");
+    await navigation.getByRole("link", { name: "Projects", exact: true }).focus();
+    const activation = narrativeScore.find((beat) => beat.id === "activation");
+    if (!activation) throw new Error("Activation checkpoint is missing");
+    await root.evaluate((element, progress) => {
+      element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+    }, activation.preview);
     await waitForStation(page, "photo");
-    await page.getByLabel("Primary navigation").getByRole("link", { name: "About" }).click();
+    await expect(page.locator("[data-interaction-escape]")).toBeFocused();
+    const about = navigation.getByRole("link", { name: "About", exact: true });
+    await about.click();
     await expect(page).toHaveURL(/\/en\/about$/, { timeout: 60_000 });
     await expect(page.locator("[data-interaction-director]")).toHaveCount(0);
     await expect(page.locator("[data-experience-root]")).toHaveCount(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    await expect(about).toBeFocused();
   });
 
   test("browser blur and tab visibility preserve active mode", async ({ page }) => {
