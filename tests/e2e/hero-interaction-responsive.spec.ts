@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { waitForStation } from "./hero-interaction-helpers";
+import { solvePuzzle, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
 
@@ -146,7 +146,7 @@ for (const { locale, height } of [{ locale: "fa", height: 568 }, { locale: "ar",
   });
 }
 
-test("mobile touch composition remains playable before continuing", async ({ browser }, testInfo) => {
+test("mobile nine-piece puzzle remains playable before continuing", async ({ browser }, testInfo) => {
   const context = await browser.newContext({
     hasTouch: true,
     viewport: { width: 390, height: 844 },
@@ -155,11 +155,9 @@ test("mobile touch composition remains playable before continuing", async ({ bro
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  for (const x of [111, 227, 340]) {
-    await page.touchscreen.tap(x, 300);
-  }
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-touch-complete", "true");
-  await page.screenshot({ path: testInfo.outputPath("mobile-composer-complete.png"), animations: "disabled" });
+  await solvePuzzle(page, "touch");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "true");
+  await page.screenshot({ path: testInfo.outputPath("mobile-puzzle-complete.png"), animations: "disabled" });
   await page.locator("[data-mobile-interaction-skip]").tap();
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
   await context.close();

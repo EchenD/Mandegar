@@ -1,531 +1,263 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent } from "react";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
-import {
-  interactionRuntime,
-  markInteractionCanvasDirty,
-  registerInteractionCanvas,
-  registerSceneInteraction,
-} from "./interaction-runtime";
+import { interactionRuntime, markInteractionCanvasDirty, registerInteractionCanvas, registerSceneInteraction } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
-import { getVisitorCreation, saveComposer } from "./visitor-creation";
 import { loadMonitorArtwork } from "./monitor-artwork";
+import { puzzleArtworkUrl } from "./puzzle-artwork";
 import {
-  cancelComposerObjectDrag,
-  composerObjectDefinitions,
-  getComposerMonitorPoint,
-  getComposerObjectState,
-  registerComposerObjectActions,
-  resetComposerObjects,
-  setComposerObjectsInteractive,
-  settleComposerObject,
-  subscribeComposerObjects,
-  updateComposerObjectPose,
-  type ComposerObjectPose,
-} from "./composer-object-store";
+  activatePuzzleSlot, beginPuzzleDrag, cancelPuzzleDrag, clearPuzzleSelection,
+  finishPuzzleDrag, getPuzzleState, resetPuzzle, setPuzzleFocusedSlot,
+  setPuzzleInteractive, subscribePuzzle, updatePuzzleDrag,
+} from "./puzzle-store";
 import styles from "./HeroInteractions.module.css";
 
+const artwork = puzzleArtworkUrl;
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.interactive.canvas;
-const center = { x: 0.5, y: 0.45 };
-const elementDefinitions = composerObjectDefinitions;
+// Keep the 3:2 artwork within the authored wide monitor.
+const board = { x: (canvasWidth - 690) / 2, y: 14, width: 690, height: 460 };
+const monitorBoard = { x: board.x / canvasWidth, y: board.y / canvasHeight, width: board.width / canvasWidth, height: board.height / canvasHeight };
+type Control = "reset" | "close" | "continue";
+const controls = {
+  reset: { x: 38, y: 486, width: 180, height: 42 },
+  continue: { x: canvasWidth - 240, y: 486, width: 202, height: 42 },
+  close: { x: canvasWidth - 88, y: 12, width: 54, height: 46 },
+} satisfies Record<Control, { x: number; y: number; width: number; height: number }>;
 
-type ComposerPointer = {
-  pointerId: number;
-  elementIndex: number | null;
-  startX: number;
-  startY: number;
-  x: number;
-  y: number;
-  initialPose: ComposerObjectPose | null;
-};
-
-function distance(firstX: number, firstY: number, secondX: number, secondY: number) {
-  return Math.hypot(firstX - secondX, firstY - secondY);
+function smoothstep(value: number) {
+  const bounded = Math.max(0, Math.min(1, value));
+  return bounded * bounded * (3 - 2 * bounded);
 }
 
-function roundedRect(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const safeRadius = Math.min(radius, width / 2, height / 2);
-  context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.arcTo(x + width, y, x + width, y + height, safeRadius);
-  context.arcTo(x + width, y + height, x, y + height, safeRadius);
-  context.arcTo(x, y + height, x, y, safeRadius);
-  context.arcTo(x, y, x + width, y, safeRadius);
-  context.closePath();
+function monitorPoint(x: number, y: number) {
+  return { x: (x - monitorBoard.x) / monitorBoard.width, y: (y - monitorBoard.y) / monitorBoard.height };
 }
 
-function hitRect(x: number, y: number, left: number, top: number, width: number, height: number) {
-  return x >= left && x <= left + width && y >= top && y <= top + height;
+function monitorControl(x: number, y: number): Control | null {
+  return (Object.keys(controls) as Control[]).find((control) => {
+    const rect = controls[control];
+    return x * canvasWidth >= rect.x && x * canvasWidth <= rect.x + rect.width
+      && y * canvasHeight >= rect.y && y * canvasHeight <= rect.y + rect.height;
+  }) ?? null;
 }
 
-function scenePoint(event: SceneInteractionEvent) {
-  return {
-    x: event.x,
-    y: event.y,
-  };
+function pointSlot(x: number, y: number) {
+  if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+  return Math.min(2, Math.floor(y * 3)) * 3 + Math.min(2, Math.floor(x * 3));
 }
 
-function revealProgress(progress: number, start: number, end: number) {
-  const value = Math.max(0, Math.min(1, (progress - start) / (end - start)));
-  return value * value * (3 - 2 * value);
+function interpolate(label: string, values: Record<string, number>) {
+  return label.replace(/\{(\w+)\}/g, (match, key: string) => String(values[key] ?? match));
 }
 
-export function TouchComposerInteraction({
-  copy,
-  onClose,
-  onComplete,
-  onReset,
-  onContinue,
-}: {
+export function TouchComposerInteraction({ copy, onClose, onComplete, onReset, onContinue }: {
   copy: InteractionCopy;
   onClose: () => void;
   onComplete: () => void;
   onReset: () => void;
   onContinue: () => void;
 }) {
+  const puzzle = useSyncExternalStore(subscribePuzzle, getPuzzleState, getPuzzleState);
+  const [artworkStatus, setArtworkStatus] = useState<"loading" | "ready" | "missing">("loading");
+  const artworkStatusRef = useRef(artworkStatus);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const continueRef = useRef<HTMLButtonElement>(null);
+  const tileButtons = useRef<Array<HTMLButtonElement | null>>([]);
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
   const transitionProgress = useRef(0);
   const transitionState = useRef<"intro" | "ready" | "outro">("intro");
-  const monitorImage = useRef<HTMLImageElement | null>(null);
+  const transitionTarget = useRef<0 | 1>(1);
+  const transitionFinish = useRef<(() => void) | undefined>(undefined);
+  const puzzleImage = useRef<HTMLImageElement | null>(null);
+  const idleImage = useRef<HTMLImageElement | null>(null);
   const previousSurface = useRef<HTMLCanvasElement | null>(null);
-  const completionTimer = useRef<number | null>(null);
   const sceneInputCount = useRef(0);
-  const activePointer = useRef<ComposerPointer | null>(null);
-  const [selected, setSelected] = useState(() => [...getVisitorCreation().composer]);
-  const [complete, setComplete] = useState(() => selected.every(Boolean));
-  const selectedRef = useRef(selected);
-  const completeRef = useRef(complete);
-  const onCompleteRef = useRef(onComplete);
-  const onResetRef = useRef(onReset);
-  const hoverElement = useRef<number | null>(null);
-  const hoverControl = useRef<"close" | "reset" | "continue" | null>(null);
-  const keyboardFocus = useRef<number | null>(null);
+  const ignoreMonitorActivateUntil = useRef(0);
+  const suppressGridClickUntil = useRef(0);
+  const pendingMonitorControl = useRef<{ pointerId: number; control: Control } | null>(null);
+  const hoverControl = useRef<Control | null>(null);
+  const focusedControl = useRef<Control | null>(null);
+  const seamOpacity = useRef(puzzle.solved ? 0 : 1);
+  const lastPaint = useRef(0);
+  const paintRef = useRef<() => void>(() => {});
+  const completionNotified = useRef(false);
+  const callbacks = useRef({ onClose, onComplete, onReset, onContinue });
 
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-    onResetRef.current = onReset;
-  }, [onComplete, onReset]);
-
-  const paint = useCallback(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    const width = canvas.width;
-    const height = canvas.height;
-    const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
-    const selectedElements = selectedRef.current;
-    const objectState = getComposerObjectState();
-    const pointer = activePointer.current;
-    const selectedCount = selectedElements.filter(Boolean).length;
-    const isComplete = selectedCount === elementDefinitions.length;
-    const transition = transitionProgress.current;
-    const retaining = transitionState.current === "outro" && selectedCount > 0;
-    const contentProgress = retaining ? 1 : transition;
-    const surfaceOpacity = revealProgress(contentProgress, 0, 0.34);
-    const centerReveal = revealProgress(contentProgress, 0.18, 0.58);
-    const elementReveals = elementDefinitions.map((_, index) => (
-      revealProgress(contentProgress, 0.34 + index * 0.09, 0.68 + index * 0.09)
-    ));
-    const controlsReveal = revealProgress(transition, 0.72, 1);
-    interactionRuntime.touchVisibility = transition;
-
-    context.clearRect(0, 0, width, height);
-    canvas.dataset.transitionProgress = transition.toFixed(3);
-    if (transitionState.current === "intro" && previousSurface.current) {
-      context.drawImage(previousSurface.current, 0, 0, width, height);
-    } else if (monitorImage.current?.complete) {
-      context.drawImage(monitorImage.current, 0, 0, width, height);
-    } else {
-      context.fillStyle = "#ede2da";
-      context.fillRect(0, 0, width, height);
-    }
-
-    context.save();
-    context.globalAlpha = surfaceOpacity;
-    const background = context.createLinearGradient(0, 0, width, height);
-    background.addColorStop(0, "#fafaf7");
-    background.addColorStop(1, "#e8eceb");
-    context.fillStyle = background;
-    context.fillRect(0, 0, width, height);
-
-    roundedRect(context, 14, 14, width - 28, height - 28, 22);
-    context.strokeStyle = "rgba(22,25,29,.12)";
-    context.lineWidth = 1;
-    context.stroke();
-
-    context.save();
-    context.direction = direction;
-    context.textAlign = "center";
-    context.fillStyle = "#225cff";
-    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText("MANDEGAR", width / 2, 37);
-    context.fillStyle = "#16191d";
-    context.font = '620 38px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(copy.stations.touch.title, width / 2, 78, width - 180);
-    context.fillStyle = "rgba(22,25,29,.6)";
-    context.font = '500 22px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(isComplete ? copy.touch.complete : copy.touch.instruction, width / 2, 109, width - 150);
-    context.restore();
-
-    context.fillStyle = "rgba(22,25,29,.12)";
-    context.fillRect(56, 126, width - 112, 1);
-    context.restore();
-
-    const centerX = center.x * width;
-    const centerY = center.y * height;
-    elementDefinitions.forEach((definition, index) => {
-      if (!selectedElements[index]) return;
-      context.save();
-      context.globalAlpha = surfaceOpacity * centerReveal * elementReveals[index];
-      const point = getComposerMonitorPoint(index, objectState.poses[index]);
-      const sourceX = point.x * width;
-      const sourceY = point.y * height;
-      context.strokeStyle = "rgba(34,92,255,.58)";
-      context.lineWidth = 3;
-      context.beginPath();
-      context.moveTo(sourceX, sourceY);
-      context.quadraticCurveTo(
-        (sourceX + centerX) / 2,
-        Math.min(sourceY, centerY) - 54,
-        centerX,
-        centerY,
-      );
-      context.stroke();
-      context.restore();
-    });
-
-    context.save();
-    context.globalAlpha = surfaceOpacity * centerReveal;
-    context.fillStyle = "#fff";
-    context.shadowColor = "rgba(22,25,29,.1)";
-    context.shadowBlur = 30;
-    context.beginPath();
-    context.arc(centerX, centerY, 62, 0, Math.PI * 2);
-    context.fill();
-    context.shadowBlur = 0;
-
-    const ringGradient = context.createRadialGradient(centerX, centerY, 8, centerX, centerY, 100);
-    ringGradient.addColorStop(0, isComplete ? "rgba(34,92,255,.15)" : "rgba(34,92,255,.07)");
-    ringGradient.addColorStop(1, "rgba(34,92,255,0)");
-    context.fillStyle = ringGradient;
-    context.beginPath();
-    context.arc(centerX, centerY, 100, 0, Math.PI * 2);
-    context.fill();
-
-    elementDefinitions.forEach((_, index) => {
-      const segmentSize = Math.PI * 2 / elementDefinitions.length;
-      const start = -Math.PI / 2 + index * segmentSize + 0.12;
-      const end = start + segmentSize - 0.24;
-      const active = selectedElements[index];
-      context.strokeStyle = active ? "#225cff" : "rgba(22,25,29,.12)";
-      context.lineWidth = active ? 6 : 4;
-      context.lineCap = "round";
-      context.beginPath();
-      context.arc(centerX, centerY, 66, start, end);
-      context.stroke();
-    });
-    context.lineCap = "butt";
-    context.beginPath();
-    context.shadowBlur = 0;
-    context.strokeStyle = isComplete ? "#225cff" : "rgba(22,25,29,.2)";
-    context.lineWidth = 1.5;
-    context.arc(centerX, centerY, 50, 0, Math.PI * 2);
-    context.stroke();
-    if (isComplete) {
-      context.strokeStyle = "#225cff";
-      context.lineWidth = 6;
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.beginPath();
-      context.moveTo(centerX - 18, centerY);
-      context.lineTo(centerX - 4, centerY + 14);
-      context.lineTo(centerX + 24, centerY - 17);
-      context.stroke();
-      context.lineCap = "butt";
-      context.lineJoin = "miter";
-    } else {
-      context.fillStyle = "#16191d";
-      context.font = '720 38px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(String(selectedCount), centerX, centerY + 8);
-      context.fillStyle = "rgba(22,25,29,.48)";
-      context.font = '650 13px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText("/ 03", centerX, centerY + 29);
-    }
-    context.restore();
-
-    elementDefinitions.forEach((definition, index) => {
-      const dragging = pointer?.elementIndex === index;
-      const point = getComposerMonitorPoint(index, objectState.poses[index]);
-      const x = point.x * width;
-      const y = point.y * height;
-      const active = selectedElements[index];
-      const focused = hoverElement.current === index || keyboardFocus.current === index;
-      const elementReveal = elementReveals[index];
-      context.save();
-      context.globalAlpha = surfaceOpacity * elementReveal;
-      context.translate(x, y);
-      context.scale(0.82 + elementReveal * 0.18, 0.82 + elementReveal * 0.18);
-      context.translate(-x, -y);
-      if (focused || dragging || objectState.dragging?.index === index) {
-        context.beginPath();
-        context.arc(x, y, 56, 0, Math.PI * 2);
-        context.strokeStyle = "rgba(34,92,255,.3)";
-        context.lineWidth = 2;
-        context.stroke();
-      }
-      context.save();
-      context.translate(x, y);
-      context.rotate(index === 1 ? objectState.poses[index].x * 0.35 : 0);
-      context.fillStyle = definition.color;
-      context.strokeStyle = "rgba(22,25,29,.2)";
-      context.lineWidth = 1.5;
-      if (index === 0) {
-        context.beginPath();
-        context.moveTo(0, -35);
-        context.lineTo(35, -16);
-        context.lineTo(35, 22);
-        context.lineTo(0, 40);
-        context.lineTo(-35, 22);
-        context.lineTo(-35, -16);
-        context.closePath();
-        context.fill();
-        context.stroke();
-        context.fillStyle = "rgba(117,216,255,.45)";
-        context.beginPath();
-        context.moveTo(0, -35); context.lineTo(35, -16); context.lineTo(0, 2); context.lineTo(-35, -16); context.closePath(); context.fill();
-        context.strokeStyle = "rgba(247,247,244,.4)";
-        context.beginPath(); context.moveTo(0, 2); context.lineTo(0, 40); context.stroke();
-      } else if (index === 1) {
-        context.beginPath();
-        context.moveTo(-44, -19); context.lineTo(-4, -30); context.lineTo(43, -13); context.lineTo(34, 27); context.lineTo(-8, 16); context.lineTo(-44, 28); context.closePath(); context.fill(); context.stroke();
-        context.fillStyle = "rgba(34,92,255,.17)";
-        context.beginPath(); context.moveTo(-4, -30); context.lineTo(43, -13); context.lineTo(34, 27); context.lineTo(-8, 16); context.closePath(); context.fill();
-      } else {
-        const radius = 34 + objectState.poses[index].y * 4;
-        const gradient = context.createRadialGradient(-11, -14, 3, 0, 0, radius);
-        gradient.addColorStop(0, "#cef2ff"); gradient.addColorStop(0.5, "#75d8ff"); gradient.addColorStop(1, "#3e9fcc");
-        context.fillStyle = gradient;
-        context.beginPath(); context.arc(0, 0, radius, 0, Math.PI * 2); context.fill(); context.stroke();
-      }
-      context.restore();
-      if (active) {
-        context.fillStyle = "#225cff";
-        context.beginPath();
-        context.arc(x + 39, y - 39, 13, 0, Math.PI * 2);
-        context.fill();
-        context.strokeStyle = "#fff";
-        context.lineWidth = 3;
-        context.lineCap = "round";
-        context.beginPath();
-        context.moveTo(x + 33, y - 39);
-        context.lineTo(x + 38, y - 34);
-        context.lineTo(x + 46, y - 44);
-        context.stroke();
-        context.lineCap = "butt";
-      }
-      context.direction = direction;
-      context.fillStyle = "#16191d";
-      context.font = '600 22px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(copy.touch.elements[index], x, y + 56, 132);
-      context.restore();
-    });
-
-    context.save();
-    context.globalAlpha = retaining ? transition : surfaceOpacity;
-    const closeX = width * 0.94;
-    const closeY = height * 0.09;
-    const closeFocused = keyboardFocus.current === 5 || hoverControl.current === "close";
-    context.fillStyle = closeFocused ? "#e9eeff" : "rgba(255,255,255,.88)";
-    context.beginPath();
-    context.arc(closeX, closeY, 24, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = closeFocused ? "#225cff" : "rgba(22,25,29,.28)";
-    context.lineWidth = closeFocused ? 3 : 1.5;
-    context.stroke();
-    context.strokeStyle = "#16191d";
-    context.lineWidth = 2;
-    context.lineCap = "round";
-    context.beginPath();
-    context.moveTo(closeX - 7, closeY - 7);
-    context.lineTo(closeX + 7, closeY + 7);
-    context.moveTo(closeX + 7, closeY - 7);
-    context.lineTo(closeX - 7, closeY + 7);
-    context.stroke();
-    context.lineCap = "butt";
-    context.restore();
-
-    const drawButton = (
-      left: number,
-      label: string,
-      enabled: boolean,
-      focused: boolean,
-      primary = false,
-    ) => {
-      const top = height * 0.84;
-      const buttonWidth = width * 0.235;
-      const buttonHeight = height * 0.105;
-      roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary && enabled ? "#225cff" : "rgba(255,255,255,.86)";
-      context.fill();
-      context.strokeStyle = focused
-        ? "#225cff"
-        : enabled
-          ? "rgba(22,25,29,.28)"
-          : "rgba(22,25,29,.12)";
-      context.lineWidth = focused ? 3 : 1.5;
-      context.stroke();
-      context.fillStyle = primary && enabled ? "#fff" : enabled ? "#16191d" : "rgba(22,25,29,.38)";
-      context.direction = direction;
-      context.font = '700 22px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.64, buttonWidth - 38);
-      if (primary && enabled) {
-        const directionSign = direction === "rtl" ? -1 : 1;
-        const arrowX = direction === "rtl" ? left + 25 : left + buttonWidth - 25;
-        const arrowY = top + buttonHeight / 2;
-        context.strokeStyle = "#fff";
-        context.lineWidth = 2;
-        context.lineCap = "round";
-        context.lineJoin = "round";
-        context.beginPath();
-        context.moveTo(arrowX - directionSign * 5, arrowY - 5);
-        context.lineTo(arrowX, arrowY);
-        context.lineTo(arrowX - directionSign * 5, arrowY + 5);
-        context.stroke();
-        context.lineCap = "butt";
-        context.lineJoin = "miter";
-      }
-    };
-    context.save();
-    context.globalAlpha = surfaceOpacity * controlsReveal;
-    drawButton(
-      width * 0.055,
-      copy.reset,
-      selectedCount > 0,
-      keyboardFocus.current === 3 || hoverControl.current === "reset",
-    );
-    drawButton(
-      width * 0.71,
-      copy.continue,
-      isComplete,
-      keyboardFocus.current === 4 || hoverControl.current === "continue",
-      true,
-    );
-    context.restore();
-
-    markInteractionCanvasDirty("interactive");
-  }, [copy]);
+  useEffect(() => { callbacks.current = { onClose, onComplete, onReset, onContinue }; }, [onClose, onComplete, onReset, onContinue]);
 
   const schedulePaint = useCallback(() => {
     if (renderFrame.current !== null) return;
     renderFrame.current = window.requestAnimationFrame(() => {
       renderFrame.current = null;
-      paint();
+      paintRef.current();
     });
-  }, [paint]);
+  }, []);
+
+  const paint = useCallback(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const state = getPuzzleState();
+    const transition = transitionProgress.current;
+    const retaining = transitionState.current === "outro" && state.started;
+    const contentOpacity = retaining ? 1 : smoothstep(transition);
+    const time = performance.now();
+    const elapsed = lastPaint.current ? Math.min(64, time - lastPaint.current) : 16;
+    lastPaint.current = time;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    seamOpacity.current = state.solved ? reducedMotion ? 0 : Math.max(0, seamOpacity.current - elapsed / 480) : 1;
+    Object.assign(canvas.dataset, {
+      transitionProgress: transition.toFixed(3), puzzleTiles: JSON.stringify(state.tiles),
+      puzzlePreviewTiles: JSON.stringify(state.previewTiles), puzzleSolved: String(state.solved),
+      puzzleMoves: String(state.moves), puzzleSelected: String(state.selectedSlot ?? "none"),
+      puzzleBoard: JSON.stringify(monitorBoard), puzzleArtwork: artworkStatusRef.current, puzzleArtworkSrc: artwork,
+    });
+    interactionRuntime.touchVisibility = transition;
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    if (transitionState.current === "intro" && previousSurface.current) context.drawImage(previousSurface.current, 0, 0, canvasWidth, canvasHeight);
+    else if (idleImage.current?.naturalWidth) context.drawImage(idleImage.current, 0, 0, canvasWidth, canvasHeight);
+    else { context.fillStyle = "#16191d"; context.fillRect(0, 0, canvasWidth, canvasHeight); }
+    context.save();
+    context.globalAlpha = contentOpacity;
+    context.fillStyle = "#16191d";
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+    const tileWidth = board.width / 3;
+    const tileHeight = board.height / 3;
+    const image = puzzleImage.current;
+    state.previewTiles.forEach((piece, slot) => {
+      const x = board.x + (slot % 3) * tileWidth;
+      const y = board.y + Math.floor(slot / 3) * tileHeight;
+      if (image?.naturalWidth) context.drawImage(image,
+        (piece % 3) * image.naturalWidth / 3, Math.floor(piece / 3) * image.naturalHeight / 3,
+        image.naturalWidth / 3, image.naturalHeight / 3, x, y, tileWidth, tileHeight);
+      else {
+        // Preserve all positions and input while artwork loads or is unavailable.
+        context.fillStyle = piece % 2 ? "#22252a" : "#2c2926";
+        context.fillRect(x, y, tileWidth, tileHeight);
+        context.fillStyle = "rgba(247,247,244,.5)";
+        context.font = '500 22px "Vazirmatn Variable", Tahoma, sans-serif';
+        context.textAlign = "center";
+        context.fillText(String(piece + 1), x + tileWidth / 2, y + tileHeight / 2 + 8);
+      }
+      if (seamOpacity.current > 0) {
+        context.save();
+        context.globalAlpha *= seamOpacity.current;
+        context.strokeStyle = "rgba(22,25,29,.8)";
+        context.lineWidth = 3;
+        context.strokeRect(x + 1.5, y + 1.5, tileWidth - 3, tileHeight - 3);
+        if (state.selectedSlot === slot || state.focusedSlot === slot || state.dragging?.targetSlot === slot) {
+          context.strokeStyle = state.selectedSlot === slot ? "#ece2cc" : "#75d8ff";
+          context.lineWidth = state.selectedSlot === slot ? 4 : 3;
+          context.strokeRect(x + 4, y + 4, tileWidth - 8, tileHeight - 8);
+        }
+        context.restore();
+      }
+    });
+    context.restore();
+    context.save();
+    context.globalAlpha = smoothstep(transition);
+    context.direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = '500 22px "Vazirmatn Variable", Tahoma, sans-serif';
+    (Object.keys(controls) as Control[]).forEach((control) => {
+      const rect = controls[control];
+      const focused = focusedControl.current === control || hoverControl.current === control;
+      context.fillStyle = focused ? "rgba(117,216,255,.13)" : "rgba(247,247,244,.035)";
+      context.beginPath();
+      context.roundRect(rect.x, rect.y, rect.width, rect.height, 12);
+      context.fill();
+      if (focused) { context.strokeStyle = "rgba(117,216,255,.85)"; context.lineWidth = 2; context.stroke(); }
+      context.fillStyle = "#f0ebe1";
+      if (control === "close") {
+        const x = rect.x + rect.width / 2;
+        const y = rect.y + rect.height / 2;
+        context.strokeStyle = "#f0ebe1";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(x - 7, y - 7); context.lineTo(x + 7, y + 7);
+        context.moveTo(x + 7, y - 7); context.lineTo(x - 7, y + 7);
+        context.stroke();
+      } else context.fillText(control === "reset" ? copy.reset : state.solved ? copy.continue : copy.skip, rect.x + rect.width / 2, rect.y + rect.height / 2, rect.width - 20);
+    });
+    context.restore();
+    markInteractionCanvasDirty("interactive");
+    if (state.solved && seamOpacity.current > 0) schedulePaint();
+  }, [copy, schedulePaint]);
+
+  useEffect(() => { paintRef.current = paint; }, [paint]);
+
+  const notifyCompletion = useCallback(() => {
+    if (!getPuzzleState().solved || completionNotified.current || transitionState.current !== "ready") return;
+    completionNotified.current = true;
+    if (gridRef.current?.contains(document.activeElement)) continueRef.current?.focus({ preventScroll: true });
+    callbacks.current.onComplete();
+  }, []);
+
+  const finishTransition = useCallback(() => {
+    const target = transitionTarget.current;
+    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+    transitionFrame.current = null;
+    transitionProgress.current = target;
+    transitionState.current = target === 1 ? "ready" : "outro";
+    setPuzzleInteractive(target === 1);
+    paint();
+    const callback = transitionFinish.current;
+    transitionFinish.current = undefined;
+    callback?.();
+    if (target === 1) notifyCompletion();
+  }, [notifyCompletion, paint]);
 
   const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-    const from = transitionProgress.current;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 0 : target === 1 ? 550 : 380;
+    transitionTarget.current = target;
+    transitionFinish.current = onFinish;
     transitionState.current = target === 1 ? "intro" : "outro";
-    setComposerObjectsInteractive(false);
-    if (duration === 0 || Math.abs(target - from) < 0.001) {
-      transitionProgress.current = target;
-      transitionState.current = target === 1 ? "ready" : "outro";
-      setComposerObjectsInteractive(target === 1);
-      paint();
-      onFinish?.();
-      return;
-    }
+    setPuzzleInteractive(false);
+    const from = transitionProgress.current;
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : target === 1 ? 550 : 380;
+    if (!duration || Math.abs(target - from) < 0.001) { finishTransition(); return; }
     const startedAt = performance.now();
     const tick = (time: number) => {
-      const elapsed = Math.min(1, (time - startedAt) / duration);
-      transitionProgress.current = from + (target - from) * elapsed;
+      const progress = Math.min(1, (time - startedAt) / duration);
+      transitionProgress.current = from + (target - from) * progress;
       paint();
-      if (elapsed < 1) {
-        transitionFrame.current = window.requestAnimationFrame(tick);
-        return;
-      }
-      transitionFrame.current = null;
-      transitionState.current = target === 1 ? "ready" : "outro";
-      setComposerObjectsInteractive(target === 1);
-      onFinish?.();
+      if (progress < 1) transitionFrame.current = window.requestAnimationFrame(tick);
+      else finishTransition();
     };
     transitionFrame.current = window.requestAnimationFrame(tick);
-  }, [paint]);
+  }, [finishTransition, paint]);
 
-  const exitWithTransition = useCallback((callback: () => void) => {
-    if (transitionState.current === "outro") return;
-    const pointer = activePointer.current;
-    if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
-    activePointer.current = null;
-    hoverElement.current = null;
+  const release = useCallback(() => {
+    const pointerId = getPuzzleState().dragging?.pointerId;
+    cancelPuzzleDrag();
+    clearPuzzleSelection();
+    if (pointerId !== undefined && gridRef.current?.hasPointerCapture(pointerId)) gridRef.current.releasePointerCapture(pointerId);
+    setPuzzleFocusedSlot(null);
     hoverControl.current = null;
-    animateTransition(0, callback);
-  }, [animateTransition]);
+    focusedControl.current = null;
+    pendingMonitorControl.current = null;
+    schedulePaint();
+  }, [schedulePaint]);
 
-  const closeWithTransition = useCallback(() => {
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    completionTimer.current = null;
-    exitWithTransition(onClose);
-  }, [exitWithTransition, onClose]);
-
-  const continueWithTransition = useCallback(() => {
-    exitWithTransition(onContinue);
-  }, [exitWithTransition, onContinue]);
+  const exit = useCallback((continueJourney: boolean) => {
+    if (transitionState.current === "outro") return;
+    release();
+    animateTransition(0, () => continueJourney ? callbacks.current.onContinue() : callbacks.current.onClose());
+  }, [animateTransition, release]);
 
   const reset = useCallback(() => {
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    completionTimer.current = null;
-    const wasComplete = completeRef.current;
-    selectedRef.current = [false, false, false];
-    resetComposerObjects();
-    interactionRuntime.touchElements = [false, false, false];
-    saveComposer([false, false, false]);
-    completeRef.current = false;
-    activePointer.current = null;
-    setSelected([false, false, false]);
-    setComplete(false);
+    if (transitionState.current !== "ready") return;
+    release();
+    resetPuzzle();
+    completionNotified.current = false;
+    callbacks.current.onReset();
     schedulePaint();
-    if (wasComplete) onResetRef.current();
-  }, [schedulePaint]);
-
-  const activateElement = useCallback((index: number) => {
-    if (transitionState.current !== "ready" || activePointer.current) return;
-    settleComposerObject(index);
-    if (selectedRef.current[index]) return;
-    const next = [...selectedRef.current];
-    next[index] = true;
-    selectedRef.current = next;
-    interactionRuntime.touchElements = [...next];
-    saveComposer(next);
-    setSelected(next);
-    const finished = next.every(Boolean);
-    if (finished && !completeRef.current) {
-      completeRef.current = true;
-      setComplete(true);
-      completionTimer.current = window.setTimeout(() => {
-        completionTimer.current = null;
-        onCompleteRef.current();
-      }, 320);
-    }
-    schedulePaint();
-  }, [schedulePaint]);
+  }, [release, schedulePaint]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -533,253 +265,234 @@ export function TouchComposerInteraction({
     const experience = canvas.closest("[data-experience-root]");
     const retained = interactionRuntime.monitorEntries.interactive?.canvas;
     previousSurface.current = retained && retained !== canvas ? retained : null;
-    interactionRuntime.touchElements = [...selectedRef.current];
     let active = true;
     let registered = false;
     const begin = (image: HTMLImageElement | null) => {
       if (!active) return;
-      monitorImage.current = image;
+      puzzleImage.current = image;
+      artworkStatusRef.current = image?.naturalWidth ? "ready" : "missing";
+      setArtworkStatus(artworkStatusRef.current);
       if (registered) { schedulePaint(); return; }
       registered = true;
       transitionProgress.current = 0;
       paint();
       registerInteractionCanvas("interactive", canvas);
-      animateTransition(1, () => {
-        previousSurface.current = null;
-        if (completeRef.current) onCompleteRef.current();
-      });
+      animateTransition(1, () => { previousSurface.current = null; });
     };
-    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.interactive, begin, { immediate: Boolean(previousSurface.current) });
-    void document.fonts?.ready.then(() => {
-      if (active) schedulePaint();
-    });
+    const stopArtwork = loadMonitorArtwork(artwork, begin, { immediate: Boolean(previousSurface.current) });
+    const stopIdle = loadMonitorArtwork(sceneTokens.bakedScene.screens.interactive, (image) => {
+      if (!active) return;
+      idleImage.current = image;
+      schedulePaint();
+    }, { immediate: true });
+    void document.fonts?.ready.then(() => { if (active) schedulePaint(); });
     return () => {
       active = false;
-      stopLoading();
-      setComposerObjectsInteractive(false);
-      if (interactionRuntime.monitorEntries.interactive?.canvas !== canvas) return;
-      if (experience?.isConnected && selectedRef.current.some(Boolean)) {
-        transitionState.current = "outro";
-        transitionProgress.current = 0;
-        paint();
-        registerInteractionCanvas("interactive", canvas);
-      } else {
-        registerInteractionCanvas("interactive", null);
+      stopArtwork();
+      stopIdle();
+      setPuzzleInteractive(false);
+      cancelPuzzleDrag();
+      if (interactionRuntime.monitorEntries.interactive?.canvas === canvas) {
+        if (experience?.isConnected && getPuzzleState().started) {
+          transitionState.current = "outro";
+          transitionProgress.current = 0;
+          paint();
+          registerInteractionCanvas("interactive", canvas);
+        } else registerInteractionCanvas("interactive", null);
       }
       previousSurface.current = null;
     };
   }, [animateTransition, paint, schedulePaint]);
 
   useEffect(() => {
-    registerComposerObjectActions(activateElement);
-    const unsubscribe = subscribeComposerObjects(schedulePaint);
-    const release = () => {
-      const pointer = activePointer.current;
-      if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
-      activePointer.current = null;
-      hoverElement.current = null;
-      hoverControl.current = null;
-      cancelComposerObjectDrag();
+    const unsubscribe = subscribePuzzle(() => {
+      if (!getPuzzleState().solved) completionNotified.current = false;
+      notifyCompletion();
       schedulePaint();
-    };
+    });
     const hidden = () => { if (document.hidden) release(); };
     const menuToggle = document.querySelector("header button[aria-controls='primary-navigation']");
     const menu = new MutationObserver(() => { if (menuToggle?.getAttribute("aria-expanded") === "true") release(); });
     if (menuToggle) menu.observe(menuToggle, { attributes: true, attributeFilter: ["aria-expanded"] });
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const motionChange = () => {
+      release();
+      if (motion.matches) {
+        seamOpacity.current = getPuzzleState().solved ? 0 : 1;
+        if (transitionFrame.current !== null) finishTransition();
+      }
+      schedulePaint();
+    };
     window.addEventListener("blur", release);
     document.addEventListener("visibilitychange", hidden);
+    motion.addEventListener("change", motionChange);
     return () => {
       unsubscribe();
-      registerComposerObjectActions(null);
+      release();
       window.removeEventListener("blur", release);
       document.removeEventListener("visibilitychange", hidden);
+      motion.removeEventListener("change", motionChange);
       menu.disconnect();
     };
-  }, [activateElement, schedulePaint]);
+  }, [finishTransition, notifyCompletion, release, schedulePaint]);
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
       sceneInputCount.current += 1;
-      if (canvasRef.current) {
-        canvasRef.current.dataset.sceneInputCount = String(sceneInputCount.current);
-      }
+      if (canvasRef.current) canvasRef.current.dataset.sceneInputCount = String(sceneInputCount.current);
       if (transitionState.current !== "ready") return;
-      const point = scenePoint(event);
-      if (event.phase === "move") {
-        const pointer = activePointer.current;
-        if (pointer?.pointerId === event.pointerId && pointer.elementIndex !== null) {
-          pointer.x = point.x;
-          pointer.y = point.y;
-          const definition = elementDefinitions[pointer.elementIndex];
-          updateComposerObjectPose(pointer.elementIndex, { x: (point.x - definition.x) / 0.08, y: (definition.y - point.y) / 0.085 });
-          schedulePaint();
-          return;
-        }
-        hoverControl.current = distance(point.x, point.y, 0.94, 0.09) <= 0.1
-          ? "close"
-          : hitRect(point.x, point.y, 0.02, 0.8, 0.32, 0.2)
-            ? "reset"
-            : hitRect(point.x, point.y, 0.66, 0.8, 0.34, 0.2)
-              ? "continue"
-              : null;
-        hoverElement.current = hoverControl.current === null
-          ? elementDefinitions.findIndex((_, index) => (
-            distance(point.x, point.y, getComposerMonitorPoint(index).x, getComposerMonitorPoint(index).y) <= 0.115
-          ))
-          : null;
-        if (hoverElement.current !== null && hoverElement.current < 0) hoverElement.current = null;
-        schedulePaint();
-        return;
-      }
-
-      if (event.phase === "down") {
-        if (distance(point.x, point.y, 0.94, 0.09) <= 0.1) {
-          closeWithTransition();
-          return;
-        }
-        if (hitRect(point.x, point.y, 0.02, 0.8, 0.32, 0.2)) {
-          reset();
-          return;
-        }
-        if (
-          completeRef.current
-          && hitRect(point.x, point.y, 0.66, 0.8, 0.34, 0.2)
-        ) {
-          continueWithTransition();
-          return;
-        }
-        const elementIndex = elementDefinitions.findIndex((_, index) => (
-          distance(point.x, point.y, getComposerMonitorPoint(index).x, getComposerMonitorPoint(index).y) <= 0.115
-        ));
-        activePointer.current = {
-          pointerId: event.pointerId,
-          elementIndex: elementIndex >= 0 ? elementIndex : null,
-          startX: point.x,
-          startY: point.y,
-          x: point.x,
-          y: point.y,
-          initialPose: elementIndex >= 0 ? { ...getComposerObjectState().poses[elementIndex] } : null,
-        };
-        schedulePaint();
-        return;
-      }
-
+      // Native clicks follow the down/up stream; handle that gesture once.
+      if (event.phase === "activate" && performance.now() < ignoreMonitorActivateUntil.current) return;
+      if (event.phase === "down" || event.phase === "up" || event.phase === "cancel") ignoreMonitorActivateUntil.current = performance.now() + 650;
+      const pending = pendingMonitorControl.current;
+      if (pending && pending.pointerId !== event.pointerId) return;
+      const dragging = getPuzzleState().dragging;
+      // Tabletop and semantic pointers use different coordinate spaces.
+      if (dragging && (dragging.surface !== "monitor" || dragging.pointerId !== event.pointerId)) return;
+      const point = monitorPoint(event.x, event.y);
       if (event.phase === "cancel") {
-        const pointer = activePointer.current;
-        if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
-        activePointer.current = null;
-        hoverElement.current = null;
+        cancelPuzzleDrag(event.pointerId);
+        pendingMonitorControl.current = null;
         hoverControl.current = null;
         schedulePaint();
-        return;
-      }
-
-      if (event.phase !== "up") return;
-      const pointer = activePointer.current;
-      activePointer.current = null;
-      if (!pointer || pointer.pointerId !== event.pointerId) {
+      } else if (event.phase === "move") {
+        if (pending) hoverControl.current = monitorControl(event.x, event.y) === pending.control ? pending.control : null;
+        else if (dragging) updatePuzzleDrag(event.pointerId, point.x, point.y);
+        else { hoverControl.current = monitorControl(event.x, event.y); setPuzzleFocusedSlot(hoverControl.current ? null : pointSlot(point.x, point.y)); }
         schedulePaint();
-        return;
+      } else if (event.phase === "down" || event.phase === "activate") {
+        if (dragging || pending) return;
+        const control = monitorControl(event.x, event.y);
+        if (control && event.phase === "down") {
+          pendingMonitorControl.current = { pointerId: event.pointerId, control };
+          hoverControl.current = control;
+          schedulePaint();
+        } else if (control === "close") exit(false);
+        else if (control === "continue") exit(true);
+        else if (control === "reset") reset();
+        else {
+          const slot = pointSlot(point.x, point.y);
+          if (slot !== null) {
+            if (event.phase === "activate") activatePuzzleSlot(slot);
+            else beginPuzzleDrag(slot, event.pointerId, point.x, point.y, "monitor");
+          }
+        }
+      } else if (event.phase === "up") {
+        if (pending) {
+          pendingMonitorControl.current = null;
+          hoverControl.current = null;
+          if (monitorControl(event.x, event.y) === pending.control) {
+            if (pending.control === "close") exit(false);
+            else if (pending.control === "continue") exit(true);
+            else reset();
+          }
+          schedulePaint();
+        } else if (dragging) {
+          updatePuzzleDrag(event.pointerId, point.x, point.y);
+          finishPuzzleDrag(event.pointerId);
+        }
       }
-      if (pointer.elementIndex !== null) {
-        const travelled = distance(point.x, point.y, pointer.startX, pointer.startY);
-        const reachedCenter = distance(point.x, point.y, center.x, center.y) <= 0.18;
-        if (travelled <= 0.045 || reachedCenter) {
-          updateComposerObjectPose(pointer.elementIndex, getComposerObjectState().poses[pointer.elementIndex], true);
-          activateElement(pointer.elementIndex);
-        } else if (pointer.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
-      }
-      schedulePaint();
     };
     registerSceneInteraction("touch", handleSceneInput);
     return () => registerSceneInteraction("touch", null);
-  }, [activateElement, closeWithTransition, continueWithTransition, reset, schedulePaint]);
+  }, [exit, reset, schedulePaint]);
 
   useEffect(() => () => {
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    setComposerObjectsInteractive(false);
-    interactionRuntime.touchElements = [...getVisitorCreation().composer];
+    renderFrame.current = null;
+    transitionFrame.current = null;
+    setPuzzleInteractive(false);
+    cancelPuzzleDrag();
     interactionRuntime.touchVisibility = 0;
   }, []);
 
-  const focusControl = (index: number | null) => {
-    keyboardFocus.current = index;
-    schedulePaint();
+  const keyboard = (event: KeyboardEvent<HTMLButtonElement>, slot: number) => {
+    if (event.key === "Enter" || event.key === " ") suppressGridClickUntil.current = 0;
+    if (event.key === "Escape") { cancelPuzzleDrag(); return; }
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    if (getPuzzleState().dragging) return;
+    const row = Math.floor(slot / 3);
+    const column = slot % 3;
+    const next = event.key === "ArrowLeft" ? row * 3 + Math.max(0, column - 1)
+      : event.key === "ArrowRight" ? row * 3 + Math.min(2, column + 1)
+        : event.key === "ArrowUp" ? Math.max(0, row - 1) * 3 + column
+          : event.key === "ArrowDown" ? Math.min(2, row + 1) * 3 + column : event.key === "Home" ? 0 : 8;
+    tileButtons.current[next]?.focus({ preventScroll: true });
   };
 
+  const gridPoint = (clientX: number, clientY: number) => {
+    const rect = gridRef.current?.getBoundingClientRect();
+    return rect ? { x: (clientX - rect.left) / rect.width, y: (clientY - rect.top) / rect.height } : null;
+  };
+  const focusControl = (control: Control | null) => { focusedControl.current = control; setPuzzleFocusedSlot(null); schedulePaint(); };
+
   return (
-    <div
-      className={styles.spatialInteractionSemantics}
-      data-touch-spatial-controls
-      data-touch-selected-count={selected.filter(Boolean).length}
-      data-touch-complete={complete ? "true" : "false"}
-      role="region"
-      aria-label={copy.stations.touch.title}
-    >
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        className={styles.textureSource}
-        data-composer-canvas
-        aria-hidden="true"
-      />
-      <p>{copy.touch.instruction}</p>
-      {copy.touch.elements.map((label, index) => (
-        <button
-          key={elementDefinitions[index].id}
-          type="button"
-          data-touch-element={elementDefinitions[index].id}
-          aria-pressed={selected[index]}
-          aria-label={`${label}. ${copy.touch.keyboard}`}
-          onKeyDown={(event) => {
-            if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key) || transitionState.current !== "ready") return;
-            event.preventDefault();
-            if (getComposerObjectState().dragging || activePointer.current) return;
-            const pose = getComposerObjectState().poses[index];
-            updateComposerObjectPose(index, { x: pose.x + (event.key === "ArrowRight" ? 0.15 : event.key === "ArrowLeft" ? -0.15 : 0), y: pose.y + (event.key === "ArrowUp" ? 0.12 : event.key === "ArrowDown" ? -0.12 : 0) }, true);
-            activateElement(index);
-          }}
-          onFocus={() => focusControl(index)}
-          onBlur={() => focusControl(null)}
-          onClick={() => activateElement(index)}
-        >
-          {label}
-        </button>
-      ))}
-      <button
-        type="button"
-        disabled={!selected.some(Boolean)}
-        onFocus={() => focusControl(3)}
-        onBlur={() => focusControl(null)}
-        onClick={reset}
-      >
-        {copy.reset}
-      </button>
-      <button
-        type="button"
-        data-interaction-continue
-        disabled={!complete}
-        onFocus={() => focusControl(4)}
-        onBlur={() => focusControl(null)}
-        onClick={continueWithTransition}
-      >
-        {copy.continue}
-      </button>
-      <button
-        type="button"
-        data-interaction-dismiss
-        onFocus={() => focusControl(5)}
-        onBlur={() => focusControl(null)}
-        onClick={closeWithTransition}
-      >
-        {copy.close}
-      </button>
-      <span role="status" aria-live="polite">
-        {complete ? copy.touch.complete : `${selected.filter(Boolean).length} / 3`}
-      </span>
+    <div className={styles.puzzleInteraction} style={{ "--puzzle-artwork": `url("${artwork}")` } as CSSProperties} data-touch-spatial-controls data-touch-complete={String(puzzle.solved)}
+      data-puzzle-tiles={JSON.stringify(puzzle.tiles)} data-puzzle-preview-tiles={JSON.stringify(puzzle.previewTiles)}
+      data-puzzle-moves={puzzle.moves} data-puzzle-solved={String(puzzle.solved)} data-puzzle-selected={puzzle.selectedSlot ?? "none"}
+      data-puzzle-artwork={artworkStatus} data-puzzle-artwork-src={artwork} data-puzzle-dragging={puzzle.dragging?.sourceSlot ?? "none"} data-puzzle-interactive={String(puzzle.interactive)}
+      role="region" aria-label={copy.stations.touch.title}>
+      <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} className={styles.textureSource} data-composer-canvas aria-hidden="true" />
+      <p className={styles.puzzleScreenReader} id="puzzle-instructions">{copy.touch.instruction} {copy.touch.keyboard}</p>
+      <div ref={gridRef} className={styles.puzzleGrid} data-puzzle-grid data-solved={String(puzzle.solved)} data-artwork-ready={String(artworkStatus === "ready")} dir="ltr" role="group"
+        aria-label={copy.stations.touch.title} aria-describedby="puzzle-instructions"
+        onPointerMove={(event) => {
+          if (getPuzzleState().dragging?.surface !== "semantic") return;
+          const point = gridPoint(event.clientX, event.clientY);
+          if (point) updatePuzzleDrag(event.pointerId, point.x, point.y);
+        }}
+        onPointerUp={(event) => {
+          const dragging = getPuzzleState().dragging;
+          if (dragging?.surface !== "semantic" || dragging.pointerId !== event.pointerId) return;
+          suppressGridClickUntil.current = event.timeStamp + 650;
+          const point = gridPoint(event.clientX, event.clientY);
+          if (point) updatePuzzleDrag(event.pointerId, point.x, point.y);
+          finishPuzzleDrag(event.pointerId);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={(event) => {
+          if (getPuzzleState().dragging?.pointerId === event.pointerId) suppressGridClickUntil.current = event.timeStamp + 650;
+          cancelPuzzleDrag(event.pointerId);
+        }}
+        onLostPointerCapture={(event) => { cancelPuzzleDrag(event.pointerId); }}>
+        {puzzle.previewTiles.map((piece, slot) => (
+          <button key={slot} ref={(button) => { tileButtons.current[slot] = button; }} type="button"
+            data-puzzle-slot={slot} data-puzzle-piece={piece}
+            aria-pressed={puzzle.selectedSlot === slot}
+            aria-disabled={puzzle.solved}
+            disabled={puzzle.solved}
+            tabIndex={puzzle.solved ? -1 : 0}
+            aria-label={interpolate(copy.touch.tile, { piece: piece + 1, row: Math.floor(slot / 3) + 1, column: slot % 3 + 1 })}
+            style={{ "--puzzle-piece-x": `${(piece % 3) * 50}%`, "--puzzle-piece-y": `${Math.floor(piece / 3) * 50}%` } as CSSProperties}
+            onKeyDown={(event) => keyboard(event, slot)}
+            onFocus={() => {
+              if (getPuzzleState().solved) { continueRef.current?.focus({ preventScroll: true }); return; }
+              focusedControl.current = null;
+              setPuzzleFocusedSlot(slot);
+            }}
+            onBlur={() => { if (getPuzzleState().focusedSlot === slot) setPuzzleFocusedSlot(null); }}
+            onPointerDown={(event) => {
+              if (event.button !== 0 || !event.isPrimary) return;
+              const point = gridPoint(event.clientX, event.clientY);
+              if (!point || !beginPuzzleDrag(slot, event.pointerId, point.x, point.y, "semantic")) return;
+              suppressGridClickUntil.current = event.timeStamp + 650;
+              event.preventDefault();
+              event.currentTarget.focus({ preventScroll: true });
+              gridRef.current?.setPointerCapture(event.pointerId);
+            }}
+            onClick={(event) => { if (event.detail === 0 && event.timeStamp >= suppressGridClickUntil.current) activatePuzzleSlot(slot); }}>
+            {artworkStatus !== "ready" ? piece + 1 : null}
+          </button>
+        ))}
+      </div>
+      <div className={styles.puzzleActions}>
+        <button type="button" data-puzzle-reset onFocus={() => focusControl("reset")} onBlur={() => focusControl(null)} onClick={reset}>{copy.reset}</button>
+        <button type="button" data-puzzle-close data-interaction-dismiss data-interaction-escape onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => exit(false)}>{copy.close}</button>
+        <button ref={continueRef} type="button" data-interaction-continue data-mobile-interaction-skip onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => exit(true)}>{puzzle.solved ? copy.continue : copy.skip}</button>
+      </div>
+      <span className={styles.puzzleScreenReader} role="status" aria-live="polite">{puzzle.solved ? copy.touch.complete : interpolate(copy.touch.moves, { count: puzzle.moves })}</span>
     </div>
   );
 }

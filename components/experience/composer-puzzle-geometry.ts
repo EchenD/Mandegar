@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import type { ComposerObjectPose } from "./interactions/composer-object-store";
 
-export type ComposerScreenFrame = {
+
+export type PuzzleScreenFrame = {
   center: THREE.Vector3;
   right: THREE.Vector3;
   up: THREE.Vector3;
@@ -11,12 +11,14 @@ export type ComposerScreenFrame = {
   rotation: THREE.Quaternion;
 };
 
-export type ComposerTableFrame = {
+export type PuzzleTableFrame = {
   center: THREE.Vector3;
   right: THREE.Vector3;
   back: THREE.Vector3;
   normal: THREE.Vector3;
-  anchors: THREE.Vector3[];
+  width: number;
+  height: number;
+  cornersFit: boolean;
   rotation: THREE.Quaternion;
 };
 
@@ -52,7 +54,7 @@ function pointAtUv(root: THREE.Object3D, u: number, v: number): THREE.Vector3 | 
   return result;
 }
 
-export function createComposerScreenFrame(screen: THREE.Object3D): ComposerScreenFrame | null {
+export function createPuzzleScreenFrame(screen: THREE.Object3D): PuzzleScreenFrame | null {
   const center = pointAtUv(screen, 0.5, 0.5);
   const rightPoint = pointAtUv(screen, 0.6, 0.5);
   const downPoint = pointAtUv(screen, 0.5, 0.6);
@@ -68,7 +70,7 @@ export function createComposerScreenFrame(screen: THREE.Object3D): ComposerScree
   return { center, right, up, normal, width, height, rotation: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, normal)) };
 }
 
-export function createComposerTableFrame(root: THREE.Object3D, screen: ComposerScreenFrame): ComposerTableFrame | null {
+export function createPuzzleTableFrame(root: THREE.Object3D, screen: PuzzleScreenFrame): PuzzleTableFrame | null {
   root.updateWorldMatrix(true, true);
   const meshes: THREE.Mesh[] = [];
   root.traverse((object) => {
@@ -98,6 +100,7 @@ export function createComposerTableFrame(root: THREE.Object3D, screen: ComposerS
   const indices = surface.object.geometry.index;
   const count = indices?.count ?? positions.count;
   const vertices: THREE.Vector3[] = [];
+  const triangles: THREE.Triangle[] = [];
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();
@@ -108,6 +111,7 @@ export function createComposerTableFrame(root: THREE.Object3D, screen: ComposerS
     c.fromBufferAttribute(positions, indices ? indices.getX(offset + 2) : offset + 2).applyMatrix4(surface.object.matrixWorld);
     new THREE.Triangle(a, b, c).getNormal(faceNormal);
     if (faceNormal.dot(normal) < 0.999 || Math.max(Math.abs(plane.distanceToPoint(a)), Math.abs(plane.distanceToPoint(b)), Math.abs(plane.distanceToPoint(c))) > 0.002) continue;
+    triangles.push(new THREE.Triangle(a.clone(), b.clone(), c.clone()));
     [a, b, c].forEach((vertex) => {
       if (!vertices.some((prior) => prior.distanceToSquared(vertex) < 1e-6)) vertices.push(vertex.clone());
     });
@@ -116,52 +120,66 @@ export function createComposerTableFrame(root: THREE.Object3D, screen: ComposerS
   const center = vertices.reduce((sum, vertex) => sum.add(vertex), new THREE.Vector3()).multiplyScalar(1 / vertices.length);
   const right = screen.right.clone().addScaledVector(normal, -screen.right.dot(normal)).normalize();
   const back = normal.clone().cross(right).normalize();
-  const front = back.clone().negate();
-  // An open triangle on the counter keeps each form clear of the authored foreground people.
-  const offsets = [[-0.325, -0.105], [0.275, 0.095], [0.425, -0.205]];
-  const anchors = offsets.map(([horizontal, depth]) => {
-    origin.copy(center).addScaledVector(right, horizontal).addScaledVector(back, depth);
-    origin.y += 2;
-    ray.set(origin, new THREE.Vector3(0, -1, 0));
-    const hit = ray.intersectObject(surface!.object, false).find((candidate) => Math.abs(plane.distanceToPoint(candidate.point)) < 0.002);
-    return hit?.point.clone() ?? plane.projectPoint(origin, new THREE.Vector3());
+  const bounds = vertices.map((vertex) => {
+    const relative = vertex.clone().sub(center);
+    return { x: relative.dot(right), y: relative.dot(back) };
   });
-  return { center, right, back, normal: normal.clone(), anchors, rotation: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, normal, front)) };
-}
-
-export function getComposerObjectPosition(frame: ComposerTableFrame, index: number, pose: ComposerObjectPose, target = new THREE.Vector3(), clearance = 0.1) {
-  return target.copy(frame.anchors[index])
-    .addScaledVector(frame.right, pose.x * 0.055)
-    .addScaledVector(frame.back, pose.y * 0.075)
-    .addScaledVector(frame.normal, clearance + 0.003);
-}
-
-export function getComposerRestHeight(geometry: THREE.BufferGeometry, rotation: THREE.Quaternion, scale: number) {
-  const vertices = geometry.getAttribute("position");
-  const point = new THREE.Vector3();
-  let lowest = 0;
-  for (let index = 0; index < vertices.count; index += 1) {
-    point.fromBufferAttribute(vertices, index).applyQuaternion(rotation).multiplyScalar(scale);
-    lowest = Math.min(lowest, point.y);
-  }
-  return -lowest;
-}
-
-export function projectComposerDrag(frame: ComposerTableFrame, movement: THREE.Vector3, initial: ComposerObjectPose): ComposerObjectPose {
-  return {
-    x: Math.max(-1, Math.min(1, initial.x + movement.dot(frame.right) / 0.055)),
-    y: Math.max(0, Math.min(1, initial.y + movement.dot(frame.back) / 0.075)),
+  const minX = Math.min(...bounds.map((point) => point.x));
+  const maxX = Math.max(...bounds.map((point) => point.x));
+  const minY = Math.min(...bounds.map((point) => point.y));
+  const maxY = Math.max(...bounds.map((point) => point.y));
+  const testPoint = new THREE.Vector3();
+  const fits = (x: number, y: number, width: number) => {
+    // Check edges as well as corners against the actual top triangles. A bounding
+    // box alone would allow a board to bridge a cutout in an authored counter.
+    for (const dx of [-0.5, 0, 0.5]) {
+      for (const dy of [-0.5, 0, 0.5]) {
+        testPoint.copy(center).addScaledVector(right, x + dx * (width + 0.04))
+          .addScaledVector(back, y + dy * (width / 1.5 + 0.04));
+        if (!triangles.some((triangle) => triangle.containsPoint(testPoint))) return false;
+      }
+    }
+    return true;
   };
+  const maximum = Math.min(maxX - minX - 0.04, (maxY - minY - 0.04) * 1.5, 1.15);
+  // Choose the largest safe 3:2 rectangle; prefer the counter center when tied.
+  const candidates: Array<{ x: number; y: number }> = [];
+  for (let row = 0; row <= 8; row += 1) {
+    for (let column = 0; column <= 12; column += 1) {
+      candidates.push({ x: minX + (maxX - minX) * column / 12, y: minY + (maxY - minY) * row / 8 });
+    }
+  }
+  candidates.sort((first, second) => Math.hypot(first.x, first.y) - Math.hypot(second.x, second.y));
+  for (let width = maximum; width >= 0.3; width -= 0.02) {
+    const candidate = candidates.find((point) => fits(point.x, point.y, width));
+    if (!candidate) continue;
+    center.addScaledVector(right, candidate.x).addScaledVector(back, candidate.y);
+    return {
+      center, right, back, normal: normal.clone(), width, height: width / 1.5, cornersFit: true,
+      rotation: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, back, normal)),
+    };
+  }
+  return null;
 }
 
-export function createComposerRibbonGeometry() {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute([
-    -0.19, -0.1, 0, -0.02, -0.1, 0.09, -0.19, 0.1, 0,
-    -0.02, -0.1, 0.09, -0.02, 0.1, 0.09, -0.19, 0.1, 0,
-    -0.02, -0.1, 0.09, 0.19, -0.1, -0.04, -0.02, 0.1, 0.09,
-    0.19, -0.1, -0.04, 0.19, 0.1, -0.04, -0.02, 0.1, 0.09,
-  ], 3));
-  geometry.computeVertexNormals();
+export function getPuzzleWorldPoint(frame: PuzzleTableFrame, x: number, y: number, target = new THREE.Vector3(), lift = 0.015) {
+  return target.copy(frame.center).addScaledVector(frame.right, (x - 0.5) * frame.width)
+    .addScaledVector(frame.back, (0.5 - y) * frame.height).addScaledVector(frame.normal, lift);
+}
+
+export function projectPuzzlePoint(frame: PuzzleTableFrame, point: THREE.Vector3) {
+  const relative = point.clone().sub(frame.center);
+  return { x: 0.5 + relative.dot(frame.right) / frame.width, y: 0.5 - relative.dot(frame.back) / frame.height };
+}
+
+/** Plane UVs sample the same top-left image piece as the canvas monitor. */
+export function createPuzzleTileGeometry(width: number, height: number, piece: number, gap = 0.006) {
+  const geometry = new THREE.PlaneGeometry(width / 3 - gap, height / 3 - gap);
+  const uv = geometry.getAttribute("uv");
+  const column = piece % 3;
+  const row = Math.floor(piece / 3);
+  for (let index = 0; index < uv.count; index += 1) {
+    uv.setXY(index, (column + uv.getX(index)) / 3, (2 - row + uv.getY(index)) / 3);
+  }
   return geometry;
 }

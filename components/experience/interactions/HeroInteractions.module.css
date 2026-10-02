@@ -221,7 +221,7 @@
 .actionRow { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; margin-block-start: 1rem; }
 .statusText { margin: .85rem auto 0; color: rgba(247,247,244,.72); font-size: .74rem; text-align: center; }
 
-/* Visible touch-composer controls live on the authored 3D screen. This compact
+/* Visible spatial controls live on the authored 3D screen. This compact
    semantic mirror preserves keyboard and assistive-technology operation. */
 .spatialInteractionSemantics {
   position: absolute;
@@ -233,6 +233,75 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+.puzzleInteraction {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+.puzzleScreenReader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.puzzleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: .45rem;
+  direction: ltr;
+  touch-action: none;
+}
+.puzzleGrid button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1px solid rgba(22, 25, 29, .8);
+  border-radius: 0;
+  background-color: #22252a;
+  background-image: var(--puzzle-artwork);
+  background-size: 300% 300%;
+  background-origin: border-box;
+  background-position: var(--puzzle-piece-x) var(--puzzle-piece-y);
+  color: #f0ebe1;
+  font: inherit;
+  font-size: .8rem;
+  cursor: grab;
+  touch-action: none;
+  transition: border-color .48s ease, opacity .48s ease;
+}
+.puzzleGrid button[aria-pressed="true"] { position: relative; z-index: 1; box-shadow: inset 0 0 0 2px #ece2cc; }
+.puzzleGrid button:focus-visible { position: relative; z-index: 1; outline: 2px solid #75d8ff; outline-offset: -3px; }
+.puzzleGrid[data-solved="true"][data-artwork-ready="true"] { background-image: var(--puzzle-artwork); background-size: 100% 100%; background-position: center; }
+.puzzleGrid[data-solved="true"][data-artwork-ready="true"] button { border-color: transparent; box-shadow: none; outline: none; opacity: 0; }
+.puzzleGrid[data-solved="true"] button { cursor: default; }
+.puzzleActions { display: flex; justify-content: space-between; gap: .25rem; }
+.puzzleActions button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: .35rem .55rem;
+  border: 0;
+  border-radius: .4rem;
+  color: #f0ebe1;
+  background: transparent;
+  font: inherit;
+  font-size: .65rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.puzzleActions button:focus-visible { outline: 2px solid #75d8ff; outline-offset: -2px; }
+.puzzleInteraction[data-puzzle-interactive="false"] .puzzleGrid,
+.puzzleInteraction[data-puzzle-interactive="false"] .puzzleActions { pointer-events: none; }
 
 .photoExperience { text-align: start; }
 .photoFrame { position: relative; width: min(26rem, 78vw); aspect-ratio: 4 / 3; margin-inline: auto; overflow: visible; }
@@ -247,7 +316,6 @@
 .phoneResult span { position: absolute; inset: .5rem; border-radius: .6rem; background: url("/media/placeholders/photo-experience.webp") center / cover; }
 .photoFlash { position: fixed; inset: 0; background: white; pointer-events: none; animation: flash .55s ease-out both; }
 
-.composer canvas,
 .drawingExperience canvas,
 .monitorPreview { display: block; width: min(100%, 46rem); aspect-ratio: 16 / 9; margin-inline: auto; border: 1px solid rgba(117,216,255,.35); border-radius: .9rem; touch-action: none; cursor: crosshair; }
 .presetRow,
@@ -284,6 +352,25 @@
 @keyframes photoCopyArrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 760px) {
+  .puzzleInteraction {
+    left: 50%;
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    z-index: 2;
+    display: grid;
+    gap: .35rem;
+    width: min(18rem, calc(100vw - 2rem));
+    height: auto;
+    padding: .5rem .5rem .15rem;
+    overflow: visible;
+    border: 1px solid rgba(247, 247, 244, .15);
+    border-radius: .65rem;
+    color: #f0ebe1;
+    background: rgba(22, 25, 29, .94);
+    opacity: 1;
+    clip-path: none;
+    pointer-events: auto;
+    transform: translateX(-50%);
+  }
   .spatialInteractionSemantics[data-game-spatial-controls] button { display: none; }
   .gameResult { display: block; }
   .mobileGameDock {
@@ -403,6 +490,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .puzzleGrid button { transition: none; }
   .photoSceneCopy,
   .photoSceneContent { animation: none !important; transition: none !important; }
   .hotspot > span,

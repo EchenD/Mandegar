@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, solvePuzzle, waitForStation } from "./hero-interaction-helpers";
 import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures, type MonitorTextureSample } from "./monitor-texture-observer";
 
 test.setTimeout(240_000);
@@ -66,15 +66,13 @@ test("the rendered game keeps painted ownership through Continue, autoplay and a
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("composer and drawing keep painted surfaces after finishing and use them when reopening", async ({ page }) => {
+test("puzzle and drawing keep painted surfaces after finishing and use them when reopening", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  for (const element of ["space", "story", "people"]) {
-    await activateWithKeyboard(page, `[data-touch-element='${element}']`);
-  }
+  await solvePuzzle(page);
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   await clearMonitorTextureSamples(page);
   await activateWithKeyboard(page, "[data-interaction-escape]");
@@ -90,7 +88,7 @@ test("composer and drawing keep painted surfaces after finishing and use them wh
   await clearMonitorTextureSamples(page);
   await reopen(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-touch-complete", "true");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "true");
   await assertPaintedOwnership(page, "interactive", "interactive");
   await activateWithKeyboard(page, "[data-interaction-escape]");
   await expect(director).toHaveAttribute("data-active-station", "none");

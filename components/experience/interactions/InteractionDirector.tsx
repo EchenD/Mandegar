@@ -481,7 +481,7 @@ export const InteractionDirector = memo(function InteractionDirector({
         </p>
       )}
 
-      {station && (
+      {station && station !== "touch" && (
         <button
           type="button"
           className={styles.mobileSkipButton}

@@ -32,7 +32,7 @@ import { AmbientDust } from "./AmbientDust";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { BakedScreenController } from "./BakedScreenController";
 import { ComposerObjects } from "./ComposerObjects";
-import { getComposerObjectState } from "./interactions/composer-object-store";
+import { getPuzzleState } from "./interactions/puzzle-store";
 import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
@@ -1301,7 +1301,7 @@ export function BakedMandegarScene({
     document.body.style.cursor = "";
   }, []);
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
+    if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     const pointer = gamePointer.current;
     if (pointer && interactionRuntime.activeStation === "game") {
       event.stopPropagation();
@@ -1339,10 +1339,11 @@ export function BakedMandegarScene({
     document.body.style.cursor = "pointer";
   }, []);
   const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
+    if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
+    if (station === "touch" && (event.button !== 0 || !event.isPrimary)) return;
     event.stopPropagation();
     if (station === "game") {
       if (gamePointer.current && gamePointer.current.pointerId !== event.pointerId) return;
@@ -1368,7 +1369,7 @@ export function BakedMandegarScene({
     }
   }, [exhibition]);
   const handlePointerEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
+    if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     const pointer = gamePointer.current;
     if (pointer && pointer.pointerId !== event.pointerId && interactionRuntime.activeStation === "game") return;
     if (pointer && pointer.pointerId === event.pointerId) {
@@ -1397,7 +1398,7 @@ export function BakedMandegarScene({
     });
   }, [releaseGamePointer]);
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
+    if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     if (gamePointer.current && interactionRuntime.activeStation === "game") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
@@ -1413,7 +1414,7 @@ export function BakedMandegarScene({
     clearInteraction();
   }, [clearInteraction]);
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
-    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
+    if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || !event.uv) return;
@@ -1441,13 +1442,18 @@ export function BakedMandegarScene({
   useEffect(() => clearInteraction, [clearInteraction]);
   useEffect(() => {
     const lostCapture = (event: PointerEvent) => {
+      if (interactionRuntime.activeStation === "touch") {
+        dispatchSceneInteraction("touch", { phase: "cancel", x: 0, y: 0, pointerId: event.pointerId, input: "pointer" });
+      }
       if (gamePointer.current?.pointerId === event.pointerId) cancelGamePointer();
     };
     window.addEventListener("blur", cancelGamePointer);
     gl.domElement.addEventListener("lostpointercapture", lostCapture);
+    gl.domElement.addEventListener("pointercancel", lostCapture);
     return () => {
       window.removeEventListener("blur", cancelGamePointer);
       gl.domElement.removeEventListener("lostpointercapture", lostCapture);
+      gl.domElement.removeEventListener("pointercancel", lostCapture);
       cancelGamePointer();
     };
   }, [cancelGamePointer, gl]);

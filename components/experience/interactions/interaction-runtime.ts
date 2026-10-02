@@ -31,7 +31,6 @@ export const interactionRuntime: {
   gameHitY: number;
   gameComplete: boolean;
   ambientGameSurface: MonitorEntry | null;
-  touchElements: boolean[];
   touchVisibility: number;
   photoStep: "idle" | "ready" | "countdown" | "captured";
   photoCount: number;
@@ -51,7 +50,6 @@ export const interactionRuntime: {
   gameHitY: 0,
   gameComplete: false,
   ambientGameSurface: null,
-  touchElements: [false, false, false],
   touchVisibility: 0,
   photoStep: "idle",
   photoCount: 3,
@@ -132,7 +130,6 @@ export function resetInteractionRuntime() {
   interactionRuntime.gameHitY = 0;
   interactionRuntime.gameComplete = false;
   interactionRuntime.ambientGameSurface = null;
-  interactionRuntime.touchElements = [false, false, false];
   interactionRuntime.touchVisibility = 0;
   interactionRuntime.photoStep = "idle";
   interactionRuntime.photoCount = 3;

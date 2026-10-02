@@ -28,7 +28,7 @@ test.describe("authored camera projection", () => {
   });
 });
 
-test("composer stays steady during pointer movement and restores motion after exit", async ({ page }) => {
+test("puzzle stays steady during pointer movement and restores motion after exit", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");

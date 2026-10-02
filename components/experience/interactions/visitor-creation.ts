@@ -1,6 +1,8 @@
+import { isValidPuzzleTiles, shufflePuzzleTiles, type PuzzleProgress } from "./puzzle-engine";
+
 export type VisitorCreation = {
   lighting: boolean[];
-  composer: boolean[];
+  puzzle: PuzzleProgress;
   drawing: HTMLCanvasElement | null;
   drawingWall: HTMLCanvasElement | null;
   gameScore: number;
@@ -10,7 +12,7 @@ export type VisitorCreation = {
 
 const creation: VisitorCreation = {
   lighting: [false, false, false, false, false],
-  composer: [false, false, false],
+  puzzle: { tiles: shufflePuzzleTiles(), moves: 0, started: false },
   drawing: null,
   drawingWall: null,
   gameScore: 0,
@@ -31,9 +33,15 @@ export function saveLightingLook(beams: readonly boolean[]) {
   announceCreation();
 }
 
-export function saveComposer(elements: readonly boolean[]) {
-  creation.composer = Array.from({ length: 3 }, (_, index) => Boolean(elements[index]));
+export function savePuzzle(progress: PuzzleProgress) {
+  if (!isValidPuzzleTiles(progress.tiles) || !Number.isFinite(progress.moves) || progress.moves < 0) return false;
+  creation.puzzle = {
+    tiles: Object.freeze([...progress.tiles]),
+    moves: Math.floor(progress.moves),
+    started: Boolean(progress.started),
+  };
   announceCreation();
+  return true;
 }
 
 export function saveDrawing(artwork: HTMLCanvasElement, wall: HTMLCanvasElement) {

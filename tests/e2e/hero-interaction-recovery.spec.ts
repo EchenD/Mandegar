@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, solvePuzzle, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
 
@@ -18,17 +18,18 @@ test("automatic entry contains keyboard focus and restores it without moving the
   }, beat.preview);
   const director = await waitForStation(page, "touch");
   const exit = page.locator("[data-interaction-escape]");
+  const lastControl = page.locator("[data-touch-spatial-controls] [data-interaction-continue]");
   await expect(exit).toBeFocused();
   const savedScroll = await page.evaluate(() => window.scrollY);
 
   await previousFocus.focus();
   await page.keyboard.press("Tab");
-  await expect(page.locator("[data-touch-element='space']")).toBeFocused();
+  await expect(page.locator("[data-puzzle-slot='0']")).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(exit).toBeFocused();
+  await expect(lastControl).toBeFocused();
   await previousFocus.focus();
   await page.keyboard.press("Shift+Tab");
-  await expect(exit).toBeFocused();
+  await expect(lastControl).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(savedScroll);
 
   await page.keyboard.press("Escape");
@@ -37,21 +38,19 @@ test("automatic entry contains keyboard focus and restores it without moving the
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(savedScroll);
 });
 
-test("composer can be skipped after resetting a completed composition", async ({ page }) => {
+test("puzzle can be skipped after resetting a completed image", async ({ page }) => {
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   const controls = page.locator("[data-touch-spatial-controls]");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  for (const element of ["space", "story", "people"]) {
-    await activateWithKeyboard(page, `[data-touch-element='${element}']`);
-  }
+  await solvePuzzle(page);
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await activateWithKeyboard(page, "[data-touch-spatial-controls] button:nth-last-of-type(3)");
-  await expect(controls).toHaveAttribute("data-touch-complete", "false");
+  await activateWithKeyboard(page, "[data-puzzle-reset]");
+  await expect(controls).toHaveAttribute("data-puzzle-solved", "false");
   await expect(director).toHaveAttribute("data-lifecycle", "active");
-  const exit = page.locator("[data-interaction-escape]");
+  const exit = page.locator("[data-touch-spatial-controls] [data-interaction-continue]");
   await expect(exit).toHaveText("Skip interaction");
-  await exit.click();
+  await activateWithKeyboard(page, "[data-touch-spatial-controls] [data-interaction-continue]");
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });

@@ -28,8 +28,6 @@ import { assetSlots, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
 import { CrowdPersonReadout } from "./CrowdPersonReadout";
 import { interactionRuntime } from "./interactions/interaction-runtime";
-import { getVisitorCreation } from "./interactions/visitor-creation";
-import { getVisitorPresentation } from "./interactions/visitor-presentation";
 import {
   createCrowdPeople,
   getCrowdPersonAtRay,
@@ -292,9 +290,6 @@ function updateCrowdUniforms(
 ) {
   uniforms.uRevealProgress.value = presence;
   uniforms.uPeakMix.value = Math.max(
-    (interactionRuntime.activeStation === "touch" ? interactionRuntime.touchElements : getVisitorCreation().composer)[2]
-      ? 0.75 * (interactionRuntime.activeStation === "touch" ? interactionRuntime.touchVisibility : getVisitorPresentation(experienceState.progress).composerVisibility)
-      : 0,
     production.centralPeak,
     production.leftPeak,
     production.rightPeak,
