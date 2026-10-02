@@ -21,6 +21,7 @@ import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { sceneTokens } from "./scene-config";
 import { interactionRuntime } from "./interactions/interaction-runtime";
+import { getAmbientGameVisibility } from "./interactions/ambient-game-visibility";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -108,7 +109,13 @@ type ScreenRuntime = {
   liveTexture: THREE.CanvasTexture | null;
   liveCanvas: HTMLCanvasElement | null;
   liveRevision: number;
+  handoffTexture: THREE.CanvasTexture | null;
 };
+
+function hasActiveSurface(id: BakedScreenId) {
+  return interactionRuntime.activeStation !== null
+    && interactionRuntime.activeStation === (id === "game" ? "game" : id === "main" ? "draw" : id === "interactive" ? "touch" : null);
+}
 
 function createFallbackTexture() {
   const data = new Uint8Array([2, 3, 5, 255]);
@@ -201,6 +208,7 @@ export function BakedScreenController({
         liveTexture: null,
         liveCanvas: null,
         liveRevision: 0,
+        handoffTexture: null,
       };
     });
     runtimesRef.current = result;
@@ -267,6 +275,7 @@ export function BakedScreenController({
         }
         restoreRuntimeMaterial(runtime.bindings, runtime.material);
         runtime.liveTexture?.dispose();
+        runtime.handoffTexture?.dispose();
         runtime.media.dispose();
         runtime.material.dispose();
       });
@@ -283,22 +292,29 @@ export function BakedScreenController({
       const activation = getActivation(runtime.id);
       const production = experienceState.stage.production;
       runtime.material.uniforms.uActivation.value = activation;
-      runtime.material.uniforms.uBaseMedia.value = runtime.media;
-      runtime.material.uniforms.uMediaBlend.value = runtime.id === "main" && interactionRuntime.activeStation !== "draw"
-        ? getVisitorPresentation(experienceState.progress).drawingVisibility
-        : 1;
       runtime.material.uniforms.uHover.value = 0;
       runtime.material.uniforms.uTime.value = clock.elapsedTime;
       runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
       const savedWall = runtime.id === "main" ? getVisitorCreation().drawingWall : null;
-      const ambientGame = runtime.id === "game" && interactionRuntime.activeStation !== "game"
-        ? interactionRuntime.ambientGameSurface
-        : null;
-      const liveEntry = interactionRuntime.monitorEntries[runtime.id] ?? ambientGame ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
+      const ambientGame = runtime.id === "game" ? interactionRuntime.ambientGameSurface : null;
+      const nextEntry = interactionRuntime.monitorEntries[runtime.id] ?? ambientGame ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
+      const waitingForSuccessor = hasActiveSurface(runtime.id)
+        || (runtime.id === "game" && getVisitorCreation().gameCompleted && experienceState.sequence === "loop"
+          && getAmbientGameVisibility(experienceState.progress) > 0);
+      // A successor registers only after painting. Keep the previous surface
+      // across effect/animation-frame ordering instead of exposing base artwork.
+      const liveEntry = nextEntry ?? (waitingForSuccessor && runtime.liveCanvas
+        ? { canvas: runtime.liveCanvas, revision: runtime.liveRevision }
+        : null);
       if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
-        runtime.liveTexture?.dispose();
+        runtime.handoffTexture?.dispose();
+        const entering = Number(liveEntry?.canvas.dataset.transitionProgress ?? 1);
+        runtime.handoffTexture = liveEntry && hasActiveSurface(runtime.id) && entering < 1
+          ? runtime.liveTexture
+          : null;
+        if (runtime.liveTexture !== runtime.handoffTexture) runtime.liveTexture?.dispose();
         runtime.liveCanvas = liveEntry?.canvas ?? null;
         runtime.liveRevision = 0;
         runtime.liveTexture = liveEntry
@@ -318,6 +334,17 @@ export function BakedScreenController({
         runtime.liveRevision = liveEntry.revision;
         runtime.liveTexture.needsUpdate = true;
       }
+      const entering = Number(liveEntry?.canvas.dataset.transitionProgress ?? 1);
+      if (runtime.handoffTexture && (!hasActiveSurface(runtime.id) || entering >= 1)) {
+        runtime.handoffTexture.dispose();
+        runtime.handoffTexture = null;
+      }
+      const presentation = getVisitorPresentation(experienceState.progress);
+      runtime.material.uniforms.uBaseMedia.value = runtime.handoffTexture ?? runtime.media;
+      runtime.material.uniforms.uMediaBlend.value = runtime.handoffTexture
+        ? Math.max(0, Math.min(1, entering))
+        : !hasActiveSurface(runtime.id) && runtime.id === "main" ? presentation.drawingVisibility
+          : !hasActiveSurface(runtime.id) && runtime.id === "interactive" ? presentation.composerVisibility : 1;
       if (!runtime.video) return;
       if (activation > 0.04 && runtime.video.paused) {
         void runtime.video.play().catch(() => undefined);

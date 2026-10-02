@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
 import {
+  interactionRuntime,
   markInteractionCanvasDirty,
   registerInteractionCanvas,
   registerSceneInteraction,
@@ -148,6 +149,8 @@ export function DrawingInteraction({
     canvas.dataset.transitionProgress = transition.toFixed(3);
     if (retainedWall) {
       context.drawImage(retainedWall, 0, 0, width, height);
+    } else if (transitionState.current === "intro" && savedWall.current) {
+      context.drawImage(savedWall.current, 0, 0, width, height);
     } else if (monitorImage.current?.complete) {
       context.drawImage(monitorImage.current, 0, 0, width, height);
     } else {
@@ -485,6 +488,7 @@ export function DrawingInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const experience = canvas.closest("[data-experience-root]");
     savedWall.current = getVisitorCreation().drawingWall;
     let mounted = true;
     let registered = false;
@@ -509,7 +513,9 @@ export function DrawingInteraction({
       mounted = false;
       image.onload = null;
       image.onerror = null;
-      registerInteractionCanvas("main", savedWall.current);
+      if (interactionRuntime.monitorEntries.main?.canvas === canvas) {
+        registerInteractionCanvas("main", experience?.isConnected ? savedWall.current : null);
+      }
     };
   }, [animateTransition, paint, schedulePaint]);
 

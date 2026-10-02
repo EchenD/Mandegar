@@ -87,6 +87,7 @@ export function TouchComposerInteraction({
   const transitionProgress = useRef(0);
   const transitionState = useRef<"intro" | "ready" | "outro">("intro");
   const monitorImage = useRef<HTMLImageElement | null>(null);
+  const previousSurface = useRef<HTMLCanvasElement | null>(null);
   const completionTimer = useRef<number | null>(null);
   const sceneInputCount = useRef(0);
   const activePointer = useRef<ComposerPointer | null>(null);
@@ -117,17 +118,21 @@ export function TouchComposerInteraction({
     const selectedCount = selectedElements.filter(Boolean).length;
     const isComplete = selectedCount === elementDefinitions.length;
     const transition = transitionProgress.current;
-    const surfaceOpacity = revealProgress(transition, 0, 0.34);
-    const centerReveal = revealProgress(transition, 0.18, 0.58);
+    const retaining = transitionState.current === "outro" && selectedCount > 0;
+    const contentProgress = retaining ? 1 : transition;
+    const surfaceOpacity = revealProgress(contentProgress, 0, 0.34);
+    const centerReveal = revealProgress(contentProgress, 0.18, 0.58);
     const elementReveals = elementDefinitions.map((_, index) => (
-      revealProgress(transition, 0.34 + index * 0.09, 0.68 + index * 0.09)
+      revealProgress(contentProgress, 0.34 + index * 0.09, 0.68 + index * 0.09)
     ));
     const controlsReveal = revealProgress(transition, 0.72, 1);
     interactionRuntime.touchVisibility = transition;
 
     context.clearRect(0, 0, width, height);
     canvas.dataset.transitionProgress = transition.toFixed(3);
-    if (monitorImage.current?.complete) {
+    if (transitionState.current === "intro" && previousSurface.current) {
+      context.drawImage(previousSurface.current, 0, 0, width, height);
+    } else if (monitorImage.current?.complete) {
       context.drawImage(monitorImage.current, 0, 0, width, height);
     } else {
       context.fillStyle = "#ede2da";
@@ -297,7 +302,7 @@ export function TouchComposerInteraction({
     });
 
     context.save();
-    context.globalAlpha = surfaceOpacity;
+    context.globalAlpha = retaining ? transition : surfaceOpacity;
     const closeX = width * 0.94;
     const closeY = height * 0.09;
     const closeFocused = keyboardFocus.current === 5 || hoverControl.current === "close";
@@ -475,6 +480,9 @@ export function TouchComposerInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const experience = canvas.closest("[data-experience-root]");
+    const retained = interactionRuntime.monitorEntries.interactive?.canvas;
+    previousSurface.current = retained && retained !== canvas ? retained : null;
     interactionRuntime.touchElements = [...selectedRef.current];
     let active = true;
     let registered = false;
@@ -487,6 +495,7 @@ export function TouchComposerInteraction({
       paint();
       registerInteractionCanvas("interactive", canvas);
       animateTransition(1, () => {
+        previousSurface.current = null;
         if (completeRef.current) onCompleteRef.current();
       });
     };
@@ -501,7 +510,16 @@ export function TouchComposerInteraction({
       active = false;
       image.onload = null;
       image.onerror = null;
-      registerInteractionCanvas("interactive", null);
+      if (interactionRuntime.monitorEntries.interactive?.canvas !== canvas) return;
+      if (experience?.isConnected && selectedRef.current.some(Boolean)) {
+        transitionState.current = "outro";
+        transitionProgress.current = 0;
+        paint();
+        registerInteractionCanvas("interactive", canvas);
+      } else {
+        registerInteractionCanvas("interactive", null);
+      }
+      previousSurface.current = null;
     };
   }, [animateTransition, paint, schedulePaint]);
 

@@ -66,8 +66,12 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
       const paused = document.hidden || !onScreen;
       canvas.dataset.ambientState = interactive ? "interactive" : paused || visibility === 0 ? "paused" : motion.matches ? "still" : "playing";
       canvas.dataset.ambientVisibility = interactive || paused ? "0.000" : visibility.toFixed(3);
-      if (interactive || paused || visibility === 0) {
+      if (paused || visibility === 0) {
         releaseSurface();
+      } else if (interactive) {
+        // The painted surface remains available while a new interactive canvas
+        // loads; the controller gives that canvas priority once it is painted.
+        lastVisibility = -1;
       } else {
         if (!motion.matches) state = stepAmbientBreakoutGame(state, delta);
         if ((!motion.matches && time - lastPaint >= 1000 / 30) || visibility !== lastVisibility) {
