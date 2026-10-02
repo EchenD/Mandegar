@@ -48,6 +48,7 @@
 }
 .photoChoiceDock { display: none; }
 .gameResult {
+  display: none;
   position: absolute;
   inset-inline: 1rem;
   inset-block-end: 5.25rem;
@@ -75,6 +76,7 @@
 .mobileDrawingDock { display: none; }
 .mobilePhotoReplay { display: none; }
 .mobilePhotoResult { display: none; }
+.mobileGameDock { display: none; }
 
 .hotspot {
   position: absolute;
@@ -236,6 +238,34 @@
 @keyframes mobilePhotoResultArrive { from { opacity: 0; transform: translate(-50%, .75rem); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 @media (max-width: 760px) {
+  .spatialInteractionSemantics[data-game-spatial-controls] button { display: none; }
+  .gameResult { display: block; }
+  .mobileGameDock {
+    position: absolute;
+    left: 50%;
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    z-index: 2;
+    display: grid;
+    gap: .5rem;
+    width: min(23rem, calc(100vw - 1.5rem));
+    padding: .65rem;
+    border: 1px solid rgba(117, 216, 255, .25);
+    border-radius: .85rem;
+    color: #f7f7f4;
+    background: rgba(16, 21, 29, .96);
+    pointer-events: auto;
+    transform: translateX(-50%);
+  }
+  .mobileGameHeader { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .65rem; font-size: .7rem; }
+  .mobileGameHeader span { color: #75d8ff; }
+  .mobileGameActions { display: grid; grid-template-columns: minmax(2.75rem, 1fr) minmax(6rem, 2fr) minmax(2.75rem, 1fr); gap: .4rem; direction: ltr; }
+  .mobileGameSecondary { display: flex; justify-content: center; gap: .5rem; }
+  .mobileGameActions button, .mobileGameSecondary button { min-height: 2.75rem; padding: .45rem .65rem; border: 1px solid rgba(247, 247, 244, .25); border-radius: .6rem; color: #f7f7f4; background: rgba(247, 247, 244, .06); font: inherit; font-size: .75rem; cursor: pointer; touch-action: none; }
+  .mobileGameActions [data-mobile-game-action] { border-color: #225cff; background: #225cff; }
+  .mobileGameActions [data-mobile-game-left], .mobileGameActions [data-mobile-game-right] { font-size: 1.2rem; }
+  .mobileGameSecondary button { border: 0; background: transparent; }
+  .mobileGameDock button:disabled { opacity: .4; cursor: not-allowed; }
+  .mobileGameDock button:focus-visible { outline: 2px solid #75d8ff; outline-offset: 2px; }
   .spatialInteractionSemantics[data-photo-spatial-controls] { display: none; }
   .mobilePhotoResult {
     position: absolute;

@@ -23,14 +23,20 @@ export type InteractionCopy = {
   stage: { beam: string; finale: string; play: string; showing: string; ready: string };
   game: {
     action: string;
+    serve: string;
+    pause: string;
+    resume: string;
+    finish: string;
+    left: string;
+    right: string;
+    lives: string;
+    time: string;
+    remaining: string;
+    keyboard: string;
     result: string;
-    perfect: string;
-    hit: string;
-    outer: string;
-    missed: string;
+    win: string;
     score: string;
     best: string;
-    throws: string;
   };
   draw: { local: string; complete: string; replaying: string; keyboard: string };
 };
@@ -49,7 +55,7 @@ const english: InteractionCopy = {
     photo: { label: "Open photo booth", title: "Photo booth", instruction: "Choose a look, then start your simulated capture." },
     touch: { label: "Open experience composer", title: "Experience composer", instruction: "Tap each ingredient and watch the space respond." },
     stage: { label: "Open stage controls", title: "Your lighting look", instruction: "Choose your lights. Play the show or finish your look." },
-    game: { label: "Launch the signal", title: "Signal toss", instruction: "Pull back, aim and release toward the active gate." },
+    game: { label: "Play Breakout", title: "Breakout", instruction: "Drag the paddle or use ← / → to clear the lights." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
   photo: { ready: "Simulated portrait · choose a mood", capture: "Start capture", captured: "Simulated portrait preview", choose: "Choose a look", looks: ["Warm", "Cool"] },
@@ -60,15 +66,21 @@ const english: InteractionCopy = {
   },
   stage: { beam: "Beam", finale: "Your lighting look is ready", play: "Play your show", showing: "Your show is playing", ready: "Pick any lights to create your look" },
   game: {
-    action: "Launch signal",
-    result: "Signal run complete",
-    perfect: "Signal network connected",
-    hit: "Bullseye · 100",
-    outer: "Gate hit · 50",
-    missed: "Missed — adjust your aim",
+    action: "Start game",
+    serve: "Serve ball",
+    pause: "Pause",
+    resume: "Resume",
+    finish: "Finish round",
+    left: "Move paddle left",
+    right: "Move paddle right",
+    lives: "Lives",
+    time: "Time",
+    remaining: "Lights cleared",
+    keyboard: "Breakout. Use left and right arrow keys to move the paddle. Press Space to serve, pause or resume.",
+    result: "Round complete",
+    win: "You cleared every light",
     score: "Score",
     best: "Visit best",
-    throws: "Throws",
   },
   draw: {
     local: "Your drawing stays in this browser session.",
@@ -93,7 +105,7 @@ const persian: InteractionCopy = {
     photo: { label: "ورود به غرفه عکس", title: "غرفه عکس", instruction: "حال‌وهوا را انتخاب کنید، سپس ثبت نمایشی را شروع کنید." },
     touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "هر عنصر را لمس کنید و واکنش فضا را ببینید." },
     stage: { label: "کنترل نور صحنه", title: "نورپردازی شما", instruction: "نورها را انتخاب کنید؛ نمایش را پخش کنید یا ترکیب را پایان دهید." },
-    game: { label: "پرتاب سیگنال", title: "پرتاب سیگنال", instruction: "سیگنال را عقب بکشید، هدف بگیرید و رها کنید." },
+    game: { label: "بازی آجرشکن", title: "آجرشکن", instruction: "سکو را بکشید یا با ← و → حرکت دهید و نورها را پاک کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
   photo: { ready: "پرتره نمایشی · انتخاب حال‌وهوا", capture: "شروع ثبت", captured: "پیش‌نمایش پرتره نمایشی", choose: "انتخاب حال‌وهوا", looks: ["گرم", "سرد"] },
@@ -104,15 +116,21 @@ const persian: InteractionCopy = {
   },
   stage: { beam: "پرتو", finale: "نورپردازی شما آماده است", play: "پخش نمایش شما", showing: "نمایش شما در حال پخش است", ready: "نورهای دلخواه را برای ترکیب خود انتخاب کنید" },
   game: {
-    action: "پرتاب سیگنال",
-    result: "دور سیگنال تمام شد",
-    perfect: "شبکه سیگنال متصل شد",
-    hit: "مرکز هدف · ۱۰۰",
-    outer: "اصابت به دروازه · ۵۰",
-    missed: "خطا — جهت را تنظیم کنید",
+    action: "شروع بازی",
+    serve: "رها کردن توپ",
+    pause: "مکث",
+    resume: "ادامه بازی",
+    finish: "پایان دور",
+    left: "حرکت سکو به چپ",
+    right: "حرکت سکو به راست",
+    lives: "فرصت‌ها",
+    time: "زمان",
+    remaining: "نورهای پاک‌شده",
+    keyboard: "آجرشکن. با کلیدهای جهت چپ و راست، سکو را حرکت دهید. با فاصله، توپ را رها کنید یا بازی را متوقف و ادامه دهید.",
+    result: "دور بازی تمام شد",
+    win: "همه نورها را پاک کردید",
     score: "امتیاز",
     best: "بهترین این بازدید",
-    throws: "پرتاب‌ها",
   },
   draw: {
     local: "طراحی فقط در همین نشست مرورگر می‌ماند.",
@@ -137,7 +155,7 @@ const arabic: InteractionCopy = {
     photo: { label: "فتح جناح الصور", title: "جناح الصور", instruction: "اختر الأجواء ثم ابدأ الالتقاط التجريبي." },
     touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "المس كل عنصر وشاهد استجابة المكان." },
     stage: { label: "فتح تحكم المسرح", title: "إضاءتك", instruction: "اختر الأضواء ثم شغّل العرض أو أنهِ تنسيقك." },
-    game: { label: "إطلاق الإشارة", title: "إطلاق الإشارة", instruction: "اسحب الإشارة للخلف، صوّب ثم أطلقها." },
+    game: { label: "العب كاسر الطوب", title: "كاسر الطوب", instruction: "اسحب المضرب أو استخدم ← و → لإزالة الأضواء." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },
   photo: { ready: "بورتريه تجريبي · اختر الأجواء", capture: "بدء الالتقاط", captured: "معاينة بورتريه تجريبية", choose: "اختر الأجواء", looks: ["دافئة", "باردة"] },
@@ -148,15 +166,21 @@ const arabic: InteractionCopy = {
   },
   stage: { beam: "شعاع", finale: "إضاءتك جاهزة", play: "شغّل عرضك", showing: "عرضك قيد التشغيل", ready: "اختر الأضواء لتشكّل أجواءك" },
   game: {
-    action: "إطلاق الإشارة",
-    result: "اكتملت جولة الإشارة",
-    perfect: "تم ربط شبكة الإشارة",
-    hit: "إصابة المركز · ١٠٠",
-    outer: "إصابة البوابة · ٥٠",
-    missed: "لم تصب — عدّل اتجاهك",
+    action: "ابدأ اللعب",
+    serve: "أطلق الكرة",
+    pause: "إيقاف مؤقت",
+    resume: "متابعة",
+    finish: "إنهاء الجولة",
+    left: "حرّك المضرب يسارًا",
+    right: "حرّك المضرب يمينًا",
+    lives: "المحاولات",
+    time: "الوقت",
+    remaining: "الأضواء المُزالة",
+    keyboard: "كاسر الطوب. استخدم سهمي اليسار واليمين لتحريك المضرب. اضغط المسافة لإطلاق الكرة أو إيقاف اللعب ومتابعته.",
+    result: "اكتملت الجولة",
+    win: "أزلت جميع الأضواء",
     score: "النتيجة",
     best: "أفضل هذه الزيارة",
-    throws: "الرميات",
   },
   draw: {
     local: "يبقى رسمك في جلسة المتصفح الحالية فقط.",

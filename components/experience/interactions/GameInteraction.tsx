@@ -11,147 +11,41 @@ import {
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
 import { getVisitorCreation, saveGameResult } from "./visitor-creation";
+import {
+  breakoutBoard,
+  createBreakoutGame,
+  finishBreakoutGame,
+  moveBreakoutPaddle,
+  serveBreakoutBall,
+  setBreakoutPaused,
+  stepBreakoutGame,
+  type BreakoutGame,
+} from "./breakout-game";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.game.canvas;
-const maxAttempts = 5;
-const targetOrder = [0, 1, 2] as const;
-const targetColors = ["#75d8ff", "#4383ff", "#a5d9ee"] as const;
-const targetRadii = [48, 40, 34] as const;
+type GameControl = "close" | "reset" | "action" | "finish";
+type BlockSpark = { x: number; y: number; startedAt: number };
 const gameControls = {
-  reset: { x: 0.14, y: 0.895, width: 0.3, height: 0.065 },
-  continue: { x: 0.56, y: 0.895, width: 0.3, height: 0.065 },
+  reset: { left: 0.065, width: 0.23 },
+  action: { left: 0.33, width: 0.34 },
+  finish: { left: 0.705, width: 0.23 },
 } as const;
-type GamePoint = { x: number; y: number };
-const targetCenters = [
-  { x: 0.2, y: 0.29 },
-  { x: 0.8, y: 0.29 },
-  { x: 0.5, y: 0.18 },
-] as const;
-const launcher = { x: 0.5, y: 0.78 };
-
-function getMovingTarget(index: number, elapsedSeconds: number, reducedMotion: boolean) {
-  const base = targetCenters[index] ?? targetCenters[2];
-  if (reducedMotion || index === 0) return { ...base };
-  if (index === 1) {
-    return {
-      x: base.x + Math.sin(elapsedSeconds * 1.45) * 0.085,
-      y: base.y,
-    };
-  }
-  return {
-    x: base.x + Math.sin(elapsedSeconds * 1.1) * 0.075,
-    y: base.y + Math.cos(elapsedSeconds * 1.7) * 0.035,
-  };
-}
-
-type GameStatus = "ready" | "dragging" | "flying" | "complete";
-
-type GamePointer = {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  x: number;
-  y: number;
-};
 
 function clamp(value: number, minimum = 0, maximum = 1) {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function distance(firstX: number, firstY: number, secondX: number, secondY: number) {
-  return Math.hypot(firstX - secondX, firstY - secondY);
-}
-
-function revealProgress(progress: number, start: number, end: number) {
-  const value = clamp((progress - start) / Math.max(0.001, end - start));
-  return value * value * (3 - 2 * value);
-}
-
-function quadraticPoint(
-  start: { x: number; y: number },
-  control: { x: number; y: number },
-  end: { x: number; y: number },
-  progress: number,
-) {
-  const inverse = 1 - progress;
-  return {
-    x: inverse * inverse * start.x + 2 * inverse * progress * control.x + progress * progress * end.x,
-    y: inverse * inverse * start.y + 2 * inverse * progress * control.y + progress * progress * end.y,
-  };
-}
-
-function getLaunchSolution(
-  pointer: { x: number; y: number },
-  target: { x: number; y: number },
-  targetIndex: number,
-) {
-  const pullX = launcher.x - pointer.x;
-  const pullY = launcher.y - pointer.y;
-  const pullLength = Math.hypot(pullX, pullY);
-  const directionX = pullLength > 0.001 ? pullX / pullLength : 0;
-  const directionY = pullLength > 0.001 ? pullY / pullLength : -1;
-  const power = clamp(pullLength / 0.17);
-  const travelDistance = 0.42 + power * 0.2;
-  const rawEnd = {
-    x: launcher.x + directionX * travelDistance,
-    y: launcher.y + directionY * travelDistance,
-  };
-  const pixelDistance = Math.hypot(
-    (rawEnd.x - target.x) * canvasWidth,
-    (rawEnd.y - target.y) * canvasHeight,
-  );
-  const innerRadius = targetIndex === 0 ? 28 : targetIndex === 1 ? 23 : 19;
-  const outerRadius = targetRadii[targetIndex] ?? targetRadii[2];
-  const assistedRadius = outerRadius + (targetIndex === 0 ? 12 : 9);
-  const result: 0 | 1 | 2 = pixelDistance <= innerRadius
-    ? 2
-    : pixelDistance <= assistedRadius
-      ? 1
-      : 0;
-  const end = result === 1 && pixelDistance > outerRadius
-    ? {
-      x: rawEnd.x + (target.x - rawEnd.x) * 0.36,
-      y: rawEnd.y + (target.y - rawEnd.y) * 0.36,
-    }
-    : rawEnd;
-  return {
-    pullLength,
-    power,
-    result,
-    end,
-    control: {
-      x: launcher.x + (end.x - launcher.x) * 0.52,
-      y: Math.min(launcher.y + (end.y - launcher.y) * 0.42, 0.43),
-    },
-  };
-}
-
-function roundedRect(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const safeRadius = Math.min(radius, width / 2, height / 2);
+function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
   context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.arcTo(x + width, y, x + width, y + height, safeRadius);
-  context.arcTo(x + width, y + height, x, y + height, safeRadius);
-  context.arcTo(x, y + height, x, y, safeRadius);
-  context.arcTo(x, y, x + width, y, safeRadius);
-  context.closePath();
+  context.roundRect(x, y, width, height, Math.min(radius, width / 2, height / 2));
 }
 
-function hitRect(x: number, y: number, left: number, top: number, width: number, height: number) {
-  return x >= left && x <= left + width && y >= top && y <= top + height;
-}
-
-function hitGameControl(x: number, y: number, control: keyof typeof gameControls) {
-  const bounds = gameControls[control];
-  return hitRect(x, y, bounds.x - 0.02, bounds.y - 0.035, bounds.width + 0.04, bounds.height + 0.07);
+function controlAtPoint(x: number, y: number): GameControl | null {
+  if (Math.hypot(x - 0.925, y - 0.057) < 0.07) return "close";
+  if (y < 0.88 || y > 0.98) return null;
+  return (Object.keys(gameControls) as Array<keyof typeof gameControls>)
+    .find((key) => x >= gameControls[key].left && x <= gameControls[key].left + gameControls[key].width) ?? null;
 }
 
 export function GameInteraction({
@@ -170,368 +64,215 @@ export function GameInteraction({
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const renderFrame = useRef<number | null>(null);
-  const motionFrame = useRef<number | null>(null);
-  const transitionFrame = useRef<number | null>(null);
-  const flightFrame = useRef<number | null>(null);
-  const nextRoundTimer = useRef<number | null>(null);
-  const completionTimer = useRef<number | null>(null);
-  const flightTick = useRef<((time: number) => void) | null>(null);
-  const transitionProgress = useRef(0);
-  const transitionState = useRef<"intro" | "ready" | "outro">("intro");
-  const monitorImage = useRef<HTMLImageElement | null>(null);
-  const activePointer = useRef<GamePointer | null>(null);
-  const statusRef = useRef<GameStatus>("ready");
-  const roundRef = useRef(0);
-  const completedRef = useRef([false, false, false]);
-  const feedbackRef = useRef("");
-  const hoverControl = useRef<"close" | "reset" | "continue" | "launch" | null>(null);
-  const keyboardFocus = useRef<"close" | "reset" | "continue" | "launch" | null>(null);
-  const flightStartedAt = useRef<number | null>(null);
-  const flightDuration = useRef(reducedMotion ? 240 : 880);
-  const flightStart = useRef<GamePoint>({ ...launcher });
-  const flightControl = useRef<GamePoint>({ x: 0.5, y: 0.38 });
-  const flightEnd = useRef<GamePoint>({ ...targetCenters[0] });
-  const flightTargetCenter = useRef<GamePoint>({ ...targetCenters[0] });
-  const flightTarget = useRef(0);
-  const flightAccuracy = useRef(1);
-  const flightResult = useRef<0 | 1 | 2>(0);
-  const attemptsRef = useRef(0);
-  const scoreRef = useRef(0);
-  const bestRef = useRef(0);
-  const gameStartedAt = useRef(0);
-  const pausedTotal = useRef(0);
-  const pausedAt = useRef<number | null>(null);
-  const completionReported = useRef(false);
+  const game = useRef<BreakoutGame>(createBreakoutGame());
+  const bestRef = useRef(getVisitorCreation().gameBest);
   const onCompleteRef = useRef(onComplete);
   const onResetRef = useRef(onReset);
-  const [status, setStatus] = useState<GameStatus>("ready");
-  const [completed, setCompleted] = useState([false, false, false]);
-  const [attempts, setAttempts] = useState(0);
-  const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
-
-  useEffect(() => {
-    bestRef.current = getVisitorCreation().gameBest;
-    setBest(bestRef.current);
-  }, []);
+  const completionReported = useRef(false);
+  const activePointer = useRef<number | null>(null);
+  const keyboardDirection = useRef<-1 | 0 | 1>(0);
+  const heldDirection = useRef<-1 | 0 | 1>(0);
+  const hoveredControl = useRef<GameControl | null>(null);
+  const focusedControl = useRef<GameControl | null>(null);
+  const transitionProgress = useRef(0);
+  const transitionState = useRef<"intro" | "ready" | "outro">("intro");
+  const transitionFrame = useRef<number | null>(null);
+  const renderFrame = useRef<number | null>(null);
+  const animationFrame = useRef<number | null>(null);
+  const monitorImage = useRef<HTMLImageElement | null>(null);
+  const trail = useRef<Array<{ x: number; y: number }>>([]);
+  const sparks = useRef<BlockSpark[]>([]);
+  const [snapshot, setSnapshot] = useState<BreakoutGame>(() => createBreakoutGame());
+  const [best, setBest] = useState(() => getVisitorCreation().gameBest);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
     onResetRef.current = onReset;
   }, [onComplete, onReset]);
 
-  const updateStatus = useCallback((next: GameStatus) => {
-    statusRef.current = next;
-    setStatus(next);
+  const applyGame = useCallback((next: BreakoutGame) => {
+    const previous = game.current;
+    game.current = next;
+    if (next.score !== previous.score) {
+      next.blocks.forEach((block) => {
+        if (block.alive || !previous.blocks[block.id]?.alive) return;
+        const x = block.x + block.width / 2;
+        const y = block.y + block.height / 2;
+        sparks.current.push({ x, y, startedAt: performance.now() });
+        interactionRuntime.gameHitId += 1;
+        interactionRuntime.gameHitX = x / canvasWidth;
+        interactionRuntime.gameHitY = y / canvasHeight;
+      });
+    }
+    if (next.status !== previous.status || next.score !== previous.score || next.lives !== previous.lives
+      || next.serves !== previous.serves || Math.ceil(breakoutBoard.duration - next.elapsed) !== Math.ceil(breakoutBoard.duration - previous.elapsed)) setSnapshot(next);
+    if (next.status === "complete" && !completionReported.current) {
+      completionReported.current = true;
+      bestRef.current = saveGameResult(next.score);
+      setBest(bestRef.current);
+      onCompleteRef.current();
+    }
   }, []);
-
-  const getElapsedSeconds = useCallback(() => (
-    (performance.now() - gameStartedAt.current - pausedTotal.current) / 1000
-  ), []);
-
-  const syncRuntime = useCallback(() => {
-    const targetIndex = targetOrder[roundRef.current] ?? 2;
-    const target = statusRef.current === "flying"
-      ? flightTargetCenter.current
-      : getMovingTarget(targetIndex, getElapsedSeconds(), reducedMotion);
-    const base = targetCenters[targetIndex];
-    interactionRuntime.gameVisibility = transitionProgress.current;
-    interactionRuntime.gameTarget = targetIndex;
-    interactionRuntime.gameGateOffsetX = target.x - base.x;
-    interactionRuntime.gameGateOffsetY = target.y - base.y;
-    interactionRuntime.gameCompletedTargets = [...completedRef.current];
-    interactionRuntime.gameComplete = statusRef.current === "complete";
-  }, [getElapsedSeconds, reducedMotion]);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
-    const width = canvas.width;
-    const height = canvas.height;
+    const current = game.current;
     const now = performance.now();
     const transition = transitionProgress.current;
-    const surfaceReveal = revealProgress(transition, 0, 0.38);
-    const controlsReveal = revealProgress(transition, 0.62, 1);
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
-    const currentTarget = targetOrder[roundRef.current] ?? 2;
-    const activeStatus = statusRef.current;
-    const currentTargetPoint = activeStatus === "flying"
-      ? flightTargetCenter.current
-      : getMovingTarget(currentTarget, getElapsedSeconds(), reducedMotion);
-    syncRuntime();
-
-    context.clearRect(0, 0, width, height);
+    const cleared = current.blocks.filter((block) => !block.alive).length;
+    const actionLabel = current.status === "running" ? copy.game.pause : current.status === "paused" ? copy.game.resume : current.serves > 0 ? copy.game.serve : copy.game.action;
+    interactionRuntime.gameVisibility = transition;
+    interactionRuntime.gameComplete = current.status === "complete";
     canvas.dataset.transitionProgress = transition.toFixed(3);
-    if (monitorImage.current?.complete) {
-      context.drawImage(monitorImage.current, 0, 0, width, height);
-    } else {
+    canvas.dataset.paddleX = current.paddleX.toFixed(1);
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    if (monitorImage.current?.complete) context.drawImage(monitorImage.current, 0, 0, canvasWidth, canvasHeight);
+    else {
       context.fillStyle = "#080b10";
-      context.fillRect(0, 0, width, height);
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
     }
-
     context.save();
-    context.globalAlpha = surfaceReveal;
-    const background = context.createLinearGradient(0, 0, width, height);
-    background.addColorStop(0, "#151a20");
-    background.addColorStop(1, "#090d12");
+    context.globalAlpha = transition;
+    const background = context.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+    background.addColorStop(0, "#141b26");
+    background.addColorStop(1, "#080d16");
     context.fillStyle = background;
-    context.fillRect(0, 0, width, height);
-
-    roundedRect(context, 12, 12, width - 24, height - 24, 24);
-    context.strokeStyle = "rgba(247,247,244,.14)";
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+    roundedRect(context, 12, 12, canvasWidth - 24, canvasHeight - 24, 22);
+    context.strokeStyle = "rgba(247,247,244,.13)";
     context.lineWidth = 1;
     context.stroke();
-
-    context.save();
     context.direction = direction;
     context.textAlign = "center";
     context.fillStyle = "#75d8ff";
-    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText("MANDEGAR", width / 2, 29);
+    context.font = '700 12px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText("MANDEGAR", canvasWidth / 2, 29);
     context.fillStyle = "#f7f7f4";
-    context.font = '620 27px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(copy.stations.game.title, width / 2, 61, width - 68);
-    context.fillStyle = "rgba(247,247,244,.7)";
-    context.font = '500 16px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(
-      activeStatus === "complete"
-        ? completedRef.current.every(Boolean) ? copy.game.perfect : copy.game.result
-        : feedbackRef.current || copy.stations.game.instruction,
-      width / 2,
-      86,
-      width - 68,
-    );
-    context.restore();
-
-    context.strokeStyle = activeStatus === "complete" ? "rgba(117,216,255,.62)" : "rgba(117,216,255,.22)";
-    context.lineWidth = activeStatus === "complete" ? 2.5 : 1.5;
-    context.beginPath();
-    context.moveTo(targetCenters[0].x * width, targetCenters[0].y * height);
-    context.lineTo(targetCenters[2].x * width, targetCenters[2].y * height);
-    context.lineTo(targetCenters[1].x * width, targetCenters[1].y * height);
-    context.stroke();
-
-    targetCenters.forEach((baseCenter, index) => {
-      const center = index === currentTarget && activeStatus !== "complete"
-        ? currentTargetPoint
-        : baseCenter;
-      const x = center.x * width;
-      const y = center.y * height;
-      const color = targetColors[index];
-      const isCurrent = activeStatus !== "complete" && currentTarget === index;
-      const isComplete = completedRef.current[index];
-      const pulse = 0.5 + Math.sin(now * 0.005 + index) * 0.5;
-      const baseRadius = targetRadii[index];
-      const radius = isCurrent ? baseRadius + pulse * 5 : isComplete ? baseRadius : baseRadius * 0.82;
-      context.save();
-      context.shadowColor = color;
-      context.shadowBlur = isComplete ? 12 : isCurrent ? 8 : 0;
-      context.strokeStyle = isComplete || isCurrent ? color : "rgba(247,247,244,.22)";
-      context.lineWidth = isComplete ? 4 : isCurrent ? 3 : 1.5;
-      context.beginPath();
-      context.arc(x, y, radius, 0, Math.PI * 2);
-      context.stroke();
-      context.shadowBlur = 0;
-      context.fillStyle = isComplete || isCurrent ? "#f7f7f4" : "rgba(247,247,244,.46)";
-      context.font = '750 17px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(isComplete ? "✓" : String(index + 1).padStart(2, "0"), x, y + 5);
-      context.restore();
+    context.font = '650 27px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(copy.stations.game.title, canvasWidth / 2, 62, canvasWidth - 100);
+    [
+      { label: copy.game.score, value: String(current.score), x: 85 },
+      { label: copy.game.lives, value: String(current.lives), x: canvasWidth / 2 },
+      { label: copy.game.time, value: `${Math.max(0, Math.ceil(breakoutBoard.duration - current.elapsed))}`, x: canvasWidth - 85 },
+    ].forEach(({ label, value, x }) => {
+      context.fillStyle = "rgba(247,247,244,.56)";
+      context.font = '500 13px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(label, x, 96, 130);
+      context.fillStyle = "#f7f7f4";
+      context.font = '700 20px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(value, x, 120);
     });
-
-    let orbPoint = { ...launcher };
-    let previewSolution: ReturnType<typeof getLaunchSolution> | null = null;
-    if (activeStatus === "dragging" && activePointer.current) {
-      orbPoint = {
-        x: clamp(activePointer.current.x, 0.12, 0.88),
-        y: clamp(activePointer.current.y, 0.56, 0.96),
-      };
-      previewSolution = getLaunchSolution(orbPoint, currentTargetPoint, currentTarget);
-    } else if (activeStatus === "flying" && flightStartedAt.current !== null) {
-      const rawProgress = clamp((now - flightStartedAt.current) / flightDuration.current);
-      const travel = 1 - Math.pow(1 - rawProgress, 3);
-      orbPoint = quadraticPoint(
-        flightStart.current,
-        flightControl.current,
-        flightEnd.current,
-        travel,
-      );
-      for (let trailIndex = 7; trailIndex >= 1; trailIndex -= 1) {
-        const trailProgress = clamp(travel - trailIndex * 0.035);
-        const trailPoint = quadraticPoint(
-          flightStart.current,
-          flightControl.current,
-          flightEnd.current,
-          trailProgress,
-        );
-        context.globalAlpha = surfaceReveal * (1 - trailIndex / 9) * 0.54;
-        context.fillStyle = targetColors[flightTarget.current];
-        context.beginPath();
-        context.arc(trailPoint.x * width, trailPoint.y * height, 12 - trailIndex, 0, Math.PI * 2);
-        context.fill();
-      }
-      context.globalAlpha = surfaceReveal;
-    }
-
-    if (activeStatus === "ready" || activeStatus === "dragging") {
-      context.save();
-      context.setLineDash([7, 10]);
-      context.lineDashOffset = -now * 0.025;
-      context.strokeStyle = `${targetColors[currentTarget]}72`;
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(launcher.x * width, launcher.y * height);
-      if (previewSolution) {
-        context.quadraticCurveTo(
-          previewSolution.control.x * width,
-          previewSolution.control.y * height,
-          previewSolution.end.x * width,
-          previewSolution.end.y * height,
-        );
-      } else {
-        context.quadraticCurveTo(
-          width * 0.5,
-          height * 0.46,
-          currentTargetPoint.x * width,
-          currentTargetPoint.y * height,
-        );
-      }
-      context.stroke();
-      context.restore();
-      if (previewSolution) {
-        context.strokeStyle = "rgba(247,247,244,.42)";
-        context.lineWidth = 3 + previewSolution.power * 3;
-        context.beginPath();
-        context.moveTo(launcher.x * width - 13, launcher.y * height);
-        context.lineTo(orbPoint.x * width, orbPoint.y * height);
-        context.lineTo(launcher.x * width + 13, launcher.y * height);
-        context.stroke();
-      }
-    }
-
-    if (activeStatus !== "complete") {
-      const orbColor = targetColors[activeStatus === "flying" ? flightTarget.current : currentTarget];
-      const orbX = orbPoint.x * width;
-      const orbY = orbPoint.y * height;
-      const orbRadius = activeStatus === "dragging" ? 30 : 25 + Math.sin(now * 0.007) * 2;
-      const glow = context.createRadialGradient(orbX, orbY, 1, orbX, orbY, orbRadius * 2.8);
-      glow.addColorStop(0, "rgba(255,255,255,1)");
-      glow.addColorStop(0.2, orbColor);
-      glow.addColorStop(0.48, `${orbColor}76`);
-      glow.addColorStop(1, `${orbColor}00`);
-      context.fillStyle = glow;
-      context.beginPath();
-      context.arc(orbX, orbY, orbRadius * 2.8, 0, Math.PI * 2);
-      context.fill();
-      context.fillStyle = "#f7f7f4";
-      context.beginPath();
-      context.arc(orbX, orbY, 7, 0, Math.PI * 2);
-      context.fill();
-    } else {
-      const finale = context.createRadialGradient(width * 0.5, height * 0.52, 4, width * 0.5, height * 0.52, width * 0.38);
-      finale.addColorStop(0, "rgba(247,247,244,.9)");
-      finale.addColorStop(0.15, "rgba(117,216,255,.42)");
-      finale.addColorStop(1, "rgba(34,92,255,0)");
-      context.fillStyle = finale;
-      context.beginPath();
-      context.arc(width * 0.5, height * 0.52, width * 0.38, 0, Math.PI * 2);
-      context.fill();
-      context.save();
-      roundedRect(context, width * 0.17, height * 0.42, width * 0.66, height * 0.28, 20);
-      context.fillStyle = "rgba(8,11,16,.92)";
-      context.fill();
-      context.direction = direction;
-      context.textAlign = "center";
-      context.fillStyle = "#75d8ff";
-      context.font = '650 18px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(copy.game.score, width / 2, height * 0.465, width * 0.58);
-      context.fillStyle = "#f7f7f4";
-      context.font = '750 58px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(String(scoreRef.current), width / 2, height * 0.55);
-      context.font = '500 20px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.fillText(`${copy.game.throws}: ${attemptsRef.current} / ${maxAttempts}`, width / 2, height * 0.61, width * 0.58);
-      context.fillStyle = "#75d8ff";
-      context.fillText(`${copy.game.best}: ${bestRef.current}`, width / 2, height * 0.66, width * 0.58);
-      context.restore();
-    }
-
-    for (let index = 0; index < maxAttempts; index += 1) {
-      context.beginPath();
-      context.arc(width * 0.5 + (index - 2) * 19, height * 0.86, 4.5, 0, Math.PI * 2);
-      context.fillStyle = index < attemptsRef.current
-        ? "rgba(247,247,244,.32)"
-        : "rgba(117,216,255,.82)";
-      context.fill();
-    }
-
-    const closeX = width * 0.92;
-    const closeY = height * 0.062;
-    const closeFocused = hoverControl.current === "close" || keyboardFocus.current === "close";
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.12)" : "rgba(247,247,244,.06)";
-    context.beginPath();
-    context.arc(closeX, closeY, 18, 0, Math.PI * 2);
+    roundedRect(context, breakoutBoard.left, breakoutBoard.top, breakoutBoard.right - breakoutBoard.left, breakoutBoard.bottom - breakoutBoard.top, 16);
+    context.fillStyle = "rgba(2,7,15,.55)";
     context.fill();
-    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.32)";
-    context.lineWidth = closeFocused ? 3 : 1.5;
+    context.strokeStyle = "rgba(117,216,255,.12)";
     context.stroke();
-    context.strokeStyle = "#f7f7f4";
-    context.lineWidth = 1.7;
-    context.beginPath();
-    context.moveTo(closeX - 5, closeY - 5);
-    context.lineTo(closeX + 5, closeY + 5);
-    context.moveTo(closeX + 5, closeY - 5);
-    context.lineTo(closeX - 5, closeY + 5);
-    context.stroke();
-
-    const drawButton = (
-      left: number,
-      buttonWidth: number,
-      label: string,
-      enabled: boolean,
-      focused: boolean,
-      primary = false,
-    ) => {
-      const top = height * gameControls.reset.y;
-      const buttonHeight = height * gameControls.reset.height;
-      roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary && enabled ? "#225cff" : "rgba(247,247,244,.04)";
+    current.blocks.forEach((block) => {
+      if (!block.alive) return;
+      roundedRect(context, block.x + 2, block.y, block.width - 4, block.height, 7);
+      context.fillStyle = block.id < 4 ? "rgba(67,151,211,.36)" : "rgba(34,92,255,.36)";
       context.fill();
-      context.strokeStyle = focused
-        ? "#75d8ff"
-        : enabled
-          ? "rgba(247,247,244,.42)"
-          : "rgba(247,247,244,.17)";
-      context.lineWidth = focused ? 3 : 1.5;
+      context.strokeStyle = block.id < 4 ? "#75d8ff" : "#4d85ff";
+      context.lineWidth = 1.5;
       context.stroke();
-      context.direction = direction;
-      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.38)";
-      context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63, buttonWidth - 22);
-    };
-    context.save();
-    context.globalAlpha = surfaceReveal * controlsReveal;
-    drawButton(
-      width * gameControls.reset.x,
-      width * gameControls.reset.width,
-      activeStatus === "complete" ? copy.replay : copy.reset,
-      activeStatus !== "flying" && (completedRef.current.some(Boolean) || activeStatus === "complete"),
-      hoverControl.current === "reset" || keyboardFocus.current === "reset",
-    );
-    drawButton(
-      width * gameControls.continue.x,
-      width * gameControls.continue.width,
-      copy.continue,
-      activeStatus === "complete",
-      hoverControl.current === "continue" || keyboardFocus.current === "continue",
-      true,
-    );
-    context.restore();
+      context.fillStyle = "rgba(247,247,244,.2)";
+      context.fillRect(block.x + 13, block.y + 6, block.width - 26, 1);
+    });
+    if (!reducedMotion) {
+      if (current.status === "running") trail.current.forEach((point, index) => {
+        context.save();
+        context.globalAlpha = transition * (index + 1) / Math.max(1, trail.current.length) * 0.18;
+        context.fillStyle = "#75d8ff";
+        context.beginPath();
+        context.arc(point.x, point.y, 2 + index * 0.55, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      });
+      sparks.current = sparks.current.filter((spark) => now - spark.startedAt < 320);
+      sparks.current.forEach((spark) => {
+        const progress = (now - spark.startedAt) / 320;
+        context.save();
+        context.globalAlpha = transition * (1 - progress) * 0.7;
+        context.fillStyle = "#75d8ff";
+        for (let index = 0; index < 6; index += 1) {
+          const angle = index / 6 * Math.PI * 2;
+          context.beginPath();
+          context.arc(spark.x + Math.cos(angle) * progress * 28, spark.y + Math.sin(angle) * progress * 20, 2, 0, Math.PI * 2);
+          context.fill();
+        }
+        context.restore();
+      });
+    }
+    if (current.status !== "complete") {
+      context.save();
+      context.shadowColor = "#75d8ff";
+      context.shadowBlur = reducedMotion ? 0 : 12;
+      context.fillStyle = "#ecfaff";
+      context.beginPath();
+      context.arc(current.ball.x, current.ball.y, breakoutBoard.ballRadius, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    }
+    roundedRect(context, current.paddleX - breakoutBoard.paddleWidth / 2, breakoutBoard.paddleY, breakoutBoard.paddleWidth, breakoutBoard.paddleHeight, 6);
+    context.fillStyle = "#75d8ff";
+    context.fill();
+    context.fillStyle = "rgba(247,247,244,.72)";
+    context.fillRect(current.paddleX - breakoutBoard.paddleWidth / 2 + 8, breakoutBoard.paddleY + 2, breakoutBoard.paddleWidth - 16, 2);
+    if (current.status !== "running") {
+      const complete = current.status === "complete";
+      roundedRect(context, 67, 329, canvasWidth - 134, complete ? 173 : 105, 18);
+      context.fillStyle = "rgba(8,13,22,.92)";
+      context.fill();
+      context.strokeStyle = "rgba(117,216,255,.2)";
+      context.lineWidth = 1;
+      context.stroke();
+      context.fillStyle = "#f7f7f4";
+      context.font = '650 25px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(complete ? current.outcome === "won" ? copy.game.win : copy.game.result : actionLabel, canvasWidth / 2, 368, canvasWidth - 166);
+      context.fillStyle = "rgba(247,247,244,.65)";
+      context.font = '500 15px "Vazirmatn Variable", Tahoma, sans-serif';
+      if (complete) {
+        context.fillStyle = "#75d8ff";
+        context.font = '750 46px "Vazirmatn Variable", Tahoma, sans-serif';
+        context.fillText(String(current.score), canvasWidth / 2, 425);
+        context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
+        context.fillText(`${copy.game.best}: ${bestRef.current}`, canvasWidth / 2, 466, canvasWidth - 166);
+      } else context.fillText(copy.stations.game.instruction, canvasWidth / 2, 402, canvasWidth - 166);
+    }
+    context.fillStyle = "rgba(247,247,244,.56)";
+    context.font = '500 14px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.fillText(`${copy.game.remaining}: ${cleared}`, canvasWidth / 2, 628, canvasWidth - 100);
+    (Object.keys(gameControls) as Array<keyof typeof gameControls>).forEach((control) => {
+      if (control === "action" && current.status === "complete") return;
+      const bounds = gameControls[control];
+      const enabled = control === "action" ? current.status !== "complete" : current.serves > 0;
+      const focused = hoveredControl.current === control || focusedControl.current === control;
+      const label = control === "reset" ? current.status === "complete" ? copy.replay : copy.reset
+        : control === "finish" ? current.status === "complete" ? copy.continue : copy.game.finish : actionLabel;
+      roundedRect(context, bounds.left * canvasWidth, 651, bounds.width * canvasWidth, 47, 23);
+      context.fillStyle = control === "action" && enabled ? "#225cff" : focused ? "rgba(117,216,255,.13)" : "rgba(247,247,244,.05)";
+      context.fill();
+      context.strokeStyle = focused ? "#75d8ff" : "rgba(247,247,244,.24)";
+      context.lineWidth = focused ? 2 : 1;
+      context.stroke();
+      context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.28)";
+      context.font = '600 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.fillText(label, (bounds.left + bounds.width / 2) * canvasWidth, 681, bounds.width * canvasWidth - 14);
+    });
+    context.strokeStyle = hoveredControl.current === "close" || focusedControl.current === "close" ? "#75d8ff" : "rgba(247,247,244,.65)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(canvasWidth * 0.925 - 6, canvasHeight * 0.057 - 6);
+    context.lineTo(canvasWidth * 0.925 + 6, canvasHeight * 0.057 + 6);
+    context.moveTo(canvasWidth * 0.925 + 6, canvasHeight * 0.057 - 6);
+    context.lineTo(canvasWidth * 0.925 - 6, canvasHeight * 0.057 + 6);
+    context.stroke();
     context.restore();
     markInteractionCanvasDirty("game");
-  }, [copy, getElapsedSeconds, reducedMotion, syncRuntime]);
+  }, [copy, reducedMotion]);
 
   const schedulePaint = useCallback(() => {
     if (renderFrame.current !== null) return;
@@ -540,158 +281,21 @@ export function GameInteraction({
       paint();
     });
   }, [paint]);
-
-  const clearRoundTimers = useCallback(() => {
-    if (nextRoundTimer.current !== null) window.clearTimeout(nextRoundTimer.current);
-    if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-    nextRoundTimer.current = null;
-    completionTimer.current = null;
+  const releaseKeyboardControls = useCallback(() => {
+    keyboardDirection.current = 0;
+    heldDirection.current = 0;
   }, []);
-
-  const finishFlight = useCallback(() => {
-    const target = flightTarget.current;
-    const nextCompleted = [...completedRef.current];
-    const hit = flightResult.current > 0;
-    if (hit) nextCompleted[target] = true;
-    const nextAttempts = attemptsRef.current + 1;
-    const earnedScore = flightResult.current === 2 ? 100 : flightResult.current === 1 ? 50 : 0;
-    const nextScore = scoreRef.current + earnedScore;
-    attemptsRef.current = nextAttempts;
-    scoreRef.current = nextScore;
-    completedRef.current = nextCompleted;
-    setAttempts(nextAttempts);
-    setScore(nextScore);
-    setCompleted(nextCompleted);
-    interactionRuntime.gameCompletedTargets = [...nextCompleted];
-    feedbackRef.current = flightResult.current === 2
-      ? copy.game.hit
-      : flightResult.current === 1
-        ? copy.game.outer
-        : copy.game.missed;
-    const allConnected = nextCompleted.every(Boolean);
-    const outOfShots = nextAttempts >= maxAttempts;
-    if (allConnected || outOfShots) {
-      bestRef.current = saveGameResult(nextScore);
-      setBest(bestRef.current);
-      updateStatus("complete");
-      interactionRuntime.gameComplete = true;
-      schedulePaint();
-      if (!completionReported.current) {
-        completionReported.current = true;
-        completionTimer.current = window.setTimeout(() => {
-          completionTimer.current = null;
-          onCompleteRef.current();
-        }, 260);
-      }
-      return;
-    }
-    if (hit) roundRef.current += 1;
-    interactionRuntime.gameTarget = targetOrder[roundRef.current];
-    nextRoundTimer.current = window.setTimeout(() => {
-      nextRoundTimer.current = null;
-      feedbackRef.current = "";
-      updateStatus("ready");
-      schedulePaint();
-    }, reducedMotion ? 0 : 650);
-    schedulePaint();
-  }, [copy.game.hit, copy.game.missed, copy.game.outer, reducedMotion, schedulePaint, updateStatus]);
-
-  const startFlightAnimation = useCallback(() => {
-    if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
-    flightStartedAt.current = performance.now();
-    const tick = (time: number) => {
-      if (document.hidden) {
-        flightFrame.current = null;
-        return;
-      }
-      paint();
-      if (flightStartedAt.current !== null && time - flightStartedAt.current < flightDuration.current) {
-        flightFrame.current = window.requestAnimationFrame(tick);
-        return;
-      }
-      flightFrame.current = null;
-      finishFlight();
-    };
-    flightTick.current = tick;
-    flightFrame.current = window.requestAnimationFrame(tick);
-  }, [finishFlight, paint]);
-
-  const launch = useCallback((pointer: GamePointer | null) => {
-    if (statusRef.current !== "ready" && statusRef.current !== "dragging") return;
-    const targetIndex = targetOrder[roundRef.current] ?? 2;
-    const target = getMovingTarget(targetIndex, getElapsedSeconds(), reducedMotion);
-    const targetVectorX = target.x - launcher.x;
-    const targetVectorY = target.y - launcher.y;
-    const targetDistance = Math.hypot(targetVectorX, targetVectorY);
-    const pullPoint = pointer
-      ? { x: clamp(pointer.x, 0.12, 0.88), y: clamp(pointer.y, 0.56, 0.96) }
-      : {
-        x: launcher.x - targetVectorX / targetDistance * 0.17,
-        y: launcher.y - targetVectorY / targetDistance * 0.17,
-      };
-    const solution = getLaunchSolution(pullPoint, target, targetIndex);
-    if (pointer && solution.pullLength < 0.045) {
-      activePointer.current = null;
-      updateStatus("ready");
-      schedulePaint();
-      return;
-    }
-    flightStart.current = { ...launcher };
-    flightControl.current = solution.control;
-    flightEnd.current = solution.end;
-    flightTargetCenter.current = target;
-    flightTarget.current = targetIndex;
-    flightResult.current = solution.result;
-    flightAccuracy.current = solution.result === 2 ? 1 : solution.result === 1 ? 0.68 : 0.24;
-    feedbackRef.current = "";
+  const releaseControls = useCallback(() => {
+    releaseKeyboardControls();
     activePointer.current = null;
-    updateStatus("flying");
-    const baseTarget = targetCenters[targetIndex];
-    interactionRuntime.gameLaunchTarget = targetIndex;
-    interactionRuntime.gameLaunchAccuracy = flightAccuracy.current;
-    interactionRuntime.gameLaunchDestinationX = solution.end.x - baseTarget.x;
-    interactionRuntime.gameLaunchDestinationY = solution.end.y - baseTarget.y;
-    interactionRuntime.gameLaunchResult = solution.result;
-    interactionRuntime.gameGateOffsetX = target.x - baseTarget.x;
-    interactionRuntime.gameGateOffsetY = target.y - baseTarget.y;
-    interactionRuntime.gameLaunchId += 1;
-    startFlightAnimation();
-  }, [getElapsedSeconds, reducedMotion, schedulePaint, startFlightAnimation, updateStatus]);
-
-  const reset = useCallback(() => {
-    const wasComplete = completionReported.current;
-    if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
-    flightFrame.current = null;
-    flightStartedAt.current = null;
-    activePointer.current = null;
-    clearRoundTimers();
-    completionReported.current = false;
-    roundRef.current = 0;
-    attemptsRef.current = 0;
-    scoreRef.current = 0;
-    gameStartedAt.current = performance.now();
-    pausedTotal.current = 0;
-    completedRef.current = [false, false, false];
-    feedbackRef.current = "";
-    setCompleted([false, false, false]);
-    setAttempts(0);
-    setScore(0);
-    updateStatus("ready");
-    interactionRuntime.gameTarget = targetOrder[0];
-    interactionRuntime.gameCompletedTargets = [false, false, false];
-    interactionRuntime.gameComplete = false;
-    interactionRuntime.gameGateOffsetX = 0;
-    interactionRuntime.gameGateOffsetY = 0;
-    schedulePaint();
-    if (wasComplete) onResetRef.current();
-  }, [clearRoundTimers, schedulePaint, updateStatus]);
+  }, [releaseKeyboardControls]);
 
   const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
-    const duration = reducedMotion ? 0 : target === 1 ? 600 : 560;
     transitionState.current = target === 1 ? "intro" : "outro";
-    if (duration === 0 || Math.abs(target - from) < 0.001) {
+    const duration = reducedMotion ? 0 : target === 1 ? 500 : 360;
+    if (duration === 0) {
       transitionProgress.current = target;
       transitionState.current = target === 1 ? "ready" : "outro";
       paint();
@@ -704,35 +308,57 @@ export function GameInteraction({
       const eased = elapsed * elapsed * (3 - 2 * elapsed);
       transitionProgress.current = from + (target - from) * eased;
       paint();
-      if (elapsed < 1) {
-        transitionFrame.current = window.requestAnimationFrame(tick);
-        return;
+      if (elapsed < 1) transitionFrame.current = window.requestAnimationFrame(tick);
+      else {
+        transitionFrame.current = null;
+        transitionState.current = target === 1 ? "ready" : "outro";
+        onFinish?.();
       }
-      transitionFrame.current = null;
-      transitionState.current = target === 1 ? "ready" : "outro";
-      onFinish?.();
     };
     transitionFrame.current = window.requestAnimationFrame(tick);
   }, [paint, reducedMotion]);
-
+  const action = useCallback(() => {
+    if (transitionState.current !== "ready") return;
+    releaseControls();
+    const current = game.current;
+    applyGame(current.status === "ready" ? serveBreakoutBall(current) : setBreakoutPaused(current, current.status === "running"));
+    trail.current = [];
+    schedulePaint();
+  }, [applyGame, releaseControls, schedulePaint]);
+  const reset = useCallback(() => {
+    if (transitionState.current !== "ready" || game.current.serves === 0) return;
+    releaseControls();
+    game.current = createBreakoutGame();
+    setSnapshot(game.current);
+    completionReported.current = false;
+    trail.current = [];
+    sparks.current = [];
+    onResetRef.current();
+    schedulePaint();
+  }, [releaseControls, schedulePaint]);
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
-    if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
-    flightFrame.current = null;
-    flightStartedAt.current = null;
-    activePointer.current = null;
-    hoverControl.current = null;
+    releaseControls();
+    if (game.current.serves > 0) saveGameResult(game.current.score);
+    game.current = setBreakoutPaused(game.current, true);
     animateTransition(0, callback);
-  }, [animateTransition]);
-
-  const closeWithTransition = useCallback(() => {
-    clearRoundTimers();
-    exitWithTransition(onClose);
-  }, [clearRoundTimers, exitWithTransition, onClose]);
-
-  const continueWithTransition = useCallback(() => {
-    exitWithTransition(onContinue);
-  }, [exitWithTransition, onContinue]);
+  }, [animateTransition, releaseControls]);
+  const finishOrContinue = useCallback(() => {
+    if (transitionState.current !== "ready" || game.current.serves === 0) return;
+    if (game.current.status === "complete") exitWithTransition(onContinue);
+    else {
+      releaseControls();
+      applyGame(finishBreakoutGame(game.current));
+      schedulePaint();
+    }
+  }, [applyGame, exitWithTransition, onContinue, releaseControls, schedulePaint]);
+  const movePaddle = useCallback((x: number) => {
+    game.current = moveBreakoutPaddle(game.current, x);
+    schedulePaint();
+  }, [schedulePaint]);
+  const focusGameCanvas = useCallback(() => {
+    if (window.matchMedia("(min-width: 761px)").matches) canvasRef.current?.focus({ preventScroll: true });
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -744,9 +370,6 @@ export function GameInteraction({
       if (!mounted || registered) return;
       registered = true;
       monitorImage.current = image.naturalWidth > 0 ? image : null;
-      gameStartedAt.current = performance.now();
-      transitionProgress.current = 0;
-      interactionRuntime.gameVisibility = 0;
       paint();
       registerInteractionCanvas("game", canvas);
       animateTransition(1);
@@ -755,9 +378,7 @@ export function GameInteraction({
     image.onerror = begin;
     image.src = sceneTokens.bakedScene.screens.game;
     if (image.complete) begin();
-    void document.fonts?.ready.then(() => {
-      if (mounted) schedulePaint();
-    });
+    void document.fonts?.ready.then(() => { if (mounted) schedulePaint(); });
     return () => {
       mounted = false;
       image.onload = null;
@@ -767,145 +388,136 @@ export function GameInteraction({
   }, [animateTransition, paint, schedulePaint]);
 
   useEffect(() => {
-    if (reducedMotion) return;
-    let lastPaint = 0;
+    let previousTime = performance.now();
     const tick = (time: number) => {
-      if (
-        !document.hidden
-        && transitionState.current === "ready"
-        && (statusRef.current === "ready" || statusRef.current === "dragging")
-        && time - lastPaint >= 1000 / 30
-      ) {
-        lastPaint = time;
-        paint();
+      if (document.hidden) {
+        animationFrame.current = null;
+        return;
       }
-      motionFrame.current = window.requestAnimationFrame(tick);
+      const delta = Math.max(0, (time - previousTime) / 1000);
+      previousTime = time;
+      if (transitionState.current === "ready") {
+        if (delta > 1 && game.current.status === "running") {
+          releaseControls();
+          applyGame(setBreakoutPaused(game.current, true));
+          schedulePaint();
+        }
+        const movement = keyboardDirection.current || heldDirection.current;
+        if (movement) game.current = moveBreakoutPaddle(game.current, game.current.paddleX + movement * 470 * delta);
+        if (game.current.status === "running") {
+          const next = stepBreakoutGame(game.current, delta);
+          applyGame(next);
+          trail.current.push({ x: next.ball.x, y: next.ball.y });
+          if (trail.current.length > 7) trail.current.shift();
+          paint();
+        } else if (movement || (!reducedMotion && sparks.current.length)) paint();
+      }
+      animationFrame.current = window.requestAnimationFrame(tick);
     };
-    motionFrame.current = window.requestAnimationFrame(tick);
+    const handleVisibility = () => {
+      releaseControls();
+      if (document.hidden) {
+        applyGame(setBreakoutPaused(game.current, true));
+        if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current);
+        animationFrame.current = null;
+      } else {
+        previousTime = performance.now();
+        if (animationFrame.current === null) animationFrame.current = window.requestAnimationFrame(tick);
+        schedulePaint();
+      }
+    };
+    const handleBlur = () => {
+      releaseControls();
+      applyGame(setBreakoutPaused(game.current, true));
+      schedulePaint();
+    };
+    animationFrame.current = window.requestAnimationFrame(tick);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
     return () => {
-      if (motionFrame.current !== null) window.cancelAnimationFrame(motionFrame.current);
-      motionFrame.current = null;
+      if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
     };
-  }, [paint, reducedMotion]);
+  }, [applyGame, paint, reducedMotion, releaseControls, schedulePaint]);
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
       if (transitionState.current !== "ready" || event.phase === "activate") return;
-      const point = { x: event.x, y: event.y };
+      const control = controlAtPoint(event.x, event.y);
       if (event.phase === "move") {
-        const pointer = activePointer.current;
-        if (pointer?.pointerId === event.pointerId) {
-          pointer.x = point.x;
-          pointer.y = point.y;
+        if (activePointer.current === event.pointerId) movePaddle(event.x * canvasWidth);
+        else {
+          hoveredControl.current = control;
           schedulePaint();
-          return;
         }
-        hoverControl.current = distance(point.x, point.y, 0.92, 0.062) <= 0.075
-          ? "close"
-          : hitGameControl(point.x, point.y, "reset")
-            ? "reset"
-            : hitGameControl(point.x, point.y, "continue")
-              ? "continue"
-              : distance(point.x, point.y, launcher.x, launcher.y) <= 0.2
-                ? "launch"
-                : null;
+      } else if (event.phase === "down") {
+        if (control === "close") exitWithTransition(onClose);
+        else if (control === "reset") {
+          reset();
+        } else if (control === "action") {
+          action();
+        }
+        else if (control === "finish") finishOrContinue();
+        else if (event.y >= breakoutBoard.top / canvasHeight && event.y <= 0.87 && game.current.status !== "complete") {
+          activePointer.current = event.pointerId;
+          if (event.y > 0.74 || game.current.status === "running") movePaddle(event.x * canvasWidth);
+          if ((game.current.status === "ready" || game.current.status === "paused") && event.y >= 0.45 && event.y <= 0.64) action();
+        }
+      } else if (event.phase === "up" || event.phase === "cancel") {
+        if (event.phase === "up" && game.current.status !== "complete") focusGameCanvas();
+        if (activePointer.current === event.pointerId) activePointer.current = null;
+        hoveredControl.current = null;
         schedulePaint();
-        return;
       }
-
-      if (event.phase === "down") {
-        if (distance(point.x, point.y, 0.92, 0.062) <= 0.075) {
-          closeWithTransition();
-          return;
-        }
-        if (hitGameControl(point.x, point.y, "reset")) {
-          if (statusRef.current !== "flying" && (completedRef.current.some(Boolean) || statusRef.current === "complete")) reset();
-          return;
-        }
-        if (hitGameControl(point.x, point.y, "continue")) {
-          if (statusRef.current === "complete") continueWithTransition();
-          return;
-        }
-        if (
-          statusRef.current !== "ready"
-          || distance(point.x, point.y, launcher.x, launcher.y) > 0.2
-        ) return;
-        activePointer.current = {
-          pointerId: event.pointerId,
-          startX: point.x,
-          startY: point.y,
-          x: point.x,
-          y: point.y,
-        };
-        updateStatus("dragging");
-        schedulePaint();
-        return;
-      }
-
-      if (event.phase === "cancel") {
-        activePointer.current = null;
-        if (statusRef.current === "dragging") updateStatus("ready");
-        hoverControl.current = null;
-        schedulePaint();
-        return;
-      }
-
-      if (event.phase !== "up") return;
-      const pointer = activePointer.current;
-      if (!pointer || pointer.pointerId !== event.pointerId) return;
-      pointer.x = point.x;
-      pointer.y = point.y;
-      launch(pointer);
     };
     registerSceneInteraction("game", handleSceneInput);
     return () => registerSceneInteraction("game", null);
-  }, [closeWithTransition, continueWithTransition, launch, reset, schedulePaint, updateStatus]);
-
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden) {
-        pausedAt.current = performance.now();
-        if (statusRef.current === "dragging") {
-          activePointer.current = null;
-          updateStatus("ready");
-        }
-        return;
-      }
-      if (pausedAt.current !== null && flightStartedAt.current !== null) {
-        flightStartedAt.current += performance.now() - pausedAt.current;
-      }
-      if (pausedAt.current !== null) pausedTotal.current += performance.now() - pausedAt.current;
-      pausedAt.current = null;
-      if (statusRef.current === "flying" && flightFrame.current === null && flightTick.current) {
-        flightFrame.current = window.requestAnimationFrame(flightTick.current);
-      }
-      schedulePaint();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [schedulePaint, updateStatus]);
-
+  }, [action, exitWithTransition, finishOrContinue, focusGameCanvas, movePaddle, onClose, reset, schedulePaint]);
   useEffect(() => () => {
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
-    if (motionFrame.current !== null) window.cancelAnimationFrame(motionFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-    if (flightFrame.current !== null) window.cancelAnimationFrame(flightFrame.current);
-    clearRoundTimers();
     interactionRuntime.gameVisibility = 0;
-    interactionRuntime.gameTarget = 0;
-    interactionRuntime.gameLaunchDestinationX = 0;
-    interactionRuntime.gameLaunchDestinationY = 0;
-    interactionRuntime.gameLaunchResult = 0;
-    interactionRuntime.gameGateOffsetX = 0;
-    interactionRuntime.gameGateOffsetY = 0;
-    interactionRuntime.gameCompletedTargets = [false, false, false];
     interactionRuntime.gameComplete = false;
-  }, [clearRoundTimers]);
+  }, []);
 
-  const focusControl = (control: "close" | "reset" | "continue" | "launch" | null) => {
-    keyboardFocus.current = control;
-    hoverControl.current = control;
+  const focusControl = (control: GameControl | null) => {
+    focusedControl.current = control;
+    releaseKeyboardControls();
     schedulePaint();
+  };
+  const actionLabel = snapshot.status === "running" ? copy.game.pause : snapshot.status === "paused" ? copy.game.resume : snapshot.serves > 0 ? copy.game.serve : copy.game.action;
+  const cleared = snapshot.blocks.filter((block) => !block.alive).length;
+  const time = Math.max(0, Math.ceil(breakoutBoard.duration - snapshot.elapsed));
+  const holdPaddle = (event: React.PointerEvent<HTMLButtonElement>, direction: -1 | 1) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    heldDirection.current = direction;
+    movePaddle(game.current.paddleX + direction * 12);
+  };
+  const releasePaddle = () => { heldDirection.current = 0; };
+  const nudgePaddle = (event: React.MouseEvent<HTMLButtonElement>, direction: -1 | 1) => {
+    if (event.detail === 0) movePaddle(game.current.paddleX + direction * 38);
+  };
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (transitionState.current !== "ready" || game.current.status === "complete") return;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      keyboardDirection.current = event.key === "ArrowLeft" ? -1 : 1;
+      movePaddle(game.current.paddleX + keyboardDirection.current * 12);
+    } else if ((event.key === " " || event.key === "Enter")
+      && (event.target === canvasRef.current || (event.target as HTMLElement).hasAttribute("data-game-action")
+        || (event.target as HTMLElement).hasAttribute("data-mobile-game-action"))) {
+      event.preventDefault();
+      if (!event.repeat) action();
+    }
+  };
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((event.key === "ArrowLeft" && keyboardDirection.current === -1)
+      || (event.key === "ArrowRight" && keyboardDirection.current === 1)) keyboardDirection.current = 0;
+  };
+  const handleRegionBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) releaseKeyboardControls();
   };
 
   return (
@@ -913,72 +525,54 @@ export function GameInteraction({
       <div
         className={styles.spatialInteractionSemantics}
         data-game-spatial-controls
-        data-game-status={status}
-        data-game-completed-count={completed.filter(Boolean).length}
-        data-game-attempts={attempts}
-        data-game-score={score}
+        data-game-type="breakout"
+        data-game-status={snapshot.status}
+        data-game-completed-count={cleared}
+        data-game-attempts={snapshot.serves}
+        data-game-score={snapshot.score}
         data-game-best={best}
+        data-game-lives={snapshot.lives}
+        data-game-time={time}
         role="region"
         aria-label={copy.stations.game.title}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onBlur={handleRegionBlur}
       >
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
-          className={styles.textureSource}
-          data-game-canvas
-          aria-hidden="true"
-        />
+        <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} className={styles.textureSource} data-game-canvas tabIndex={0} aria-label={copy.game.keyboard} onFocus={schedulePaint} />
         <p>{copy.stations.game.instruction}</p>
-        <button
-          type="button"
-          disabled={status === "flying" || status === "complete"}
-          onFocus={() => focusControl("launch")}
-          onBlur={() => focusControl(null)}
-          onClick={() => launch(null)}
-        >
-          {copy.game.action}
-        </button>
-        <button
-          type="button"
-          disabled={status === "flying" || (!completed.some(Boolean) && status !== "complete")}
-          onFocus={() => focusControl("reset")}
-          onBlur={() => focusControl(null)}
-          onClick={reset}
-        >
-          {status === "complete" ? copy.replay : copy.reset}
-        </button>
-        <button
-          type="button"
-          data-interaction-continue
-          disabled={status !== "complete"}
-          onFocus={() => focusControl("continue")}
-          onBlur={() => focusControl(null)}
-          onClick={continueWithTransition}
-        >
-          {copy.continue}
-        </button>
-        <button
-          type="button"
-          data-interaction-dismiss
-          onFocus={() => focusControl("close")}
-          onBlur={() => focusControl(null)}
-          onClick={closeWithTransition}
-        >
-          {copy.close}
-        </button>
+        <button type="button" data-game-action disabled={snapshot.status === "complete"} onFocus={() => focusControl("action")} onBlur={() => focusControl(null)} onClick={action}>{actionLabel}</button>
+        <button type="button" data-game-replay disabled={snapshot.serves === 0} onFocus={() => focusControl("reset")} onBlur={() => focusControl(null)} onClick={reset}>{snapshot.status === "complete" ? copy.replay : copy.reset}</button>
+        <button type="button" data-game-finish data-interaction-continue disabled={snapshot.serves === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={finishOrContinue}>{snapshot.status === "complete" ? copy.continue : copy.game.finish}</button>
+        <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
         <span role="status" aria-live="polite">
-          {status === "complete"
-            ? `${completed.every(Boolean) ? copy.game.perfect : copy.game.result}. ${copy.game.score}: ${score}. ${copy.game.throws}: ${attempts}. ${copy.game.best}: ${best}.`
-            : `${completed.filter(Boolean).length} / 3 · ${score} · ${attempts} / ${maxAttempts}`}
+          {snapshot.status === "complete" ? `${snapshot.outcome === "won" ? copy.game.win : copy.game.result}. ${copy.game.score}: ${snapshot.score}. ${copy.game.best}: ${best}.`
+            : `${copy.game.score}: ${snapshot.score}. ${copy.game.lives}: ${snapshot.lives}. ${copy.game.remaining}: ${cleared}.`}
         </span>
       </div>
-      {status === "complete" && (
+      {snapshot.status !== "complete" && (
+        <div className={styles.mobileGameDock} data-mobile-game-dock role="group" aria-label={copy.stations.game.title} onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} onBlur={handleRegionBlur}>
+          <div className={styles.mobileGameHeader}>
+            <strong>{copy.stations.game.title}</strong>
+            <span><bdi>{snapshot.score}</bdi> · {copy.game.lives}: <bdi>{snapshot.lives}</bdi> · <bdi>{time}</bdi>s</span>
+          </div>
+          <div className={styles.mobileGameActions}>
+            <button type="button" data-mobile-game-left aria-label={copy.game.left} onPointerDown={(event) => holdPaddle(event, -1)} onPointerUp={releasePaddle} onPointerCancel={releasePaddle} onLostPointerCapture={releasePaddle} onBlur={releaseControls} onClick={(event) => nudgePaddle(event, -1)}>←</button>
+            <button type="button" data-mobile-game-action onClick={action}>{actionLabel}</button>
+            <button type="button" data-mobile-game-right aria-label={copy.game.right} onPointerDown={(event) => holdPaddle(event, 1)} onPointerUp={releasePaddle} onPointerCancel={releasePaddle} onLostPointerCapture={releasePaddle} onBlur={releaseControls} onClick={(event) => nudgePaddle(event, 1)}>→</button>
+          </div>
+          <div className={styles.mobileGameSecondary}>
+            <button type="button" data-mobile-game-reset disabled={snapshot.serves === 0} onClick={reset}>{copy.reset}</button>
+            <button type="button" data-mobile-game-finish disabled={snapshot.serves === 0} onClick={finishOrContinue}>{copy.game.finish}</button>
+          </div>
+        </div>
+      )}
+      {snapshot.status === "complete" && (
         <aside className={styles.gameResult} data-game-result>
-          <strong>{completed.every(Boolean) ? copy.game.perfect : copy.game.result}</strong>
+          <strong>{snapshot.outcome === "won" ? copy.game.win : copy.game.result}</strong>
           <dl className={styles.gameResultStats}>
-            <div><dt>{copy.game.score}</dt><dd><bdi>{score}</bdi></dd></div>
-            <div><dt>{copy.game.throws}</dt><dd><bdi>{attempts} / {maxAttempts}</bdi></dd></div>
+            <div><dt>{copy.game.score}</dt><dd><bdi>{snapshot.score}</bdi></dd></div>
+            <div><dt>{copy.game.remaining}</dt><dd><bdi>{cleared}</bdi></dd></div>
             <div><dt>{copy.game.best}</dt><dd><bdi>{best}</bdi></dd></div>
           </dl>
           <button type="button" data-game-result-replay onClick={reset}>{copy.replay}</button>

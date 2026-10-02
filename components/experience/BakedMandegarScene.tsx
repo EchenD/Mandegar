@@ -709,44 +709,26 @@ function InteractionGameEffects({
   const camera = useThree((state) => state.camera);
   const rig = useMemo(() => {
     const group = new THREE.Group();
-    group.name = "fxInteraction_game_signal_toss";
-    const fallbackCenter = anchors.stations.game.object.getWorldPosition(new THREE.Vector3());
-    const screenCenter = screen ? getWorldPointAtUv(screen, 0.5, 0.5) : null;
-    const screenRight = screen ? getWorldPointAtUv(screen, 0.6, 0.5) : null;
-    const screenDown = screen ? getWorldPointAtUv(screen, 0.5, 0.6) : null;
-    const screenLaunch = screen ? getWorldPointAtUv(screen, 0.5, 0.78) : null;
-    const xAxis = screenCenter && screenRight
-      ? screenRight.clone().sub(screenCenter).multiplyScalar(10)
+    group.name = "fxInteraction_game_breakout";
+    const center = screen
+      ? getWorldPointAtUv(screen, 0.5, 0.5)
+      : anchors.stations.game.object.getWorldPosition(new THREE.Vector3());
+    const screenCenter = center ?? anchors.stations.game.object.getWorldPosition(new THREE.Vector3());
+    const right = screen ? getWorldPointAtUv(screen, 0.6, 0.5) : null;
+    const down = screen ? getWorldPointAtUv(screen, 0.5, 0.6) : null;
+    const xAxis = right
+      ? right.clone().sub(screenCenter).multiplyScalar(10)
       : new THREE.Vector3(1, 0, 0);
-    const yAxis = screenCenter && screenDown
-      ? screenDown.clone().sub(screenCenter).multiplyScalar(10)
+    const yAxis = down
+      ? down.clone().sub(screenCenter).multiplyScalar(10)
       : new THREE.Vector3(0, -1.3, 0);
-    const center = screenCenter ?? fallbackCenter;
     const normal = xAxis.clone().cross(yAxis).normalize();
-    if (normal.dot(camera.position.clone().sub(center)) < 0) normal.negate();
-    const screenScale = Math.max(0.2, Math.min(xAxis.length(), yAxis.length()));
-    const targetUvs = [
-      [0.2, 0.29],
-      [0.8, 0.29],
-      [0.5, 0.18],
-    ] as const;
-    const targetPositions = targetUvs.map(([u, v]) => {
-      const surfacePosition = screen ? getWorldPointAtUv(screen, u, v) : null;
-      return (surfacePosition ?? center.clone()
-        .addScaledVector(xAxis, u - 0.5)
-        .addScaledVector(yAxis, v - 0.5))
-        .addScaledVector(normal, screenScale * 0.045);
-    });
-    const launchPosition = (screenLaunch ?? center.clone().addScaledVector(yAxis, 0.28))
-      .clone()
-      .addScaledVector(normal, screenScale * 0.035);
-    const colors = ["#50c7ff", "#ef86ff", "#ffb54a"].map((color) => new THREE.Color(color));
-    const radialTexture = createRadialLightTexture();
-    const ringSize = screenScale * 0.2;
-
-    const orbMaterial = new THREE.SpriteMaterial({
-      map: radialTexture,
-      color: colors[0],
+    if (normal.dot(camera.position.clone().sub(screenCenter)) < 0) normal.negate();
+    const scale = Math.max(0.2, Math.min(xAxis.length(), yAxis.length()));
+    const texture = createGameWaveTexture();
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      color: "#75d8ff",
       transparent: true,
       opacity: 0,
       depthTest: true,
@@ -754,235 +736,48 @@ function InteractionGameEffects({
       blending: THREE.AdditiveBlending,
       toneMapped: false,
     });
-    const orb = new THREE.Sprite(orbMaterial);
-    orb.name = "fxInteraction_game_launched_signal";
-    orb.position.copy(launchPosition);
-    orb.scale.setScalar(screenScale * 0.22);
-    orb.renderOrder = 17;
-    orb.frustumCulled = false;
-    orb.raycast = () => {};
-    group.add(orb);
-
-    const trailCount = quality === "full" ? 10 : 6;
-    const trailGeometry = new THREE.BufferGeometry();
-    const trailPositions = new Float32Array(trailCount * 3);
-    const trailColors = new Float32Array(trailCount * 3);
-    trailGeometry.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
-    trailGeometry.setAttribute("color", new THREE.BufferAttribute(trailColors, 3));
-    const trailMaterial = new THREE.PointsMaterial({
-      map: radialTexture,
-      size: screenScale * (quality === "full" ? 0.11 : 0.13),
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: quality === "full" ? 0.8 : 0.66,
-      depthTest: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      vertexColors: true,
-      toneMapped: false,
-    });
-    const trail = new THREE.Points(trailGeometry, trailMaterial);
-    trail.name = "fxInteraction_game_signal_trail";
-    trail.renderOrder = 16;
-    trail.frustumCulled = false;
-    trail.raycast = () => {};
-    trail.visible = false;
-    group.add(trail);
-
-    const waveTexture = createGameWaveTexture();
-    const impactMaterial = new THREE.SpriteMaterial({
-      map: waveTexture,
-      color: colors[0],
-      transparent: true,
-      opacity: 0,
-      depthTest: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      toneMapped: false,
-    });
-    const impact = new THREE.Sprite(impactMaterial);
-    impact.name = "fxInteraction_game_hit_burst";
+    const impact = new THREE.Sprite(material);
+    impact.name = "fxInteraction_game_block_light";
     impact.renderOrder = 18;
     impact.frustumCulled = false;
     impact.raycast = () => {};
-    impact.visible = false;
     group.add(impact);
-
-    const finaleWaves = colors.map((color, index) => {
-      const material = new THREE.SpriteMaterial({
-        map: waveTexture,
-        color,
-        transparent: true,
-        opacity: 0,
-        depthTest: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        toneMapped: false,
-      });
-      const wave = new THREE.Sprite(material);
-      wave.name = `fxInteraction_game_finale_wave_${String(index + 1).padStart(2, "0")}`;
-      wave.position.copy(center).addScaledVector(normal, screenScale * (0.05 + index * 0.012));
-      wave.scale.setScalar(screenScale * 0.3);
-      wave.renderOrder = 17 + index;
-      wave.frustumCulled = false;
-      wave.raycast = () => {};
-      wave.visible = false;
-      group.add(wave);
-      return wave;
-    });
-
     return {
       group,
+      screenCenter,
       xAxis,
       yAxis,
       normal,
-      targetPositions,
-      launchPosition,
-      colors,
-      radialTexture,
-      ringSize,
-      orb,
-      orbMaterial,
-      trail,
-      trailGeometry,
-      trailMaterial,
-      trailCount,
-      waveTexture,
+      scale,
+      texture,
+      material,
       impact,
-      impactMaterial,
-      finaleWaves,
-      screenScale,
-      observedLaunchId: interactionRuntime.gameLaunchId,
-      launchAge: Number.POSITIVE_INFINITY,
-      launchTarget: 0,
-      launchAccuracy: 1,
-      launchResult: 0 as 0 | 1 | 2,
-      launchDestination: new THREE.Vector3(),
-      wasComplete: false,
-      finaleAge: Number.POSITIVE_INFINITY,
-      controlPoint: new THREE.Vector3(),
-      curvePoint: new THREE.Vector3(),
-      curvePartA: new THREE.Vector3(),
-      curvePartB: new THREE.Vector3(),
-      curvePartC: new THREE.Vector3(),
-      workingColor: new THREE.Color(),
+      observedHitId: interactionRuntime.gameHitId,
+      age: Number.POSITIVE_INFINITY,
     };
-  }, [anchors, camera, quality, screen]);
+  }, [anchors, camera, screen]);
 
   useFrame((_, delta) => {
+    if (interactionRuntime.gameHitId !== rig.observedHitId) {
+      rig.observedHitId = interactionRuntime.gameHitId;
+      rig.age = 0;
+      rig.impact.position.copy(rig.screenCenter)
+        .addScaledVector(rig.xAxis, interactionRuntime.gameHitX - 0.5)
+        .addScaledVector(rig.yAxis, interactionRuntime.gameHitY - 0.5)
+        .addScaledVector(rig.normal, rig.scale * 0.035);
+    } else {
+      rig.age += delta;
+    }
+    const progress = Math.min(1, rig.age / 0.45);
     const visibility = interactionRuntime.gameVisibility;
-    const complete = interactionRuntime.gameComplete;
-    const allConnected = interactionRuntime.gameCompletedTargets.every(Boolean);
-    const successfulComplete = complete && allConnected;
-    if (successfulComplete && !rig.wasComplete) rig.finaleAge = 0;
-    rig.wasComplete = successfulComplete;
-    rig.finaleAge += delta;
-    if (interactionRuntime.gameLaunchId !== rig.observedLaunchId) {
-      rig.observedLaunchId = interactionRuntime.gameLaunchId;
-      rig.launchAge = 0;
-      rig.launchTarget = interactionRuntime.gameLaunchTarget;
-      rig.launchAccuracy = interactionRuntime.gameLaunchAccuracy;
-      rig.launchResult = interactionRuntime.gameLaunchResult;
-      rig.launchDestination.copy(rig.targetPositions[rig.launchTarget]);
-      rig.launchDestination.addScaledVector(
-        rig.xAxis,
-        interactionRuntime.gameLaunchDestinationX,
-      );
-      rig.launchDestination.addScaledVector(
-        rig.yAxis,
-        interactionRuntime.gameLaunchDestinationY,
-      );
-      rig.orbMaterial.color.copy(rig.colors[rig.launchTarget]);
-      rig.impactMaterial.color.copy(rig.colors[rig.launchTarget]);
-    } else {
-      rig.launchAge += delta;
-    }
-
-    const flightDuration = 0.88;
-    const flightProgress = Math.min(1, rig.launchAge / flightDuration);
-    const flying = rig.launchResult > 0 && rig.launchAge < flightDuration && visibility > 0.001;
-    rig.orb.visible = flying;
-    rig.trail.visible = flying;
-    if (flying) {
-      const travel = 1 - Math.pow(1 - flightProgress, 3);
-      const destination = rig.launchDestination;
-      rig.controlPoint.copy(rig.launchPosition).lerp(destination, 0.48);
-      rig.controlPoint.addScaledVector(
-        rig.normal,
-        rig.screenScale * (0.18 + rig.launchAccuracy * 0.08),
-      );
-      const updateCurvePoint = (progress: number, target: THREE.Vector3) => {
-        const inverse = 1 - progress;
-        target.copy(rig.launchPosition).multiplyScalar(inverse * inverse);
-        rig.curvePartA.copy(rig.controlPoint).multiplyScalar(2 * inverse * progress);
-        rig.curvePartB.copy(destination).multiplyScalar(progress * progress);
-        target.add(rig.curvePartA).add(rig.curvePartB);
-      };
-      updateCurvePoint(travel, rig.curvePoint);
-      rig.orb.position.copy(rig.curvePoint);
-      rig.orbMaterial.opacity = Math.sin(flightProgress * Math.PI) * visibility;
-      rig.orb.scale.setScalar(rig.ringSize * (1.05 + Math.sin(flightProgress * Math.PI) * 0.38));
-
-      const trailPositions = rig.trailGeometry.getAttribute("position") as THREE.BufferAttribute;
-      const trailColors = rig.trailGeometry.getAttribute("color") as THREE.BufferAttribute;
-      for (let index = 0; index < rig.trailCount; index += 1) {
-        const trailProgress = Math.max(0, travel - index * (0.38 / rig.trailCount));
-        updateCurvePoint(trailProgress, rig.curvePartC);
-        trailPositions.setXYZ(index, rig.curvePartC.x, rig.curvePartC.y, rig.curvePartC.z);
-        const energy = (1 - index / rig.trailCount) * Math.sin(flightProgress * Math.PI);
-        rig.workingColor.copy(rig.colors[rig.launchTarget]).multiplyScalar(energy);
-        trailColors.setXYZ(
-          index,
-          rig.workingColor.r,
-          rig.workingColor.g,
-          rig.workingColor.b,
-        );
-      }
-      trailPositions.needsUpdate = true;
-      trailColors.needsUpdate = true;
-    } else {
-      rig.orbMaterial.opacity = 0;
-    }
-
-    const impactProgress = THREE.MathUtils.clamp((rig.launchAge - 0.48) / 0.58, 0, 1);
-    const impactActive = rig.launchResult > 0 && impactProgress > 0 && impactProgress < 1;
-    rig.impact.visible = impactActive;
-    if (impactActive) {
-      const strength = rig.launchResult === 2 ? 1 : 0.68;
-      rig.impact.position.copy(rig.launchDestination).addScaledVector(
-        rig.normal,
-        rig.screenScale * impactProgress * 0.12,
-      );
-      rig.impactMaterial.opacity = Math.sin(impactProgress * Math.PI) * strength * visibility;
-      rig.impact.scale.setScalar(
-        rig.screenScale * (0.16 + impactProgress * (rig.launchResult === 2 ? 0.92 : 0.58)),
-      );
-    } else {
-      rig.impactMaterial.opacity = 0;
-    }
-
-    rig.finaleWaves.forEach((wave, index) => {
-      const material = wave.material as THREE.SpriteMaterial;
-      const waveProgress = THREE.MathUtils.clamp((rig.finaleAge - index * 0.1) / 0.95, 0, 1);
-      const active = successfulComplete && waveProgress > 0 && waveProgress < 1;
-      wave.visible = active;
-      material.opacity = active ? Math.sin(waveProgress * Math.PI) * 0.48 * visibility : 0;
-      wave.scale.setScalar(rig.screenScale * (0.35 + waveProgress * 2.1));
-    });
-    rig.group.visible = visibility > 0.001
-      || flying
-      || impactActive
-      || (successfulComplete && rig.finaleAge < 1.25);
+    rig.group.visible = visibility > 0.001 && progress < 1;
+    rig.material.opacity = Math.sin(progress * Math.PI) * (quality === "full" ? 0.28 : 0.2) * visibility;
+    rig.impact.scale.setScalar(rig.scale * (0.06 + progress * 0.34));
   });
 
   useEffect(() => () => {
-    rig.orbMaterial.dispose();
-    rig.trailGeometry.dispose();
-    rig.trailMaterial.dispose();
-    rig.impactMaterial.dispose();
-    rig.finaleWaves.forEach((wave) => (wave.material as THREE.Material).dispose());
-    rig.waveTexture.dispose();
-    rig.radialTexture.dispose();
+    rig.material.dispose();
+    rig.texture.dispose();
   }, [rig]);
 
   return <primitive object={rig.group} />;

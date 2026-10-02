@@ -400,11 +400,12 @@ test.describe("Mandegar responsive layout", () => {
     await expect(page.locator("[data-scene-copy='experiences']")).toBeVisible();
     const director = page.locator("[data-interaction-director]");
     await expect(director).toHaveAttribute("data-active-station", "game");
-    const launch = page.locator("[data-game-spatial-controls] button").first();
+    await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+    const launch = page.locator("[data-game-action]");
     await launch.focus();
     await expect(launch).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "flying");
+    await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "running");
     await page.keyboard.press("Escape");
     await expect(director).toHaveAttribute("data-active-station", "none");
 
