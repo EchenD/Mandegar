@@ -115,9 +115,9 @@ You can begin 3D production now. Work in this order so code reviews can use mean
 Review these URLs while working:
 
 ```text
-http://localhost:3000/fa?intro=0&phase=arrival&creative=1
-http://localhost:3000/fa?intro=0&phase=discovery&creative=1
-http://localhost:3000/fa?intro=0&phase=activation&creative=1
+http://localhost:3100/fa?intro=0&phase=arrival&creative=1
+http://localhost:3100/fa?intro=0&phase=discovery&creative=1
+http://localhost:3100/fa?intro=0&phase=activation&creative=1
 ```
 
 For now, do not spend time on detailed audience assets, decorative orbiting geometry, dense booth props or final screen media. Those do not help us prove the silence-to-discovery-to-activation sentence and may need to change after the first three compositions are locked.

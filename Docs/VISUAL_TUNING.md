@@ -73,7 +73,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 Run the development server and open a stage with the creative flag:
 
 ```text
-http://localhost:3000/fa?intro=0&phase=discovery&creative=1
+http://localhost:3100/fa?intro=0&phase=discovery&creative=1
 ```
 
 The panel is deliberately excluded from production builds. It can:

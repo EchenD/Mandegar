@@ -11,7 +11,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/fa`. English is available at `/en` and Arabic at `/ar`.
+Open `http://localhost:3100/fa`. English is available at `/en` and Arabic at `/ar`.
+Development uses port 3100 to avoid Windows reserving port 3000. Override it with `npm run dev -- --port <port>` when needed.
 
 ## Production build
 

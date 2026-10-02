@@ -108,7 +108,7 @@ PASS
 npm run build
 PASS — Next.js 16.2.12 production build, 59/59 static pages generated
 
-PLAYWRIGHT_PORT=3001 npx playwright test \
+PLAYWRIGHT_PORT=3100 npx playwright test \
   tests/e2e/baked-scene-contract.spec.ts \
   tests/e2e/hero-interaction-shell.spec.ts \
   tests/e2e/hero-photo.spec.ts \
@@ -157,7 +157,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/fa`, `/en`, and `/ar`. Useful direct checks are:
+Open `http://localhost:3100/fa`, `/en`, and `/ar`. Useful direct checks are:
 
 ```text
 /en?intro=0&phase=activation
@@ -170,10 +170,10 @@ Open `http://localhost:3000/fa`, `/en`, and `/ar`. Useful direct checks are:
 /en?intro=0&phase=reveal&anchors=1   (development only)
 ```
 
-If port 3000 is occupied:
+Development defaults to port 3100 because Windows can reserve port 3000. If port 3100 is occupied, choose another available, non-excluded port:
 
 ```powershell
-npm run dev -- -p 3100
+npm run dev -- -p 3300
 ```
 
 For the production bundle:
