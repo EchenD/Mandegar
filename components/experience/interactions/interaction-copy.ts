@@ -19,6 +19,7 @@ export type InteractionCopy = {
     elements: [string, string, string];
     instruction: string;
     complete: string;
+    keyboard: string;
   };
   stage: { beam: string; finale: string; play: string; showing: string; ready: string };
   game: {
@@ -53,7 +54,7 @@ const english: InteractionCopy = {
   undo: "Undo",
   stations: {
     photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch a moment arrive on your phone." },
-    touch: { label: "Open experience composer", title: "Experience composer", instruction: "Tap or drag an element to the centre." },
+    touch: { label: "Shape the experience", title: "Shape the experience.", instruction: "Move the forms. Watch the screen change." },
     stage: { label: "Open stage controls", title: "Your lighting look", instruction: "Choose your lights. Play the show or finish your look." },
     game: { label: "Play Breakout", title: "Breakout", instruction: "Drag the paddle or use ← / → to clear the lights." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
@@ -61,8 +62,9 @@ const english: InteractionCopy = {
   photo: { ready: "Capture the moment.", capture: "Watch delivery", captured: "On your phone.", delivery: "Straight to your phone.", example: "Demo · example photo" },
   touch: {
     elements: ["Space", "Story", "People"],
-    instruction: "Bring space, story and people together.",
+    instruction: "Move the forms to shape your experience.",
     complete: "Your space is alive.",
+    keyboard: "Press Enter to select. Use arrow keys to move this form.",
   },
   stage: { beam: "Beam", finale: "Your lighting look is ready", play: "Play your show", showing: "Your show is playing", ready: "Pick any lights to create your look" },
   game: {
@@ -103,7 +105,7 @@ const persian: InteractionCopy = {
   undo: "بازگشت",
   stations: {
     photo: { label: "نمایش تحویل عکس رویداد", title: "تحویل فوری عکس", instruction: "رسیدن یک لحظه به گوشی خود را ببینید." },
-    touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "هر عنصر را لمس کنید یا به مرکز بکشید." },
+    touch: { label: "تجربه را بسازید", title: "تجربه را بسازید.", instruction: "شکل‌ها را حرکت دهید؛ تغییر نمایشگر را ببینید." },
     stage: { label: "کنترل نور صحنه", title: "نورپردازی شما", instruction: "نورها را انتخاب کنید؛ نمایش را پخش کنید یا ترکیب را پایان دهید." },
     game: { label: "بازی آجرشکن", title: "آجرشکن", instruction: "سکو را بکشید یا با ← و → حرکت دهید و نورها را پاک کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
@@ -111,8 +113,9 @@ const persian: InteractionCopy = {
   photo: { ready: "ثبت یک لحظه.", capture: "نمایش تحویل", captured: "روی گوشی شما.", delivery: "مستقیم روی گوشی شما.", example: "نمایش خدمات · تصویر نمونه" },
   touch: {
     elements: ["فضا", "روایت", "مردم"],
-    instruction: "فضا، روایت و مردم را به هم متصل کنید.",
+    instruction: "با حرکت شکل‌ها، تجربه‌تان را بسازید.",
     complete: "فضای شما زنده شد.",
+    keyboard: "با Enter انتخاب کنید و با کلیدهای جهت شکل را حرکت دهید.",
   },
   stage: { beam: "پرتو", finale: "نورپردازی شما آماده است", play: "پخش نمایش شما", showing: "نمایش شما در حال پخش است", ready: "نورهای دلخواه را برای ترکیب خود انتخاب کنید" },
   game: {
@@ -153,7 +156,7 @@ const arabic: InteractionCopy = {
   undo: "تراجع",
   stations: {
     photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد اللحظة تصل إلى هاتفك." },
-    touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "المس كل عنصر أو اسحبه إلى الوسط." },
+    touch: { label: "شكّل التجربة", title: "شكّل التجربة.", instruction: "حرّك الأشكال وشاهد الشاشة تتغيّر." },
     stage: { label: "فتح تحكم المسرح", title: "إضاءتك", instruction: "اختر الأضواء ثم شغّل العرض أو أنهِ تنسيقك." },
     game: { label: "العب كاسر الطوب", title: "كاسر الطوب", instruction: "اسحب المضرب أو استخدم ← و → لإزالة الأضواء." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
@@ -161,8 +164,9 @@ const arabic: InteractionCopy = {
   photo: { ready: "التقط اللحظة.", capture: "شاهد التسليم", captured: "على هاتفك.", delivery: "مباشرةً إلى هاتفك.", example: "عرض تجريبي · صورة نموذجية" },
   touch: {
     elements: ["المكان", "القصة", "الناس"],
-    instruction: "اجمع المكان والقصة والناس.",
+    instruction: "حرّك الأشكال لتشكّل تجربتك.",
     complete: "مكانك ينبض بالحياة.",
+    keyboard: "اضغط Enter للاختيار واستخدم الأسهم لتحريك هذا الشكل.",
   },
   stage: { beam: "شعاع", finale: "إضاءتك جاهزة", play: "شغّل عرضك", showing: "عرضك قيد التشغيل", ready: "اختر الأضواء لتشكّل أجواءك" },
   game: {

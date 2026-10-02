@@ -49,6 +49,7 @@
 .root[data-active-station="photo"] .interactionHint,
 .root[data-active-station="photo"] .mobileSkipButton[data-complete="true"] { display: none; }
 .root[data-active-station="game"] .interactionHint { display: none; }
+.root[data-active-station="touch"] .interactionHint { display: none; }
 .root[data-active-station="photo"] .mobileSkipButton:not([data-complete="true"]) {
   inset-inline: auto;
   right: 1.25rem;

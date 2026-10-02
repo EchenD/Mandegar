@@ -11,15 +11,25 @@ import {
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
 import { getVisitorCreation, saveComposer } from "./visitor-creation";
+import { loadMonitorArtwork } from "./monitor-artwork";
+import {
+  cancelComposerObjectDrag,
+  composerObjectDefinitions,
+  getComposerMonitorPoint,
+  getComposerObjectState,
+  registerComposerObjectActions,
+  resetComposerObjects,
+  setComposerObjectsInteractive,
+  settleComposerObject,
+  subscribeComposerObjects,
+  updateComposerObjectPose,
+  type ComposerObjectPose,
+} from "./composer-object-store";
 import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.interactive.canvas;
 const center = { x: 0.5, y: 0.45 };
-const elementDefinitions = [
-  { id: "space", x: 0.2, y: 0.67 },
-  { id: "story", x: 0.5, y: 0.71 },
-  { id: "people", x: 0.8, y: 0.67 },
-] as const;
+const elementDefinitions = composerObjectDefinitions;
 
 type ComposerPointer = {
   pointerId: number;
@@ -28,6 +38,7 @@ type ComposerPointer = {
   startY: number;
   x: number;
   y: number;
+  initialPose: ComposerObjectPose | null;
 };
 
 function distance(firstX: number, firstY: number, secondX: number, secondY: number) {
@@ -114,6 +125,7 @@ export function TouchComposerInteraction({
     const height = canvas.height;
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const selectedElements = selectedRef.current;
+    const objectState = getComposerObjectState();
     const pointer = activePointer.current;
     const selectedCount = selectedElements.filter(Boolean).length;
     const isComplete = selectedCount === elementDefinitions.length;
@@ -176,8 +188,9 @@ export function TouchComposerInteraction({
       if (!selectedElements[index]) return;
       context.save();
       context.globalAlpha = surfaceOpacity * centerReveal * elementReveals[index];
-      const sourceX = definition.x * width;
-      const sourceY = definition.y * height;
+      const point = getComposerMonitorPoint(index, objectState.poses[index]);
+      const sourceX = point.x * width;
+      const sourceY = point.y * height;
       context.strokeStyle = "rgba(34,92,255,.58)";
       context.lineWidth = 3;
       context.beginPath();
@@ -254,8 +267,9 @@ export function TouchComposerInteraction({
 
     elementDefinitions.forEach((definition, index) => {
       const dragging = pointer?.elementIndex === index;
-      const x = (dragging ? pointer.x : definition.x) * width;
-      const y = (dragging ? pointer.y : definition.y) * height;
+      const point = getComposerMonitorPoint(index, objectState.poses[index]);
+      const x = point.x * width;
+      const y = point.y * height;
       const active = selectedElements[index];
       const focused = hoverElement.current === index || keyboardFocus.current === index;
       const elementReveal = elementReveals[index];
@@ -264,20 +278,48 @@ export function TouchComposerInteraction({
       context.translate(x, y);
       context.scale(0.82 + elementReveal * 0.18, 0.82 + elementReveal * 0.18);
       context.translate(-x, -y);
-      context.fillStyle = active ? "#e9eeff" : "#fff";
-      context.strokeStyle = active || focused || dragging ? "#225cff" : "rgba(22,25,29,.2)";
-      context.lineWidth = focused || dragging ? 4 : active ? 3 : 1.5;
-      context.shadowColor = "rgba(22,25,29,.11)";
-      context.shadowBlur = focused || dragging ? 26 : 16;
-      context.beginPath();
-      context.arc(x, y, 56, 0, Math.PI * 2);
-      context.fill();
-      context.stroke();
-      context.shadowBlur = 0;
-      context.fillStyle = active ? "#225cff" : "rgba(22,25,29,.42)";
-      context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
-      context.textAlign = "center";
-      context.fillText(String(index + 1).padStart(2, "0"), x, y - 72);
+      if (focused || dragging || objectState.dragging?.index === index) {
+        context.beginPath();
+        context.arc(x, y, 56, 0, Math.PI * 2);
+        context.strokeStyle = "rgba(34,92,255,.3)";
+        context.lineWidth = 2;
+        context.stroke();
+      }
+      context.save();
+      context.translate(x, y);
+      context.rotate(index === 1 ? objectState.poses[index].x * 0.35 : 0);
+      context.fillStyle = definition.color;
+      context.strokeStyle = "rgba(22,25,29,.2)";
+      context.lineWidth = 1.5;
+      if (index === 0) {
+        context.beginPath();
+        context.moveTo(0, -35);
+        context.lineTo(35, -16);
+        context.lineTo(35, 22);
+        context.lineTo(0, 40);
+        context.lineTo(-35, 22);
+        context.lineTo(-35, -16);
+        context.closePath();
+        context.fill();
+        context.stroke();
+        context.fillStyle = "rgba(117,216,255,.45)";
+        context.beginPath();
+        context.moveTo(0, -35); context.lineTo(35, -16); context.lineTo(0, 2); context.lineTo(-35, -16); context.closePath(); context.fill();
+        context.strokeStyle = "rgba(247,247,244,.4)";
+        context.beginPath(); context.moveTo(0, 2); context.lineTo(0, 40); context.stroke();
+      } else if (index === 1) {
+        context.beginPath();
+        context.moveTo(-44, -19); context.lineTo(-4, -30); context.lineTo(43, -13); context.lineTo(34, 27); context.lineTo(-8, 16); context.lineTo(-44, 28); context.closePath(); context.fill(); context.stroke();
+        context.fillStyle = "rgba(34,92,255,.17)";
+        context.beginPath(); context.moveTo(-4, -30); context.lineTo(43, -13); context.lineTo(34, 27); context.lineTo(-8, 16); context.closePath(); context.fill();
+      } else {
+        const radius = 34 + objectState.poses[index].y * 4;
+        const gradient = context.createRadialGradient(-11, -14, 3, 0, 0, radius);
+        gradient.addColorStop(0, "#cef2ff"); gradient.addColorStop(0.5, "#75d8ff"); gradient.addColorStop(1, "#3e9fcc");
+        context.fillStyle = gradient;
+        context.beginPath(); context.arc(0, 0, radius, 0, Math.PI * 2); context.fill(); context.stroke();
+      }
+      context.restore();
       if (active) {
         context.fillStyle = "#225cff";
         context.beginPath();
@@ -295,9 +337,9 @@ export function TouchComposerInteraction({
       }
       context.direction = direction;
       context.fillStyle = "#16191d";
-      context.font = '700 26px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = '600 22px "Vazirmatn Variable", Tahoma, sans-serif';
       context.textAlign = "center";
-      context.fillText(copy.touch.elements[index], x, y + 7, 98);
+      context.fillText(copy.touch.elements[index], x, y + 56, 132);
       context.restore();
     });
 
@@ -401,9 +443,11 @@ export function TouchComposerInteraction({
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const duration = reducedMotion ? 0 : target === 1 ? 550 : 380;
     transitionState.current = target === 1 ? "intro" : "outro";
+    setComposerObjectsInteractive(false);
     if (duration === 0 || Math.abs(target - from) < 0.001) {
       transitionProgress.current = target;
       transitionState.current = target === 1 ? "ready" : "outro";
+      setComposerObjectsInteractive(target === 1);
       paint();
       onFinish?.();
       return;
@@ -419,6 +463,7 @@ export function TouchComposerInteraction({
       }
       transitionFrame.current = null;
       transitionState.current = target === 1 ? "ready" : "outro";
+      setComposerObjectsInteractive(target === 1);
       onFinish?.();
     };
     transitionFrame.current = window.requestAnimationFrame(tick);
@@ -426,6 +471,8 @@ export function TouchComposerInteraction({
 
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
+    const pointer = activePointer.current;
+    if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
     activePointer.current = null;
     hoverElement.current = null;
     hoverControl.current = null;
@@ -447,6 +494,7 @@ export function TouchComposerInteraction({
     completionTimer.current = null;
     const wasComplete = completeRef.current;
     selectedRef.current = [false, false, false];
+    resetComposerObjects();
     interactionRuntime.touchElements = [false, false, false];
     saveComposer([false, false, false]);
     completeRef.current = false;
@@ -458,6 +506,8 @@ export function TouchComposerInteraction({
   }, [schedulePaint]);
 
   const activateElement = useCallback((index: number) => {
+    if (transitionState.current !== "ready" || activePointer.current) return;
+    settleComposerObject(index);
     if (selectedRef.current[index]) return;
     const next = [...selectedRef.current];
     next[index] = true;
@@ -486,11 +536,11 @@ export function TouchComposerInteraction({
     interactionRuntime.touchElements = [...selectedRef.current];
     let active = true;
     let registered = false;
-    const image = new Image();
-    const begin = () => {
-      if (!active || registered) return;
+    const begin = (image: HTMLImageElement | null) => {
+      if (!active) return;
+      monitorImage.current = image;
+      if (registered) { schedulePaint(); return; }
       registered = true;
-      monitorImage.current = image.naturalWidth > 0 ? image : null;
       transitionProgress.current = 0;
       paint();
       registerInteractionCanvas("interactive", canvas);
@@ -499,17 +549,14 @@ export function TouchComposerInteraction({
         if (completeRef.current) onCompleteRef.current();
       });
     };
-    image.onload = begin;
-    image.onerror = begin;
-    image.src = sceneTokens.bakedScene.screens.interactive;
-    if (image.complete) begin();
+    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.interactive, begin, { immediate: Boolean(previousSurface.current) });
     void document.fonts?.ready.then(() => {
       if (active) schedulePaint();
     });
     return () => {
       active = false;
-      image.onload = null;
-      image.onerror = null;
+      stopLoading();
+      setComposerObjectsInteractive(false);
       if (interactionRuntime.monitorEntries.interactive?.canvas !== canvas) return;
       if (experience?.isConnected && selectedRef.current.some(Boolean)) {
         transitionState.current = "outro";
@@ -524,6 +571,33 @@ export function TouchComposerInteraction({
   }, [animateTransition, paint, schedulePaint]);
 
   useEffect(() => {
+    registerComposerObjectActions(activateElement);
+    const unsubscribe = subscribeComposerObjects(schedulePaint);
+    const release = () => {
+      const pointer = activePointer.current;
+      if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
+      activePointer.current = null;
+      hoverElement.current = null;
+      hoverControl.current = null;
+      cancelComposerObjectDrag();
+      schedulePaint();
+    };
+    const hidden = () => { if (document.hidden) release(); };
+    const menuToggle = document.querySelector("header button[aria-controls='primary-navigation']");
+    const menu = new MutationObserver(() => { if (menuToggle?.getAttribute("aria-expanded") === "true") release(); });
+    if (menuToggle) menu.observe(menuToggle, { attributes: true, attributeFilter: ["aria-expanded"] });
+    window.addEventListener("blur", release);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      unsubscribe();
+      registerComposerObjectActions(null);
+      window.removeEventListener("blur", release);
+      document.removeEventListener("visibilitychange", hidden);
+      menu.disconnect();
+    };
+  }, [activateElement, schedulePaint]);
+
+  useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
       sceneInputCount.current += 1;
       if (canvasRef.current) {
@@ -536,6 +610,8 @@ export function TouchComposerInteraction({
         if (pointer?.pointerId === event.pointerId && pointer.elementIndex !== null) {
           pointer.x = point.x;
           pointer.y = point.y;
+          const definition = elementDefinitions[pointer.elementIndex];
+          updateComposerObjectPose(pointer.elementIndex, { x: (point.x - definition.x) / 0.08, y: (definition.y - point.y) / 0.085 });
           schedulePaint();
           return;
         }
@@ -547,9 +623,8 @@ export function TouchComposerInteraction({
               ? "continue"
               : null;
         hoverElement.current = hoverControl.current === null
-          ? elementDefinitions.findIndex((definition, index) => (
-            !selectedRef.current[index]
-            && distance(point.x, point.y, definition.x, definition.y) <= 0.115
+          ? elementDefinitions.findIndex((_, index) => (
+            distance(point.x, point.y, getComposerMonitorPoint(index).x, getComposerMonitorPoint(index).y) <= 0.115
           ))
           : null;
         if (hoverElement.current !== null && hoverElement.current < 0) hoverElement.current = null;
@@ -573,9 +648,8 @@ export function TouchComposerInteraction({
           continueWithTransition();
           return;
         }
-        const elementIndex = elementDefinitions.findIndex((definition, index) => (
-          !selectedRef.current[index]
-          && distance(point.x, point.y, definition.x, definition.y) <= 0.115
+        const elementIndex = elementDefinitions.findIndex((_, index) => (
+          distance(point.x, point.y, getComposerMonitorPoint(index).x, getComposerMonitorPoint(index).y) <= 0.115
         ));
         activePointer.current = {
           pointerId: event.pointerId,
@@ -584,12 +658,15 @@ export function TouchComposerInteraction({
           startY: point.y,
           x: point.x,
           y: point.y,
+          initialPose: elementIndex >= 0 ? { ...getComposerObjectState().poses[elementIndex] } : null,
         };
         schedulePaint();
         return;
       }
 
       if (event.phase === "cancel") {
+        const pointer = activePointer.current;
+        if (pointer?.elementIndex !== null && pointer?.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
         activePointer.current = null;
         hoverElement.current = null;
         hoverControl.current = null;
@@ -607,7 +684,10 @@ export function TouchComposerInteraction({
       if (pointer.elementIndex !== null) {
         const travelled = distance(point.x, point.y, pointer.startX, pointer.startY);
         const reachedCenter = distance(point.x, point.y, center.x, center.y) <= 0.18;
-        if (travelled <= 0.045 || reachedCenter) activateElement(pointer.elementIndex);
+        if (travelled <= 0.045 || reachedCenter) {
+          updateComposerObjectPose(pointer.elementIndex, getComposerObjectState().poses[pointer.elementIndex], true);
+          activateElement(pointer.elementIndex);
+        } else if (pointer.initialPose) updateComposerObjectPose(pointer.elementIndex, pointer.initialPose);
       }
       schedulePaint();
     };
@@ -619,6 +699,7 @@ export function TouchComposerInteraction({
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
+    setComposerObjectsInteractive(false);
     interactionRuntime.touchElements = [...getVisitorCreation().composer];
     interactionRuntime.touchVisibility = 0;
   }, []);
@@ -652,6 +733,15 @@ export function TouchComposerInteraction({
           type="button"
           data-touch-element={elementDefinitions[index].id}
           aria-pressed={selected[index]}
+          aria-label={`${label}. ${copy.touch.keyboard}`}
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key) || transitionState.current !== "ready") return;
+            event.preventDefault();
+            if (getComposerObjectState().dragging || activePointer.current) return;
+            const pose = getComposerObjectState().poses[index];
+            updateComposerObjectPose(index, { x: pose.x + (event.key === "ArrowRight" ? 0.15 : event.key === "ArrowLeft" ? -0.15 : 0), y: pose.y + (event.key === "ArrowUp" ? 0.12 : event.key === "ArrowDown" ? -0.12 : 0) }, true);
+            activateElement(index);
+          }}
           onFocus={() => focusControl(index)}
           onBlur={() => focusControl(null)}
           onClick={() => activateElement(index)}

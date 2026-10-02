@@ -31,6 +31,8 @@ import {
 import { AmbientDust } from "./AmbientDust";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { BakedScreenController } from "./BakedScreenController";
+import { ComposerObjects } from "./ComposerObjects";
+import { getComposerObjectState } from "./interactions/composer-object-store";
 import { DeferredBakedCrowd } from "./BakedCrowd";
 import { DataFlowNetwork } from "./DataFlowNetwork";
 import { experienceState } from "./experience-state";
@@ -1299,6 +1301,7 @@ export function BakedMandegarScene({
     document.body.style.cursor = "";
   }, []);
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
     const pointer = gamePointer.current;
     if (pointer && interactionRuntime.activeStation === "game") {
       event.stopPropagation();
@@ -1336,6 +1339,7 @@ export function BakedMandegarScene({
     document.body.style.cursor = "pointer";
   }, []);
   const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
@@ -1364,6 +1368,7 @@ export function BakedMandegarScene({
     }
   }, [exhibition]);
   const handlePointerEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
     const pointer = gamePointer.current;
     if (pointer && pointer.pointerId !== event.pointerId && interactionRuntime.activeStation === "game") return;
     if (pointer && pointer.pointerId === event.pointerId) {
@@ -1392,6 +1397,7 @@ export function BakedMandegarScene({
     });
   }, [releaseGamePointer]);
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
     if (gamePointer.current && interactionRuntime.activeStation === "game") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
@@ -1407,6 +1413,7 @@ export function BakedMandegarScene({
     clearInteraction();
   }, [clearInteraction]);
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
+    if (interactionRuntime.activeStation === "touch" && getComposerObjectState().dragging !== null) return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || !event.uv) return;
@@ -1523,6 +1530,7 @@ export function BakedMandegarScene({
         onClick={handleClick}
       />
       <BakedScreenController root={exhibition} projects={projects} />
+      <ComposerObjects root={exhibition} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} root={exhibition} />
       <InteractionGameEffects
