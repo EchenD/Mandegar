@@ -104,7 +104,7 @@ export function IntelligenceInspector({ locale, enabled }: { locale: Locale; ena
         type="button"
         className={styles.explore}
         disabled={snapshot.people.length === 0}
-        hidden={Boolean(example)}
+        hidden={Boolean(snapshot.pinned)}
         onClick={(event) => {
           cycleIntelligencePerson(1);
           if (event.detail === 0) {

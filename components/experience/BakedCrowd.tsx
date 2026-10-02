@@ -216,9 +216,21 @@ function BakedCrowdAsset({
     const id = getCrowdPersonAtRay(world, event.ray, raycaster);
     return id && id === getCrowdPersonId(event.object) ? id : null;
   };
+  const clearHoverForObject = (object: THREE.Object3D) => {
+    const id = getCrowdPersonId(object);
+    if (id && getIntelligenceSnapshot().hovered === id) hoverIntelligencePerson(null);
+    if (runtimeRef.current?.ownsCursor && !getIntelligenceSnapshot().hovered) {
+      document.body.style.cursor = "";
+      runtimeRef.current.ownsCursor = false;
+    }
+  };
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+    if (event.pointerType === "touch") return;
     const id = personFromHit(event);
-    if (!id || event.pointerType === "touch") return;
+    if (!id) {
+      clearHoverForObject(event.object);
+      return;
+    }
     event.stopPropagation();
     hoverIntelligencePerson(id);
     document.body.style.cursor = "pointer";
@@ -230,12 +242,7 @@ function BakedCrowdAsset({
     }
   };
   const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
-    const id = getCrowdPersonId(event.object);
-    if (id && getIntelligenceSnapshot().hovered === id) hoverIntelligencePerson(null);
-    if (runtimeRef.current?.ownsCursor) {
-      document.body.style.cursor = "";
-      runtimeRef.current.ownsCursor = false;
-    }
+    clearHoverForObject(event.object);
   };
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     const id = personFromHit(event);
@@ -251,7 +258,7 @@ function BakedCrowdAsset({
 
   return (
     <>
-      <primitive object={scene} onPointerMove={handlePointerMove} onPointerOut={handlePointerOut} onClick={handleClick} />
+      <primitive object={scene} onPointerMove={handlePointerMove} onPointerOut={handlePointerOut} onPointerCancel={handlePointerOut} onClick={handleClick} />
       <CrowdIntelligenceNetwork crowd={scene} />
       <CrowdPersonReadout
         locale={locale}

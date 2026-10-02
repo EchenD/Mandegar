@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import * as THREE from "three";
-import { getCrowdPersonAtRay, getCrowdReadoutPoint, isCrowdPersonOccluded } from "../../components/experience/crowd-person-inspection";
+import { createCrowdPeople, getCrowdPersonAtRay, getCrowdReadoutPoint, isCrowdPersonOccluded } from "../../components/experience/crowd-person-inspection";
+import { createBakedSceneMaterial } from "../../components/experience/baked-scene-material";
+import { restoreRuntimeMaterial } from "../../components/experience/baked-material-binding";
 
 test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
@@ -62,11 +64,14 @@ test("hovering and clicking a real scene person previews and pins simulated acti
   await page.screenshot({ path: baselinePath });
   await testInfo.attach("intelligence-desktop-before-hover", { path: baselinePath, contentType: "image/png" });
   const point = await firstPerson(page);
+  await inspector.locator("[data-intelligence-explore]").focus();
   await hoverPerson(page, point.id);
   await expect(inspector).toHaveAttribute("data-person", point.id);
   await expect(inspector).toHaveAttribute("data-pinned", "false");
   await expect(inspector).toContainText("Example data · simulated");
   await expectWorldReadout(page, point.id);
+  await expect(inspector.locator("[data-intelligence-explore]")).toBeFocused();
+  await expect(inspector.locator("[data-intelligence-explore]")).toBeVisible();
   const otherPoint = (JSON.parse(await inspector.getAttribute("data-visible-people") ?? "[]") as PersonPoint[]).find((person) => person.id !== point.id);
   if (otherPoint) {
     await hoverPerson(page, otherPoint.id);
@@ -300,4 +305,54 @@ test("a person with both anchor points outside the frustum has no readout", () =
   expect(getCrowdReadoutPoint(torso, scene.camera, new THREE.Vector3(0, 0, 6))).toBeNull();
   expect(getCrowdReadoutPoint(torso, scene.camera)).toBeNull();
   scene.dispose();
+});
+
+test("readout anchors follow a changed camera transform before the next render", () => {
+  const scene = createOcclusionScene();
+  const torso = new THREE.Vector3(0, 0, 0);
+  const edge = new THREE.Vector3(1.5, 0, 0);
+  expect(getCrowdReadoutPoint(torso, scene.camera, edge)).toBe(torso);
+  scene.camera.position.x = 3;
+  expect(getCrowdReadoutPoint(torso, scene.camera, edge)).toBe(edge);
+  scene.dispose();
+});
+
+test("highlighting one person preserves authored maps and geometry and the other person's focus", () => {
+  const quietMap = new THREE.Texture();
+  const peakMap = new THREE.Texture();
+  const originalMaterial = new THREE.MeshBasicMaterial();
+  const geometry = new THREE.BoxGeometry(1, 2, 0.3);
+  const originalUvs = Array.from(geometry.attributes.uv.array);
+  const root = new THREE.Group();
+  for (const [index, x] of [0, 2].entries()) {
+    const person = new THREE.Mesh(geometry, originalMaterial);
+    person.name = `Human_0${index}`;
+    person.position.x = x;
+    root.add(person);
+  }
+  root.updateMatrixWorld(true);
+  const baked = createBakedSceneMaterial({ name: "test_crowd", quietMap, peakMap, edgeColor: "#225cff", crowdFalloff: true });
+  const people = createCrowdPeople(root, baked.material, baked.uniforms);
+  people[0].focus.value = 1;
+  baked.uniforms.uPeakMix.value = 0.7;
+  for (const person of people) {
+    expect(person.material.uniforms.uQuietMap.value).toBe(quietMap);
+    expect(person.material.uniforms.uPeakMap.value).toBe(peakMap);
+    expect(person.material.uniforms.uPeakMix).toBe(baked.uniforms.uPeakMix);
+    expect((person.object as THREE.Mesh).geometry).toBe(geometry);
+  }
+  expect(people[0].material.uniforms.uPersonFocus.value).toBe(1);
+  expect(people[1].material.uniforms.uPersonFocus.value).toBe(0);
+  expect(baked.uniforms.uPersonFocus.value).toBe(0);
+  expect(Array.from(geometry.attributes.uv.array)).toEqual(originalUvs);
+  people.forEach((person) => {
+    restoreRuntimeMaterial(person.bindings, person.material);
+    expect((person.object as THREE.Mesh).material).toBe(originalMaterial);
+    person.material.dispose();
+  });
+  baked.material.dispose();
+  originalMaterial.dispose();
+  geometry.dispose();
+  quietMap.dispose();
+  peakMap.dispose();
 });

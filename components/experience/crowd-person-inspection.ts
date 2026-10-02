@@ -44,6 +44,8 @@ export function getCrowdPersonAtRay(world: THREE.Scene, ray: THREE.Ray, raycaste
 
 /** A visible edge hit can anchor the annotation when the figure's torso leaves the viewport. */
 export function getCrowdReadoutPoint(torso: THREE.Vector3, camera: THREE.Camera, pointerHit?: THREE.Vector3, projected = new THREE.Vector3()) {
+  // CameraRig changes its transform before the renderer normally refreshes these matrices.
+  camera.updateWorldMatrix(true, false);
   const inside = (point: THREE.Vector3) => {
     projected.copy(point).project(camera);
     return Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1 && projected.z >= -1 && projected.z <= 1;
@@ -54,6 +56,7 @@ export function getCrowdReadoutPoint(torso: THREE.Vector3, camera: THREE.Camera,
 
 /** A hidden torso alone does not make an exposed head or shoulder ineligible. */
 export function isCrowdPersonOccluded(person: THREE.Object3D, world: THREE.Scene, camera: THREE.Camera, raycaster: THREE.Raycaster, pointerHit?: THREE.Vector3) {
+  camera.updateWorldMatrix(true, false);
   const ownMeshes: THREE.Mesh[] = [];
   person.traverse((object) => { if (isVisibleOpaqueMesh(object)) ownMeshes.push(object); });
   if (ownMeshes.length === 0) return false;
@@ -122,6 +125,7 @@ export function projectVisibleCrowdPeople(
   element: HTMLCanvasElement,
   raycaster: THREE.Raycaster,
 ) {
+  camera.updateWorldMatrix(true, false);
   const opaque = getOpaqueMeshes(world);
   const rect = element.getBoundingClientRect();
   const projected = new THREE.Vector3();
