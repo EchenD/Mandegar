@@ -27,10 +27,10 @@ export function Footer({ locale, settings }: { locale: Locale; settings?: SiteSe
         </div>
         <div className="footerMeta">
           <span>{globalLine}</span>
-          <span>© {new Date().getFullYear()} Mandegar</span>
         </div>
       </div>
       <div className="pageWidth footerBottom">
+        <span dir="ltr">© {new Date().getFullYear()} Mandegar</span>
         <Link prefetch={false} href={localizedPath(locale, "legal")}>{legal}</Link>
         <span>{mediaNote}</span>
       </div>
