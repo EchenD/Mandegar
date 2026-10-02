@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { publicAssetPath } from "@/lib/public-asset-path";
+import type { Locale } from "@/lib/i18n";
 import {
   bakedSceneContract,
   requiredEnvironmentNodes,
@@ -1128,10 +1129,12 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
 }
 
 export function BakedMandegarScene({
+  locale,
   quality,
   projects,
   onFirstFrame,
 }: {
+  locale: Locale;
   quality: SceneQuality;
   projects: SceneProject[];
   onFirstFrame?: () => void;
@@ -1533,7 +1536,7 @@ export function BakedMandegarScene({
         quality={quality}
       />
       <DataFlowNetwork exhibition={exhibition} />
-      <DeferredBakedCrowd quietMap={textures[2]} peakMap={textures[3]} />
+      <DeferredBakedCrowd locale={locale} quietMap={textures[2]} peakMap={textures[3]} />
     </group>
   );
 }

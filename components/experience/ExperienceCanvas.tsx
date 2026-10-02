@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import type { Locale } from "@/lib/i18n";
 import { hasWebGLSupport } from "@/lib/webgl-support";
 import { BakedMandegarScene } from "./BakedMandegarScene";
 import { CameraRig } from "./CameraRig";
@@ -19,6 +20,7 @@ import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./s
 
 type RuntimeState = "pending" | "fallback" | SceneQuality;
 type ExperienceCanvasProps = {
+  locale: Locale;
   className?: string;
   enabledByCms?: boolean;
   projects?: SceneProject[];
@@ -27,10 +29,12 @@ type ExperienceCanvasProps = {
 };
 
 function ExhibitionWorld({
+  locale,
   quality,
   projects,
   onFirstFrame,
 }: {
+  locale: Locale;
   quality: SceneQuality;
   projects: SceneProject[];
   onFirstFrame?: () => void;
@@ -40,7 +44,7 @@ function ExhibitionWorld({
       <color attach="background" args={[sceneTokens.bakedScene.background]} />
       <Suspense fallback={null}>
         <CameraRig source={assetSlots.environment} />
-        <BakedMandegarScene quality={quality} projects={projects} onFirstFrame={onFirstFrame} />
+        <BakedMandegarScene locale={locale} quality={quality} projects={projects} onFirstFrame={onFirstFrame} />
       </Suspense>
     </>
   );
@@ -65,6 +69,7 @@ function CanvasFallback({ className }: { className?: string }) {
 }
 
 export function ExperienceCanvas({
+  locale,
   className,
   enabledByCms = true,
   projects = [],
@@ -168,7 +173,7 @@ export function ExperienceCanvas({
           gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
       >
-        <ExhibitionWorld quality={runtime} projects={projects} onFirstFrame={onFirstFrame} />
+        <ExhibitionWorld locale={locale} quality={runtime} projects={projects} onFirstFrame={onFirstFrame} />
       </Canvas>
     </CanvasErrorBoundary>
   );

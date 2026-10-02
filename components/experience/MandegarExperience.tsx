@@ -12,6 +12,7 @@ import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
 import { AmbientGame } from "./interactions/AmbientGame";
+import { IntelligenceInspector } from "./IntelligenceInspector";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -395,6 +396,7 @@ export function MandegarExperience({
         <div className={styles.sceneShell} data-runtime={runtime} data-mandegar-experience>
           <h1 className={styles.visuallyHidden}>{copy.revealTitle}</h1>
           <ExperienceCanvas
+            locale={locale}
             className={styles.canvas}
             enabledByCms={enabledByCms}
             projects={canvasProjects}
@@ -420,20 +422,21 @@ export function MandegarExperience({
 
           <InteractionDirector locale={locale} activePhase={activePhase} runtime={runtime} />
           <AmbientGame locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
+          <IntelligenceInspector locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
 
           <div className={styles.copyLayer}>
-            <section className={`${styles.sceneCopy} ${styles.arrivalCopy}`} data-scene-copy="arrival" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="arrival" data-cinematic-beat>
               <span data-copy-line>01 / {copy.phases.arrival}</span>
               <h2 data-copy-line>{copy.arrivalLabel}</h2>
               <p data-copy-line>{copy.arrivalBody}</p>
             </section>
 
-            <section className={`${styles.sceneCopy} ${styles.discoveryCopy}`} data-scene-copy="discovery" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="discovery" data-cinematic-beat>
               <span data-copy-line>{copy.discoveryEyebrow}</span>
               <h2 data-copy-line>{copy.discoveryTitle}</h2>
               <p data-copy-line>{copy.discoveryBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.activationCopy}`} data-scene-copy="activation" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="activation" data-cinematic-beat>
               <span data-copy-line>{copy.activationEyebrow}</span>
               <h2 data-copy-line>{copy.activationTitle}</h2>
               <p data-copy-line>{copy.activationBody}</p>
@@ -443,12 +446,12 @@ export function MandegarExperience({
               <h2 data-copy-line>{copy.engagementTitle}</h2>
               <p data-copy-line>{copy.engagementBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.revealCopy}`} data-scene-copy="reveal" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="reveal" data-cinematic-beat>
               <span data-copy-line>{copy.revealEyebrow}</span>
               <h2 data-copy-line>{copy.revealTitle}</h2>
               <p data-copy-line>{copy.revealBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.experiencesCopy}`} data-scene-copy="experiences" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="experiences" data-cinematic-beat>
               <span data-copy-line>{copy.experiencesEyebrow}</span>
               <h2 data-copy-line>{copy.experiencesTitle}</h2>
               <p data-copy-line>{copy.experiencesBody}</p>
@@ -458,17 +461,17 @@ export function MandegarExperience({
               <h2 data-copy-line>{copy.connectionTitle}</h2>
               <p data-copy-line>{copy.connectionBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.proofCopy}`} data-scene-copy="proof" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="proof" data-cinematic-beat>
               <span data-copy-line>{copy.proofEyebrow}</span>
               <h2 data-copy-line>{copy.proofTitle}</h2>
               <p data-copy-line>{copy.proofBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.intelligenceCopy}`} data-scene-copy="intelligence" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="intelligence" data-cinematic-beat>
               <span data-copy-line>{copy.intelligenceEyebrow}</span>
               <h2 data-copy-line>{copy.intelligenceTitle}</h2>
               <p data-copy-line>{copy.intelligenceBody}</p>
             </section>
-            <section className={`${styles.sceneCopy} ${styles.invitationCopy}`} data-scene-copy="invitation" data-cinematic-beat>
+            <section className={styles.sceneCopy} data-scene-copy="invitation" data-cinematic-beat>
               <span data-copy-line>{copy.invitationEyebrow}</span>
               <h2 data-copy-line>{copy.invitationTitle}</h2>
               <p data-copy-line>{copy.invitationBody}</p>
