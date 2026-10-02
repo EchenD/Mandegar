@@ -19,7 +19,13 @@
       "path": "public/media/mandegar/screens/screen-interactive-16x9.webp",
       "width": 2062,
       "height": 1080,
-      "prompt": "Use case: stylized-concept. Asset type: idle artwork filling a physical landscape interactive-composition monitor in Mandegar's 3D event website. Generate refined minimal illustration about bringing three elements together, landscape composition 2062 x 1080. Pale ivory background #fafaf7 with a barely visible cool-gray gradient #e8eceb. Exactly three small tactile abstract forms, one subtle cobalt-blue cube at 20 percent across/67 percent down, one ivory-blue folded strip at 50 percent across/71 percent down, and one translucent cyan sphere at 80 percent across/67 percent down. One quiet, thin cobalt circle centered at 50 percent across/45 percent down is their common meeting point. Restrained hairline paths connect the forms to this center. Objects should be small, clean, abstract representations of space, story and people; no human silhouettes. Gentle material shading, ample clean negative space, especially upper quarter and bottom 15 percent. Straight-on screen artwork; no surrounding monitor, no UI perspective, no event scene. Match charcoal/ivory/cobalt/cyan Mandegar palette. No text, labels, controls, buttons, logos, gold, orange, giant glowing effects, dense network or particles."
+      "prompt": "Derived from the approved sculptural Mandegar M artwork documented in Docs/puzzle-artwork.json. The 3:2 image is contained without stretching on a charcoal 2062 by 1080 monitor canvas with subtle 3 by 3 seams; no text, labels or three-element composition graphics.",
+      "source": "public/media/mandegar/screens/mandegar-puzzle.webp",
+      "artworkAspect": "3:2",
+      "liveCanvas": {
+        "width": 1031,
+        "height": 540
+      }
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "generator": "Built-in image_gen",
+  "date": "2026-10-02",
+  "artwork": "public/media/mandegar/screens/mandegar-puzzle.webp",
+  "idleMonitor": "public/media/mandegar/screens/screen-interactive-16x9.webp",
+  "sourceWidth": 1536,
+  "sourceHeight": 1024,
+  "artworkWidth": 1200,
+  "artworkHeight": 800,
+  "idleMonitorWidth": 2062,
+  "idleMonitorHeight": 1080,
+  "prompt": "Use case: stylized-concept. Asset type: final brand artwork for a 3 by 3 picture puzzle in the Mandegar interactive event-experience website, also shown on the idle interaction monitor. Generate one elegant LANDSCAPE 3:2 image, a coherent polished architectural sculpture illustration, premium minimal cinematic 3D render. Subject: an abstract sculptural lowercase-free capital M formed by two warm ivory illuminated sweeping architectural ribbons with dark charcoal bronze inner structure, on a dark smooth floor in an exhibition-like space. The silhouette must read clearly as M when all nine image pieces are assembled, suggesting Mandegar's memorable events, light, design and interaction. Integrate a few refined cobalt-blue and cyan-lit accents in the ribbon structure, with warm amber rim lighting matching the supplied website scene. Composition: the M fills most of the width and height but has comfortable margins, diagonals/curves travel through every quadrant so all nine rectangular puzzle pieces have distinctive visual cues; asymmetrical but balanced structure. Background: charcoal to deep warm brown soft architectural gradient with a few broad gentle curved light bands, not detailed environment. Materials: satin ivory metal, restrained bronze, soft clean glow, visible precise edges, tasteful floor reflection. No humans, no UI, no puzzle grid or cracks drawn, no text or typography, no logos other than the abstract M silhouette, no watermark, no tiny floating debris. Finished stylish artwork, detailed but very clean, readable at small scale."
+}

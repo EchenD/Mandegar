@@ -1,6 +1,6 @@
 {
   "date": "2026-10-02",
-  "scope": "Final lifecycle and interaction fixes, followed by the user-requested design review. Latest steering keeps particles alive, replaces literal insight text with animated graphics, and requires the beam monitor aspect. The memory card remains excluded.",
+  "scope": "Completed lifecycle and interaction refinements, accepted Intelligence visuals, and the approved nine-piece 3D Mandegar picture puzzle. Intelligence preserves animated particle paths, uses the measured 1740 by 450 beam monitor, and shows compact vertical head annotations with texture-weighted warm glow. The picture puzzle replaces the previous three-object composer with synchronized tabletop, monitor, touch and keyboard interaction. Final current-source validation is recorded separately from accepted historical checks. The memory-card replacement remains excluded.",
   "requests": [
     {
       "request": "Minimum changes with strong visual and interaction impact; review the whole journey",
@@ -15,14 +15,14 @@
       "status": "implemented",
       "evidence": [
         "components/experience/interactions/interaction-copy.ts",
-        "Duplicate photo/game hints removed"
+        "Duplicate photo/game/touch hints removed"
       ]
     },
     {
       "request": "Faster interaction entrances",
       "status": "implemented",
       "evidence": [
-        "Entrances: game 500ms; composer, stage and drawing 550ms; photo 600ms",
+        "Entrances: game 500ms; puzzle, stage and drawing 550ms; photo 600ms",
         "Canvas is painted before registration; reopening retains the previous surface until its replacement is ready"
       ]
     },
@@ -39,7 +39,9 @@
       "status": "implemented",
       "evidence": [
         "components/experience/ConnectedJourney.tsx",
-        "Localized project categories and direct work links"
+        "Localized project categories and direct work links",
+        "Invitation Start a project link remains reachable through ConnectedJourney: its container uses pointer-events:none and actual links use pointer-events:auto",
+        "tests/e2e/hero-invitation.spec.ts covers real Persian desktop mouse, mobile touch and keyboard contact navigation"
       ]
     },
     {
@@ -64,7 +66,7 @@
       "evidence": [
         "InteractionDirector RESTART and station onReset callbacks restore the unfinished lifecycle",
         "tests/e2e/hero-interaction-recovery.spec.ts",
-        "Skip and Continue follow current completion after composer reset, stage changes, photo replay, and game replay"
+        "Skip and Continue follow current completion after puzzle reset, stage changes, photo replay, and game replay"
       ]
     },
     {
@@ -73,7 +75,8 @@
       "evidence": [
         "components/experience/interactions/visitor-creation.ts",
         "components/experience/interactions/visitor-presentation.ts",
-        "Saved monitor compositions and drawing surfaces"
+        "Committed puzzle arrangements, moves and started state remain within the visit through exit, reopening and reverse/forward scrolling; transient previews and selection are released",
+        "Saved lighting choices and drawing surfaces remain reversible through chapter presentation"
       ]
     },
     {
@@ -155,7 +158,7 @@
       "evidence": [
         "Vazirmatn family",
         "Charcoal, ivory, cobalt, and cyan controls",
-        "Photo and game UI cleaned"
+        "Photo and game UI cleaned; puzzle shows artwork with quiet Reset, Close and Skip/Continue actions"
       ]
     },
     {
@@ -177,13 +180,14 @@
     },
     {
       "request": "Change people materials only with the color transition, preserving original textures and using brightness as falloff intensity",
-      "status": "initial implementation present; reference appearance needs refinement",
+      "status": "implemented",
       "evidence": [
         "components/experience/baked-scene-material.ts",
         "Original maps and geometry retained; peak mix gates texture-weighted falloff",
+        "Recalibrated atlas luminance weighting strengthens the warm ivory Fresnel on dark source textures",
+        "Glow-only smooth normals shape the broad rim; authored normals and base texture shading remain unchanged",
         "Development-only off/soft/strong comparison variants",
-        "Material review found the brightness mask too weak for the dark atlas and original normals faceted",
-        "Next experiment: recalibrated texture weighting, warm rim, smooth glow-only normals; preserve the color-transition gate"
+        "Per-person hover/pin glow remains reversible and uses the same warm material family"
       ]
     },
     {
@@ -191,7 +195,8 @@
       "status": "implemented",
       "evidence": [
         "components/experience/BakedCrowd.tsx",
-        "Stable clearly labelled simulated activity and time examples",
+        "Visible activity/time rows replaced by a compact illustrative head signal",
+        "Clearly labelled fixed simulated examples remain available through the semantic readout",
         "Reversible per-person focus glow"
       ]
     },
@@ -209,7 +214,9 @@
       "status": "implemented",
       "evidence": [
         "Docs/monitor-artwork.json",
-        "Three generated WebP assets fitted to authored screen ratios"
+        "Generated game and drawing artwork fitted to authored screen ratios",
+        "Interactive idle screen derived from the generated sculptural Mandegar M picture, documented in Docs/puzzle-artwork.json",
+        "Puzzle artwork: 1200 by 800; matching idle monitor: 2062 by 1080; 3:2 image contained without stretching in the 1031 by 540 live monitor"
       ]
     },
     {
@@ -217,9 +224,9 @@
       "status": "implemented",
       "evidence": [
         "components/experience/CrowdPersonReadout.tsx",
-        "One reusable world annotation, shaped RTL reveal, latest-target retargeting, viewport and occlusion cleanup",
-        "Accessible controls and semantic data",
-        "The user requested a shorter straight animated leader and fewer metrics as the next visual pass"
+        "Approximately 76px vertical head-origin stem with endpoint dots and a ring and bars stacked on one adaptive side; approximately 64 by 98px; no visible annotation text",
+        "Head origin uses bounds center x/z and max y plus 0.22m; latest-target retargeting, same-depth projection, depth and occlusion cleanup",
+        "Illustrative fixed records and keyboard exploration remain accessible through hidden semantics; chapter text remains visible"
       ]
     },
     {
@@ -234,21 +241,51 @@
     },
     {
       "request": "Manipulate three actual 3D objects and reflect the changes continuously on the interactive monitor",
+      "status": "superseded by the approved nine-piece picture puzzle",
+      "evidence": [
+        "The former cube, ribbon and sphere interaction was replaced by nine real image tile meshes",
+        "The earlier tactile and physics discussion was superseded by the approved lift-and-snap puzzle interaction"
+      ]
+    },
+    {
+      "request": "Replace the composer with a nine-piece 3D picture puzzle and mirror its arrangement on the monitor",
       "status": "implemented",
       "evidence": [
         "components/experience/ComposerObjects.tsx",
-        "components/experience/interactions/composer-object-store.ts",
-        "Real mesh pointer/touch gestures, shared keyboard controls, saved arrangements, reverse presentation and interruption recovery",
-        "Counter placement corrected; further tactile motion/physics design remains under discussion"
+        "components/experience/composer-puzzle-geometry.ts",
+        "components/experience/interactions/puzzle-engine.ts",
+        "components/experience/interactions/puzzle-store.ts",
+        "components/experience/interactions/TouchComposerInteraction.tsx",
+        "All nine pieces are present in a 3 by 3 permutation with no empty slot; solving reveals the generated sculptural Mandegar M artwork",
+        "One canonical store shares committed tiles, selection/focus, pointer ownership and candidate swap preview across tabletop meshes, monitor painting and semantic controls",
+        "Drag onto another tile or tap/select two slots to swap; physical keyboard directions remain consistent in Persian and Arabic RTL",
+        "Only the final committed swap completes the puzzle; seams and highlights fade from the assembled image, while Reset saves a new unfinished permutation and restarts the lifecycle",
+        "Off-board release, wrong pointers, multiple touches, cancellation, lost capture, blur, menu opening and teardown preserve committed arrangements",
+        "Placement derives from the authored sloped tabletop; gentle lift and snap use existing Three.js animation without adding a physics dependency",
+        "Mobile image controls provide synchronized targets of at least 44px without enlarging unrelated 3D hitboxes",
+        "Monitor controls act on release, native clicks are deduplicated, and pointer gestures cannot trigger a second swap",
+        "Late or missing artwork preserves input and committed progress; numbered monitor and mobile fallback controls remain playable",
+        "Saved presentation retains composerVisibility and existing data-composer-canvas and data-transition-progress integration contracts",
+        "Docs/puzzle-artwork.json and Docs/monitor-artwork.json document generated artwork and matching idle monitor",
+        "tests/e2e/puzzle-engine.spec.ts, composer-objects.spec.ts, hero-touch.spec.ts, hero-artwork-recovery.spec.ts, hero-monitor-handoff.spec.ts and adapted recovery/responsive checks"
       ]
     },
     {
       "request": "Keep Intelligence particles alive and develop minimal animated graphs on the same monitor used for beams",
-      "status": "design revision requested; pending implementation",
+      "status": "implemented",
       "evidence": [
         "Gathering prototype removed at user request",
-        "Reuse interactionSurfaceSizes.videoWall.canvas: 1740 by 450, matching the authored display",
-        "Animated abstract graphs, short straight person leaders and minimal metrics proposed for discussion"
+        "CrowdIntelligenceNetwork and DataFlowNetwork keep their existing animated particle paths alive; particles do not gather into the monitor",
+        "components/experience/IntelligenceMonitor.tsx",
+        "components/experience/intelligence-monitor-graphics.ts",
+        "Exact interactionSurfaceSizes.videoWall.canvas: 1740 by 450, matching the measured 3.87:1 beam display",
+        "Visible signal title removed; only a small simulated-example footer remains, while hidden canvas semantics preserve its illustrative signal meaning",
+        "No literal visitor records, claimed metrics, cards or panels",
+        "Hovered/pinned person shares a deterministic signal seed with the head annotation; rapid changes smoothly retarget the current pattern",
+        "One reusable canvas with a 24fps paint cap, hidden/offscreen pause, reduced-motion still graphics and owner-checked foreground handoff",
+        "Scroll and temporal fades retain the owned canvas through reverse/reentry and yield immediately to active stations",
+        "tests/e2e/intelligence-monitor-graphics.spec.ts: eight browser-free checks passed",
+        "Animated waves, bars, ring and cached illustrative binary rows changing around 4Hz; canvas painting is bounded to 24fps"
       ]
     },
     {
@@ -275,22 +312,76 @@
     "Hover previews keep keyboard Explore available, and projection helpers synchronize the current camera matrix",
     "Live reduced-motion changes and failed scene assets activate the complete semantic fallback and release active controls; unavailable runtimes reject reopening",
     "Stage now participates in monitor surface retention, matching its videoWall ownership",
-    "Three forms rest on the authored sloped counter and leave the monitor controls visible",
-    "The rejected gathering prototype was removed; Intelligence motion graphics and the stronger material remain the next design pass",
-    "Desktop/mobile screenshots reveal remaining composer visual limits: partial cube obstruction/cropping and no contact shadows; these are included in the next design pass"
+    "Nine image tile meshes replace the earlier three forms and derive their board placement from the authored sloped counter",
+    "The rejected gathering prototype was removed; animated particle paths remain alive around the scene",
+    "Intelligence motion graphics use the exact beam-display ratio and shared person signal seeds; visible signal titles are removed, retaining only a small simulated-example footer",
+    "The accepted person annotation uses a vertical head-origin stem, endpoint dots and a ring and bars on one adaptive side, with no visible annotation text",
+    "Warm Fresnel uses stronger texture luminance weighting with glow-only smooth normals",
+    "The puzzle shares committed and candidate arrangements across physical tiles, monitor artwork and reachable mobile controls; completion follows release rather than preview",
+    "Reset, reopening, backward scrolling and reduced-motion teardown preserve the intended lifecycle and committed progress",
+    "The old composer store, geometry and crowd ingredient coupling were removed while preserving narrative color transitions and accepted Intelligence glow",
+    "Final puzzle screenshots and focused regression outcomes are recorded in validation; historical checks remain separate."
   ],
+  "priorFeatureValidation": {
+    "monitorHandoffs": "Previously passed: rendered game, earlier composer and drawing completion/reopening checks. The earlier composer has now been superseded by the puzzle.",
+    "narrative": "Previously passed: Persian and Arabic desktop/mobile forward and reverse sweeps.",
+    "game": "Previously passed: desktop header, keyboard, mouse drag, held/multiple touch ownership, autoplay, Persian/Arabic HUD, mobile menu focus/Escape/pause/resume.",
+    "photo": "Previously passed: capture, phone delivery, replay, exit, desktop screenshots and mobile RTL layouts."
+  },
   "validation": {
-    "lint": "passed",
-    "typecheck": "passed",
-    "monitorHandoffs": "passed: rendered game, composer, and drawing completion/reopening checks",
-    "narrative": "passed: Persian and Arabic desktop/mobile forward and reverse sweeps",
-    "intelligence": "passed: real mesh hover/tap, rapid retargeting, pinning, keyboard, blur, Persian/Arabic readouts, eight occlusion/frustum checks",
-    "game": "passed: desktop header, keyboard, mouse drag, held/multiple touch ownership, autoplay, Persian/Arabic HUD, mobile menu focus/Escape/pause/resume",
-    "photo": "passed: capture, phone delivery, replay, exit, desktop screenshots and mobile RTL layouts",
-    "currentPass": "33 focused tests passed: physical props and sloped-table geometry, saved choices, photo replay, late artwork on four stations, real-person hover/tap and occlusion, monitor handoffs, game replay/autoplay, live reduced motion and failed scene fallback",
-    "productionBuild": "passed: updated optimized Next.js build and all 59 static pages",
-    "pending": [
-      "Next visual design pass: animated Intelligence graphs, short leaders, warm Fresnel material and tactile composer"
-    ]
+    "lint": "Passed: npm run lint across the full configured source and test scope. After the final test-harness correction, npx eslint tests/e2e/hero-interaction-recovery.spec.ts also passed.",
+    "typecheck": "Passed: npm run typecheck.",
+    "puzzle": "Passed: 24 core checks (13 engine/state, two geometry/atlas and nine browser gesture/lifecycle checks). Additional reset/skip, mobile continuation, camera, artwork recovery and rendered monitor handoff checks passed. Coverage includes physical tabletop and native monitor input, keyboard, Persian/Arabic touch targets of at least 44px, physical RTL directions, overflow, exact committed completion, canceled previews, wrong pointers, native capture loss, off-board release, blur, multiple touches, menu cancellation, reduced-motion teardown and within-visit partial/solved progress.",
+    "monitorHandoffs": "Passed: both hero-monitor-handoff.spec.ts cases verify rendered WebGL painted ownership through game Continue/autoplay/reopening and puzzle/drawing completion/reopening. Background flashes are checked from sampled rendered surfaces.",
+    "narrative": "Passed current-source beam forward/reverse presentation, puzzle partial/solved reverse scrolling and reopening, and camera stability/released pointer motion. Historical wider localized narrative sweeps remain separate in priorFeatureValidation.",
+    "intelligence": "Passed: all six current-source hero-intelligence-monitor.spec.ts checks, including latest-person selection, authored wide monitor, rapid reverse and Stage ownership, Persian/Arabic compact head graphics, live reduced-motion rebuilding and restoration from an initially reduced-motion page. Accepted material and annotation checks remain in acceptedIntelligenceValidation.",
+    "game": "Passed: all seven current-source hero-game.spec.ts checks for scoring, pause/completion, replay/best score, mouse capture outside the monitor, blur recovery, background autoplay and Persian/Arabic held touch controls.",
+    "photo": "Passed: current-source capture, phone delivery, replay and exit, plus mobile immediate skip after replay. Historical photo screenshot/layout validation remains in priorFeatureValidation.",
+    "drawing": "Passed: all five current-source hero-draw.spec.ts checks for scene input, undo/clear, keyboard creation, Finish highlight retention and immediate Continue; rendered retained-surface/reopening and stalled-artwork recovery checks also passed.",
+    "visualReview": {
+      "result": "Inspected actual English desktop tabletop/native-monitor screenshots and solved English, Persian and Arabic mobile screenshots. Artwork orientation matches the monitor and tabletop; the board fits the sloped counter; solved mobile artwork is seamless and focus moves to Continue. Authored foreground people and cameras remain unchanged. Mobile synchronized controls keep every tile reachable where the physical counter is cropped or occluded.",
+      "artifacts": [
+        "%TEMP%/mandegar-puzzle-final-remaining-results/hero-touch-nine-tabletop-i-ad5ba-e-mouse-swap-as-the-monitor-chromium/puzzle-tabletop-desktop.png",
+        "%TEMP%/mandegar-puzzle-final-remaining-results/hero-touch-native-monitor--3d81d-eld-Close-waits-for-release-chromium/puzzle-monitor-desktop-native.png",
+        "%TEMP%/mandegar-puzzle-final-recovery-results/hero-interaction-responsiv-293f1--playable-before-continuing-chromium/mobile-puzzle-complete.png",
+        "%TEMP%/mandegar-puzzle-final-remaining-results/hero-touch-fa-mobile-taps--b27c4--nine-reachable-RTL-targets-chromium/fa-puzzle-mobile-solved.png",
+        "%TEMP%/mandegar-puzzle-final-remaining-results/hero-touch-ar-mobile-taps--078de--nine-reachable-RTL-targets-chromium/ar-puzzle-mobile-solved.png"
+      ]
+    },
+    "currentPass": {
+      "scope": "67 distinct focused checks verified: 17 browser-free checks and 50 Chromium browser checks. This is not the full repository-wide suite. Successful cases from the interrupted run were not counted twice.",
+      "initialAttempt": {
+        "command": "npx playwright test puzzle-engine.spec.ts composer-objects.spec.ts hero-touch.spec.ts hero-artwork-recovery.spec.ts hero-interaction-recovery.spec.ts hero-monitor-handoff.spec.ts hero-runtime-recovery.spec.ts hero-intelligence-monitor.spec.ts hero-photo.spec.ts hero-game.spec.ts hero-draw.spec.ts hero-beam-flow.spec.ts hero-invitation.spec.ts camera-projection.spec.ts footer.spec.ts --config \"$env:TEMP/mandegar-puzzle-finish.config.ts\" --workers=1 --max-failures=3",
+        "passed": 32,
+        "failed": 3,
+        "didNotRun": 31,
+        "finding": "One recovery test tried a mouse click on the visually hidden desktop keyboard control after successful solve/reset; it was corrected to keyboard activation. The existing dev server then exited during a delayed idle-image response, and the next case received connection refused. Port 3100 was verified free before restarting the server with captured logs. Application source stayed frozen throughout browser runs.",
+        "output": "%TEMP%/mandegar-puzzle-final-regression-results"
+      },
+      "correctedRecovery": {
+        "command": "npx playwright test hero-interaction-recovery.spec.ts hero-interaction-responsive.spec.ts --grep \"puzzle can be skipped|mobile nine-piece puzzle\" --config \"$env:TEMP/mandegar-puzzle-finish.config.ts\" --workers=1 --max-failures=1",
+        "passed": 2,
+        "failed": 0,
+        "output": "%TEMP%/mandegar-puzzle-final-recovery-results"
+      },
+      "remainingAndInterrupted": {
+        "command": "npx playwright test hero-artwork-recovery.spec.ts hero-game.spec.ts hero-intelligence-monitor.spec.ts hero-invitation.spec.ts hero-monitor-handoff.spec.ts hero-runtime-recovery.spec.ts hero-touch.spec.ts --grep-invert \"(game|stage|draw) starts while idle artwork\" --config \"$env:TEMP/mandegar-puzzle-finish.config.ts\" --workers=1 --max-failures=2",
+        "passed": 33,
+        "failed": 0,
+        "output": "%TEMP%/mandegar-puzzle-final-remaining-results"
+      },
+      "additionalChecks": "The localized footer passed across desktop/mobile sizes and all locales. All four Persian desktop/mobile real-pointer and keyboard Invitation contact-navigation checks passed. Browser runs used one worker against the existing local address, with application source frozen and artifacts outside the repository."
+    },
+    "productionBuild": "Passed: npm run build compiled the optimized production bundle, passed its TypeScript phase and generated all 59 static pages. next-env.d.ts was backed up before building and restored byte-for-byte to its pre-existing content afterward; it is excluded from commits.",
+    "pending": []
+  },
+  "acceptedIntelligenceValidation": {
+    "commits": [
+      "a489b39",
+      "9bec393"
+    ],
+    "preservedUserModels": "8ceb316",
+    "focusedRun": "Initial focused run passed 46 of 48 checks and exposed two issues; after fixes all six affected reduced-motion/CTA checks passed. These overlapping runs are not cumulative coverage.",
+    "checks": "Full lint, TypeScript and optimized production build passed, including all 59 static pages. Desktop/mobile Intelligence screenshots were visually reviewed. No full repository-wide test suite was claimed."
   }
 }
