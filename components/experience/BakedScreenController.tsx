@@ -114,7 +114,7 @@ type ScreenRuntime = {
 
 function hasActiveSurface(id: BakedScreenId) {
   return interactionRuntime.activeStation !== null
-    && interactionRuntime.activeStation === (id === "game" ? "game" : id === "main" ? "draw" : id === "interactive" ? "touch" : null);
+    && interactionRuntime.activeStation === (id === "game" ? "game" : id === "main" ? "draw" : id === "interactive" ? "touch" : id === "videoWall" ? "stage" : null);
 }
 
 function createFallbackTexture() {

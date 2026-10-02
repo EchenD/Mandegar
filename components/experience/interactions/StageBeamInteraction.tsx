@@ -13,6 +13,7 @@ import {
 import type { SceneInteractionEvent } from "./interaction-types";
 import { getVisitorCreation, saveLightingLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
+import { loadMonitorArtwork } from "./monitor-artwork";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.videoWall.canvas;
 const beamCenters = [0.12, 0.31, 0.5, 0.69, 0.88] as const;
@@ -496,28 +497,27 @@ export function StageBeamInteraction({
     if (!canvas) return;
     let mounted = true;
     let registered = false;
-    const image = new Image();
-    const begin = () => {
-      if (!mounted || registered) return;
+    const begin = (image: HTMLImageElement | null) => {
+      if (!mounted) return;
+      monitorImage.current = image;
+      if (registered) {
+        schedulePaint();
+        return;
+      }
       registered = true;
-      monitorImage.current = image.naturalWidth > 0 ? image : null;
       transitionProgress.current = 0;
       interactionRuntime.stageVisibility = 0;
       paint();
       registerInteractionCanvas("videoWall", canvas);
       animateTransition(1);
     };
-    image.onload = begin;
-    image.onerror = begin;
-    image.src = sceneTokens.bakedScene.screens.videoWall;
-    if (image.complete) begin();
+    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.videoWall, begin);
     void document.fonts?.ready.then(() => {
       if (mounted) schedulePaint();
     });
     return () => {
       mounted = false;
-      image.onload = null;
-      image.onerror = null;
+      stopLoading();
       registerInteractionCanvas("videoWall", null);
     };
   }, [animateTransition, paint, schedulePaint]);

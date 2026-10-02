@@ -7,6 +7,7 @@ import {
   type ErrorInfo,
   type ReactNode,
   useEffect,
+  useCallback,
   useState,
 } from "react";
 import * as THREE from "three";
@@ -51,12 +52,13 @@ function ExhibitionWorld({
 }
 
 class CanvasErrorBoundary extends Component<
-  { children: ReactNode; fallback: ReactNode },
+  { children: ReactNode; fallback: ReactNode; onError: () => void },
   { hasError: boolean }
 > {
   state = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(error: Error, info: ErrorInfo) {
+    this.props.onError();
     if (process.env.NODE_ENV !== "production") {
       console.warn("Mandegar exhibition canvas fallback", error, info.componentStack);
     }
@@ -81,8 +83,12 @@ export function ExperienceCanvas({
   const [sceneVisible, setSceneVisible] = useState(true);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let fallbackFrame: number | null = null;
+    const updateRuntime = () => {
+      if (fallbackFrame !== null) window.cancelAnimationFrame(fallbackFrame);
+      fallbackFrame = null;
+      const reduced = motion.matches;
       const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
       const supportsWebGL = hasWebGLSupport();
       const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
@@ -95,8 +101,10 @@ export function ExperienceCanvas({
       experienceState.quality = nextRuntime === "full" ? "full" : "adaptive";
       setRuntime(nextRuntime);
       onRuntimeReady?.(nextRuntime);
-      if (nextRuntime === "fallback") window.requestAnimationFrame(() => onFirstFrame?.());
-    });
+      if (nextRuntime === "fallback") fallbackFrame = window.requestAnimationFrame(() => onFirstFrame?.());
+    };
+    const frame = window.requestAnimationFrame(updateRuntime);
+    motion.addEventListener("change", updateRuntime);
     const onVisibilityChange = () => setPageVisible(document.visibilityState === "visible");
     const onPointerMove = (event: PointerEvent) => {
       const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
@@ -118,6 +126,8 @@ export function ExperienceCanvas({
     document.documentElement.addEventListener("pointerleave", resetPointer);
     return () => {
       window.cancelAnimationFrame(frame);
+      if (fallbackFrame !== null) window.cancelAnimationFrame(fallbackFrame);
+      motion.removeEventListener("change", updateRuntime);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("blur", resetPointer);
@@ -148,10 +158,16 @@ export function ExperienceCanvas({
     };
   }, [runtime]);
 
+  const handleCanvasFailure = useCallback(() => {
+    setRuntime("fallback");
+    onRuntimeReady?.("fallback");
+    onFirstFrame?.();
+  }, [onFirstFrame, onRuntimeReady]);
+
   if (runtime === "pending" || runtime === "fallback") return <CanvasFallback className={className} />;
   const profile = qualityProfiles[runtime];
   return (
-    <CanvasErrorBoundary fallback={<CanvasFallback className={className} />}>
+    <CanvasErrorBoundary fallback={<CanvasFallback className={className} />} onError={handleCanvasFailure}>
       <Canvas
         className={className}
         data-experience-canvas="true"

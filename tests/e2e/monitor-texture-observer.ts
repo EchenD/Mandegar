@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 export type MonitorTextureSample = {
-  screen: "game" | "main" | "interactive";
+  screen: "game" | "main" | "interactive" | "videoWall";
   media: string;
   base: string;
   blend: number;
@@ -11,7 +11,7 @@ export type MonitorTextureSample = {
 /** Observe rendered sampler ownership rather than adding hooks to the scene. */
 export async function observeMonitorTextures(page: Page) {
   await page.addInitScript(() => {
-    type Source = { label: string; screen: "game" | "main" | "interactive" | null; canvas?: HTMLCanvasElement };
+    type Source = { label: string; screen: "game" | "main" | "interactive" | "videoWall" | null; canvas?: HTMLCanvasElement };
     type Program = { media?: number; base?: number; blend?: number };
     type Context = {
       program: WebGLProgram | null;
@@ -36,14 +36,16 @@ export async function observeMonitorTextures(page: Page) {
       if (source instanceof HTMLImageElement) {
         const screen = source.src.includes("screen-game-") ? "game"
           : source.src.includes("screen-main-") ? "main"
-            : source.src.includes("screen-interactive-") ? "interactive" : null;
+            : source.src.includes("screen-interactive-") ? "interactive"
+              : source.src.includes("screen-center-") ? "videoWall" : null;
         return { label: "image", screen };
       }
       const screen = source.hasAttribute("data-game-canvas") || source.hasAttribute("data-game-ambient") ? "game"
         : source.hasAttribute("data-drawing-canvas") ? "main"
-          : source.hasAttribute("data-composer-canvas") ? "interactive" : null;
+          : source.hasAttribute("data-composer-canvas") ? "interactive"
+            : source.hasAttribute("data-stage-canvas") ? "videoWall" : null;
       const label = source.hasAttribute("data-game-ambient") ? "ambient"
-        : screen ? "interactive" : "retained";
+        : screen === "videoWall" ? "stage" : screen ? "interactive" : "retained";
       return { label, screen, canvas: source };
     };
     const record = (gl: WebGLRenderingContext) => {

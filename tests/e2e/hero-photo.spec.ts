@@ -80,6 +80,7 @@ test("event photo delivery demo captures, reaches the phone, replays and exits",
   await activateWithKeyboard(page, "[data-photo-replay]");
   await expect(director).toHaveAttribute("data-lifecycle", "active");
   await expect(controls).toHaveAttribute("data-photo-state", "ready");
+  await expect(page.locator("[data-photo-capture]")).toBeFocused();
   await recordCountdown(page);
   await activateWithKeyboard(page, "[data-photo-capture]");
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });

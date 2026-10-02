@@ -33,7 +33,10 @@ export function PhotoBoothInteraction({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const interfaceRef = useRef<HTMLDivElement>(null);
+  const captureRef = useRef<HTMLButtonElement>(null);
   const continueRef = useRef<HTMLButtonElement>(null);
+  const mountedRef = useRef(false);
+  const restoreCaptureFocus = useRef(false);
   const countdownFrame = useRef<number | null>(null);
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
@@ -60,6 +63,7 @@ export function PhotoBoothInteraction({
   }, []);
 
   const paint = useCallback(() => {
+    if (!mountedRef.current) return;
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
@@ -96,7 +100,7 @@ export function PhotoBoothInteraction({
   }, []);
 
   const schedulePaint = useCallback(() => {
-    if (renderFrame.current !== null) return;
+    if (!mountedRef.current || renderFrame.current !== null) return;
     renderFrame.current = window.requestAnimationFrame(() => {
       renderFrame.current = null;
       paint();
@@ -154,6 +158,7 @@ export function PhotoBoothInteraction({
 
   const replay = useCallback(() => {
     if (transitionState.current === "outro") return;
+    restoreCaptureFocus.current = Boolean(interfaceRef.current?.contains(document.activeElement));
     clearTimers();
     commitCount(3);
     commitStep("ready");
@@ -203,6 +208,7 @@ export function PhotoBoothInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    mountedRef.current = true;
     clearTimers();
     transitionProgress.current = 0;
     transitionState.current = "intro";
@@ -219,6 +225,7 @@ export function PhotoBoothInteraction({
     animateTransition(1);
     void document.fonts?.ready.then(schedulePaint);
     return () => {
+      mountedRef.current = false;
       registerPhotoSurface(null);
       interactionRuntime.photoStep = "idle";
       interactionRuntime.photoCount = 3;
@@ -243,8 +250,15 @@ export function PhotoBoothInteraction({
   }, [clearTimers]);
 
   useEffect(() => {
-    if (step !== "captured") return;
-    const frame = window.requestAnimationFrame(() => continueRef.current?.focus({ preventScroll: true }));
+    if (step !== "captured" && !(step === "ready" && restoreCaptureFocus.current)) return;
+    restoreCaptureFocus.current = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (!mountedRef.current || transitionState.current === "outro" || document.hidden) return;
+      const menuOpen = document.querySelector("header button[aria-controls='primary-navigation']")?.getAttribute("aria-expanded") === "true";
+      if (menuOpen) return;
+      const target = step === "captured" ? continueRef.current : captureRef.current;
+      target?.focus({ preventScroll: true });
+    });
     return () => window.cancelAnimationFrame(frame);
   }, [step]);
 
@@ -273,7 +287,7 @@ export function PhotoBoothInteraction({
               <button ref={continueRef} type="button" data-photo-continue data-mobile-photo-continue data-interaction-continue onClick={() => exitWithTransition(onContinue)}>{copy.continue}</button>
             </>
           ) : (
-            <button type="button" data-photo-capture data-mobile-photo-capture disabled={step !== "ready"} onClick={capture}>{copy.photo.capture}</button>
+            <button ref={captureRef} type="button" data-photo-capture data-mobile-photo-capture disabled={step !== "ready"} onClick={capture}>{copy.photo.capture}</button>
           )}
         </div>
       </div>

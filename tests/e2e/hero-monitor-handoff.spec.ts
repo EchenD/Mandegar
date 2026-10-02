@@ -61,8 +61,9 @@ test("the rendered game keeps painted ownership through Continue, autoplay and a
   await expect(director).toHaveAttribute("data-active-station", "none");
   await assertPaintedOwnership(page, "game", "ambient");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.locator("[data-game-ambient]")).toHaveAttribute("data-ambient-state", "still");
-  await assertPaintedOwnership(page, "game", "ambient");
+  await expect(page.locator("[data-webgl='fallback']")).toBeAttached();
+  await expect(page.locator("[data-semantic-fallback]")).toBeVisible();
+  await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
 test("composer and drawing keep painted surfaces after finishing and use them when reopening", async ({ page }) => {

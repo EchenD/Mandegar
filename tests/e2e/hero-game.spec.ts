@@ -119,6 +119,7 @@ test("Breakout replay retains the best score and restores Skip", async ({ page }
   const firstBest = await controls.getAttribute("data-game-best");
   await activateWithKeyboard(page, "[data-game-replay]");
   await expect(controls).toHaveAttribute("data-game-status", "ready");
+  await expect(page.locator("[data-game-canvas]")).toBeFocused();
   await expect(controls).toHaveAttribute("data-game-score", "0");
   await expect(controls).toHaveAttribute("data-game-attempts", "0");
   await expect(controls).toHaveAttribute("data-game-lives", "3");
@@ -303,10 +304,9 @@ test("completed game plays in the background and hands controls back without cha
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(ambient).toHaveAttribute("data-ambient-state", "playing");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(ambient).toHaveAttribute("data-ambient-state", "still");
-  const stillBall = await ambient.getAttribute("data-ambient-ball");
-  await page.waitForTimeout(250);
-  await expect(ambient).toHaveAttribute("data-ambient-ball", stillBall!);
+  await expect(page.locator("[data-webgl='fallback']")).toBeAttached();
+  await expect(page.locator("[data-semantic-fallback]")).toBeVisible();
+  await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
 for (const { locale, height } of [{ locale: "fa", height: 844 }, { locale: "ar", height: 640 }]) {
@@ -422,6 +422,7 @@ for (const { locale, height } of [{ locale: "fa", height: 844 }, { locale: "ar",
     await page.locator("[data-game-result-replay]").tap();
     await expect(controls).toHaveAttribute("data-game-status", "ready");
     await expect(page.locator("[data-mobile-game-action]")).toBeInViewport();
+    await expect(page.locator("[data-mobile-game-action]")).toBeFocused();
     await exit.tap();
     await expect(director).toHaveAttribute("data-active-station", "none");
     await expect(director).toHaveAttribute("data-scroll-locked", "false");

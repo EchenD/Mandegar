@@ -23,6 +23,7 @@ import {
   type BreakoutGame,
 } from "./breakout-game";
 import styles from "./HeroInteractions.module.css";
+import { loadMonitorArtwork } from "./monitor-artwork";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.game.canvas;
 function clamp(value: number, minimum = 0, maximum = 1) {
@@ -64,6 +65,7 @@ export function GameInteraction({
   const transitionFrame = useRef<number | null>(null);
   const renderFrame = useRef<number | null>(null);
   const animationFrame = useRef<number | null>(null);
+  const focusFrame = useRef<number | null>(null);
   const monitorImage = useRef<HTMLImageElement | null>(null);
   const trail = useRef<Array<{ x: number; y: number }>>([]);
   const sparks = useRef<BlockSpark[]>([]);
@@ -188,6 +190,7 @@ export function GameInteraction({
   }, [applyGame, releaseControls, schedulePaint]);
   const reset = useCallback(() => {
     if (transitionState.current !== "ready" || game.current.serves === 0) return;
+    const restoreFocus = chromeRef.current?.contains(document.activeElement);
     releaseControls();
     game.current = createBreakoutGame();
     setSnapshot(game.current);
@@ -196,6 +199,17 @@ export function GameInteraction({
     sparks.current = [];
     onResetRef.current();
     schedulePaint();
+    if (restoreFocus) {
+      if (focusFrame.current !== null) window.cancelAnimationFrame(focusFrame.current);
+      focusFrame.current = window.requestAnimationFrame(() => {
+        focusFrame.current = null;
+        if (!mountedRef.current || transitionState.current !== "ready") return;
+        const target = window.matchMedia("(max-width: 760px)").matches
+          ? chromeRef.current?.querySelector<HTMLButtonElement>("[data-mobile-game-action]")
+          : canvasRef.current;
+        target?.focus({ preventScroll: true });
+      });
+    }
   }, [releaseControls, schedulePaint]);
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
@@ -235,25 +249,26 @@ export function GameInteraction({
     }
     let mounted = true;
     let registered = false;
-    const image = new Image();
-    const begin = () => {
-      if (!mounted || registered) return;
+    const begin = (image: HTMLImageElement | null) => {
+      if (!mounted) return;
+      monitorImage.current = image;
+      if (registered) {
+        schedulePaint();
+        return;
+      }
       registered = true;
-      monitorImage.current = image.naturalWidth > 0 ? image : null;
       paint();
       registerInteractionCanvas("game", canvas);
       animateTransition(1);
     };
-    image.onload = begin;
-    image.onerror = begin;
-    image.src = sceneTokens.bakedScene.screens.game;
-    if (image.complete || entranceBackground.current) begin();
+    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.game, begin, {
+      immediate: Boolean(entranceBackground.current),
+    });
     void document.fonts?.ready.then(() => { if (mounted) schedulePaint(); });
     return () => {
       mounted = false;
       mountedRef.current = false;
-      image.onload = null;
-      image.onerror = null;
+      stopLoading();
       if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
       if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
       renderFrame.current = null;
@@ -362,6 +377,7 @@ export function GameInteraction({
   useEffect(() => () => {
     if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+    if (focusFrame.current !== null) window.cancelAnimationFrame(focusFrame.current);
     interactionRuntime.gameVisibility = 0;
     interactionRuntime.gameComplete = false;
   }, []);

@@ -113,7 +113,8 @@ export const InteractionDirector = memo(function InteractionDirector({
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
     if (
-      interactionRuntime.availableStation !== station
+      (runtime !== "adaptive" && runtime !== "full")
+      || interactionRuntime.availableStation !== station
       || state.availableStation !== station
       || state.activeStation
     ) return;
@@ -143,7 +144,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       : null;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dispatch({ type: "ENTER", station, input });
-  }, [state.activeStation, state.availableStation]);
+  }, [runtime, state.activeStation, state.availableStation]);
 
   useEffect(() => {
     if (
@@ -230,8 +231,8 @@ export const InteractionDirector = memo(function InteractionDirector({
 
   useEffect(() => {
     if (!state.activeStation) return;
-    if (state.activeStation !== expectedStation) exit(true);
-  }, [expectedStation, exit, state.activeStation]);
+    if (state.activeStation !== expectedStation || (runtime !== "adaptive" && runtime !== "full")) exit(true);
+  }, [expectedStation, exit, runtime, state.activeStation]);
 
   useEffect(() => {
     if (!state.activeStation || state.activeStation !== expectedStation) return;

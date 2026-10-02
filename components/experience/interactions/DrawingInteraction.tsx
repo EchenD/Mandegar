@@ -11,6 +11,7 @@ import {
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
+import { loadMonitorArtwork } from "./monitor-artwork";
 import { clearDrawing, getVisitorCreation, saveDrawing } from "./visitor-creation";
 
 type Point = { x: number; y: number };
@@ -492,27 +493,28 @@ export function DrawingInteraction({
     savedWall.current = getVisitorCreation().drawingWall;
     let mounted = true;
     let registered = false;
-    const image = new Image();
-    const begin = () => {
-      if (!mounted || registered) return;
+    const begin = (image: HTMLImageElement | null) => {
+      if (!mounted) return;
+      monitorImage.current = image;
+      if (registered) {
+        schedulePaint();
+        return;
+      }
       registered = true;
-      monitorImage.current = image.naturalWidth > 0 ? image : null;
       transitionProgress.current = 0;
       paint();
       registerInteractionCanvas("main", canvas);
       animateTransition(1);
     };
-    image.onload = begin;
-    image.onerror = begin;
-    image.src = sceneTokens.bakedScene.screens.main;
-    if (image.complete) begin();
+    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.main, begin, {
+      immediate: Boolean(savedWall.current),
+    });
     void document.fonts?.ready.then(() => {
       if (mounted) schedulePaint();
     });
     return () => {
       mounted = false;
-      image.onload = null;
-      image.onerror = null;
+      stopLoading();
       if (interactionRuntime.monitorEntries.main?.canvas === canvas) {
         registerInteractionCanvas("main", experience?.isConnected ? savedWall.current : null);
       }

@@ -527,7 +527,7 @@ export function MandegarExperience({
           [copy.experiencesEyebrow, copy.experiencesTitle, copy.experiencesBody],
           [copy.connectionEyebrow, copy.connectionTitle, copy.connectionBody],
           [copy.proofEyebrow, copy.proofTitle, copy.proofBody],
-          [copy.intelligenceEyebrow, copy.intelligenceTitle, copy.intelligenceBody],
+          [copy.intelligenceEyebrow, copy.intelligenceTitle, locale === "en" ? "See how participation becomes useful insight." : locale === "fa" ? "ببینید مشارکت چگونه به شناخت بهتر تبدیل می‌شود." : "شاهد كيف تتحول المشاركة إلى فهم أفضل."],
           [copy.invitationEyebrow, copy.invitationTitle, copy.invitationBody],
         ].map((content, index) => (
           <section key={content[0]}>
