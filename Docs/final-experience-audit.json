@@ -1,6 +1,6 @@
 {
   "date": "2026-10-02",
-  "scope": "Final audit of the requests in this conversation. Repeated requests are checked against the same implementation; concepts explicitly left open for discussion remain proposals.",
+  "scope": "Final lifecycle and interaction fixes, followed by the user-requested design review. Latest steering keeps particles alive, replaces literal insight text with animated graphics, and requires the beam monitor aspect. The memory card remains excluded.",
   "requests": [
     {
       "request": "Minimum changes with strong visual and interaction impact; review the whole journey",
@@ -177,11 +177,13 @@
     },
     {
       "request": "Change people materials only with the color transition, preserving original textures and using brightness as falloff intensity",
-      "status": "implemented",
+      "status": "initial implementation present; reference appearance needs refinement",
       "evidence": [
         "components/experience/baked-scene-material.ts",
         "Original maps and geometry retained; peak mix gates texture-weighted falloff",
-        "Development-only off/soft/strong comparison variants"
+        "Development-only off/soft/strong comparison variants",
+        "Material review found the brightness mask too weak for the dark atlas and original normals faceted",
+        "Next experiment: recalibrated texture weighting, warm rim, smooth glow-only normals; preserve the color-transition gate"
       ]
     },
     {
@@ -216,7 +218,8 @@
       "evidence": [
         "components/experience/CrowdPersonReadout.tsx",
         "One reusable world annotation, shaped RTL reveal, latest-target retargeting, viewport and occlusion cleanup",
-        "Accessible controls and semantic data"
+        "Accessible controls and semantic data",
+        "The user requested a shorter straight animated leader and fewer metrics as the next visual pass"
       ]
     },
     {
@@ -230,6 +233,25 @@
       ]
     },
     {
+      "request": "Manipulate three actual 3D objects and reflect the changes continuously on the interactive monitor",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/ComposerObjects.tsx",
+        "components/experience/interactions/composer-object-store.ts",
+        "Real mesh pointer/touch gestures, shared keyboard controls, saved arrangements, reverse presentation and interruption recovery",
+        "Counter placement corrected; further tactile motion/physics design remains under discussion"
+      ]
+    },
+    {
+      "request": "Keep Intelligence particles alive and develop minimal animated graphs on the same monitor used for beams",
+      "status": "design revision requested; pending implementation",
+      "evidence": [
+        "Gathering prototype removed at user request",
+        "Reuse interactionSurfaceSizes.videoWall.canvas: 1740 by 450, matching the authored display",
+        "Animated abstract graphs, short straight person leaders and minimal metrics proposed for discussion"
+      ]
+    },
+    {
       "request": "Final monitor start/finish/reopen audit for background flashes",
       "status": "implemented",
       "evidence": [
@@ -239,22 +261,23 @@
       ]
     }
   ],
-  "openDiscussion": [
-    {
-      "idea": "Three actual 3D objects that control the interactive monitor",
-      "status": "proposal",
-      "current": "The existing Space/Story/People composer remains a monitor interaction; selected People also changes the scene. Actual object manipulation has not been implemented."
-    },
-    {
-      "idea": "Gather Intelligence particles into monitor insights",
-      "status": "proposal",
-      "current": "Existing data routes converge toward the central screen and person-linked example readouts are implemented. A new particle-gathering sequence and monitor insight display have not been implemented."
-    },
+  "excluded": [
     {
       "idea": "A branded memory card near the end of the hero",
-      "status": "proposal",
-      "current": "The disliked download feature was removed. A replacement keepsake remains open for design discussion."
+      "status": "excluded by the user",
+      "current": "The disliked download was removed; the user explicitly excluded its replacement from this final pass."
     }
+  ],
+  "reviewFindings": [
+    "Replay now restores keyboard focus to a useful live control",
+    "Idle artwork loading is bounded to 1200ms; stalled or late assets cannot trap an interaction or restart its entrance",
+    "Rejected opaque hover hits clear transient focus without clearing a pinned person",
+    "Hover previews keep keyboard Explore available, and projection helpers synchronize the current camera matrix",
+    "Live reduced-motion changes and failed scene assets activate the complete semantic fallback and release active controls; unavailable runtimes reject reopening",
+    "Stage now participates in monitor surface retention, matching its videoWall ownership",
+    "Three forms rest on the authored sloped counter and leave the monitor controls visible",
+    "The rejected gathering prototype was removed; Intelligence motion graphics and the stronger material remain the next design pass",
+    "Desktop/mobile screenshots reveal remaining composer visual limits: partial cube obstruction/cropping and no contact shadows; these are included in the next design pass"
   ],
   "validation": {
     "lint": "passed",
@@ -264,7 +287,10 @@
     "intelligence": "passed: real mesh hover/tap, rapid retargeting, pinning, keyboard, blur, Persian/Arabic readouts, eight occlusion/frustum checks",
     "game": "passed: desktop header, keyboard, mouse drag, held/multiple touch ownership, autoplay, Persian/Arabic HUD, mobile menu focus/Escape/pause/resume",
     "photo": "passed: capture, phone delivery, replay, exit, desktop screenshots and mobile RTL layouts",
-    "productionBuild": "passed: Next.js optimized build and all 59 static pages",
-    "pending": []
+    "currentPass": "33 focused tests passed: physical props and sloped-table geometry, saved choices, photo replay, late artwork on four stations, real-person hover/tap and occlusion, monitor handoffs, game replay/autoplay, live reduced motion and failed scene fallback",
+    "productionBuild": "passed: updated optimized Next.js build and all 59 static pages",
+    "pending": [
+      "Next visual design pass: animated Intelligence graphs, short leaders, warm Fresnel material and tactile composer"
+    ]
   }
 }
