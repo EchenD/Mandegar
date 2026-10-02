@@ -309,7 +309,6 @@
 }
 
 .copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; }
-
 .root[data-interaction-active] .copyLayer,
 .root[data-interaction-active] .phaseRail,
 .root[data-interaction-active] .scrollCue,
@@ -340,11 +339,15 @@
 }
 
 .sceneCopy {
+  --copy-x: 50%;
+  --copy-y: 72%;
+  --copy-y-mobile: 72%;
+  --copy-width: min(38rem, 72vw);
   position: absolute;
   z-index: 0;
-  left: 50%;
-  inset-block-start: 70%;
-  width: min(50rem, 72vw);
+  left: var(--copy-x);
+  inset-block-start: var(--copy-y);
+  width: var(--copy-width);
   color: var(--experience-ink);
   text-align: center;
   opacity: 0;
@@ -356,44 +359,37 @@
 }
 
 :global([dir="rtl"]) .sceneCopy,
-:global([dir="ltr"]) .sceneCopy { right: auto; left: 50%; text-align: center; }
+:global([dir="ltr"]) .sceneCopy { right: auto; left: var(--copy-x); text-align: center; }
+
+.sceneCopy[data-scene-copy="arrival"] { --copy-y: 50%; --copy-y-mobile: 50%; --copy-width: min(42rem, 72vw); }
+.sceneCopy[data-scene-copy="discovery"] { --copy-y: 72%; }
+.sceneCopy[data-scene-copy="activation"] { --copy-x: 45%; --copy-y: 74%; }
+.sceneCopy[data-scene-copy="engagement"] { --copy-x: 54%; --copy-y: 74%; }
+.sceneCopy[data-scene-copy="reveal"] { --copy-y: 75%; }
+.sceneCopy[data-scene-copy="experiences"] { --copy-x: 48%; --copy-y: 76%; }
+.sceneCopy[data-scene-copy="connection"] { --copy-x: 46%; --copy-y: 76%; }
+.sceneCopy[data-scene-copy="proof"] { --copy-y: 72%; }
+.sceneCopy[data-scene-copy="intelligence"] { --copy-y: 76%; }
+.sceneCopy[data-scene-copy="invitation"] { --copy-y: 67%; --copy-y-mobile: 67%; }
 
 .sceneCopy > span {
   display: inline-flex;
   align-items: center;
-  gap: .65rem;
-  margin-block-end: 1rem;
-  color: var(--experience-accent);
-  font-size: .58rem;
-  font-weight: 720;
-  letter-spacing: .12em;
+  gap: .45rem;
+  margin-block-end: .6rem;
+  color: var(--experience-muted);
+  font-size: .625rem;
+  font-weight: 600;
+  letter-spacing: .08em;
   text-transform: uppercase;
   justify-content: center;
   transition: color .25s ease;
 }
 
-.sceneCopy > span::before { content: ""; width: 1.8rem; height: 1px; background: currentColor; }
-.sceneCopy h2 { max-width: 18ch; margin: 0 auto; font-size: clamp(1.9rem, 2.8vw, 3.75rem); font-weight: 520; line-height: 1.14; letter-spacing: -.025em; }
-.sceneCopy p { max-width: 34rem; margin: .8rem auto 0; color: var(--experience-muted); font-size: clamp(.8rem, .95vw, .98rem); line-height: 1.72; transition: color .25s ease; }
-.sceneCopy [data-copy-line] { will-change: opacity, transform, filter, clip-path; }
-
-.sceneCopy.invitationCopy,
-.sceneCopy.arrivalCopy { width: min(48rem, 72vw); }
-
-.sceneCopy.arrivalCopy { inset-block-start: 50%; }
-
-:global([dir="rtl"]) .sceneCopy.arrivalCopy {
-  right: auto;
-  left: 50%;
-  text-align: center;
-}
-
-.sceneCopy.arrivalCopy h2 { max-width: 15ch; margin-inline: auto; }
-
-.sceneCopy.arrivalCopy p {
-  font-size: clamp(.875rem, 1.05vw, 1rem);
-  text-wrap: balance;
-}
+.sceneCopy > span::before { content: ""; width: 1rem; height: 1px; background: currentColor; }
+.sceneCopy h2 { max-width: 22ch; margin: 0 auto; font-size: clamp(1.6rem, 2.35vw, 2.65rem); font-weight: 520; line-height: 1.28; letter-spacing: -.018em; text-wrap: balance; }
+.sceneCopy p { max-width: 38rem; margin: .65rem auto 0; color: var(--experience-muted); font-size: clamp(.875rem, .95vw, .95rem); line-height: 1.65; text-wrap: balance; transition: color .25s ease; }
+.sceneCopy [data-copy-line] { will-change: opacity, transform; }
 
 .ctaRow { display: flex; flex-wrap: wrap; justify-content: center; gap: .65rem; margin-block-start: 1.7rem; pointer-events: auto; }
 .primaryCta { display: inline-flex; align-items: center; justify-content: center; gap: 1.1rem; min-height: 3rem; padding-inline: 1.2rem; border: 1px solid #225cff; border-radius: 999px; color: #fff; background: #225cff; box-shadow: 0 1.3rem 3rem rgba(34,92,255,.25); font-size: .7rem; font-weight: 650; text-decoration: none; transition: transform .25s ease; }
@@ -682,7 +678,7 @@
 
 @media (max-width: 900px) {
   .phaseRail { width: min(18rem, 48vw); }
-  .sceneCopy { width: min(46rem, 82vw); }
+  .sceneCopy { width: min(38rem, 82vw); }
 }
 
 @media (max-width: 760px) {
@@ -691,14 +687,11 @@
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }
   .fallbackHalo { width: 82vw; inset-block-start: 27%; }
-  .sceneCopy { left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
-  :global([dir="rtl"]) .sceneCopy { right: auto; left: 50%; }
-  .sceneCopy h2 { max-width: 17ch; font-size: clamp(1.7rem, 7.6vw, 2.75rem); }
-  .sceneCopy p { max-width: 30rem; margin-block-start: .65rem; font-size: .76rem; line-height: 1.55; }
-  .sceneCopy > span { margin-block-end: .65rem; }
-  .sceneCopy.arrivalCopy,
-  .sceneCopy.invitationCopy { inset-inline: auto; left: 50%; inset-block: 69% auto; width: calc(100% - 2.4rem); transform: translate(-50%, -50%); }
-  .sceneCopy.arrivalCopy { inset-block-start: 50%; }
+  .sceneCopy,
+  .sceneCopy[data-scene-copy] { --copy-x: 50%; inset-block: var(--copy-y-mobile) auto; width: calc(100% - 2.4rem); }
+  .sceneCopy h2 { max-width: 22ch; font-size: clamp(1.45rem, 6.3vw, 2.05rem); }
+  .sceneCopy p { max-width: 30rem; margin-block-start: .6rem; font-size: .875rem; line-height: 1.6; }
+  .sceneCopy > span { margin-block-end: .55rem; }
   .ctaRow { margin-block-start: 1.1rem; }
   .primaryCta { min-height: 2.7rem; }
   .phaseRail { inset-block-end: 1rem; width: min(15rem, calc(100% - 7rem)); }

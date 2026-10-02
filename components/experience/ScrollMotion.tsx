@@ -37,7 +37,7 @@ function rangeProgress(progress: number, start: number, end: number) {
   return clamp01((progress - start) / Math.max(0.0001, end - start));
 }
 
-function renderCopyState(state: CopyState, progress: number) {
+function renderCopyState(state: CopyState, progress: number, reducedMotion: boolean) {
   const phase = narrativeScore.find((item) => item.id === state.phase);
   if (!phase) return;
   const timing = getNarrativeCopyTiming(phase.id);
@@ -53,16 +53,11 @@ function renderCopyState(state: CopyState, progress: number) {
       : ease(rangeProgress(progress, timing.enterStart + enterOffset, timing.enterEnd));
     const exited = ease(rangeProgress(progress, timing.exitStart + exitOffset, timing.exitEnd));
     const opacity = entered * (1 - exited);
-    const y = (1 - entered) * 24 - exited * 15;
-    const z = (1 - entered) * -78 + exited * 48;
-    const blur = (1 - entered) * 11 + exited * 7;
+    const y = reducedMotion ? 0 : (1 - entered) * 8 - exited * 6;
+    const z = reducedMotion ? 0 : (1 - entered) * -8 + exited * 6;
     highestOpacity = Math.max(highestOpacity, opacity);
     line.style.opacity = opacity.toFixed(4);
     line.style.transform = `translate3d(0, ${y.toFixed(2)}px, ${z.toFixed(2)}px)`;
-    line.style.filter = `blur(${blur.toFixed(2)}px)`;
-    line.style.clipPath = exited > 0.001
-      ? `inset(${(exited * 100).toFixed(2)}% 0 0 0)`
-      : `inset(0 0 ${((1 - entered) * 100).toFixed(2)}% 0)`;
     line.style.visibility = opacity > 0.002 ? "visible" : "hidden";
   });
 
@@ -131,7 +126,7 @@ export function ScrollMotion({
       root.dataset.nativeProgress = nativeProgress.toFixed(4);
       root.dataset.copyProgress = nativeProgress.toFixed(4);
       root.style.setProperty("--scroll-progress", nativeProgress.toFixed(4));
-      copyStates.forEach((state) => renderCopyState(state, nativeProgress));
+      copyStates.forEach((state) => renderCopyState(state, nativeProgress, reduced || saveData));
     };
 
     const syncExperience = (progress: number) => {
