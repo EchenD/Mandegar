@@ -1,13 +1,11 @@
-export type PhotoLook = "warm" | "cool";
-
 export type VisitorCreation = {
   lighting: boolean[];
   composer: boolean[];
   drawing: HTMLCanvasElement | null;
   drawingWall: HTMLCanvasElement | null;
-  photoLook: PhotoLook;
   gameScore: number;
   gameBest: number;
+  gameCompleted: boolean;
 };
 
 const creation: VisitorCreation = {
@@ -15,9 +13,9 @@ const creation: VisitorCreation = {
   composer: [false, false, false],
   drawing: null,
   drawingWall: null,
-  photoLook: "warm",
   gameScore: 0,
   gameBest: 0,
+  gameCompleted: false,
 };
 
 function announceCreation() {
@@ -56,14 +54,14 @@ export function clearDrawing() {
   announceCreation();
 }
 
-export function savePhotoLook(look: PhotoLook) {
-  creation.photoLook = look;
-  announceCreation();
-}
-
 export function saveGameResult(score: number) {
   creation.gameScore = Math.max(0, Math.round(score));
   creation.gameBest = Math.max(creation.gameBest, creation.gameScore);
   announceCreation();
   return creation.gameBest;
+}
+
+export function completeGameResult(score: number) {
+  creation.gameCompleted = true;
+  return saveGameResult(score);
 }

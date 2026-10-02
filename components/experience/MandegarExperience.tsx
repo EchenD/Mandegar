@@ -11,7 +11,7 @@ import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
-import { VisitorPostcard } from "./interactions/VisitorPostcard";
+import { AmbientGame } from "./interactions/AmbientGame";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -419,6 +419,7 @@ export function MandegarExperience({
           </div>
 
           <InteractionDirector locale={locale} activePhase={activePhase} runtime={runtime} />
+          <AmbientGame locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
 
           <div className={styles.copyLayer}>
             <section className={`${styles.sceneCopy} ${styles.arrivalCopy}`} data-scene-copy="arrival" data-cinematic-beat>
@@ -533,7 +534,6 @@ export function MandegarExperience({
         ))}
       </div>
       </ScrollMotion>
-      <VisitorPostcard locale={locale} enabled={!["arrival", "discovery", "activation"].includes(activePhase)} />
 
       <ConnectedJourney
         locale={locale}

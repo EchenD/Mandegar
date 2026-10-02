@@ -16,6 +16,12 @@ import styles from "./HeroInteractions.module.css";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.videoWall.canvas;
 const beamCenters = [0.12, 0.31, 0.5, 0.69, 0.88] as const;
+const stageControls = {
+  reset: { left: 0.265, top: 0.2, width: 0.15, height: 0.09 },
+  play: { left: 0.425, top: 0.2, width: 0.15, height: 0.09 },
+  finish: { left: 0.585, top: 0.2, width: 0.15, height: 0.09 },
+} as const;
+type StageControl = "close" | keyof typeof stageControls;
 
 type StagePointer = {
   pointerId: number;
@@ -50,6 +56,14 @@ function hitRect(x: number, y: number, left: number, top: number, width: number,
 
 function distance(firstX: number, firstY: number, secondX: number, secondY: number) {
   return Math.hypot(firstX - secondX, firstY - secondY);
+}
+
+function controlAtPoint(x: number, y: number): StageControl | null {
+  if (distance(x, y, 0.965, 0.085) <= 0.075) return "close";
+  return (Object.keys(stageControls) as Array<keyof typeof stageControls>).find((control) => {
+    const bounds = stageControls[control];
+    return hitRect(x, y, bounds.left, bounds.top, bounds.width, bounds.height);
+  }) ?? null;
 }
 
 function revealProgress(progress: number, start: number, end: number) {
@@ -89,7 +103,7 @@ export function StageBeamInteraction({
   const [active, setActive] = useState(() => [...getVisitorCreation().lighting]);
   const activeRef = useRef(active);
   const hoverBeam = useRef<number | null>(null);
-  const hoverControl = useRef<"close" | "reset" | "play" | "finish" | null>(null);
+  const hoverControl = useRef<StageControl | null>(null);
   const keyboardFocus = useRef<number | null>(null);
   const completionReported = useRef(false);
   const onCompleteRef = useRef(onComplete);
@@ -172,16 +186,16 @@ export function StageBeamInteraction({
     context.fillText(
       isShowing ? copy.stage.showing : complete ? copy.stage.finale : activeCount > 0 ? copy.stage.ready : copy.stations.stage.instruction,
       width / 2,
-      94,
+      397,
       width - 180,
     );
     context.fillStyle = "#225cff";
     context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(String(activeCount).padStart(2, "0"), width / 2, 115);
+    context.fillText(String(activeCount).padStart(2, "0"), width / 2, 425);
     context.restore();
 
     context.fillStyle = "rgba(22,25,29,.12)";
-    context.fillRect(55, 126, width - 110, 1);
+    context.fillRect(55, 137, width - 110, 1);
 
     context.strokeStyle = "rgba(22,25,29,.16)";
     context.lineWidth = 1.5;
@@ -271,15 +285,17 @@ export function StageBeamInteraction({
     context.lineCap = "butt";
 
     const drawButton = (
-      left: number,
+      control: keyof typeof stageControls,
       label: string,
       enabled: boolean,
       focused: boolean,
       primary = false,
     ) => {
-      const top = height * 0.865;
-      const buttonWidth = width * 0.205;
-      const buttonHeight = height * 0.09;
+      const bounds = stageControls[control];
+      const left = width * bounds.left;
+      const top = height * bounds.top;
+      const buttonWidth = width * bounds.width;
+      const buttonHeight = height * bounds.height;
       roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
       context.fillStyle = primary && enabled ? "#225cff" : "rgba(255,255,255,.88)";
       context.fill();
@@ -299,19 +315,19 @@ export function StageBeamInteraction({
     context.save();
     context.globalAlpha = surfaceReveal * controlsReveal;
     drawButton(
-      width * 0.035,
+      "reset",
       copy.reset,
       activeCount > 0,
       hoverControl.current === "reset" || keyboardFocus.current === 5,
     );
     drawButton(
-      width * 0.3975,
+      "play",
       copy.stage.play,
       activeCount > 0 && !isShowing,
       hoverControl.current === "play" || keyboardFocus.current === 6,
     );
     drawButton(
-      width * 0.76,
+      "finish",
       complete ? copy.continue : copy.finish,
       activeCount > 0,
       hoverControl.current === "finish" || keyboardFocus.current === 7,
@@ -514,6 +530,7 @@ export function StageBeamInteraction({
       }
       if (transitionState.current !== "ready" || event.phase === "activate") return;
       const point = { x: event.x, y: event.y };
+      const control = controlAtPoint(point.x, point.y);
       if (event.phase === "move") {
         const pointer = activePointer.current;
         if (pointer?.pointerId === event.pointerId) {
@@ -531,15 +548,7 @@ export function StageBeamInteraction({
           schedulePaint();
           return;
         }
-        hoverControl.current = distance(point.x, point.y, 0.965, 0.085) <= 0.075
-          ? "close"
-          : hitRect(point.x, point.y, 0.02, 0.82, 0.25, 0.18)
-            ? "reset"
-            : hitRect(point.x, point.y, 0.38, 0.82, 0.24, 0.18)
-              ? "play"
-              : hitRect(point.x, point.y, 0.73, 0.82, 0.27, 0.18)
-                ? "finish"
-                : null;
+        hoverControl.current = control;
         const index = hoverControl.current === null ? beamAtPoint(point.x, point.y) : -1;
         hoverBeam.current = index >= 0 ? index : null;
         syncSceneBeams();
@@ -548,20 +557,20 @@ export function StageBeamInteraction({
       }
 
       if (event.phase === "down") {
-        if (distance(point.x, point.y, 0.965, 0.085) <= 0.075) {
+        if (control === "close") {
           closeWithTransition();
           return;
         }
-        if (hitRect(point.x, point.y, 0.02, 0.82, 0.25, 0.18)) {
+        if (control === "reset") {
           if (activeRef.current.some(Boolean)) reset();
           return;
         }
-        if (hitRect(point.x, point.y, 0.73, 0.82, 0.27, 0.18)) {
+        if (control === "finish") {
           if (completionReported.current) continueWithTransition();
           else finishLook();
           return;
         }
-        if (hitRect(point.x, point.y, 0.38, 0.82, 0.24, 0.18)) {
+        if (control === "play") {
           playShow();
           return;
         }

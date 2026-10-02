@@ -14,7 +14,7 @@ export type InteractionCopy = {
   clear: string;
   undo: string;
   stations: Record<InteractionStation, StationCopy>;
-  photo: { ready: string; capture: string; captured: string; choose: string; looks: [string, string] };
+  photo: { ready: string; capture: string; captured: string; delivery: string; example: string };
   touch: {
     elements: [string, string, string];
     instruction: string;
@@ -52,16 +52,16 @@ const english: InteractionCopy = {
   clear: "Clear",
   undo: "Undo",
   stations: {
-    photo: { label: "Open photo booth", title: "Photo booth", instruction: "Choose a look, then start your simulated capture." },
-    touch: { label: "Open experience composer", title: "Experience composer", instruction: "Tap each ingredient and watch the space respond." },
+    photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch an event photo arrive on the visitor’s phone." },
+    touch: { label: "Open experience composer", title: "Experience composer", instruction: "Tap or drag an element to the centre." },
     stage: { label: "Open stage controls", title: "Your lighting look", instruction: "Choose your lights. Play the show or finish your look." },
     game: { label: "Play Breakout", title: "Breakout", instruction: "Drag the paddle or use ← / → to clear the lights." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
-  photo: { ready: "Simulated portrait · choose a mood", capture: "Start capture", captured: "Simulated portrait preview", choose: "Choose a look", looks: ["Warm", "Cool"] },
+  photo: { ready: "Capture at the event.", capture: "Watch the demo", captured: "From the event to their phone.", delivery: "Instantly on the visitor’s phone.", example: "Delivery demo · example photo" },
   touch: {
     elements: ["Space", "Story", "People"],
-    instruction: "Space lights the path. Story shapes the screen. People bring the energy.",
+    instruction: "Bring space, story and people together.",
     complete: "Your space is alive.",
   },
   stage: { beam: "Beam", finale: "Your lighting look is ready", play: "Play your show", showing: "Your show is playing", ready: "Pick any lights to create your look" },
@@ -102,16 +102,16 @@ const persian: InteractionCopy = {
   clear: "پاک کردن",
   undo: "بازگشت",
   stations: {
-    photo: { label: "ورود به غرفه عکس", title: "غرفه عکس", instruction: "حال‌وهوا را انتخاب کنید، سپس ثبت نمایشی را شروع کنید." },
-    touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "هر عنصر را لمس کنید و واکنش فضا را ببینید." },
+    photo: { label: "نمایش تحویل عکس رویداد", title: "عکس رویداد، تحویل فوری", instruction: "ثبت عکس در رویداد و رسیدن آن به گوشی مهمان را ببینید." },
+    touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "هر عنصر را لمس کنید یا به مرکز بکشید." },
     stage: { label: "کنترل نور صحنه", title: "نورپردازی شما", instruction: "نورها را انتخاب کنید؛ نمایش را پخش کنید یا ترکیب را پایان دهید." },
     game: { label: "بازی آجرشکن", title: "آجرشکن", instruction: "سکو را بکشید یا با ← و → حرکت دهید و نورها را پاک کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
-  photo: { ready: "پرتره نمایشی · انتخاب حال‌وهوا", capture: "شروع ثبت", captured: "پیش‌نمایش پرتره نمایشی", choose: "انتخاب حال‌وهوا", looks: ["گرم", "سرد"] },
+  photo: { ready: "ثبت عکس در رویداد.", capture: "دیدن نمایش", captured: "از رویداد، مستقیم به گوشی مهمان.", delivery: "تحویل فوری به گوشی مهمان.", example: "نمایش خدمات · تصویر نمونه" },
   touch: {
     elements: ["فضا", "روایت", "مردم"],
-    instruction: "فضا مسیر را روشن می‌کند؛ روایت نمایشگر را شکل می‌دهد؛ مردم انرژی می‌آورند.",
+    instruction: "فضا، روایت و مردم را به هم متصل کنید.",
     complete: "فضای شما زنده شد.",
   },
   stage: { beam: "پرتو", finale: "نورپردازی شما آماده است", play: "پخش نمایش شما", showing: "نمایش شما در حال پخش است", ready: "نورهای دلخواه را برای ترکیب خود انتخاب کنید" },
@@ -152,16 +152,16 @@ const arabic: InteractionCopy = {
   clear: "مسح",
   undo: "تراجع",
   stations: {
-    photo: { label: "فتح جناح الصور", title: "جناح الصور", instruction: "اختر الأجواء ثم ابدأ الالتقاط التجريبي." },
-    touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "المس كل عنصر وشاهد استجابة المكان." },
+    photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد صورة الفعالية تصل إلى هاتف الزائر." },
+    touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "المس كل عنصر أو اسحبه إلى الوسط." },
     stage: { label: "فتح تحكم المسرح", title: "إضاءتك", instruction: "اختر الأضواء ثم شغّل العرض أو أنهِ تنسيقك." },
     game: { label: "العب كاسر الطوب", title: "كاسر الطوب", instruction: "اسحب المضرب أو استخدم ← و → لإزالة الأضواء." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },
-  photo: { ready: "بورتريه تجريبي · اختر الأجواء", capture: "بدء الالتقاط", captured: "معاينة بورتريه تجريبية", choose: "اختر الأجواء", looks: ["دافئة", "باردة"] },
+  photo: { ready: "التقاط الصورة في الفعالية.", capture: "شاهد العرض", captured: "من الفعالية مباشرةً إلى هاتف الزائر.", delivery: "تصل فورًا إلى هاتف الزائر.", example: "عرض الخدمة · صورة نموذجية" },
   touch: {
     elements: ["المكان", "القصة", "الناس"],
-    instruction: "المكان يضيء المسار، والقصة تشكّل الشاشة، والناس يبعثون الطاقة.",
+    instruction: "اجمع المكان والقصة والناس.",
     complete: "مكانك ينبض بالحياة.",
   },
   stage: { beam: "شعاع", finale: "إضاءتك جاهزة", play: "شغّل عرضك", showing: "عرضك قيد التشغيل", ready: "اختر الأضواء لتشكّل أجواءك" },

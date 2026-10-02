@@ -293,7 +293,10 @@ export function BakedScreenController({
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
       const savedWall = runtime.id === "main" ? getVisitorCreation().drawingWall : null;
-      const liveEntry = interactionRuntime.monitorEntries[runtime.id] ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
+      const ambientGame = runtime.id === "game" && interactionRuntime.activeStation !== "game"
+        ? interactionRuntime.ambientGameSurface
+        : null;
+      const liveEntry = interactionRuntime.monitorEntries[runtime.id] ?? ambientGame ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
       if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
         runtime.liveTexture?.dispose();
         runtime.liveCanvas = liveEntry?.canvas ?? null;

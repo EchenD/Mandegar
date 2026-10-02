@@ -8,9 +8,6 @@ import * as THREE from "three";
 import { bakedSceneContract } from "./baked-scene-contract";
 import { experienceState } from "./experience-state";
 import { phaseProgress, sceneTokens } from "./scene-config";
-import { interactionRuntime } from "./interactions/interaction-runtime";
-import { getVisitorCreation } from "./interactions/visitor-creation";
-import { getVisitorPresentation } from "./interactions/visitor-presentation";
 
 const vertexShader = /* glsl */ `
   attribute float aRoute;
@@ -137,10 +134,7 @@ export function DataFlowNetwork({ exhibition }: { exhibition: THREE.Object3D }) 
   useFrame(({ clock }) => {
     const timing = phaseProgress(experienceState.progress, sceneTokens.bakedScene.dataFlowRange);
     const easedTiming = timing * timing * (3 - 2 * timing);
-    const inComposer = interactionRuntime.activeStation === "touch";
-    const spaceSelected = (inComposer ? interactionRuntime.touchElements : getVisitorCreation().composer)[0];
-    const composerStrength = spaceSelected ? (inComposer ? interactionRuntime.touchVisibility * 0.8 : 0.3 * getVisitorPresentation(experienceState.progress).composerVisibility) : 0;
-    const strength = Math.max(experienceState.stage.production.dataFlow * easedTiming, composerStrength);
+    const strength = experienceState.stage.production.dataFlow * easedTiming;
     material.uniforms.uTime.value = clock.elapsedTime;
     material.uniforms.uStrength.value = strength;
     if (points.current) points.current.visible = strength > 0.002;

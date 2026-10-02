@@ -519,25 +519,6 @@ function InteractionBeamEffects({
   return <primitive object={rig.group} />;
 }
 
-function createTouchPulseTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 64;
-  const context = canvas.getContext("2d");
-  if (context) {
-    const gradient = context.createRadialGradient(32, 32, 2, 32, 32, 30);
-    gradient.addColorStop(0, "rgba(255,255,255,1)");
-    gradient.addColorStop(0.22, "rgba(117,216,255,.95)");
-    gradient.addColorStop(1, "rgba(34,92,255,0)");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 64, 64);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
-}
-
 function getWorldPointAtUv(
   root: THREE.Object3D,
   targetU: number,
@@ -579,122 +560,88 @@ function getWorldPointAtUv(
   return result;
 }
 
-function InteractionTouchEffects({
-  anchors,
+type ScenePointerCapture = {
+  setPointerCapture: (pointerId: number) => void;
+  releasePointerCapture: (pointerId: number) => void;
+};
+
+type GamePointerProjection = {
+  pointerId: number;
+  capture: ScenePointerCapture;
+  input: "pointer" | "touch";
+  origin: THREE.Vector3;
+  uAxis: THREE.Vector3;
+  vAxis: THREE.Vector3;
+  plane: THREE.Plane;
+  point: THREE.Vector3;
+  uu: number;
+  uv: number;
+  vv: number;
+  determinant: number;
+  x: number;
+  y: number;
+};
+
+function createGamePointerProjection(screen: THREE.Object3D, event: ThreeEvent<PointerEvent>): GamePointerProjection | null {
+  const origin = getWorldPointAtUv(screen, 0.5, 0.5);
+  const right = getWorldPointAtUv(screen, 0.6, 0.5);
+  const up = getWorldPointAtUv(screen, 0.5, 0.6);
+  if (!origin || !right || !up || !event.uv) return null;
+  const uAxis = right.sub(origin).multiplyScalar(10);
+  const vAxis = up.sub(origin).multiplyScalar(10);
+  const uu = uAxis.dot(uAxis);
+  const uv = uAxis.dot(vAxis);
+  const vv = vAxis.dot(vAxis);
+  const determinant = uu * vv - uv * uv;
+  if (Math.abs(determinant) < 1e-8) return null;
+  return {
+    pointerId: event.pointerId,
+    capture: event.target as unknown as ScenePointerCapture,
+    input: event.pointerType === "touch" ? "touch" : "pointer",
+    origin,
+    uAxis,
+    vAxis,
+    plane: new THREE.Plane().setFromNormalAndCoplanarPoint(uAxis.clone().cross(vAxis).normalize(), origin),
+    point: new THREE.Vector3(),
+    uu,
+    uv,
+    vv,
+    determinant,
+    x: event.uv.x,
+    y: event.uv.y,
+  };
+}
+
+function projectGamePointer(ray: THREE.Ray, pointer: GamePointerProjection) {
+  if (!ray.intersectPlane(pointer.plane, pointer.point)) return;
+  pointer.point.sub(pointer.origin);
+  const u = pointer.point.dot(pointer.uAxis);
+  const v = pointer.point.dot(pointer.vAxis);
+  pointer.x = 0.5 + (u * pointer.vv - v * pointer.uv) / pointer.determinant;
+  pointer.y = 0.5 + (v * pointer.uu - u * pointer.uv) / pointer.determinant;
+}
+
+function NarrativeParticles({
+  environment,
+  exhibition,
   quality,
-  screen,
 }: {
-  anchors: InteractionAnchorRuntime;
+  environment: THREE.Object3D;
+  exhibition: THREE.Object3D;
   quality: SceneQuality;
-  screen: THREE.Object3D | null;
 }) {
-  const camera = useThree((state) => state.camera);
-  const group = useMemo(() => {
-    const next = new THREE.Group();
-    next.name = "fxInteraction_touch_composer";
-    const fallbackCenter = anchors.stations.touch.object.getWorldPosition(new THREE.Vector3());
-    const screenCenter = screen ? getWorldPointAtUv(screen, 0.5, 0.45) : null;
-    const screenRight = screen ? getWorldPointAtUv(screen, 0.6, 0.45) : null;
-    const screenDown = screen ? getWorldPointAtUv(screen, 0.5, 0.55) : null;
-    const xAxis = screenCenter && screenRight
-      ? screenRight.clone().sub(screenCenter).multiplyScalar(10)
-      : new THREE.Vector3(1, 0, 0);
-    const yAxis = screenCenter && screenDown
-      ? screenDown.clone().sub(screenCenter).multiplyScalar(10)
-      : new THREE.Vector3(0, -1, 0);
-    const normal = xAxis.clone().cross(yAxis).normalize();
-    const centerPoint = screenCenter ?? fallbackCenter;
-    if (normal.dot(camera.position.clone().sub(centerPoint)) < 0) normal.negate();
-    next.position.copy(centerPoint).addScaledVector(normal, 0.07);
-    const pulseTexture = createTouchPulseTexture();
-    const storyCanvas = document.createElement("canvas");
-    storyCanvas.width = storyCanvas.height = 256;
-    const storyContext = storyCanvas.getContext("2d");
-    if (storyContext) {
-      storyContext.strokeStyle = "#fff";
-      storyContext.lineWidth = 5;
-      for (let index = 0; index < 5; index += 1) {
-        storyContext.beginPath();
-        storyContext.moveTo(16, 64 + index * 28);
-        storyContext.bezierCurveTo(90, index * 18, 166, 256 - index * 18, 240, 64 + index * 28);
-        storyContext.stroke();
-      }
-    }
-    const storyTexture = new THREE.CanvasTexture(storyCanvas);
-    const colors = ["#50c7ff", "#d95cff", "#ffb54a"];
-    const pulses = colors.map((color, index) => {
-      const pulseMaterial = new THREE.SpriteMaterial({
-        map: index === 1 ? storyTexture : pulseTexture,
-        color,
-        transparent: true,
-        opacity: 0,
-        depthTest: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        toneMapped: false,
-      });
-      const pulse = new THREE.Sprite(pulseMaterial);
-      pulse.name = `fxInteraction_touch_signal_${index + 1}`;
-      pulse.scale.setScalar(0.28);
-      pulse.raycast = () => {};
-      pulse.renderOrder = 43;
-      pulse.visible = false;
-      next.add(pulse);
-      return pulse;
-    });
-
-    next.userData.pulses = pulses;
-    next.userData.xAxis = xAxis;
-    next.userData.yAxis = yAxis;
-    next.userData.normal = normal;
-    next.userData.pulseTexture = pulseTexture;
-    next.userData.storyTexture = storyTexture;
-    return next;
-  }, [anchors, camera, screen]);
-
-  useFrame(({ clock }, delta) => {
-    const inComposer = interactionRuntime.activeStation === "touch";
-    const elements = inComposer ? interactionRuntime.touchElements : getVisitorCreation().composer;
-    const complete = elements.every(Boolean);
-    const pulses = group.userData.pulses as THREE.Sprite[];
-    const xAxis = group.userData.xAxis as THREE.Vector3;
-    const yAxis = group.userData.yAxis as THREE.Vector3;
-    const normal = group.userData.normal as THREE.Vector3;
-    pulses.forEach((pulse, index) => {
-      const pulseMaterial = pulse.material as THREE.SpriteMaterial;
-      const active = elements[index];
-      pulseMaterial.opacity = THREE.MathUtils.damp(
-        pulseMaterial.opacity,
-        active
-          ? (complete ? 0.9 : quality === "full" ? 0.78 : 0.64)
-            * (inComposer ? interactionRuntime.touchVisibility : 0.35 * getVisitorPresentation(experienceState.progress).composerVisibility)
-          : 0,
-        11,
-        delta,
-      );
-      pulse.visible = pulseMaterial.opacity > 0.002;
-      if (pulse.visible) {
-        const angle = clock.elapsedTime * (complete ? 0.95 : 0.68) + index * Math.PI * 2 / 3;
-        const radius = complete ? 0.82 : 1;
-        pulse.position.copy(xAxis).multiplyScalar(Math.cos(angle) * 0.095 * radius);
-        pulse.position.addScaledVector(yAxis, Math.sin(angle) * 0.17 * radius);
-        pulse.position.addScaledVector(normal, Math.sin(angle * 1.4) * 0.025);
-        if (index === 1) pulse.position.set(0, 0, 0);
-        const scale = index === 1 ? 0.55 : (complete ? 0.32 : 0.27) + Math.sin(clock.elapsedTime * 5 + index) * 0.025;
-        pulse.scale.setScalar(scale);
-      }
-    });
+  const group = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!group.current) return;
+    group.current.visible = experienceState.narrative.phase !== "engagement"
+      && interactionRuntime.activeStation !== "touch";
   });
-
-  useEffect(() => () => {
-    (group.userData.pulses as THREE.Sprite[]).forEach((pulse) => {
-      (pulse.material as THREE.Material).dispose();
-    });
-    (group.userData.pulseTexture as THREE.Texture).dispose();
-    (group.userData.storyTexture as THREE.Texture).dispose();
-  }, [group]);
-
-  return <primitive object={group} />;
+  return (
+    <group ref={group} name="fxNarrative_ambient_particles">
+      <TransitionParticleField environment={environment} exhibition={exhibition} quality={quality} />
+      <AmbientDust exhibition={exhibition} quality={quality} />
+    </group>
+  );
 }
 
 function InteractionGameEffects({
@@ -957,7 +904,7 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     texture: THREE.CanvasTexture;
   } | null>(null);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const photoInterface = group.userData.photoInterface as THREE.Sprite;
     const interfaceMaterial = group.userData.interfaceMaterial as THREE.SpriteMaterial;
     const phone = group.userData.phone as THREE.Sprite;
@@ -972,12 +919,6 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     const trailPositionAttribute = (group.userData.trailGeometry as THREE.BufferGeometry)
       .getAttribute("position") as THREE.BufferAttribute;
     const flashLight = group.userData.flashLight as THREE.PointLight;
-    const warm = interactionRuntime.photoLook === "warm";
-    phoneMaterial.color.set(warm ? "#fff0db" : "#e0efff");
-    phoneFrameMaterial.color.set(warm ? "#f3e3ce" : "#d9e7ff");
-    flashVolumeMaterial.color.set(warm ? "#ffe5ba" : "#d8eeff");
-    trailMaterial.color.set(warm ? "#ffc985" : "#75d8ff");
-    flashLight.color.set(warm ? "#ffe5ba" : "#d8eeff");
     const surface = interactionRuntime.photoSurface;
     if (surface && surfaceTexture.current?.canvas !== surface.canvas) {
       surfaceTexture.current?.texture.dispose();
@@ -1000,12 +941,13 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     }
     const step = interactionRuntime.photoStep;
     const interfaceTarget = interactionRuntime.photoVisibility;
+    const desktopInterface = state.size.width > 760;
     const exitProgress = step === "captured"
       ? THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(1 - interfaceTarget, 0, 1), 0, 1)
       : 0;
     interfaceMaterial.opacity = THREE.MathUtils.damp(
       interfaceMaterial.opacity,
-      interfaceTarget,
+      !desktopInterface && step === "captured" ? 0 : interfaceTarget,
       10,
       delta,
     );
@@ -1021,8 +963,8 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
       1 - Math.exp(-8 * delta),
     );
     const targetInterfaceScale = step === "captured"
-      ? 0.68 * (1 - exitProgress * 0.46)
-      : step === "countdown" ? 0.74 : 0.7;
+      ? (desktopInterface ? 0.75 : 0.68) * (1 - exitProgress * 0.46)
+      : step === "countdown" ? 0.74 : desktopInterface ? 1.2 : 0.7;
     const interfaceScale = THREE.MathUtils.damp(
       photoInterface.scale.y,
       interfaceTarget > 0.001 ? targetInterfaceScale : 0.078,
@@ -1173,7 +1115,7 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     if (directControl && captureAge.current < 1) return;
     dispatchSceneInteraction("photo", {
       phase,
-      x: directControl === "replay" ? 0.2 : THREE.MathUtils.clamp(event.uv.x, 0, 1),
+      x: directControl === "replay" ? 0.425 : THREE.MathUtils.clamp(event.uv.x, 0, 1),
       y: directControl === "replay" ? 0.83 : THREE.MathUtils.clamp(1 - event.uv.y, 0, 1),
       pointerId: event.pointerId,
       input: event.pointerType === "touch" ? "touch" : "pointer",
@@ -1341,11 +1283,47 @@ export function BakedMandegarScene({
     station: InteractionStation;
     until: number;
   } | null>(null);
+  const gamePointer = useRef<GamePointerProjection | null>(null);
+
+  const releaseGamePointer = useCallback(() => {
+    const pointer = gamePointer.current;
+    gamePointer.current = null;
+    if (pointer && gl.domElement.hasPointerCapture(pointer.pointerId)) {
+      pointer.capture.releasePointerCapture(pointer.pointerId);
+    }
+  }, [gl]);
+  const cancelGamePointer = useCallback(() => {
+    const pointer = gamePointer.current;
+    if (!pointer) return;
+    dispatchSceneInteraction("game", {
+      phase: "cancel",
+      x: pointer.x,
+      y: pointer.y,
+      pointerId: pointer.pointerId,
+      input: pointer.input,
+    });
+    releaseGamePointer();
+  }, [releaseGamePointer]);
 
   const clearInteraction = useCallback(() => {
     document.body.style.cursor = "";
   }, []);
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
+    const pointer = gamePointer.current;
+    if (pointer && interactionRuntime.activeStation === "game") {
+      event.stopPropagation();
+      if (pointer.pointerId !== event.pointerId) return;
+      projectGamePointer(event.ray, pointer);
+      document.body.style.cursor = "ew-resize";
+      dispatchSceneInteraction("game", {
+        phase: "move",
+        x: pointer.x,
+        y: pointer.y,
+        pointerId: pointer.pointerId,
+        input: pointer.input,
+      });
+      return;
+    }
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (station && interactionRuntime.activeStation === station && event.uv) {
@@ -1372,9 +1350,14 @@ export function BakedMandegarScene({
     const station = screenId ? screenStations[screenId] : null;
     if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
     event.stopPropagation();
-    const target = event.nativeEvent.target;
-    if (target instanceof Element && "setPointerCapture" in target) {
-      target.setPointerCapture(event.pointerId);
+    if (station === "game") {
+      if (gamePointer.current && gamePointer.current.pointerId !== event.pointerId) return;
+      const screen = exhibition.getObjectByName(bakedSceneContract.exhibition.screens.game);
+      gamePointer.current = screen ? createGamePointerProjection(screen, event) : null;
+      gamePointer.current?.capture.setPointerCapture(event.pointerId);
+    } else {
+      const target = event.nativeEvent.target;
+      if (target instanceof Element && "setPointerCapture" in target) target.setPointerCapture(event.pointerId);
     }
     dispatchSceneInteraction(station, {
       phase: "down",
@@ -1389,8 +1372,23 @@ export function BakedMandegarScene({
         until: performance.now() + 500,
       };
     }
-  }, []);
+  }, [exhibition]);
   const handlePointerEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
+    const pointer = gamePointer.current;
+    if (pointer && pointer.pointerId !== event.pointerId && interactionRuntime.activeStation === "game") return;
+    if (pointer && pointer.pointerId === event.pointerId) {
+      event.stopPropagation();
+      projectGamePointer(event.ray, pointer);
+      dispatchSceneInteraction("game", {
+        phase: event.type === "pointercancel" ? "cancel" : "up",
+        x: pointer.x,
+        y: pointer.y,
+        pointerId: pointer.pointerId,
+        input: pointer.input,
+      });
+      releaseGamePointer();
+      return;
+    }
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
@@ -1402,8 +1400,9 @@ export function BakedMandegarScene({
       pointerId: event.pointerId,
       input: event.pointerType === "touch" ? "touch" : "pointer",
     });
-  }, []);
+  }, [releaseGamePointer]);
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (gamePointer.current && interactionRuntime.activeStation === "game") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (station && interactionRuntime.activeStation === station) {
@@ -1443,8 +1442,21 @@ export function BakedMandegarScene({
     requestInteraction(station, "pointer");
   }, []);
   useEffect(() => clearInteraction, [clearInteraction]);
+  useEffect(() => {
+    const lostCapture = (event: PointerEvent) => {
+      if (gamePointer.current?.pointerId === event.pointerId) cancelGamePointer();
+    };
+    window.addEventListener("blur", cancelGamePointer);
+    gl.domElement.addEventListener("lostpointercapture", lostCapture);
+    return () => {
+      window.removeEventListener("blur", cancelGamePointer);
+      gl.domElement.removeEventListener("lostpointercapture", lostCapture);
+      cancelGamePointer();
+    };
+  }, [cancelGamePointer, gl]);
 
   useFrame(({ clock }) => {
+    if (gamePointer.current && interactionRuntime.activeStation !== "game") cancelGamePointer();
     const runtime = runtimeRef.current;
     if (!runtime) {
       return;
@@ -1523,22 +1535,16 @@ export function BakedMandegarScene({
       <BakedScreenController root={exhibition} projects={projects} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} root={exhibition} />
-      <InteractionTouchEffects
-        anchors={interactionAnchors}
-        quality={quality}
-        screen={exhibition.getObjectByName(bakedSceneContract.exhibition.screens.interactive) ?? null}
-      />
       <InteractionGameEffects
         anchors={interactionAnchors}
         quality={quality}
         screen={exhibition.getObjectByName(bakedSceneContract.exhibition.screens.game) ?? null}
       />
-      <TransitionParticleField
+      <NarrativeParticles
         environment={environment}
         exhibition={exhibition}
         quality={quality}
       />
-      <AmbientDust exhibition={exhibition} quality={quality} />
       <DataFlowNetwork exhibition={exhibition} />
       <DeferredBakedCrowd quietMap={textures[2]} peakMap={textures[3]} />
     </group>
