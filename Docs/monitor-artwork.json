@@ -1,0 +1,25 @@
+{
+  "generator": "Built-in image_gen",
+  "date": "2026-10-02",
+  "usage": "Idle screen previews; live interactions and retained visitor creations override them.",
+  "assets": [
+    {
+      "path": "public/media/mandegar/screens/screen-game-3x4.webp",
+      "width": 1002,
+      "height": 1440,
+      "prompt": "Use case: stylized-concept. Asset type: idle artwork filling a physical portrait game monitor in Mandegar's 3D event website. Generate a refined minimal Breakout-inspired screen illustration, portrait 1002 x 1440 composition. Charcoal/navy background (#080d16 to #141b26), eight translucent blue rounded rectangular bricks in two rows of four in the upper quarter, one short cyan paddle near the lower quarter, one small ivory ball between the paddle and blocks with a very restrained cyan trail. Straight-on screen artwork; no surrounding monitor, no perspective, no scene. Fine edges, calm premium event-brand visual, colors cobalt #225cff, cyan #75d8ff, ivory #f7f7f4. Leave generous quiet space between bricks and paddle and at the top and bottom. Match a simple eight-brick Breakout game, no pinball or maze. No text, lettering, labels, buttons, HUD, icons, logos, gold, orange, people or busy particles."
+    },
+    {
+      "path": "public/media/mandegar/screens/screen-main-4x3.webp",
+      "width": 1920,
+      "height": 1436,
+      "prompt": "Use case: stylized-concept. Asset type: idle artwork filling a physical landscape writing/drawing monitor in Mandegar's 3D event website. Generate refined minimal luminous freehand drawing artwork, landscape composition 1920 x 1436. Deep charcoal/slate background (#090d12 to #151a20), a single loose expressive hand-drawn loop flowing across the middle, like the beginning of a visitor's freehand signature but not any word or letter. Thin ivory core with restrained cobalt #225cff and cyan #75d8ff soft luminous edge. Calm generous negative space around the mark, especially the upper and lower 20 percent for future localized live controls. Straight-on screen artwork only, no physical monitor, no perspective, no scene. Premium understated feel and natural human stroke, no abstract metallic ribbons. No text, labels, letters, brand logo, controls, buttons, HUD, gold, people or busy particles."
+    },
+    {
+      "path": "public/media/mandegar/screens/screen-interactive-16x9.webp",
+      "width": 2062,
+      "height": 1080,
+      "prompt": "Use case: stylized-concept. Asset type: idle artwork filling a physical landscape interactive-composition monitor in Mandegar's 3D event website. Generate refined minimal illustration about bringing three elements together, landscape composition 2062 x 1080. Pale ivory background #fafaf7 with a barely visible cool-gray gradient #e8eceb. Exactly three small tactile abstract forms, one subtle cobalt-blue cube at 20 percent across/67 percent down, one ivory-blue folded strip at 50 percent across/71 percent down, and one translucent cyan sphere at 80 percent across/67 percent down. One quiet, thin cobalt circle centered at 50 percent across/45 percent down is their common meeting point. Restrained hairline paths connect the forms to this center. Objects should be small, clean, abstract representations of space, story and people; no human silhouettes. Gentle material shading, ample clean negative space, especially upper quarter and bottom 15 percent. Straight-on screen artwork; no surrounding monitor, no UI perspective, no event scene. Match charcoal/ivory/cobalt/cyan Mandegar palette. No text, labels, controls, buttons, logos, gold, orange, giant glowing effects, dense network or particles."
+    }
+  ]
+}
