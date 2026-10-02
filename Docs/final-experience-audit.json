@@ -1,0 +1,270 @@
+{
+  "date": "2026-10-02",
+  "scope": "Final audit of the requests in this conversation. Repeated requests are checked against the same implementation; concepts explicitly left open for discussion remain proposals.",
+  "requests": [
+    {
+      "request": "Minimum changes with strong visual and interaction impact; review the whole journey",
+      "status": "implemented",
+      "evidence": [
+        "Scene cameras and authored geometry preserved",
+        "Focused interaction, copy, footer, and mobile polish"
+      ]
+    },
+    {
+      "request": "Clearer interaction hints",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/interaction-copy.ts",
+        "Duplicate photo/game hints removed"
+      ]
+    },
+    {
+      "request": "Faster interaction entrances",
+      "status": "implemented",
+      "evidence": [
+        "Entrances: game 500ms; composer, stage and drawing 550ms; photo 600ms",
+        "Canvas is painted before registration; reopening retains the previous surface until its replacement is ready"
+      ]
+    },
+    {
+      "request": "Quieter Skip, clearer Continue",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/HeroInteractions.module.css",
+        "Completion, replay, reset, and skip recovery"
+      ]
+    },
+    {
+      "request": "Clearer project links and categories",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/ConnectedJourney.tsx",
+        "Localized project categories and direct work links"
+      ]
+    },
+    {
+      "request": "Cleaner website copy",
+      "status": "implemented",
+      "evidence": [
+        "app/[locale]/page.tsx",
+        "Localized concise titles and supporting lines"
+      ]
+    },
+    {
+      "request": "Final mobile and accessibility polish",
+      "status": "implemented",
+      "evidence": [
+        "Keyboard controls, focus recovery, touch ownership, RTL, reduced motion, overflow, and 44px controls",
+        "Mobile menu traps Tab and owns Escape without also closing the active interaction"
+      ]
+    },
+    {
+      "request": "Recover correctly when resetting, replaying, or unselecting after completion",
+      "status": "implemented",
+      "evidence": [
+        "InteractionDirector RESTART and station onReset callbacks restore the unfinished lifecycle",
+        "tests/e2e/hero-interaction-recovery.spec.ts",
+        "Skip and Continue follow current completion after composer reset, stage changes, photo replay, and game replay"
+      ]
+    },
+    {
+      "request": "Keep visitor choices while reversing their presentation during backward scrolling",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/visitor-creation.ts",
+        "components/experience/interactions/visitor-presentation.ts",
+        "Saved monitor compositions and drawing surfaces"
+      ]
+    },
+    {
+      "request": "Loop the chosen beam show, stop at Intelligence, restore it when scrolling back",
+      "status": "implemented",
+      "evidence": [
+        "tests/e2e/hero-beam-flow.spec.ts",
+        "Saved lighting playback follows narrative visibility"
+      ]
+    },
+    {
+      "request": "Replace the previous game with a familiar simple game",
+      "status": "implemented",
+      "evidence": [
+        "Breakout with eight bricks",
+        "Personal scores and visit best retained"
+      ]
+    },
+    {
+      "request": "Preserve the finished drawing and remove its finish flash",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/DrawingInteraction.tsx",
+        "Saved wall remains behind departing controls and during re-entry"
+      ]
+    },
+    {
+      "request": "Fix Windows dev server EACCES on port 3000",
+      "status": "implemented",
+      "evidence": [
+        "Port 3000 lies in the Windows excluded range",
+        "npm run dev uses available port 3100",
+        "Development documentation and fallback URLs updated"
+      ]
+    },
+    {
+      "request": "Support mouse dragging in the game",
+      "status": "implemented",
+      "evidence": [
+        "tests/e2e/hero-game.spec.ts",
+        "Pointer capture, out-of-screen steering, release, and blur recovery"
+      ]
+    },
+    {
+      "request": "Remove activation and decorative particles from the interactive monitor; retain Intelligence particles",
+      "status": "implemented",
+      "evidence": [
+        "Monitor composition has no particle effects",
+        "Crowd intelligence network remains in its narrative section"
+      ]
+    },
+    {
+      "request": "Place the main stage monitor buttons together near the top center",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/StageBeamInteraction.tsx",
+        "Shared visual and pointer bounds"
+      ]
+    },
+    {
+      "request": "Explain event photo delivery to the phone; remove unwanted extra photo UI",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/PhotoBoothInteraction.tsx",
+        "Short transparent scene copy, countdown, authored photo-to-phone animation, Replay and Continue"
+      ]
+    },
+    {
+      "request": "Remove the downloadable picture",
+      "status": "implemented",
+      "evidence": [
+        "VisitorPostcard removed",
+        "No photo download, camera request, or delivery submission in the demo"
+      ]
+    },
+    {
+      "request": "Make all interaction UI belong to the website's theme",
+      "status": "implemented",
+      "evidence": [
+        "Vazirmatn family",
+        "Charcoal, ivory, cobalt, and cyan controls",
+        "Photo and game UI cleaned"
+      ]
+    },
+    {
+      "request": "Keep the completed game alive with automatic play and restarts",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/interactions/AmbientGame.tsx",
+        "Separate simulation preserves personal stats; pauses offscreen/hidden and respects reduced motion"
+      ]
+    },
+    {
+      "request": "Review copyright placement, UI, and flow; commit changes in steps",
+      "status": "implemented",
+      "evidence": [
+        "components/layout/Footer.tsx",
+        "tests/e2e/footer.spec.ts",
+        "Conventional commits with distinct implementation scopes"
+      ]
+    },
+    {
+      "request": "Change people materials only with the color transition, preserving original textures and using brightness as falloff intensity",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/baked-scene-material.ts",
+        "Original maps and geometry retained; peak mix gates texture-weighted falloff",
+        "Development-only off/soft/strong comparison variants"
+      ]
+    },
+    {
+      "request": "Hover or tap people to brighten them and show artificial participation data",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/BakedCrowd.tsx",
+        "Stable clearly labelled simulated activity and time examples",
+        "Reversible per-person focus glow"
+      ]
+    },
+    {
+      "request": "Shorter titles and text in empty scene space, with better entrances and no covering panels",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/MandegarExperience.module.css",
+        "components/experience/ScrollMotion.tsx",
+        "Phase-specific placement, shallow depth/lift, readable body copy, no panel"
+      ]
+    },
+    {
+      "request": "Regenerate game, writing, and interactive monitor images to match their interactions",
+      "status": "implemented",
+      "evidence": [
+        "Docs/monitor-artwork.json",
+        "Three generated WebP assets fitted to authored screen ratios"
+      ]
+    },
+    {
+      "request": "Make Intelligence data emerge in 3D near the person with a leader line, retain chapter text, handle fast hover and cleanup",
+      "status": "implemented",
+      "evidence": [
+        "components/experience/CrowdPersonReadout.tsx",
+        "One reusable world annotation, shaped RTL reveal, latest-target retargeting, viewport and occlusion cleanup",
+        "Accessible controls and semantic data"
+      ]
+    },
+    {
+      "request": "Review game top UI",
+      "status": "implemented",
+      "evidence": [
+        "Localized HUD and matching Close hit area",
+        "Duplicate instruction removed",
+        "Desktop central navigation hidden during active game and restored on exit",
+        "Opening the mobile menu releases paddle input and pauses the game; resuming requires the game button"
+      ]
+    },
+    {
+      "request": "Final monitor start/finish/reopen audit for background flashes",
+      "status": "implemented",
+      "evidence": [
+        "tests/e2e/hero-monitor-handoff.spec.ts",
+        "Actual WebGL sampler draws verify painted surfaces through handoffs",
+        "Outgoing surface retained until successor is painted"
+      ]
+    }
+  ],
+  "openDiscussion": [
+    {
+      "idea": "Three actual 3D objects that control the interactive monitor",
+      "status": "proposal",
+      "current": "The existing Space/Story/People composer remains a monitor interaction; selected People also changes the scene. Actual object manipulation has not been implemented."
+    },
+    {
+      "idea": "Gather Intelligence particles into monitor insights",
+      "status": "proposal",
+      "current": "Existing data routes converge toward the central screen and person-linked example readouts are implemented. A new particle-gathering sequence and monitor insight display have not been implemented."
+    },
+    {
+      "idea": "A branded memory card near the end of the hero",
+      "status": "proposal",
+      "current": "The disliked download feature was removed. A replacement keepsake remains open for design discussion."
+    }
+  ],
+  "validation": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "monitorHandoffs": "passed: rendered game, composer, and drawing completion/reopening checks",
+    "narrative": "passed: Persian and Arabic desktop/mobile forward and reverse sweeps",
+    "intelligence": "passed: real mesh hover/tap, rapid retargeting, pinning, keyboard, blur, Persian/Arabic readouts, eight occlusion/frustum checks",
+    "game": "passed: desktop header, keyboard, mouse drag, held/multiple touch ownership, autoplay, Persian/Arabic HUD, mobile menu focus/Escape/pause/resume",
+    "photo": "passed: capture, phone delivery, replay, exit, desktop screenshots and mobile RTL layouts",
+    "productionBuild": "passed: Next.js optimized build and all 59 static pages",
+    "pending": []
+  }
+}
