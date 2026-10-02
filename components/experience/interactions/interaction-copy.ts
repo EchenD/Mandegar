@@ -52,13 +52,13 @@ const english: InteractionCopy = {
   clear: "Clear",
   undo: "Undo",
   stations: {
-    photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch an event photo arrive on the visitor’s phone." },
+    photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch a moment arrive on your phone." },
     touch: { label: "Open experience composer", title: "Experience composer", instruction: "Tap or drag an element to the centre." },
     stage: { label: "Open stage controls", title: "Your lighting look", instruction: "Choose your lights. Play the show or finish your look." },
     game: { label: "Play Breakout", title: "Breakout", instruction: "Drag the paddle or use ← / → to clear the lights." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
-  photo: { ready: "Capture at the event.", capture: "Watch the demo", captured: "From the event to their phone.", delivery: "Instantly on the visitor’s phone.", example: "Delivery demo · example photo" },
+  photo: { ready: "Capture the moment.", capture: "Watch delivery", captured: "On your phone.", delivery: "Straight to your phone.", example: "Demo · example photo" },
   touch: {
     elements: ["Space", "Story", "People"],
     instruction: "Bring space, story and people together.",
@@ -102,13 +102,13 @@ const persian: InteractionCopy = {
   clear: "پاک کردن",
   undo: "بازگشت",
   stations: {
-    photo: { label: "نمایش تحویل عکس رویداد", title: "عکس رویداد، تحویل فوری", instruction: "ثبت عکس در رویداد و رسیدن آن به گوشی مهمان را ببینید." },
+    photo: { label: "نمایش تحویل عکس رویداد", title: "تحویل فوری عکس", instruction: "رسیدن یک لحظه به گوشی خود را ببینید." },
     touch: { label: "باز کردن ترکیب‌ساز تجربه", title: "ترکیب‌ساز تجربه", instruction: "هر عنصر را لمس کنید یا به مرکز بکشید." },
     stage: { label: "کنترل نور صحنه", title: "نورپردازی شما", instruction: "نورها را انتخاب کنید؛ نمایش را پخش کنید یا ترکیب را پایان دهید." },
     game: { label: "بازی آجرشکن", title: "آجرشکن", instruction: "سکو را بکشید یا با ← و → حرکت دهید و نورها را پاک کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
-  photo: { ready: "ثبت عکس در رویداد.", capture: "دیدن نمایش", captured: "از رویداد، مستقیم به گوشی مهمان.", delivery: "تحویل فوری به گوشی مهمان.", example: "نمایش خدمات · تصویر نمونه" },
+  photo: { ready: "ثبت یک لحظه.", capture: "نمایش تحویل", captured: "روی گوشی شما.", delivery: "مستقیم روی گوشی شما.", example: "نمایش خدمات · تصویر نمونه" },
   touch: {
     elements: ["فضا", "روایت", "مردم"],
     instruction: "فضا، روایت و مردم را به هم متصل کنید.",
@@ -152,13 +152,13 @@ const arabic: InteractionCopy = {
   clear: "مسح",
   undo: "تراجع",
   stations: {
-    photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد صورة الفعالية تصل إلى هاتف الزائر." },
+    photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد اللحظة تصل إلى هاتفك." },
     touch: { label: "فتح مؤلف التجربة", title: "مؤلف التجربة", instruction: "المس كل عنصر أو اسحبه إلى الوسط." },
     stage: { label: "فتح تحكم المسرح", title: "إضاءتك", instruction: "اختر الأضواء ثم شغّل العرض أو أنهِ تنسيقك." },
     game: { label: "العب كاسر الطوب", title: "كاسر الطوب", instruction: "اسحب المضرب أو استخدم ← و → لإزالة الأضواء." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },
-  photo: { ready: "التقاط الصورة في الفعالية.", capture: "شاهد العرض", captured: "من الفعالية مباشرةً إلى هاتف الزائر.", delivery: "تصل فورًا إلى هاتف الزائر.", example: "عرض الخدمة · صورة نموذجية" },
+  photo: { ready: "التقط اللحظة.", capture: "شاهد التسليم", captured: "على هاتفك.", delivery: "مباشرةً إلى هاتفك.", example: "عرض تجريبي · صورة نموذجية" },
   touch: {
     elements: ["المكان", "القصة", "الناس"],
     instruction: "اجمع المكان والقصة والناس.",

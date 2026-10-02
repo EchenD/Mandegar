@@ -10,7 +10,7 @@ import {
   registerSceneInteraction,
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
-import { gameControls, paintBreakoutScreen, type BlockSpark, type GameControl } from "./breakout-screen";
+import { gameControlAtPoint, paintBreakoutScreen, type BlockSpark, type GameControl } from "./breakout-screen";
 import { completeGameResult, getVisitorCreation, saveGameResult } from "./visitor-creation";
 import {
   breakoutBoard,
@@ -29,13 +29,6 @@ function clamp(value: number, minimum = 0, maximum = 1) {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function controlAtPoint(x: number, y: number): GameControl | null {
-  if (Math.hypot(x - 0.925, y - 0.057) < 0.07) return "close";
-  if (y < 0.88 || y > 0.98) return null;
-  return (Object.keys(gameControls) as Array<keyof typeof gameControls>)
-    .find((key) => x >= gameControls[key].left && x <= gameControls[key].left + gameControls[key].width) ?? null;
-}
-
 export function GameInteraction({
   copy,
   reducedMotion,
@@ -52,6 +45,9 @@ export function GameInteraction({
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
+  const entranceBackground = useRef<HTMLCanvasElement | null>(null);
   const game = useRef<BreakoutGame>(createBreakoutGame());
   const bestRef = useRef(getVisitorCreation().gameBest);
   const onCompleteRef = useRef(onComplete);
@@ -108,6 +104,7 @@ export function GameInteraction({
   }, []);
 
   const paint = useCallback(() => {
+    if (!mountedRef.current) return;
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
@@ -116,15 +113,19 @@ export function GameInteraction({
     interactionRuntime.gameVisibility = transition;
     interactionRuntime.gameComplete = current.status === "complete";
     canvas.dataset.transitionProgress = transition.toFixed(3);
+    canvas.dataset.transitionState = transitionState.current;
     canvas.dataset.paddleX = current.paddleX.toFixed(1);
     canvas.dataset.dragging = activePointer.current === null ? "false" : "true";
+    chromeRef.current?.style.setProperty("--game-ui-opacity", transition.toFixed(3));
+    if (chromeRef.current) chromeRef.current.dataset.gameExiting = transitionState.current === "outro" ? "true" : "false";
     sparks.current = sparks.current.filter((spark) => performance.now() - spark.startedAt < 320);
     paintBreakoutScreen(context, current, {
       copy,
       best: bestRef.current,
       reducedMotion,
-      transition,
-      background: monitorImage.current,
+      transition: transitionState.current === "outro" ? 1 : transition,
+      controlsTransition: transition,
+      background: transitionState.current === "intro" && entranceBackground.current ? entranceBackground.current : monitorImage.current,
       trail: trail.current,
       sparks: sparks.current,
       hoveredControl: hoveredControl.current,
@@ -134,7 +135,7 @@ export function GameInteraction({
   }, [copy, reducedMotion]);
 
   const schedulePaint = useCallback(() => {
-    if (renderFrame.current !== null) return;
+    if (!mountedRef.current || renderFrame.current !== null) return;
     renderFrame.current = window.requestAnimationFrame(() => {
       renderFrame.current = null;
       paint();
@@ -223,6 +224,15 @@ export function GameInteraction({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    mountedRef.current = true;
+    const retained = interactionRuntime.ambientGameSurface?.canvas;
+    if (retained) {
+      const snapshot = document.createElement("canvas");
+      snapshot.width = canvasWidth;
+      snapshot.height = canvasHeight;
+      snapshot.getContext("2d")?.drawImage(retained, 0, 0, canvasWidth, canvasHeight);
+      entranceBackground.current = snapshot;
+    }
     let mounted = true;
     let registered = false;
     const image = new Image();
@@ -237,12 +247,17 @@ export function GameInteraction({
     image.onload = begin;
     image.onerror = begin;
     image.src = sceneTokens.bakedScene.screens.game;
-    if (image.complete) begin();
+    if (image.complete || entranceBackground.current) begin();
     void document.fonts?.ready.then(() => { if (mounted) schedulePaint(); });
     return () => {
       mounted = false;
+      mountedRef.current = false;
       image.onload = null;
       image.onerror = null;
+      if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
+      if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
+      renderFrame.current = null;
+      transitionFrame.current = null;
       registerInteractionCanvas("game", null);
     };
   }, [animateTransition, paint, schedulePaint]);
@@ -291,6 +306,13 @@ export function GameInteraction({
       applyGame(setBreakoutPaused(game.current, true));
       schedulePaint();
     };
+    const menuToggle = document.querySelector("header button[aria-controls='primary-navigation']");
+    const handleMenu = () => {
+      if (menuToggle?.getAttribute("aria-expanded") === "true") handleBlur();
+    };
+    const menuObserver = new MutationObserver(handleMenu);
+    if (menuToggle) menuObserver.observe(menuToggle, { attributes: true, attributeFilter: ["aria-expanded"] });
+    handleMenu();
     animationFrame.current = window.requestAnimationFrame(tick);
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
@@ -298,13 +320,14 @@ export function GameInteraction({
       if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
+      menuObserver.disconnect();
     };
   }, [applyGame, paint, reducedMotion, releaseControls, schedulePaint]);
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
       if (transitionState.current !== "ready" || event.phase === "activate") return;
-      const control = controlAtPoint(event.x, event.y);
+      const control = gameControlAtPoint(event.x, event.y);
       if (event.phase === "move") {
         if (activePointer.current === event.pointerId) movePaddle(event.x * canvasWidth);
         else {
@@ -389,7 +412,7 @@ export function GameInteraction({
   };
 
   return (
-    <>
+    <div ref={chromeRef} className={styles.gameChrome}>
       <div
         className={styles.spatialInteractionSemantics}
         data-game-spatial-controls
@@ -422,7 +445,11 @@ export function GameInteraction({
         <div className={styles.mobileGameDock} data-mobile-game-dock role="group" aria-label={copy.stations.game.title} onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} onBlur={handleRegionBlur}>
           <div className={styles.mobileGameHeader}>
             <strong>{copy.stations.game.title}</strong>
-            <span><bdi>{snapshot.score}</bdi> · {copy.game.lives}: <bdi>{snapshot.lives}</bdi> · <bdi>{time}</bdi>s</span>
+            <dl className={styles.mobileGameStats} data-mobile-game-stats>
+              <div><dt>{copy.game.score}</dt><dd><bdi>{snapshot.score}</bdi></dd></div>
+              <div><dt>{copy.game.lives}</dt><dd><bdi>{snapshot.lives}</bdi></dd></div>
+              <div><dt>{copy.game.time}</dt><dd><bdi>{time}</bdi></dd></div>
+            </dl>
           </div>
           <div className={styles.mobileGameActions}>
             <button type="button" data-mobile-game-left aria-label={copy.game.left} onPointerDown={(event) => holdPaddle(event, -1)} onPointerUp={releasePaddle} onPointerCancel={releasePaddle} onLostPointerCapture={releasePaddle} onBlur={releaseControls} onClick={(event) => nudgePaddle(event, -1)}>←</button>
@@ -446,6 +473,6 @@ export function GameInteraction({
           <button type="button" data-game-result-replay onClick={reset}>{copy.replay}</button>
         </aside>
       )}
-    </>
+    </div>
   );
 }

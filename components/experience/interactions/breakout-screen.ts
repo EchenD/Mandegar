@@ -9,7 +9,14 @@ export const gameControls = {
   action: { left: 0.33, width: 0.34 },
   finish: { left: 0.705, width: 0.23 },
 } as const;
+export const gameCloseControl = { x: 0.925, y: 0.057, radius: 22 } as const;
 
+export function gameControlAtPoint(x: number, y: number): GameControl | null {
+  if (Math.hypot((x - gameCloseControl.x) * canvasWidth, (y - gameCloseControl.y) * canvasHeight) <= gameCloseControl.radius) return "close";
+  if (y < 0.88 || y > 0.98) return null;
+  return (Object.keys(gameControls) as Array<keyof typeof gameControls>)
+    .find((key) => x >= gameControls[key].left && x <= gameControls[key].left + gameControls[key].width) ?? null;
+}
 
 function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
   context.beginPath();
@@ -21,7 +28,8 @@ type BreakoutScreenOptions = {
   best: number;
   reducedMotion: boolean;
   transition: number;
-  background: HTMLImageElement | null;
+  controlsTransition?: number;
+  background: CanvasImageSource | null;
   trail: ReadonlyArray<{ x: number; y: number }>;
   sparks: ReadonlyArray<BlockSpark>;
   hoveredControl?: GameControl | null;
@@ -37,6 +45,7 @@ export function paintBreakoutScreen(
     best,
     reducedMotion,
     transition,
+    controlsTransition = transition,
     background: backgroundImage,
     trail,
     sparks,
@@ -50,7 +59,7 @@ export function paintBreakoutScreen(
   const cleared = current.blocks.filter((block) => !block.alive).length;
   const actionLabel = current.status === "running" ? copy.game.pause : current.status === "paused" ? copy.game.resume : current.serves > 0 ? copy.game.serve : copy.game.action;
   context.clearRect(0, 0, canvasWidth, canvasHeight);
-  if (backgroundImage?.complete) context.drawImage(backgroundImage, 0, 0, canvasWidth, canvasHeight);
+  if (backgroundImage) context.drawImage(backgroundImage, 0, 0, canvasWidth, canvasHeight);
   else {
     context.fillStyle = "#080b10";
     context.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -73,12 +82,13 @@ export function paintBreakoutScreen(
   context.fillText("MANDEGAR", canvasWidth / 2, 29);
   context.fillStyle = "#f7f7f4";
   context.font = '650 27px "Vazirmatn Variable", Tahoma, sans-serif';
-  context.fillText(copy.stations.game.title, canvasWidth / 2, 62, canvasWidth - 100);
+  context.fillText(copy.stations.game.title, canvasWidth / 2, 62, canvasWidth - 136);
   [
     { label: copy.game.score, value: String(current.score), x: 85 },
     { label: copy.game.lives, value: String(current.lives), x: canvasWidth / 2 },
     { label: copy.game.time, value: `${Math.max(0, Math.ceil(breakoutBoard.duration - current.elapsed))}`, x: canvasWidth - 85 },
-  ].forEach(({ label, value, x }) => {
+  ].forEach(({ label, value, x: physicalX }) => {
+    const x = direction === "rtl" ? canvasWidth - physicalX : physicalX;
     context.fillStyle = "rgba(247,247,244,.56)";
     context.font = '500 13px "Vazirmatn Variable", Tahoma, sans-serif';
     context.fillText(label, x, 96, 130);
@@ -112,7 +122,7 @@ export function paintBreakoutScreen(
       context.fill();
       context.restore();
     });
-      sparks.forEach((spark) => {
+    sparks.forEach((spark) => {
       const progress = (now - spark.startedAt) / 320;
       context.save();
       context.globalAlpha = transition * (1 - progress) * 0.7;
@@ -142,6 +152,8 @@ export function paintBreakoutScreen(
   context.fillStyle = "rgba(247,247,244,.72)";
   context.fillRect(current.paddleX - breakoutBoard.paddleWidth / 2 + 8, breakoutBoard.paddleY + 2, breakoutBoard.paddleWidth - 16, 2);
   if (interactive && current.status !== "running") {
+    context.save();
+    context.globalAlpha = controlsTransition;
     const complete = current.status === "complete";
     roundedRect(context, 67, 329, canvasWidth - 134, complete ? 173 : 105, 18);
     context.fillStyle = "rgba(8,13,22,.92)";
@@ -161,11 +173,14 @@ export function paintBreakoutScreen(
       context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
       context.fillText(`${copy.game.best}: ${best}`, canvasWidth / 2, 466, canvasWidth - 166);
     } else context.fillText(copy.stations.game.instruction, canvasWidth / 2, 402, canvasWidth - 166);
+    context.restore();
   }
   context.fillStyle = "rgba(247,247,244,.56)";
   context.font = '500 14px "Vazirmatn Variable", Tahoma, sans-serif';
   context.fillText(`${copy.game.remaining}: ${cleared}`, canvasWidth / 2, 628, canvasWidth - 100);
   if (interactive) {
+    context.save();
+    context.globalAlpha = controlsTransition;
     (Object.keys(gameControls) as Array<keyof typeof gameControls>).forEach((control) => {
       if (control === "action" && current.status === "complete") return;
       const bounds = gameControls[control];
@@ -183,14 +198,25 @@ export function paintBreakoutScreen(
       context.font = '600 17px "Vazirmatn Variable", Tahoma, sans-serif';
       context.fillText(label, (bounds.left + bounds.width / 2) * canvasWidth, 681, bounds.width * canvasWidth - 14);
     });
-    context.strokeStyle = hoveredControl === "close" || focusedControl === "close" ? "#75d8ff" : "rgba(247,247,244,.65)";
+    const closeFocused = hoveredControl === "close" || focusedControl === "close";
+    const closeX = canvasWidth * gameCloseControl.x;
+    const closeY = canvasHeight * gameCloseControl.y;
+    context.beginPath();
+    context.arc(closeX, closeY, gameCloseControl.radius, 0, Math.PI * 2);
+    context.fillStyle = closeFocused ? "rgba(117,216,255,.13)" : "rgba(247,247,244,.05)";
+    context.fill();
+    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.24)";
+    context.lineWidth = closeFocused ? 2 : 1;
+    context.stroke();
+    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.72)";
     context.lineWidth = 2;
     context.beginPath();
-    context.moveTo(canvasWidth * 0.925 - 6, canvasHeight * 0.057 - 6);
-    context.lineTo(canvasWidth * 0.925 + 6, canvasHeight * 0.057 + 6);
-    context.moveTo(canvasWidth * 0.925 + 6, canvasHeight * 0.057 - 6);
-    context.lineTo(canvasWidth * 0.925 - 6, canvasHeight * 0.057 + 6);
+    context.moveTo(closeX - 6, closeY - 6);
+    context.lineTo(closeX + 6, closeY + 6);
+    context.moveTo(closeX + 6, closeY - 6);
+    context.lineTo(closeX - 6, closeY + 6);
     context.stroke();
+    context.restore();
   }
   context.restore();
 }

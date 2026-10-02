@@ -22,7 +22,7 @@ async function recordCountdown(page: Page) {
   });
 }
 
-test("event photo delivery demo captures, reaches the phone, replays and exits", async ({ page }) => {
+test("event photo delivery demo captures, reaches the phone, replays and exits", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     const photoWindow = window as Window & { photoCameraRequests?: number };
     photoWindow.photoCameraRequests = 0;
@@ -43,21 +43,39 @@ test("event photo delivery demo captures, reaches the phone, replays and exits",
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
   await expect(controls).toHaveAttribute("data-photo-state", "ready");
   await expect(director).toHaveAttribute("data-lifecycle", "active");
-  await expect(controls.locator("p").nth(0)).toHaveText("Capture at the event.");
-  await expect(controls.locator("p").nth(1)).toHaveText("Instantly on the visitor’s phone.");
-  await expect(controls.locator("p").nth(2)).toHaveText("Delivery demo · example photo");
+  await expect(controls.getByRole("heading")).toHaveText("Capture the moment.");
+  await expect(controls.getByRole("heading")).toBeInViewport();
+  await expect(controls.locator("p")).toHaveText("Straight to your phone.");
+  await expect(controls.locator("small")).toHaveText("Demo · example photo");
+  await expect(controls).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.locator("[data-interaction-hint]")).toBeHidden();
   await expect(page.locator("[data-photo-look-choice], [data-mobile-photo-look], [data-mobile-photo-preview]")).toHaveCount(0);
   await expect(controls.locator("img")).toHaveCount(0);
-  await expect(page.locator("[data-photo-capture]")).toHaveText("Watch the demo");
+  await expect(page.locator("[data-photo-capture]")).toHaveText("Watch delivery");
+  await expect(controls.getByRole("button")).toHaveCount(1);
+  await page.screenshot({ path: testInfo.outputPath("photo-desktop-ready.png") });
   await recordCountdown(page);
   await activateWithKeyboard(page, "[data-photo-capture]");
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
   await expect(page.locator("html")).toHaveAttribute("data-photo-countdown-observed", "true");
   await expect(canvas).toHaveAttribute("data-painted-photo-state", "captured");
-  await expect(controls.locator("[role='status']")).toContainText("From the event to their phone.");
+  await expect(controls.locator("[role='status']")).toContainText("On your phone.");
+  await expect(controls.getByRole("heading")).toHaveText("On your phone.");
+  await expect(page.locator("[data-photo-replay]")).toBeInViewport();
+  await expect(page.locator("[data-photo-continue]")).toBeInViewport();
+  await expect(page.locator("[data-interaction-escape]")).toBeHidden();
+  await expect(controls.getByRole("button")).toHaveCount(2);
+  const attachedInterface = await canvas.evaluate((element: HTMLCanvasElement) => {
+    const pixels = element.getContext("2d")?.getImageData(0, 0, element.width, element.height).data;
+    return pixels?.some((channel, index) => index % 4 === 3 && channel > 0);
+  });
+  expect(attachedInterface).toBe(false);
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   expect(await page.evaluate(() => (window as Window & { photoCameraRequests?: number }).photoCameraRequests)).toBe(0);
   expect(deliveryRequests).toEqual([]);
+  // Capture the delivered phone after its authored arrival has settled.
+  await page.waitForTimeout(1_200);
+  await page.screenshot({ path: testInfo.outputPath("photo-desktop-delivered.png") });
 
   await activateWithKeyboard(page, "[data-photo-replay]");
   await expect(director).toHaveAttribute("data-lifecycle", "active");

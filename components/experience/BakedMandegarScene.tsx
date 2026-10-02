@@ -741,7 +741,6 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     const interfaceOrigin = anchors.stations.photo.object.getWorldPosition(new THREE.Vector3());
     const flashPosition = anchors.photoFlash.object.getWorldPosition(new THREE.Vector3());
     const phoneDestination = anchors.photoPhone.object.getWorldPosition(new THREE.Vector3());
-    const interfaceResultPosition = phoneDestination.clone();
     const photoExitPosition = phoneDestination.clone()
       .lerp(interfaceOrigin, 0.38)
       .add(new THREE.Vector3(0, 0.34, 0));
@@ -771,6 +770,7 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     photoInterface.renderOrder = 54;
     photoInterface.frustumCulled = false;
     photoInterface.visible = false;
+    photoInterface.raycast = () => {};
     const portrait = portraitSource.clone();
     portrait.colorSpace = THREE.SRGBColorSpace;
     portrait.needsUpdate = true;
@@ -887,7 +887,6 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     next.userData.trailPositions = trailPositions;
     next.userData.flashLight = flashLight;
     next.userData.interfaceOrigin = interfaceOrigin;
-    next.userData.interfaceResultPosition = interfaceResultPosition;
     next.userData.flashPosition = flashPosition;
     next.userData.phoneDestination = phoneDestination;
     next.userData.photoExitPosition = photoExitPosition;
@@ -904,7 +903,7 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     texture: THREE.CanvasTexture;
   } | null>(null);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const photoInterface = group.userData.photoInterface as THREE.Sprite;
     const interfaceMaterial = group.userData.interfaceMaterial as THREE.SpriteMaterial;
     const phone = group.userData.phone as THREE.Sprite;
@@ -941,30 +940,18 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     }
     const step = interactionRuntime.photoStep;
     const interfaceTarget = interactionRuntime.photoVisibility;
-    const desktopInterface = state.size.width > 760;
     const exitProgress = step === "captured"
       ? THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(1 - interfaceTarget, 0, 1), 0, 1)
       : 0;
     interfaceMaterial.opacity = THREE.MathUtils.damp(
       interfaceMaterial.opacity,
-      !desktopInterface && step === "captured" ? 0 : interfaceTarget,
+      step === "countdown" ? interfaceTarget : 0,
       10,
       delta,
     );
-    const interfaceOrigin = group.userData.interfaceOrigin as THREE.Vector3;
-    const interfaceResultPosition = group.userData.interfaceResultPosition as THREE.Vector3;
     const photoExitPosition = group.userData.photoExitPosition as THREE.Vector3;
     const workingPosition = group.userData.workingPosition as THREE.Vector3;
-    const targetInterfacePosition = step === "captured"
-      ? workingPosition.copy(interfaceResultPosition).lerp(photoExitPosition, exitProgress)
-      : interfaceOrigin;
-    photoInterface.position.lerp(
-      targetInterfacePosition,
-      1 - Math.exp(-8 * delta),
-    );
-    const targetInterfaceScale = step === "captured"
-      ? (desktopInterface ? 0.75 : 0.68) * (1 - exitProgress * 0.46)
-      : step === "countdown" ? 0.74 : desktopInterface ? 1.2 : 0.7;
+    const targetInterfaceScale = step === "countdown" ? 0.74 : 0.078;
     const interfaceScale = THREE.MathUtils.damp(
       photoInterface.scale.y,
       interfaceTarget > 0.001 ? targetInterfaceScale : 0.078,

@@ -34,15 +34,31 @@ export function Header({ locale, settings }: HeaderProps) {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     navigation.current?.querySelector<HTMLAnchorElement>("a")?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      menuButton.current?.focus();
+    const handleMenuKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(false);
+        menuButton.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      event.stopPropagation();
+      const links = Array.from(navigation.current?.querySelectorAll<HTMLAnchorElement>("a") ?? []);
+      const targets = [...links, menuButton.current].filter((target): target is HTMLAnchorElement | HTMLButtonElement => target !== null);
+      const first = targets[0];
+      const last = targets.at(-1);
+      if (!targets.some((target) => target === document.activeElement)
+        || (event.shiftKey && document.activeElement === first)
+        || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+      }
     };
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", handleMenuKeyDown, true);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", handleMenuKeyDown, true);
     };
   }, [open]);
 

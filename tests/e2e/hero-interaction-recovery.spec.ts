@@ -106,9 +106,12 @@ test("mobile photo can be skipped immediately after replaying a completed captur
   await expect(director).toHaveAttribute("data-lifecycle", "complete");
   const exit = page.locator("[data-interaction-escape]");
   await expect(exit).toHaveText("متابعة الرحلة");
+  await expect(exit).toBeHidden();
+  await expect(page.locator("[data-mobile-photo-continue]")).toBeInViewport();
   await page.locator("[data-mobile-photo-replay]").tap();
   await expect(controls).toHaveAttribute("data-photo-state", "ready");
   await expect(exit).toHaveText("تخطي التفاعل");
+  await expect(exit).toBeVisible();
   await exit.tap();
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(director).toHaveAttribute("data-scroll-locked", "false");

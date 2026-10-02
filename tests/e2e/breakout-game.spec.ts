@@ -8,6 +8,17 @@ import {
   setBreakoutPaused,
   stepBreakoutGame,
 } from "../../components/experience/interactions/breakout-game";
+import { gameCloseControl, gameControlAtPoint } from "../../components/experience/interactions/breakout-screen";
+
+test("the screen close target matches its 44-pixel circle without swallowing nearby header text", () => {
+  const { x, y, radius } = gameCloseControl;
+  expect(radius * 2).toBe(44);
+  expect(gameControlAtPoint(x, y)).toBe("close");
+  expect(gameControlAtPoint(x - (radius - 1) / breakoutBoard.width, y)).toBe("close");
+  expect(gameControlAtPoint(x, y + (radius - 1) / breakoutBoard.height)).toBe("close");
+  expect(gameControlAtPoint(x - (radius + 1) / breakoutBoard.width, y)).toBeNull();
+  expect(gameControlAtPoint(x, y + (radius + 1) / breakoutBoard.height)).toBeNull();
+});
 
 test("the paddle stays inside the board and carries the ball before serving", () => {
   const original = createBreakoutGame();

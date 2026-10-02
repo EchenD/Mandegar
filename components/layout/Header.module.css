@@ -82,6 +82,12 @@
 .header:has(.navOpen) .menuButton i { background: var(--ink) !important; }
 
 @media (min-width: 761px) {
+  :global(body:has([data-interaction-director][data-active-station="game"])) .header .nav {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .header .nav {
     position: absolute;
     left: 50%;

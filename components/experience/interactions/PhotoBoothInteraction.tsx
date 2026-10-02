@@ -12,58 +12,9 @@ import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
 
 type PhotoStep = "ready" | "countdown" | "captured";
-type PhotoControl = "capture" | "replay" | "continue";
 
 const canvasWidth = 800;
 const canvasHeight = 520;
-const readyControls = {
-  capture: { x: 0.25, y: 0.7, width: 0.5, height: 0.18 },
-} as const;
-const capturedControls = {
-  replay: { x: 0.3, y: 0.8, width: 0.25, height: 0.18 },
-  continue: { x: 0.56, y: 0.8, width: 0.34, height: 0.18 },
-} as const;
-
-function roundedRect(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const safeRadius = Math.min(radius, width / 2, height / 2);
-  context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.arcTo(x + width, y, x + width, y + height, safeRadius);
-  context.arcTo(x + width, y + height, x, y + height, safeRadius);
-  context.arcTo(x, y + height, x, y, safeRadius);
-  context.arcTo(x, y, x + width, y, safeRadius);
-  context.closePath();
-}
-
-function hitRect(x: number, y: number, left: number, top: number, width: number, height: number) {
-  return x >= left && x <= left + width && y >= top && y <= top + height;
-}
-
-function revealProgress(progress: number, start: number, end: number) {
-  const value = Math.max(0, Math.min(1, (progress - start) / (end - start)));
-  return value * value * (3 - 2 * value);
-}
-
-function controlAtPoint(step: PhotoStep, x: number, y: number): PhotoControl | null {
-  if (step === "ready") {
-    const capture = readyControls.capture;
-    if (hitRect(x, y, capture.x, capture.y, capture.width, capture.height)) return "capture";
-  }
-  if (step === "captured") {
-    const replay = capturedControls.replay;
-    const next = capturedControls.continue;
-    if (hitRect(x, y, replay.x - 0.02, replay.y - 0.02, replay.width + 0.04, replay.height + 0.04)) return "replay";
-    if (hitRect(x, y, next.x - 0.02, next.y - 0.02, next.width + 0.04, next.height + 0.04)) return "continue";
-  }
-  return null;
-}
 
 export function PhotoBoothInteraction({
   copy,
@@ -81,6 +32,8 @@ export function PhotoBoothInteraction({
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const interfaceRef = useRef<HTMLDivElement>(null);
+  const continueRef = useRef<HTMLButtonElement>(null);
   const countdownFrame = useRef<number | null>(null);
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
@@ -88,8 +41,6 @@ export function PhotoBoothInteraction({
   const transitionState = useRef<"intro" | "ready" | "outro">("intro");
   const stepRef = useRef<PhotoStep>("ready");
   const countRef = useRef(3);
-  const hoverControl = useRef<PhotoControl | null>(null);
-  const keyboardFocus = useRef<PhotoControl | null>(null);
   const completionReported = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onResetRef = useRef(onReset);
@@ -114,14 +65,10 @@ export function PhotoBoothInteraction({
     if (!canvas || !context) return;
     const width = canvas.width;
     const height = canvas.height;
-    const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const fontFamily = getComputedStyle(document.body).fontFamily;
     const currentStep = stepRef.current;
     const currentCount = countRef.current;
     const transition = transitionProgress.current;
-    const surfaceReveal = revealProgress(transition, 0, 0.38);
-    const contentReveal = revealProgress(transition, 0.2, 0.72);
-    const controlsReveal = revealProgress(transition, 0.62, 1);
 
     interactionRuntime.photoStep = currentStep;
     interactionRuntime.photoCount = currentCount;
@@ -130,92 +77,23 @@ export function PhotoBoothInteraction({
     canvas.dataset.paintedPhotoState = currentStep;
     canvas.dataset.paintedPhotoCount = String(currentCount);
     canvas.dataset.transitionProgress = transition.toFixed(3);
-
-    context.save();
-    context.globalAlpha = surfaceReveal;
-    const centerX = width / 2;
-    const centerY = height * 0.42;
-    if (currentStep === "ready") {
-      context.save();
-      context.globalAlpha = contentReveal;
-      context.direction = direction;
-      context.textAlign = "center";
-      context.fillStyle = "#f7f7f4";
-      context.font = `650 34px ${fontFamily}`;
-      context.fillText(copy.photo.ready, centerX, height * 0.3, width - 80);
-      context.fillStyle = "#75d8ff";
-      context.font = `500 32px ${fontFamily}`;
-      context.fillText(copy.photo.delivery, centerX, height * 0.43, width - 80);
-      context.fillStyle = "rgba(247,247,244,.6)";
-      context.font = `500 26px ${fontFamily}`;
-      context.fillText(copy.photo.example, centerX, height * 0.55, width - 80);
-      context.restore();
-    }
+    interfaceRef.current?.style.setProperty("--photo-copy-opacity", transition.toFixed(3));
+    interfaceRef.current?.style.setProperty("--photo-copy-offset", `${((1 - transition) * 8).toFixed(2)}px`);
     if (currentStep === "countdown") {
       context.save();
-      context.globalAlpha = contentReveal;
+      context.globalAlpha = transition;
       context.fillStyle = "#f7f7f4";
-      context.font = `750 132px ${fontFamily}`;
+      context.font = `600 180px ${fontFamily}`;
       context.textAlign = "center";
+      context.textBaseline = "middle";
       context.shadowColor = "#225cff";
-      context.shadowBlur = 10;
-      context.fillText(String(currentCount), centerX, centerY + 48);
-      context.shadowBlur = 0;
+      context.shadowBlur = 8;
+      context.fillText(String(currentCount), width / 2, height / 2);
       context.restore();
     }
-    if (currentStep === "captured") {
-      context.save();
-      context.globalAlpha = contentReveal;
-      context.direction = direction;
-      context.textAlign = "center";
-      context.fillStyle = "#f7f7f4";
-      context.font = `650 32px ${fontFamily}`;
-      context.fillText(copy.photo.captured, centerX, 70, width - 80);
-      context.fillStyle = "rgba(247,247,244,.62)";
-      context.font = `500 26px ${fontFamily}`;
-      context.fillText(copy.photo.example, centerX, 108, width - 80);
-      context.restore();
-    }
-
-    const drawButton = (
-      control: PhotoControl,
-      left: number,
-      top: number,
-      buttonWidth: number,
-      buttonHeight: number,
-      label: string,
-      primary: boolean,
-    ) => {
-      const focused = hoverControl.current === control || keyboardFocus.current === control;
-      roundedRect(context, left, top, buttonWidth, buttonHeight, buttonHeight / 2);
-      context.fillStyle = primary ? "#225cff" : focused ? "#e9eeff" : "rgba(247,247,244,.96)";
-      context.fill();
-      context.strokeStyle = focused ? "#75d8ff" : primary ? "#225cff" : "rgba(22,25,29,.26)";
-      context.lineWidth = focused ? 3 : 1.5;
-      context.stroke();
-      context.direction = direction;
-      context.textAlign = "center";
-      context.fillStyle = primary ? "#fff" : "#16191d";
-      context.font = `650 32px ${fontFamily}`;
-      context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.62, buttonWidth - 24);
-    };
-
-    context.save();
-    context.globalAlpha = controlsReveal;
-    if (currentStep === "ready") {
-      const area = readyControls.capture;
-      drawButton("capture", width * area.x, height * area.y, width * area.width, height * area.height, copy.photo.capture, true);
-    } else if (currentStep === "captured") {
-      const replay = capturedControls.replay;
-      const next = capturedControls.continue;
-      drawButton("replay", width * replay.x, height * replay.y, width * replay.width, height * replay.height, copy.replay, false);
-      drawButton("continue", width * next.x, height * next.y, width * next.width, height * next.height, copy.continue, true);
-    }
-    context.restore();
-    context.restore();
 
     markPhotoSurfaceDirty();
-  }, [copy]);
+  }, []);
 
   const schedulePaint = useCallback(() => {
     if (renderFrame.current !== null) return;
@@ -247,7 +125,7 @@ export function PhotoBoothInteraction({
   }, [commitStep]);
 
   const capture = useCallback(() => {
-    if (stepRef.current !== "ready") return;
+    if (stepRef.current !== "ready" || transitionState.current === "outro") return;
     clearTimers();
     commitCount(3);
     if (reducedMotion) {
@@ -275,6 +153,7 @@ export function PhotoBoothInteraction({
   }, [clearTimers, commitCount, commitStep, finishCapture, reducedMotion]);
 
   const replay = useCallback(() => {
+    if (transitionState.current === "outro") return;
     clearTimers();
     commitCount(3);
     commitStep("ready");
@@ -316,16 +195,10 @@ export function PhotoBoothInteraction({
   const exitWithTransition = useCallback((callback: () => void) => {
     if (transitionState.current === "outro") return;
     clearTimers();
-    hoverControl.current = null;
+    if (interfaceRef.current) interfaceRef.current.dataset.photoExiting = "true";
     document.body.style.cursor = "";
     animateTransition(0, callback);
   }, [animateTransition, clearTimers]);
-
-  const handleControl = useCallback((control: PhotoControl) => {
-    if (control === "capture") capture();
-    else if (control === "replay") replay();
-    else if (control === "continue") exitWithTransition(onContinue);
-  }, [capture, exitWithTransition, onContinue, replay]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -355,21 +228,12 @@ export function PhotoBoothInteraction({
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
-      if (transitionState.current !== "ready" || event.phase === "activate") return;
-      const control = controlAtPoint(stepRef.current, event.x, event.y);
-      if (event.phase === "move") {
-        hoverControl.current = control;
-        schedulePaint();
-      } else if (event.phase === "down" && control) {
-        handleControl(control);
-      } else if (event.phase === "cancel") {
-        hoverControl.current = null;
-        schedulePaint();
-      }
+      if (transitionState.current !== "ready" || stepRef.current !== "captured" || event.phase !== "down") return;
+      replay();
     };
     registerSceneInteraction("photo", handleSceneInput);
     return () => registerSceneInteraction("photo", null);
-  }, [handleControl, schedulePaint]);
+  }, [replay]);
 
   useEffect(() => () => {
     clearTimers();
@@ -378,41 +242,43 @@ export function PhotoBoothInteraction({
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
   }, [clearTimers]);
 
-  const focusControl = (control: PhotoControl | null) => {
-    keyboardFocus.current = control;
-    schedulePaint();
-  };
+  useEffect(() => {
+    if (step !== "captured") return;
+    const frame = window.requestAnimationFrame(() => continueRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   return (
-    <>
-      <div
-        className={styles.spatialInteractionSemantics}
-        data-photo-spatial-controls
-        data-photo-state={step}
-        data-photo-count={count}
-        role="region"
-        aria-label={copy.stations.photo.title}
-      >
-        <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} aria-hidden="true" />
-        <p>{step === "captured" ? copy.photo.captured : copy.photo.ready}</p>
-        <p>{copy.photo.delivery}</p>
-        <p>{copy.photo.example}</p>
-        <button type="button" data-photo-capture disabled={step !== "ready"} onFocus={() => focusControl("capture")} onBlur={() => focusControl(null)} onClick={capture}>{copy.photo.capture}</button>
-        <button type="button" data-photo-replay disabled={step !== "captured"} onFocus={() => focusControl("replay")} onBlur={() => focusControl(null)} onClick={replay}>{copy.replay}</button>
-        <button type="button" data-interaction-continue disabled={step !== "captured"} onFocus={() => focusControl("continue")} onBlur={() => focusControl(null)} onClick={() => handleControl("continue")}>{copy.continue}</button>
-        <button type="button" data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
-        <span role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
+    <div
+      ref={interfaceRef}
+      className={styles.photoSceneCopy}
+      data-photo-spatial-controls
+      data-photo-service-dock
+      data-mobile-photo-result={step === "captured" ? "" : undefined}
+      data-photo-state={step}
+      data-photo-count={count}
+      role="region"
+      aria-label={copy.stations.photo.title}
+      aria-busy={step === "countdown"}
+    >
+      <canvas ref={canvasRef} hidden width={canvasWidth} height={canvasHeight} aria-hidden="true" />
+      <div className={styles.photoSceneContent}>
+        <h2>{step === "captured" ? copy.photo.captured : copy.photo.ready}</h2>
+        {step !== "captured" ? <p>{copy.photo.delivery}</p> : null}
+        <small>{copy.photo.example}</small>
+        <div className={styles.photoSceneActions}>
+          {step === "captured" ? (
+            <>
+              <button type="button" data-photo-replay data-mobile-photo-replay onClick={replay}>{copy.replay}</button>
+              <button ref={continueRef} type="button" data-photo-continue data-mobile-photo-continue data-interaction-continue onClick={() => exitWithTransition(onContinue)}>{copy.continue}</button>
+            </>
+          ) : (
+            <button type="button" data-photo-capture data-mobile-photo-capture disabled={step !== "ready"} onClick={capture}>{copy.photo.capture}</button>
+          )}
+        </div>
       </div>
-      <div className={styles.photoServiceDock} data-photo-service-dock data-mobile-photo-result={step === "captured" ? "" : undefined} role="group" aria-label={copy.stations.photo.title}>
-        <p>{step === "captured" ? copy.photo.captured : copy.photo.delivery}</p>
-        <span>{copy.photo.example}</span>
-        {step === "captured" ? (
-          <button type="button" data-mobile-photo-replay onClick={replay}>{copy.replay}</button>
-        ) : (
-          <button type="button" data-mobile-photo-capture disabled={step !== "ready"} onClick={capture}>{step === "countdown" ? count : copy.photo.capture}</button>
-        )}
-        <span className={styles.spatialInteractionSemantics} role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
-      </div>
-    </>
+      <button type="button" hidden data-interaction-dismiss onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
+      <span className={styles.spatialInteractionSemantics} role="status" aria-live="polite">{step === "countdown" ? count : step === "captured" ? copy.photo.captured : copy.photo.ready}</span>
+    </div>
   );
 }

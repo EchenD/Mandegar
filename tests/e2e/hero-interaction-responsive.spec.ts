@@ -45,8 +45,9 @@ test("touch-capable mobile viewport opens the photo step automatically", async (
   const capture = page.locator("[data-mobile-photo-capture]");
   await expect(capture).toBeInViewport();
   await expect(capture).toBeEnabled();
-  await expect(page.locator("[data-photo-service-dock]")).toContainText("Instantly on the visitor’s phone.");
-  await expect(capture).toHaveText("Watch the demo");
+  await expect(page.locator("[data-photo-service-dock]")).toContainText("Straight to your phone.");
+  await expect(page.locator("[data-photo-service-dock]")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(capture).toHaveText("Watch delivery");
   await expect(page.locator("[data-mobile-photo-look], [data-mobile-photo-preview]")).toHaveCount(0);
   await context.close();
 });
@@ -69,8 +70,8 @@ test("mobile photo replay stays reachable beside the journey action", async ({ b
   const result = page.locator("[data-mobile-photo-result]");
   await expect(result).toHaveCSS("opacity", "1");
   await expect(result).toBeInViewport();
-  await expect(result).toContainText("From the event to their phone.");
-  await expect(result).toContainText("Delivery demo · example photo");
+  await expect(result).toContainText("On your phone.");
+  await expect(result).toContainText("Demo · example photo");
   await expect(result.locator("img")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("mobile-photo-captured.png"), animations: "disabled" });
   const replay = page.locator("[data-mobile-photo-replay]");
@@ -95,7 +96,8 @@ test("mobile photo replay stays reachable beside the journey action", async ({ b
   await page.locator("[data-mobile-photo-capture]").tap();
   await expect(controls).toHaveAttribute("data-photo-state", "captured", { timeout: 10_000 });
   await expect(controls).toHaveAttribute("data-photo-countdown-observed", "true");
-  await page.locator("[data-mobile-interaction-skip]").tap();
+  await expect(page.locator("[data-mobile-interaction-skip]")).toBeHidden();
+  await page.locator("[data-mobile-photo-continue]").tap();
   await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
   await context.close();
 });
@@ -117,6 +119,7 @@ for (const { locale, height } of [{ locale: "fa", height: 568 }, { locale: "ar",
     const exit = page.locator("[data-mobile-interaction-skip]");
     await expect(page.locator("[data-mobile-photo-preview]")).toHaveCount(0);
     await expect(capture).toBeInViewport();
+    expect((await capture.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await expect(service).toBeInViewport();
     await expect(exit).toBeInViewport();
     const serviceBox = await service.boundingBox();
@@ -130,9 +133,15 @@ for (const { locale, height } of [{ locale: "fa", height: 568 }, { locale: "ar",
     await expect(result).toHaveCSS("opacity", "1");
     await expect(result).toBeInViewport();
     await expect(replay).toBeInViewport();
-    const resultBox = await result.boundingBox();
-    const continueBox = await exit.boundingBox();
-    expect(resultBox && continueBox && resultBox.y + resultBox.height < continueBox.y).toBeTruthy();
+    await expect(exit).toBeHidden();
+    const continueButton = page.locator("[data-mobile-photo-continue]");
+    await expect(continueButton).toBeInViewport();
+    const replayBox = await replay.boundingBox();
+    const continueBox = await continueButton.boundingBox();
+    expect(replayBox?.height).toBeGreaterThanOrEqual(44);
+    expect(continueBox?.height).toBeGreaterThanOrEqual(44);
+    expect(replayBox && continueBox && (replayBox.x + replayBox.width <= continueBox.x
+      || continueBox.x + continueBox.width <= replayBox.x)).toBeTruthy();
     await context.close();
   });
 }

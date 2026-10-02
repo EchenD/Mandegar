@@ -46,7 +46,54 @@
   text-align: center;
   pointer-events: none;
 }
-.photoServiceDock { display: none; }
+.root[data-active-station="photo"] .interactionHint,
+.root[data-active-station="photo"] .mobileSkipButton[data-complete="true"] { display: none; }
+.root[data-active-station="game"] .interactionHint { display: none; }
+.root[data-active-station="photo"] .mobileSkipButton:not([data-complete="true"]) {
+  inset-inline: auto;
+  right: 1.25rem;
+  width: auto;
+  transform: none;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: .45rem .85rem;
+  border-color: rgba(247, 247, 244, .16);
+  background: rgba(22, 25, 29, .22);
+  font-size: .75rem;
+  font-weight: 500;
+}
+.root[data-active-station="photo"] .mobileSkipButton:focus-visible { outline: 2px solid #75d8ff; outline-offset: 3px; }
+.photoSceneCopy {
+  position: absolute;
+  left: clamp(2rem, 7vw, 7rem);
+  inset-block-end: clamp(6rem, 17vh, 10rem);
+  width: min(23rem, calc(100vw - 4rem));
+  color: #f7f7f4;
+  background: transparent;
+  text-align: start;
+  opacity: var(--photo-copy-opacity, 0);
+  transform: translateY(var(--photo-copy-offset, 8px));
+  pointer-events: auto;
+  transition: opacity .2s ease;
+}
+.photoSceneContent { transition: opacity .2s ease, transform .25s ease; }
+.photoSceneCopy[data-photo-state="ready"] .photoSceneContent { animation: photoCopyArrive .35s ease-out both; }
+.photoSceneCopy[data-photo-state="captured"] .photoSceneContent { animation: photoCopyArrive .35s ease-out .25s both; }
+.photoSceneCopy[data-photo-state="countdown"],
+.photoSceneCopy[data-photo-exiting="true"] { pointer-events: none; }
+.photoSceneCopy[data-photo-state="countdown"] .photoSceneContent { opacity: 0; transform: translateY(-.25rem); }
+.photoSceneCopy h2 { margin: 0; font-size: clamp(1.25rem, 1.65vw, 1.65rem); font-weight: 520; line-height: 1.3; letter-spacing: -.02em; }
+.photoSceneCopy p { margin: .25rem 0 0; color: #75d8ff; font-size: clamp(1rem, 1.2vw, 1.2rem); line-height: 1.5; }
+.photoSceneCopy small { display: block; margin-block-start: .6rem; color: rgba(247,247,244,.62); font-size: .65rem; line-height: 1.5; }
+.photoSceneActions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-block-start: 1rem; }
+.photoSceneActions button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .55rem 1.2rem; border: 1px solid transparent; border-radius: 999px; color: #fff; background: #225cff; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.photoSceneActions [data-photo-replay] { padding-inline: .65rem; color: #f7f7f4; background: transparent; }
+.photoSceneActions [data-photo-replay]:hover { color: #75d8ff; }
+.photoSceneActions button:disabled { opacity: .5; cursor: not-allowed; }
+.photoSceneActions button:focus-visible { outline: 2px solid #75d8ff; outline-offset: 3px; }
+.gameChrome { position: absolute; inset: 0; opacity: var(--game-ui-opacity, 0); pointer-events: none; }
+.gameChrome[data-game-exiting="true"] .mobileGameDock,
+.gameChrome[data-game-exiting="true"] .gameResult button { pointer-events: none; }
 .gameResult {
   display: none;
   position: absolute;
@@ -233,6 +280,7 @@
 @keyframes phoneArrive { from { opacity: 0; transform: translate(-2rem, 2rem) rotate(8deg); } to { opacity: 1; transform: none; } }
 @keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
 @keyframes drawingEcho { from { opacity: .8; transform: scale(.72); } to { opacity: 0; transform: scale(1.2); } }
+@keyframes photoCopyArrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 760px) {
   .spatialInteractionSemantics[data-game-spatial-controls] button { display: none; }
@@ -253,8 +301,11 @@
     pointer-events: auto;
     transform: translateX(-50%);
   }
-  .mobileGameHeader { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .65rem; font-size: .7rem; }
-  .mobileGameHeader span { color: #75d8ff; }
+  .mobileGameHeader { display: flex; align-items: center; justify-content: space-between; gap: .65rem; font-size: .7rem; }
+  .mobileGameHeader > strong { min-width: 0; font-size: .875rem; font-weight: 600; }
+  .mobileGameStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; min-width: 10rem; margin: 0; text-align: center; }
+  .mobileGameStats dt { color: rgba(247,247,244,.62); font-size: .625rem; line-height: 1.5; }
+  .mobileGameStats dd { margin: .1rem 0 0; color: #75d8ff; font-size: .875rem; font-weight: 650; line-height: 1.4; }
   .mobileGameActions { display: grid; grid-template-columns: minmax(2.75rem, 1fr) minmax(6rem, 2fr) minmax(2.75rem, 1fr); gap: .4rem; direction: ltr; }
   .mobileGameSecondary { display: flex; justify-content: center; gap: .5rem; }
   .mobileGameActions button, .mobileGameSecondary button { min-height: 2.75rem; padding: .45rem .65rem; border: 1px solid rgba(247, 247, 244, .25); border-radius: .6rem; color: #f7f7f4; background: rgba(247, 247, 244, .06); font: inherit; font-size: .75rem; cursor: pointer; touch-action: none; }
@@ -263,7 +314,6 @@
   .mobileGameSecondary button { border: 0; background: transparent; }
   .mobileGameDock button:disabled { opacity: .4; cursor: not-allowed; }
   .mobileGameDock button:focus-visible { outline: 2px solid #75d8ff; outline-offset: 2px; }
-  .spatialInteractionSemantics[data-photo-spatial-controls] { display: none; }
   .spatialInteractionSemantics[data-stage-spatial-controls] { display: none; }
   .mobileStageDock {
     position: absolute;
@@ -297,15 +347,11 @@
   .mobileStageActions [data-mobile-stage-finish]:not(:disabled) { border-color: #225cff; color: #fff; background: #225cff; }
   .mobileStageActions button:disabled { opacity: .4; cursor: not-allowed; }
   .mobileStageActions button:focus-visible { outline: 2px solid #225cff; outline-offset: 2px; }
-  .photoServiceDock { position: absolute; left: 50%; inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 5rem); z-index: 2; display: grid; gap: .45rem; width: min(22rem, calc(100vw - 2rem)); padding: .75rem; border: 1px solid rgba(22,25,29,.15); border-radius: .75rem; color: #16191d; background: rgba(250,250,247,.96); text-align: center; transform: translateX(-50%); pointer-events: auto; }
-  .photoServiceDock p { margin: 0; font-size: .8rem; font-weight: 500; line-height: 1.5; }
-  .photoServiceDock > span { color: #666c75; font-size: .62rem; line-height: 1.4; }
-  .photoServiceDock button { min-height: 2.75rem; padding: .5rem 1rem; border: 1px solid #225cff; border-radius: 999px; color: #fff; background: #225cff; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
-  .photoServiceDock [data-mobile-photo-replay] { border-color: rgba(22,25,29,.2); color: #16191d; background: transparent; }
-  .photoServiceDock button:disabled { opacity: .5; cursor: not-allowed; }
-  .photoServiceDock button:focus-visible { outline: 2px solid #225cff; outline-offset: 2px; }
+  .photoSceneCopy { left: 1.25rem; inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 5.75rem); width: calc(100vw - 2.5rem); }
+  .photoSceneCopy h2 { font-size: 1.25rem; }
+  .photoSceneCopy p { font-size: .95rem; }
+  .photoSceneActions { margin-block-start: .75rem; }
   .spatialInteractionSemantics[data-drawing-spatial-controls] button { display: none; }
-  .root[data-active-station="photo"] .interactionHint { display: none; }
   .mobileDrawingDock {
     position: absolute;
     left: 50%;
@@ -356,6 +402,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .photoSceneCopy,
+  .photoSceneContent { animation: none !important; transition: none !important; }
   .hotspot > span,
   .phoneResult,
   .photoFlash,
