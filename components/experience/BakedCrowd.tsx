@@ -21,6 +21,8 @@ import {
   restoreRuntimeMaterial,
 } from "./baked-material-binding";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
+import { bindCrowdGlowGeometry, restoreCrowdGlowGeometry } from "./crowd-glow-geometry";
+import { getCrowdSignalHead, getCrowdSignalLayout } from "./crowd-signal-geometry";
 import { experienceState } from "./experience-state";
 import { assetSlots, sceneTokens } from "./scene-config";
 import { CrowdIntelligenceNetwork } from "./CrowdIntelligenceNetwork";
@@ -78,12 +80,21 @@ function BakedCrowdAsset({
   const { camera, gl, scene: world } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const personProjection = useMemo(() => new THREE.Vector3(), []);
+  const signalHead = useMemo(() => new THREE.Vector3(), []);
+  const signalBounds = useMemo(() => new THREE.Box3(), []);
   const scene = useMemo(() => {
     const clone = cloneSkeleton(gltf.scene);
     clone.visible = false;
     return clone;
   }, [gltf.scene]);
   const runtimeRef = useRef<CrowdRuntime | null>(null);
+  const canShowSignal = (person: CrowdPersonRuntime | undefined) => {
+    if (!person || !getCrowdSignalHead(person.object, signalHead, signalBounds)) return false;
+    camera.updateWorldMatrix(true, false);
+    signalHead.project(camera);
+    const bounds = gl.domElement.getBoundingClientRect();
+    return getCrowdSignalLayout(signalHead, bounds.width, bounds.height) !== null;
+  };
 
   useEffect(() => {
     validateContractNodes(gltf.scene, [bakedSceneContract.crowd.root], "Crowd GLB");
@@ -107,13 +118,14 @@ function BakedCrowdAsset({
     if (process.env.NODE_ENV !== "production") {
       const variant = new URLSearchParams(window.location.search).get("crowdFalloff");
       if (variant === "off") baked.uniforms.uCrowdFalloffStrength.value = 0;
-      else if (variant === "strong") baked.uniforms.uCrowdFalloffStrength.value = 0.8;
-      else if (variant === "soft") baked.uniforms.uCrowdFalloffStrength.value = 0.32;
+      else if (variant === "strong") baked.uniforms.uCrowdFalloffStrength.value = 1.25;
+      else if (variant === "soft") baked.uniforms.uCrowdFalloffStrength.value = 0.45;
     }
     const revealOrigin = getRevealOrigin(root, null);
     baked.uniforms.uRevealOrigin.value.copy(revealOrigin);
     baked.uniforms.uRevealExtent.value = getRevealExtent(root, revealOrigin);
     baked.uniforms.uEdgeStrength.value = sceneTokens.bakedScene.material.edgeStrength;
+    const geometryBindings = bindCrowdGlowGeometry(root);
     const people = createCrowdPeople(root, baked.material, baked.uniforms);
     const runtime = {
       material: baked.material,
@@ -129,21 +141,24 @@ function BakedCrowdAsset({
     scene.visible = true;
     const releaseFocus = () => {
       clearIntelligenceSelection();
-      runtime.people.forEach((person) => { person.focus.value = 0; });
       if (runtime.ownsCursor) document.body.style.cursor = "";
       runtime.ownsCursor = false;
       runtime.pointerHits.clear();
     };
-    const releaseWhenHidden = () => { if (document.hidden) releaseFocus(); };
+    const resetFocus = () => {
+      releaseFocus();
+      runtime.people.forEach((person) => { person.focus.value = 0; });
+    };
+    const releaseWhenHidden = () => { if (document.hidden) resetFocus(); };
     const unsubscribe = subscribeIntelligenceInspector(() => {
       if (!getIntelligenceSnapshot().available) releaseFocus();
     });
-    window.addEventListener("blur", releaseFocus);
+    window.addEventListener("blur", resetFocus);
     document.addEventListener("visibilitychange", releaseWhenHidden);
 
     return () => {
       unsubscribe();
-      window.removeEventListener("blur", releaseFocus);
+      window.removeEventListener("blur", resetFocus);
       document.removeEventListener("visibilitychange", releaseWhenHidden);
       if (runtimeRef.current === runtime) {
         runtimeRef.current = null;
@@ -155,6 +170,7 @@ function BakedCrowdAsset({
         restoreRuntimeMaterial(person.bindings, person.material);
         person.material.dispose();
       });
+      restoreCrowdGlowGeometry(geometryBindings);
       runtime.material.dispose();
     };
   }, [peakMap, quietMap, scene]);
@@ -173,7 +189,8 @@ function BakedCrowdAsset({
     const inspecting = canInspectPeople();
     const projecting = inspecting && clock.elapsedTime >= runtime.nextProjection;
     if (projecting) {
-      updateIntelligencePeople(projectVisibleCrowdPeople(runtime.people, world, camera, gl.domElement, raycaster));
+      const visible = projectVisibleCrowdPeople(runtime.people, world, camera, gl.domElement, raycaster);
+      updateIntelligencePeople(visible.filter((point) => canShowSignal(runtime.people.find((person) => person.id === point.id))));
       runtime.nextProjection = clock.elapsedTime + 0.4;
     } else if (!inspecting) {
       updateIntelligencePeople(null);
@@ -185,7 +202,7 @@ function BakedCrowdAsset({
     let focused = inspecting ? getFocusedIntelligencePerson() : null;
     if (focused) {
       const selected = runtime.people.find((person) => person.id === focused);
-      let visible = Boolean(selected);
+      let visible = canShowSignal(selected);
       for (let ancestor: THREE.Object3D | null = selected?.object ?? null; ancestor; ancestor = ancestor.parent) {
         if (!ancestor.visible) visible = false;
       }
@@ -205,16 +222,15 @@ function BakedCrowdAsset({
       }
     }
     runtime.people.forEach((person) => {
-      person.focus.value = inspecting
-        ? THREE.MathUtils.damp(person.focus.value, person.id === focused ? 1 : 0, 20, delta)
-        : 0;
+      person.focus.value = THREE.MathUtils.damp(person.focus.value,
+        inspecting && person.id === focused ? 1 : 0, 20, delta);
     });
   });
 
   const personFromHit = (event: ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>) => {
     if (!canInspectPeople()) return null;
     const id = getCrowdPersonAtRay(world, event.ray, raycaster);
-    return id && id === getCrowdPersonId(event.object) ? id : null;
+    return id && id === getCrowdPersonId(event.object) && canShowSignal(runtimeRef.current?.people.find((person) => person.id === id)) ? id : null;
   };
   const clearHoverForObject = (object: THREE.Object3D) => {
     const id = getCrowdPersonId(object);

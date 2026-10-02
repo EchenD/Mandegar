@@ -22,7 +22,7 @@ const vertexShader = /* glsl */ `
     float travel = fract(aProgress - uTime * 0.13 - aRoute * 0.29);
     float pulse = 1.0 - smoothstep(0.0, 0.16, abs(travel - 0.5));
     float secondary = 1.0 - smoothstep(0.0, 0.08, abs(fract(travel + 0.38) - 0.5));
-    vAlpha = (0.1 + pulse + secondary * 0.42) * uStrength;
+    vAlpha = (0.035 + pulse * 0.78 + secondary * 0.25) * uStrength;
     vRoute = aRoute;
     vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * viewPosition;
@@ -38,9 +38,9 @@ const fragmentShader = /* glsl */ `
     float radius = length(point);
     if (radius > 0.5) discard;
     float alpha = (1.0 - smoothstep(0.08, 0.5, radius)) * vAlpha;
-    vec3 cool = vec3(0.23, 0.68, 1.0);
-    vec3 warm = vec3(1.0, 0.49, 0.18);
-    gl_FragColor = vec4(mix(cool, warm, vRoute * 0.42), alpha);
+    vec3 cobalt = vec3(0.13, 0.36, 1.0);
+    vec3 cyan = vec3(0.46, 0.85, 1.0);
+    gl_FragColor = vec4(mix(cobalt, cyan, vRoute), alpha);
     #include <colorspace_fragment>
   }
 `;

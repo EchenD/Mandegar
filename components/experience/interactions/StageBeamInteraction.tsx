@@ -518,7 +518,9 @@ export function StageBeamInteraction({
     return () => {
       mounted = false;
       stopLoading();
-      registerInteractionCanvas("videoWall", null);
+      if (interactionRuntime.monitorEntries.videoWall?.canvas === canvas) {
+        registerInteractionCanvas("videoWall", null);
+      }
     };
   }, [animateTransition, paint, schedulePaint]);
 

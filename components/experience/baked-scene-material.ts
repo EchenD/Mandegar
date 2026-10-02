@@ -1,5 +1,22 @@
 import * as THREE from "three";
 
+export const crowdGlowProfile = {
+  brightnessFloor: 0.28,
+  brightnessLow: 0.004,
+  brightnessHigh: 0.14,
+  strength: 0.9,
+  power: 1.25,
+} as const;
+
+/** Linear atlas luminance weighting, also embedded in the crowd shader below. */
+export function getCrowdGlowBrightnessWeight(luminance: number) {
+  const value = Number.isFinite(luminance) ? luminance : 0;
+  const progress = THREE.MathUtils.clamp((value - crowdGlowProfile.brightnessLow)
+    / (crowdGlowProfile.brightnessHigh - crowdGlowProfile.brightnessLow), 0, 1);
+  return crowdGlowProfile.brightnessFloor + (1 - crowdGlowProfile.brightnessFloor)
+    * progress * progress * (3 - 2 * progress);
+}
+
 export type BakedMaterialUniforms = {
   uQuietMap: { value: THREE.Texture };
   uPeakMap: { value: THREE.Texture };
@@ -22,6 +39,7 @@ const vertexShader = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vWorldPosition;
   #ifdef CROWD_FALLOFF
+    attribute vec3 glowNormal;
     varying vec3 vViewNormal;
     varying vec3 vViewDirection;
   #endif
@@ -31,7 +49,7 @@ const vertexShader = /* glsl */ `
     vec4 worldPosition = modelMatrix * vec4(position, 1.0);
     vWorldPosition = worldPosition.xyz;
     #ifdef CROWD_FALLOFF
-      vViewNormal = normalize(normalMatrix * normal);
+      vViewNormal = normalize(normalMatrix * glowNormal);
       vViewDirection = -(viewMatrix * worldPosition).xyz;
     #endif
     gl_Position = projectionMatrix * viewMatrix * worldPosition;
@@ -88,19 +106,21 @@ const fragmentShader = /* glsl */ `
     ) * peakMix;
     bakedColor *= 1.0 + authoredHighlight * 0.08;
     #ifdef CROWD_FALLOFF
-      // The authored colour texture controls the glow: shaded texels stay quiet.
+      // Weight the authored linear atlas without silencing its shaded figures.
       float textureBrightness = dot(peakSample.rgb, vec3(0.2126, 0.7152, 0.0722));
-      float brightnessMask = smoothstep(0.025, 0.36, textureBrightness);
+      float brightnessMask = ${crowdGlowProfile.brightnessFloor} + ${1 - crowdGlowProfile.brightnessFloor}
+        * smoothstep(${crowdGlowProfile.brightnessLow}, ${crowdGlowProfile.brightnessHigh}, textureBrightness);
       float facing = abs(dot(normalize(vViewNormal), normalize(vViewDirection)));
       float falloff = pow(1.0 - clamp(facing, 0.0, 1.0), uCrowdFalloffPower);
-      bakedColor += peakSample.rgb * brightnessMask * peakMix
-        * uCrowdFalloffStrength * (0.4 + falloff * 0.6);
-      // Focus remains a separate, reversible response to exploring a person.
-      // A small light lift makes the selected silhouette readable even in shade.
-      vec3 focusLift = vec3(0.05, 0.065, 0.075) * (0.6 + brightnessMask * 0.4)
-        + vec3(0.14, 0.18, 0.2) * falloff;
+      vec3 warmIvory = vec3(1.0, 0.77, 0.5);
+      // The broad rim uses glow-only smooth normals. Original maps and normals
+      // continue to describe the figure; all added light begins with colour.
+      bakedColor += warmIvory * brightnessMask * peakMix
+        * uCrowdFalloffStrength * (0.035 + falloff * 0.48);
+      vec3 focusLift = warmIvory * (0.16 + brightnessMask * 0.10
+        + falloff * (0.25 + brightnessMask * 0.20));
       bakedColor += clamp(uPersonFocus, 0.0, 1.0) * peakMix
-        * (bakedColor * 1.4 + focusLift);
+        * (peakSample.rgb * 1.1 + focusLift);
     #endif
 
     float safeExtent = max(0.001, uRevealExtent);
@@ -173,8 +193,8 @@ export function createBakedSceneMaterial({
     uEdgeColor: { value: new THREE.Color(edgeColor) },
     uEdgeStrength: { value: 0.2 },
     uOpacity: { value: 1 },
-    uCrowdFalloffStrength: { value: 0.6 },
-    uCrowdFalloffPower: { value: 2 },
+    uCrowdFalloffStrength: { value: crowdGlowProfile.strength },
+    uCrowdFalloffPower: { value: crowdGlowProfile.power },
     uPersonFocus: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({

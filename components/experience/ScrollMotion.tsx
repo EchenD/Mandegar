@@ -24,6 +24,19 @@ type CopyState = {
   phase: ScenePhaseId;
 };
 
+type ExperienceRuntime = "pending" | "fallback" | "adaptive" | "full";
+
+type ScrollCheckpoint = {
+  progress: number;
+  overflow: number;
+};
+
+type SeekRequest = {
+  progress?: number;
+  sync?: boolean;
+  top?: number;
+};
+
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
 }
@@ -70,15 +83,20 @@ export function ScrollMotion({
   className,
   enabled = true,
   lenisEnabled = false,
+  runtime = "full",
   onPhaseChange,
 }: {
   children: React.ReactNode;
   className?: string;
   enabled?: boolean;
   lenisEnabled?: boolean;
+  runtime?: ExperienceRuntime;
   onPhaseChange?: (phase: ScenePhaseId) => void;
 }) {
   const scope = useRef<HTMLDivElement>(null);
+  const checkpoint = useRef<ScrollCheckpoint | null>(null);
+  const resumeRequested = useRef(false);
+  const pendingSeek = useRef<SeekRequest | null>(null);
 
   useGSAP(() => {
     const root = scope.current;
@@ -86,6 +104,8 @@ export function ScrollMotion({
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+    const staticMode = runtime === "fallback" || reduced || saveData;
+    const resume = enabled && !staticMode && resumeRequested.current ? checkpoint.current : null;
     const supportsSmooth = window.matchMedia("(pointer: fine)").matches;
     const previousBehavior = document.documentElement.style.scrollBehavior;
     const preview = getNarrativePreview(new URLSearchParams(window.location.search).get("phase"));
@@ -102,6 +122,10 @@ export function ScrollMotion({
     let interactionObserver: MutationObserver | undefined;
     let activePhase: ScenePhaseId = "arrival";
     let previousNativeProgress: number | null = null;
+    let suspended = Boolean(resume);
+    let pendingRuntime: ExperienceRuntime | null = null;
+    let initialPositionCancelled = false;
+    let applySeek: ((request: SeekRequest) => void) | undefined;
 
     const showPhaseRail = () => {
       if (root.dataset.scrollEngaged === "true") return;
@@ -122,16 +146,77 @@ export function ScrollMotion({
       return clamp01((window.scrollY - root.offsetTop) / getScrollDistance());
     };
 
+    const prepareRuntimeChange = (event: Event) => {
+      const nextRuntime = (event as CustomEvent<{ runtime?: ExperienceRuntime }>).detail?.runtime;
+      if (!nextRuntime || runtime === "pending") return;
+      if (nextRuntime === runtime) {
+        // Rapid opposite changes can be batched into the current runtime, so
+        // there will be no React effect update to resume the existing timeline.
+        if (pendingRuntime !== null) {
+          pendingRuntime = null;
+          suspended = false;
+          resumeRequested.current = false;
+          previousNativeProgress = getNativeProgress();
+          root.dataset.scrollDirection = "backward";
+          syncExperience(previousNativeProgress);
+        }
+        return;
+      }
+      if (!staticMode) {
+        const relativeTop = window.scrollY - root.offsetTop;
+        const distance = getScrollDistance();
+        const lockedProgress = root.hasAttribute("data-interaction-active")
+          ? Number(root.dataset.nativeProgress)
+          : Number.NaN;
+        checkpoint.current = {
+          progress: Number.isFinite(lockedProgress) ? clamp01(lockedProgress) : getNativeProgress(),
+          overflow: Number.isFinite(lockedProgress)
+            ? 0
+            : relativeTop < 0 ? relativeTop : Math.max(0, relativeTop - distance),
+        };
+      } else if (!checkpoint.current) {
+        checkpoint.current = { progress: preview ?? 0, overflow: 0 };
+      }
+      // Stop the old timeline before the semantic fallback changes the track's
+      // height and the browser clamps its native scroll position.
+      suspended = true;
+      pendingRuntime = nextRuntime;
+      resumeRequested.current = true;
+    };
+    root.addEventListener("mandegar:runtime-change", prepareRuntimeChange);
+
+    const seekExperience = (event: Event) => {
+      const detail = (event as CustomEvent<SeekRequest>).detail;
+      const validProgress = typeof detail?.progress === "number" && Number.isFinite(detail.progress);
+      const validTop = typeof detail?.top === "number" && Number.isFinite(detail.top);
+      if (!validProgress && !validTop) return;
+      const request: SeekRequest = validProgress
+        ? { progress: clamp01(detail.progress!), sync: detail.sync }
+        : { top: detail.top };
+      initialPositionCancelled = true;
+      root.dataset.scrollSeekRequested = "true";
+      if (applySeek && pendingRuntime === null) {
+        suspended = false;
+        pendingSeek.current = null;
+        applySeek(request);
+      } else {
+        // Runtime readiness can precede the intro releasing scroll. Keep the
+        // latest request until the native timeline is actually installed.
+        pendingSeek.current = request;
+      }
+    };
+    root.addEventListener("mandegar:seek", seekExperience);
+
     const syncNativePresentation = (nativeProgress: number) => {
       root.dataset.nativeProgress = nativeProgress.toFixed(4);
       root.dataset.copyProgress = nativeProgress.toFixed(4);
       root.style.setProperty("--scroll-progress", nativeProgress.toFixed(4));
-      copyStates.forEach((state) => renderCopyState(state, nativeProgress, reduced || saveData));
+      copyStates.forEach((state) => renderCopyState(state, nativeProgress, staticMode));
     };
 
     const syncExperience = (progress: number) => {
-      if (root.hasAttribute("data-interaction-active")) return;
-      const timelineProgress = clamp01(reduced || saveData ? progress : getNativeProgress());
+      if (suspended || root.hasAttribute("data-interaction-active")) return;
+      const timelineProgress = clamp01(staticMode ? progress : getNativeProgress());
       const nativeProgress = timelineProgress;
       if (previousNativeProgress !== null) {
         const movement = nativeProgress - previousNativeProgress;
@@ -167,22 +252,32 @@ export function ScrollMotion({
       }
     };
 
-    if (!enabled) {
+    if (!enabled || runtime === "pending") {
       directNarrative(0);
       root.style.setProperty("--scene-progress", "0");
       return () => {
+        root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
+        root.removeEventListener("mandegar:seek", seekExperience);
         resetNarrative();
       };
     }
 
-    if (reduced || saveData) {
+    if (staticMode) {
       root.dataset.reducedMotion = "true";
       showPhaseRail();
-      syncExperience(preview ?? narrativeScore.find((phase) => phase.id === "reveal")?.preview ?? 0.409091);
+      const staticProgress = checkpoint.current?.progress
+        ?? preview
+        ?? narrativeScore.find((phase) => phase.id === "reveal")?.preview
+        ?? 0.409091;
+      checkpoint.current ??= { progress: staticProgress, overflow: 0 };
+      syncExperience(staticProgress);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
+        root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
+        root.removeEventListener("mandegar:seek", seekExperience);
         resetNarrative();
         root.removeAttribute("data-story-stage");
+        root.removeAttribute("data-reduced-motion");
       };
     }
 
@@ -249,27 +344,62 @@ export function ScrollMotion({
       ScrollTrigger.update();
     };
 
-    const seekExperience = (event: Event) => {
-      const detail = (event as CustomEvent<{ progress?: number; sync?: boolean; top?: number }>).detail;
-      if (typeof detail?.progress === "number") goToProgress(detail.progress, detail.sync);
-      else if (typeof detail?.top === "number" && Number.isFinite(detail.top)) {
+    applySeek = (detail) => {
+      if (typeof detail.progress === "number") goToProgress(detail.progress, detail.sync);
+      else if (typeof detail.top === "number") {
         goToScrollTop(detail.top);
         ScrollTrigger.update();
       }
     };
-    root.addEventListener("mandegar:seek", seekExperience);
     const onNativeScroll = () => {
-      if (root.hasAttribute("data-interaction-active")) return;
+      if (suspended || root.hasAttribute("data-interaction-active")) return;
+      initialPositionCancelled = true;
       const currentProgress = getNativeProgress();
       syncExperience(currentProgress);
       if (currentProgress > 0.0008) showPhaseRail();
     };
     window.addEventListener("scroll", onNativeScroll, { passive: true });
+    const cancelInitialPosition = () => { initialPositionCancelled = true; };
+    const cancelOnScrollKey = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancelInitialPosition();
+    };
+    window.addEventListener("wheel", cancelInitialPosition, { passive: true });
+    window.addEventListener("touchstart", cancelInitialPosition, { passive: true });
+    window.addEventListener("keydown", cancelOnScrollKey);
 
-    syncExperience(preview ?? getNativeProgress());
+    const restoreCheckpoint = () => {
+      if (!resume || pendingRuntime !== null) return;
+      // A preference change resumes the same reading position; it is not a
+      // forward arrival at a station and must not automatically open one.
+      previousNativeProgress = resume.progress;
+      root.dataset.scrollDirection = "backward";
+      goToScrollTop(root.offsetTop + getScrollDistance() * resume.progress + resume.overflow);
+      suspended = false;
+      playhead.progress = resume.progress;
+      motionTimeline.progress(resume.progress, false);
+      syncExperience(resume.progress);
+      if (resume.progress > 0.0008) showPhaseRail();
+      ScrollTrigger.update();
+    };
+
+    if (!resume) syncExperience(preview ?? getNativeProgress());
     ScrollTrigger.refresh();
+    if (pendingSeek.current) {
+      const request = pendingSeek.current;
+      pendingSeek.current = null;
+      suspended = false;
+      initialPositionCancelled = true;
+      applySeek(request);
+      resumeRequested.current = false;
+    } else if (resume) {
+      restoreCheckpoint();
+      resumeRequested.current = false;
+    }
     const initialFrame = window.requestAnimationFrame(() => {
-      if (preview !== undefined) {
+      if (pendingRuntime !== null || initialPositionCancelled) return;
+      if (resume) {
+        restoreCheckpoint();
+      } else if (preview !== undefined) {
         goToProgress(preview, true);
       } else {
         syncExperience(getNativeProgress());
@@ -288,7 +418,11 @@ export function ScrollMotion({
       if (lenisTick) gsap.ticker.remove(lenisTick);
       smooth?.destroy();
       root.removeEventListener("mandegar:seek", seekExperience);
+      root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
       window.removeEventListener("scroll", onNativeScroll);
+      window.removeEventListener("wheel", cancelInitialPosition);
+      window.removeEventListener("touchstart", cancelInitialPosition);
+      window.removeEventListener("keydown", cancelOnScrollKey);
       copyStates.forEach(({ copy, lines }) => {
         copy.removeAttribute("style");
         lines.forEach((line) => line.removeAttribute("style"));
@@ -305,7 +439,7 @@ export function ScrollMotion({
       root.removeAttribute("data-scroll-direction");
       root.removeAttribute("data-copy-progress");
     };
-  }, { scope, dependencies: [enabled, lenisEnabled, onPhaseChange] });
+  }, { scope, dependencies: [enabled, lenisEnabled, onPhaseChange, runtime], revertOnUpdate: true });
 
   return (
     <div

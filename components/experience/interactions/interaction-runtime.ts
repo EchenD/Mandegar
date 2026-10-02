@@ -9,6 +9,7 @@ import type {
 type MonitorEntry = {
   canvas: HTMLCanvasElement;
   revision: number;
+  blend?: number;
 };
 
 type PhotoSurfaceEntry = {
@@ -75,12 +76,13 @@ export function publishInteractionAnchors(frame: InteractionAnchorFrame) {
 export function registerInteractionCanvas(
   screen: BakedScreenId,
   canvas: HTMLCanvasElement | null,
+  blend?: number,
 ) {
   if (!canvas) {
     delete interactionRuntime.monitorEntries[screen];
     return;
   }
-  interactionRuntime.monitorEntries[screen] = { canvas, revision: 1 };
+  interactionRuntime.monitorEntries[screen] = { canvas, revision: 1, blend };
 }
 
 export function markInteractionCanvasDirty(screen: BakedScreenId) {

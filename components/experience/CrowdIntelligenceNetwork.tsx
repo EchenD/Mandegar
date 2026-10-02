@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { experienceState } from "./experience-state";
+import { getFocusedIntelligencePerson } from "./intelligence-inspector-store";
 import { phaseProgress, sceneTokens } from "./scene-config";
 
 const vertexShader = /* glsl */ `
@@ -18,6 +19,8 @@ const vertexShader = /* glsl */ `
   uniform vec3 uPointer;
   uniform float uPointerActive;
   uniform float uInteractionRadius;
+  uniform vec3 uFocusPoint;
+  uniform float uFocusActive;
   varying float vAlpha;
   varying float vKind;
   varying float vSeed;
@@ -37,12 +40,13 @@ const vertexShader = /* glsl */ `
     float pointerDistance = length(position - uPointer);
     float interaction = (1.0 - smoothstep(0.0, uInteractionRadius, pointerDistance))
       * uPointerActive;
-    vAlpha = mix(0.24 + packet * 0.76, 0.76 + nodePulse * 0.24, aKind)
+    float focused = (1.0 - smoothstep(0.08, 0.34, length(position - uFocusPoint))) * uFocusActive;
+    vAlpha = mix(0.12 + packet * 0.68, 0.54 + nodePulse * 0.28, aKind)
       * uStrength
-      * (1.0 + interaction * 0.58);
+      * (1.0 + interaction * 0.42 + focused * 0.55);
     vKind = aKind;
     vSeed = aSeed;
-    vInteraction = interaction;
+    vInteraction = max(interaction, focused);
 
     vec3 displaced = position;
     vec3 pointerDirection = (position - uPointer) / max(pointerDistance, 0.001);
@@ -57,7 +61,7 @@ const vertexShader = /* glsl */ `
     gl_Position = projectionMatrix * viewPosition;
     gl_PointSize = mix(1.05 + packet * 1.9, 4.25 + nodePulse * 1.1, aKind)
       * uPixelRatio
-      * (1.0 + interaction * 0.42);
+      * (1.0 + interaction * 0.3 + focused * 0.36);
   }
 `;
 
@@ -183,6 +187,15 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
   const points = useRef<THREE.Points>(null);
   const { camera, gl } = useThree();
   const geometry = useMemo(() => buildCrowdNetwork(crowd), [crowd]);
+  const focusHeads = useMemo(() => {
+    const bounds = new THREE.Box3();
+    return new Map(getCrowdActors(crowd).map((actor) => {
+      bounds.setFromObject(actor);
+      const head = bounds.getCenter(new THREE.Vector3());
+      head.y = bounds.max.y + 0.22;
+      return [actor.name, head] as const;
+    }));
+  }, [crowd]);
   const networkFocus = useMemo(
     () => geometry.boundingSphere?.center.clone() ?? new THREE.Vector3(),
     [geometry],
@@ -205,6 +218,8 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
       uPointer: { value: networkFocus.clone() },
       uPointerActive: { value: 0 },
       uInteractionRadius: { value: interactionRadius },
+      uFocusPoint: { value: new THREE.Vector3() },
+      uFocusActive: { value: 0 },
     },
     vertexShader,
     fragmentShader,
@@ -247,6 +262,9 @@ export function CrowdIntelligenceNetwork({ crowd }: { crowd: THREE.Object3D }) {
     material.uniforms.uPointer.value.copy(pointerWorld.current);
     material.uniforms.uPointerActive.value = pointerStrength.current;
     material.uniforms.uPixelRatio.value = Math.min(gl.getPixelRatio(), 1.5);
+    const focusHead = focusHeads.get(getFocusedIntelligencePerson() ?? "");
+    if (focusHead) material.uniforms.uFocusPoint.value.copy(focusHead);
+    material.uniforms.uFocusActive.value = THREE.MathUtils.damp(material.uniforms.uFocusActive.value, focusHead ? 1 : 0, 14, delta);
     if (points.current) points.current.visible = strength > 0.002;
   });
 

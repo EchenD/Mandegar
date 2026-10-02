@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { createCrowdPeople, getCrowdPersonAtRay, getCrowdReadoutPoint, isCrowdPersonOccluded } from "../../components/experience/crowd-person-inspection";
 import { createBakedSceneMaterial } from "../../components/experience/baked-scene-material";
 import { restoreRuntimeMaterial } from "../../components/experience/baked-material-binding";
+import { getCrowdSignalHead, getCrowdSignalLayout } from "../../components/experience/crowd-signal-geometry";
 
 test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
@@ -49,16 +50,38 @@ async function expectWorldReadout(page: Page, id: string) {
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
   expect(bounds!.y).toBeGreaterThanOrEqual(0);
-  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height * 0.6);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
+  expect(bounds!.width).toBeLessThanOrEqual(64);
+  expect(bounds!.height).toBeLessThanOrEqual(105);
+  const leader = JSON.parse(await inspector.getAttribute("data-world-readout-leader") ?? "null") as {
+    start: { x: number; y: number }; end: { x: number; y: number }; points: number;
+  };
+  expect(leader.points).toBe(2);
+  expect(Math.abs(leader.end.x - leader.start.x)).toBeLessThan(0.01);
+  const length = leader.start.y - leader.end.y;
+  expect(length).toBeGreaterThanOrEqual(63.99);
+  expect(length).toBeLessThanOrEqual(82.01);
+  await expect(inspector).toHaveAttribute("data-world-readout-kind", "vertical-signal");
+  await expect(inspector).toHaveAttribute("data-world-readout-text", "none");
+  await expect(inspector).toHaveAttribute("data-world-readout-font-size", "0");
+  const glyphs = JSON.parse(await inspector.getAttribute("data-world-readout-glyphs") ?? "null") as {
+    ring: { x: number; y: number }; bars: { x: number; y: number };
+  };
+  expect(glyphs.ring.x).toBe(glyphs.bars.x);
+  expect(glyphs.bars.y - glyphs.ring.y).toBeGreaterThanOrEqual(36);
+  const columnX = bounds!.x + glyphs.ring.x;
+  const side = await inspector.getAttribute("data-world-readout-side");
+  expect((columnX - leader.start.x) * (side === "left" ? -1 : 1)).toBeGreaterThan(20);
   await expect(page.locator("[data-scene-copy='intelligence']")).toBeVisible();
 }
 
-test("hovering and clicking a real scene person previews and pins simulated activity", async ({ page }, testInfo) => {
+test("hovering and clicking a real scene person previews and pins a compact head signal", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   const inspector = await openIntelligence(page);
+  const chapterCopy = await page.locator("[data-scene-copy='intelligence']").textContent();
   await page.mouse.move(20, 80);
   const baselinePath = testInfo.outputPath("intelligence-desktop-before-hover.png");
   await page.screenshot({ path: baselinePath });
@@ -70,6 +93,7 @@ test("hovering and clicking a real scene person previews and pins simulated acti
   await expect(inspector).toHaveAttribute("data-pinned", "false");
   await expect(inspector).toContainText("Example data · simulated");
   await expectWorldReadout(page, point.id);
+  await expect(page.locator("[data-scene-copy='intelligence']")).toHaveText(chapterCopy!);
   await expect(inspector.locator("[data-intelligence-explore]")).toBeFocused();
   await expect(inspector.locator("[data-intelligence-explore]")).toBeVisible();
   const otherPoint = (JSON.parse(await inspector.getAttribute("data-visible-people") ?? "[]") as PersonPoint[]).find((person) => person.id !== point.id);
@@ -81,6 +105,11 @@ test("hovering and clicking a real scene person previews and pins simulated acti
   }
   const activities = await inspector.locator("[data-example-activities]").textContent();
   const time = await inspector.locator("[data-example-time]").textContent();
+  const firstPaint = Number(await inspector.getAttribute("data-world-readout-paint-count"));
+  await expect.poll(async () => Number(await inspector.getAttribute("data-world-readout-paint-count")), { timeout: 10_000 }).toBeGreaterThan(firstPaint);
+  const semanticBounds = await inspector.locator("[data-intelligence-readout]").boundingBox();
+  expect(semanticBounds!.width).toBeLessThanOrEqual(1);
+  expect(semanticBounds!.height).toBeLessThanOrEqual(1);
   const pinPoint = await firstPerson(page, point.id);
   await page.mouse.click(pinPoint.x, pinPoint.y);
   await expect(inspector).toHaveAttribute("data-pinned", "true");
@@ -138,10 +167,10 @@ test("keyboard exploration keeps focus and stable example records, then clears o
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test.describe("mobile example activity", () => {
+test.describe("mobile head signal", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
-  test("a Persian scene tap pins readable example data with reachable controls", async ({ page }, testInfo) => {
+  test("a Persian scene tap pins a compact signal with semantic records and reachable controls", async ({ page }, testInfo) => {
     const inspector = await openIntelligence(page, "fa");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     const point = await firstPerson(page);
@@ -151,7 +180,7 @@ test.describe("mobile example activity", () => {
     await expect(inspector).toContainText("داده نمونه · شبیه‌سازی‌شده");
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intelligence-selected", "true");
     await expectWorldReadout(page, point.id);
-    expect(Number(await inspector.getAttribute("data-world-readout-font-size"))).toBeGreaterThanOrEqual(14);
+    await expect(inspector).toHaveAttribute("data-world-readout-font-size", "0");
     const semanticReadout = await inspector.locator("[data-intelligence-readout]").boundingBox();
     expect(semanticReadout?.width).toBeLessThanOrEqual(1);
     expect(semanticReadout?.height).toBeLessThanOrEqual(1);
@@ -183,6 +212,75 @@ test("Arabic examples use localized labels and retain keyboard access", async ({
   await expect(inspector.locator("[data-intelligence-next]")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(inspector.locator("[data-intelligence-explore]")).toBeFocused();
+});
+
+test("head signal uses the crowd particle origin after the actor transform", () => {
+  const geometry = new THREE.BoxGeometry(1, 2, 0.3);
+  const material = new THREE.MeshBasicMaterial();
+  const actor = new THREE.Mesh(geometry, material);
+  actor.position.set(2, 3, -4);
+  actor.scale.setScalar(2);
+  const head = getCrowdSignalHead(actor)!;
+  expect(head.x).toBeCloseTo(2);
+  expect(head.y).toBeCloseTo(5.22);
+  expect(head.z).toBeCloseTo(-4);
+  geometry.dispose();
+  material.dispose();
+});
+
+test("head signal keeps a short vertical leader rising from the actual projected head", () => {
+  const layout = getCrowdSignalLayout(new THREE.Vector3(-0.3, 0.2, 0.4), 1440, 900)!;
+  expect(layout.start.x).toBeCloseTo(504);
+  expect(layout.start.y).toBeCloseTo(360);
+  expect(layout.end.x).toBe(layout.start.x);
+  expect(layout.start.y - layout.end.y).toBeCloseTo(76);
+  expect(layout.rect.y).toBeLessThan(layout.end.y);
+  expect(layout.rect.width).toBe(64);
+  expect(layout.rect.height).toBe(98);
+});
+
+test("head signal fits a small mobile viewport without moving the head anchor", () => {
+  for (const x of [-0.9, 0, 0.9]) {
+    const layout = getCrowdSignalLayout(new THREE.Vector3(x, 0, 0.4), 320, 640)!;
+    expect(layout).not.toBeNull();
+    expect(layout.start.x).toBeCloseTo((x * 0.5 + 0.5) * 320);
+    expect(layout.start.y).toBe(320);
+    expect(layout.rect.x).toBeGreaterThanOrEqual(12);
+    expect(layout.rect.x + layout.rect.width).toBeLessThanOrEqual(308);
+    expect(layout.start.y - layout.end.y).toBeGreaterThanOrEqual(63.99);
+    expect(layout.start.y - layout.end.y).toBeLessThanOrEqual(82.01);
+    expect(layout.end.x).toBe(layout.start.x);
+    expect(layout.side).toBe(x > 0 ? -1 : 1);
+    const columnX = layout.origin.x + layout.side * 28;
+    expect(columnX - 8.5).toBeGreaterThanOrEqual(0);
+    expect(columnX + 8.5).toBeLessThanOrEqual(layout.rect.width);
+  }
+});
+
+test("head signal clamps its glyphs at viewport edges while its leader stays vertical", () => {
+  for (const y of [0.78, -0.96]) {
+    const layout = getCrowdSignalLayout(new THREE.Vector3(0.1, y, 0.4), 390, 844)!;
+    expect(layout).not.toBeNull();
+    expect(layout.rect.y).toBeGreaterThanOrEqual(12);
+    expect(layout.rect.y + layout.rect.height).toBeLessThanOrEqual(832);
+    expect(layout.start.y).toBeCloseTo((-y * 0.5 + 0.5) * 844);
+    expect(layout.end.x).toBe(layout.start.x);
+    expect(layout.start.y - layout.end.y).toBeCloseTo(76);
+    const ringX = layout.origin.x + layout.side * 28;
+    const ringY = layout.origin.y - 64;
+    expect(ringX - 7.5).toBeGreaterThanOrEqual(0);
+    expect(ringY - 7.5).toBeGreaterThanOrEqual(0);
+    expect(ringX + 8.5).toBeLessThanOrEqual(layout.rect.width);
+  }
+});
+
+test("head signal hides an offscreen or behind-camera origin instead of detaching it", () => {
+  for (const head of [new THREE.Vector3(1.01, 0, 0), new THREE.Vector3(0, -1.01, 0), new THREE.Vector3(0, 0, 1.01), new THREE.Vector3(Number.NaN, 0, 0)]) {
+    expect(getCrowdSignalLayout(head, 390, 844)).toBeNull();
+  }
+  // A line must have room to rise, and both tiny glyphs must stay beside its actual origin.
+  expect(getCrowdSignalLayout(new THREE.Vector3(0, 0.9, 0), 390, 844)).toBeNull();
+  expect(getCrowdSignalLayout(new THREE.Vector3(-0.98, 0, 0), 390, 844)).toBeNull();
 });
 
 test("a noninteractive opaque wall blocks selecting the person behind it", () => {

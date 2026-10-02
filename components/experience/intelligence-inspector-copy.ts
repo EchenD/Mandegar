@@ -3,7 +3,8 @@ import type { Locale } from "@/lib/i18n";
 const copy = {
   en: {
     example: "Example data · simulated",
-    explore: "Explore example activity",
+    signal: "Illustrative signal",
+    explore: "Explore interactions",
     activities: "Activities tried",
     time: "Participation time",
     previous: "Previous example",
@@ -15,7 +16,8 @@ const copy = {
   },
   fa: {
     example: "داده نمونه · شبیه‌سازی‌شده",
-    explore: "دیدن نمونه مشارکت",
+    signal: "سیگنال نمونه",
+    explore: "کاوش تعامل‌ها",
     activities: "تجربه‌های انجام‌شده",
     time: "زمان مشارکت",
     previous: "نمونه قبلی",
@@ -27,7 +29,8 @@ const copy = {
   },
   ar: {
     example: "بيانات نموذجية · محاكاة",
-    explore: "استكشف نموذج المشاركة",
+    signal: "إشارة نموذجية",
+    explore: "استكشف التفاعل",
     activities: "التجارب التي تمت",
     time: "وقت المشاركة",
     previous: "المثال السابق",

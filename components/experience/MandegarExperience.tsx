@@ -13,6 +13,7 @@ import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
 import { AmbientGame } from "./interactions/AmbientGame";
 import { IntelligenceInspector } from "./IntelligenceInspector";
+import { IntelligenceMonitor } from "./IntelligenceMonitor";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -169,6 +170,7 @@ export function MandegarExperience({
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
   const [interactionReady, setInteractionReady] = useState(false);
+  const [introComplete, setIntroComplete] = useState(false);
   const [workReady, setWorkReady] = useState(false);
   const workJump = useRef<(() => void) | null>(null);
   const handleWorkReady = useCallback((jump: (() => void) | null) => {
@@ -202,14 +204,18 @@ export function MandegarExperience({
     document.documentElement.style.scrollBehavior = "auto";
 
     const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const resetInitialScroll = () => {
+      if (document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollSeekRequested === "true") return;
+      resetScroll();
+    };
     const handlePageShow = () => resetScroll();
     resetScroll();
     window.addEventListener("pageshow", handlePageShow);
     let secondFrame: number | undefined;
     const firstFrame = window.requestAnimationFrame(() => {
-      resetScroll();
+      resetInitialScroll();
       secondFrame = window.requestAnimationFrame(() => {
-        resetScroll();
+        resetInitialScroll();
         document.documentElement.style.scrollBehavior = previousBehavior;
       });
     });
@@ -249,10 +255,11 @@ export function MandegarExperience({
     }
     const requestedPhase = new URLSearchParams(window.location.search).get("phase");
     html.removeAttribute("data-experience-scroll-lock");
-    if (requestedPhase) return;
+    if (requestedPhase || document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollSeekRequested === "true") return;
 
     const previousBehavior = html.style.scrollBehavior;
     const resetScroll = () => {
+      if (document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollSeekRequested === "true") return;
       html.style.scrollBehavior = "auto";
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     };
@@ -302,13 +309,19 @@ export function MandegarExperience({
   }, [interactionReady]);
 
   const handleRuntimeReady = useCallback((nextRuntime: "pending" | "fallback" | "adaptive" | "full") => {
+    document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:runtime-change", {
+      detail: { runtime: nextRuntime },
+    }));
     setRuntime(nextRuntime);
-    setLoadProgress(72);
+    setLoadProgress((current) => current === 100 ? current : 72);
   }, []);
 
   const handleFirstFrame = useCallback(() => setLoadProgress(100), []);
   const handleIntroInteractive = useCallback(() => setInteractionReady(true), []);
-  const handleIntroComplete = useCallback(() => setInteractionReady(true), []);
+  const handleIntroComplete = useCallback(() => {
+    setInteractionReady(true);
+    setIntroComplete(true);
+  }, []);
   const handlePhaseChange = useCallback((phase: ScenePhaseId) => setActivePhase(phase), []);
 
   const scrollToProgress = useCallback((progress: number) => {
@@ -377,7 +390,7 @@ export function MandegarExperience({
 
   return (
     <>
-      <ScrollMotion className={styles.root} enabled={interactionReady} lenisEnabled={lenisEnabled} onPhaseChange={handlePhaseChange}>
+      <ScrollMotion className={styles.root} enabled={interactionReady} lenisEnabled={lenisEnabled} runtime={runtime} onPhaseChange={handlePhaseChange}>
       <div
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
@@ -405,7 +418,7 @@ export function MandegarExperience({
           />
           <ExperienceIntro
             ready={loadProgress === 100}
-            enabled={runtime === "adaptive" || runtime === "full"}
+            enabled={!introComplete && (runtime === "adaptive" || runtime === "full")}
             skipLabel={locale === "fa" ? "رد شدن" : locale === "ar" ? "تخطي" : "Skip intro"}
             onInteractive={handleIntroInteractive}
             onComplete={handleIntroComplete}
@@ -423,6 +436,7 @@ export function MandegarExperience({
           <InteractionDirector locale={locale} activePhase={activePhase} runtime={runtime} />
           <AmbientGame locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
           <IntelligenceInspector locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
+          <IntelligenceMonitor locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
 
           <div className={styles.copyLayer}>
             <section className={styles.sceneCopy} data-scene-copy="arrival" data-cinematic-beat>

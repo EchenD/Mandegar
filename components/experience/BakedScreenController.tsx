@@ -38,6 +38,8 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform sampler2D uMedia;
   uniform sampler2D uBaseMedia;
+  uniform sampler2D uIdleMedia;
+  uniform float uBaseBlend;
   uniform float uMediaBlend;
   uniform float uActivation;
   uniform float uHover;
@@ -88,7 +90,8 @@ const fragmentShader = /* glsl */ `
       vec3(0.035, 0.15, 0.28),
       smoothstep(0.0, 1.0, vUv.x + vUv.y * 0.28)
     );
-    vec3 mediaColor = mix(texture2D(uBaseMedia, vUv).rgb, texture2D(uMedia, vUv).rgb, uMediaBlend);
+    vec3 baseColor = mix(texture2D(uIdleMedia, vUv).rgb, texture2D(uBaseMedia, vUv).rgb, uBaseBlend);
+    vec3 mediaColor = mix(baseColor, texture2D(uMedia, vUv).rgb, uMediaBlend);
     vec3 poweredColor = mix(fallbackColor, mediaColor, uHasMedia);
     vec3 color = mix(offColor, poweredColor, activation);
     vec3 hoverColor = color * (1.0 + uHoverBrightness)
@@ -109,7 +112,9 @@ type ScreenRuntime = {
   liveTexture: THREE.CanvasTexture | null;
   liveCanvas: HTMLCanvasElement | null;
   liveRevision: number;
+  liveBlend: number;
   handoffTexture: THREE.CanvasTexture | null;
+  handoffBlend: number;
 };
 
 function hasActiveSurface(id: BakedScreenId) {
@@ -176,6 +181,8 @@ export function BakedScreenController({
         uniforms: {
           uMedia: { value: media },
           uBaseMedia: { value: media },
+          uIdleMedia: { value: media },
+          uBaseBlend: { value: 1 },
           uMediaBlend: { value: 1 },
           uActivation: { value: 0 },
           uHover: { value: 0 },
@@ -208,7 +215,9 @@ export function BakedScreenController({
         liveTexture: null,
         liveCanvas: null,
         liveRevision: 0,
+        liveBlend: 1,
         handoffTexture: null,
+        handoffBlend: 1,
       };
     });
     runtimesRef.current = result;
@@ -234,6 +243,7 @@ export function BakedScreenController({
         result[id].media = texture;
         result[id].video = video;
         result[id].material.uniforms.uBaseMedia.value = texture;
+        result[id].material.uniforms.uIdleMedia.value = texture;
         if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
         result[id].material.uniforms.uHasMedia.value = 1;
         return;
@@ -249,6 +259,7 @@ export function BakedScreenController({
           result[id].media.dispose();
           result[id].media = texture;
           result[id].material.uniforms.uBaseMedia.value = texture;
+          result[id].material.uniforms.uIdleMedia.value = texture;
           if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
           result[id].material.uniforms.uHasMedia.value = 1;
         },
@@ -306,7 +317,7 @@ export function BakedScreenController({
       // A successor registers only after painting. Keep the previous surface
       // across effect/animation-frame ordering instead of exposing base artwork.
       const liveEntry = nextEntry ?? (waitingForSuccessor && runtime.liveCanvas
-        ? { canvas: runtime.liveCanvas, revision: runtime.liveRevision }
+        ? { canvas: runtime.liveCanvas, revision: runtime.liveRevision, blend: runtime.liveBlend }
         : null);
       if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
         runtime.handoffTexture?.dispose();
@@ -314,6 +325,7 @@ export function BakedScreenController({
         runtime.handoffTexture = liveEntry && hasActiveSurface(runtime.id) && entering < 1
           ? runtime.liveTexture
           : null;
+        runtime.handoffBlend = runtime.handoffTexture ? runtime.liveBlend : 1;
         if (runtime.liveTexture !== runtime.handoffTexture) runtime.liveTexture?.dispose();
         runtime.liveCanvas = liveEntry?.canvas ?? null;
         runtime.liveRevision = 0;
@@ -341,10 +353,15 @@ export function BakedScreenController({
       }
       const presentation = getVisitorPresentation(experienceState.progress);
       runtime.material.uniforms.uBaseMedia.value = runtime.handoffTexture ?? runtime.media;
-      runtime.material.uniforms.uMediaBlend.value = runtime.handoffTexture
+      runtime.material.uniforms.uBaseBlend.value = runtime.handoffTexture ? runtime.handoffBlend : 1;
+      const presentationBlend = runtime.handoffTexture
         ? Math.max(0, Math.min(1, entering))
         : !hasActiveSurface(runtime.id) && runtime.id === "main" ? presentation.drawingVisibility
           : !hasActiveSurface(runtime.id) && runtime.id === "interactive" ? presentation.composerVisibility : 1;
+      const surfaceBlend = liveEntry && "blend" in liveEntry ? liveEntry.blend : undefined;
+      runtime.liveBlend = typeof surfaceBlend === "number" && Number.isFinite(surfaceBlend)
+        ? Math.max(0, Math.min(1, surfaceBlend)) : presentationBlend;
+      runtime.material.uniforms.uMediaBlend.value = runtime.liveBlend;
       if (!runtime.video) return;
       if (activation > 0.04 && runtime.video.paused) {
         void runtime.video.play().catch(() => undefined);
