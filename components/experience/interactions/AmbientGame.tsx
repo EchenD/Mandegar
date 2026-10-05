@@ -4,10 +4,10 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
 import { sceneTokens } from "../scene-config";
-import { createAmbientBreakoutGame, stepAmbientBreakoutGame } from "./ambient-breakout-game";
+import { createRaceGame, getAutonomousTarget, raceBoard, stepRace } from "./race-game";
 import { getAmbientGameVisibility } from "./ambient-game-visibility";
-import { breakoutBoard } from "./breakout-game";
-import { paintBreakoutScreen } from "./breakout-screen";
+import { paintRaceScreen } from "./race-screen";
+import { loadRaceArtwork } from "./race-artwork";
 import { getInteractionCopy } from "./interaction-copy";
 import { interactionRuntime } from "./interaction-runtime";
 import { getVisitorCreation } from "./visitor-creation";
@@ -28,6 +28,11 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
   const copy = getInteractionCopy(locale);
 
   useEffect(() => {
+    if (!enabled) return;
+    return loadRaceArtwork(() => {});
+  }, [enabled]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context || !enabled || !completed) return;
@@ -42,13 +47,19 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const background = new Image();
     background.src = sceneTokens.bakedScene.screens.game;
-    let state = createAmbientBreakoutGame();
+    let state = createRaceGame(319);
+    state.status = "running";
+    let round = 1;
     let lastPaint = 0;
     let lastVisibility = -1;
+    let wasInteractive = false;
+    let handoff: HTMLCanvasElement | null = null;
+    let handoffAt = -Infinity;
     let frame: number;
     const resumeClock = () => { lastTime = performance.now(); };
     document.addEventListener("visibilitychange", resumeClock);
     background.onload = () => { lastVisibility = -1; };
+    const stopArtwork = loadRaceArtwork(() => { lastVisibility = -1; });
 
     const releaseSurface = () => {
       if (interactionRuntime.ambientGameSurface?.canvas === canvas) {
@@ -72,22 +83,33 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
         // The painted surface remains available while a new interactive canvas
         // loads; the controller gives that canvas priority once it is painted.
         lastVisibility = -1;
+        wasInteractive = true;
       } else {
-        if (!motion.matches) state = stepAmbientBreakoutGame(state, delta);
+        if (wasInteractive || interactionRuntime.ambientGameSurface?.canvas !== canvas && !handoff) {
+          const previous = interactionRuntime.ambientGameSurface?.canvas;
+          if (previous && previous !== canvas) {
+            handoff = document.createElement("canvas");
+            handoff.width = canvas.width;
+            handoff.height = canvas.height;
+            handoff.getContext("2d")?.drawImage(previous, 0, 0);
+            handoffAt = time;
+          }
+          wasInteractive = false;
+        }
+        if (!motion.matches) {
+          if (state.status === "complete") { state = { ...createRaceGame(319 + round++), status: "running" }; }
+          state = stepRace(state, delta, 0, getAutonomousTarget(state));
+        }
         if ((!motion.matches && time - lastPaint >= 1000 / 30) || visibility !== lastVisibility) {
-          paintBreakoutScreen(context, state.game, {
-            copy,
-            best: 0,
-            reducedMotion: motion.matches,
-            transition: visibility,
-            background: background.naturalWidth > 0 ? background : null,
-            trail: [],
-            sparks: [],
-            interactive: false,
+          const blend = motion.matches ? 1 : Math.min(1, (time - handoffAt) / 400);
+          paintRaceScreen(context, state, {
+            copy, best: getVisitorCreation().gameBest, transition: visibility * blend * blend * (3 - 2 * blend),
+            background: handoff ?? (background.naturalWidth > 0 ? background : null), interactive: false,
           });
-          canvas.dataset.ambientRound = String(state.round);
-          canvas.dataset.ambientScore = String(state.game.score);
-          canvas.dataset.ambientBall = `${state.game.ball.x.toFixed(1)},${state.game.ball.y.toFixed(1)}`;
+          if (blend >= 1) handoff = null;
+          canvas.dataset.ambientRound = String(round);
+          canvas.dataset.ambientScore = String(state.score);
+          canvas.dataset.ambientCar = String(state.x);
           const surface = interactionRuntime.ambientGameSurface;
           if (surface?.canvas === canvas) surface.revision += 1;
           else interactionRuntime.ambientGameSurface = { canvas, revision: 1 };
@@ -103,6 +125,7 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
       observer.disconnect();
       document.removeEventListener("visibilitychange", resumeClock);
       background.onload = null;
+      stopArtwork();
       releaseSurface();
     };
   }, [completed, copy, enabled]);
@@ -110,8 +133,8 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
   return (
     <canvas
       ref={canvasRef}
-      width={breakoutBoard.width}
-      height={breakoutBoard.height}
+      width={raceBoard.width}
+      height={raceBoard.height}
       className={styles.textureSource}
       data-game-ambient
       data-ambient-state="unavailable"

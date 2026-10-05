@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, continueFromResult, returnToStationForward, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(180_000);
 
@@ -28,24 +28,12 @@ test("finished drawing continues without a media flash and blends when reversing
     }
   });
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/en?intro=0&phase=reveal", { waitUntil: "domcontentloaded" });
-  const director = await waitForStation(page, "stage");
-  await expect(page.locator("[data-stage-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  for (const beam of [1, 3]) {
-    await activateWithKeyboard(page, `[data-stage-beam='${beam}']`);
-  }
-  await activateWithKeyboard(page, "[data-stage-finish]");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await activateWithKeyboard(page, "[data-stage-spatial-controls] [data-interaction-continue]");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await page.goto("/en?intro=0&phase=connection", { waitUntil: "domcontentloaded" });
+  const director = await waitForStation(page, "draw");
 
   const connection = narrativeScore.find((beat) => beat.id === "connection");
   if (!connection) throw new Error("Drawing checkpoint is missing");
   const root = page.locator("[data-experience-root]");
-  await root.evaluate((element, progress) => {
-    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
-  }, connection.preview);
-  await waitForStation(page, "draw");
   const controls = page.locator("[data-drawing-spatial-controls]");
   await expect(page.locator("[data-drawing-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   await page.mouse.move(550, 250);
@@ -56,11 +44,8 @@ test("finished drawing continues without a media flash and blends when reversing
   await page.evaluate(() => {
     (window as unknown as Window & { __screenBlends: number[] }).__screenBlends = [];
   });
-  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await expect(controls).toHaveAttribute("data-drawing-finished", "true");
-  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await activateWithKeyboard(page, "[data-drawing-finish]");
+  await continueFromResult(page, "draw");
   const continuationBlends = await page.evaluate(() => {
     return (window as unknown as Window & { __screenBlends: number[] }).__screenBlends;
   });
@@ -83,18 +68,10 @@ test("finished drawing continues without a media flash and blends when reversing
   }, activation.preview);
   await expect(director).toHaveAttribute("data-active-station", "none");
 
-  await root.evaluate((element, progress) => {
-    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
-  }, connection.preview);
-  await expect(director).toHaveAttribute("data-available-station", "draw");
-  await expect(director).toHaveAttribute("data-active-station", "none");
-  await page.evaluate(() => {
-    window.dispatchEvent(new CustomEvent("mandegar:interaction-request", {
-      detail: { station: "draw", input: "keyboard" },
-    }));
-  });
-  await waitForStation(page, "draw");
+  await returnToStationForward(page, "draw");
   await expect(controls).toHaveAttribute("data-stroke-count", "0");
+  await expect(controls).toHaveAttribute("data-drawing-finished", "false");
+  await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });

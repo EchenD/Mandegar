@@ -1,43 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
-import {
-  interactionRuntime,
-  markInteractionCanvasDirty,
-  registerInteractionCanvas,
-  registerSceneInteraction,
-} from "./interaction-runtime";
-import type { SceneInteractionEvent } from "./interaction-types";
-import { gameControlAtPoint, paintBreakoutScreen, type BlockSpark, type GameControl } from "./breakout-screen";
-import { completeGameResult, getVisitorCreation, saveGameResult } from "./visitor-creation";
-import {
-  breakoutBoard,
-  createBreakoutGame,
-  finishBreakoutGame,
-  moveBreakoutPaddle,
-  serveBreakoutBall,
-  setBreakoutPaused,
-  stepBreakoutGame,
-  type BreakoutGame,
-} from "./breakout-game";
-import styles from "./HeroInteractions.module.css";
+import { interactionRuntime, markInteractionCanvasDirty, registerInteractionCanvas, registerSceneInteraction } from "./interaction-runtime";
+import { completeGameResult, getVisitorCreation } from "./visitor-creation";
+import { getSavedRace, raceBoard, saveRace, steerRace, stepRace, toggleRace, type RaceGame } from "./race-game";
+import { paintRaceScreen, raceControlAtPoint, type RaceControl } from "./race-screen";
+import { loadRaceArtwork } from "./race-artwork";
 import { loadMonitorArtwork } from "./monitor-artwork";
+import { reportInteractionParticipation } from "./interaction-participation";
+import { sceneTokens } from "../scene-config";
+import styles from "./HeroInteractions.module.css";
 
-const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.game.canvas;
-function clamp(value: number, minimum = 0, maximum = 1) {
-  return Math.max(minimum, Math.min(maximum, value));
-}
-
-export function GameInteraction({
-  copy,
-  reducedMotion,
-  onClose,
-  onComplete,
-  onReset,
-  onContinue,
-}: {
+export function GameInteraction({ copy, reducedMotion, onComplete }: {
   copy: InteractionCopy;
   reducedMotion: boolean;
   onClose: () => void;
@@ -47,448 +22,256 @@ export function GameInteraction({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chromeRef = useRef<HTMLDivElement>(null);
-  const mountedRef = useRef(false);
+  const game = useRef<RaceGame>(getSavedRace());
+  const best = useRef(getVisitorCreation().gameBest);
+  const direction = useRef(0);
+  const pointer = useRef<number | null>(null);
+  const heldControl = useRef<{ id: number; target: HTMLButtonElement } | null>(null);
+  const focused = useRef<RaceControl | null>(null);
+  const transition = useRef(0);
+  const transitionReady = useRef(false);
+  const departingAt = useRef<number | null>(null);
+  const diagnosticsAt = useRef(-Infinity);
   const entranceBackground = useRef<HTMLCanvasElement | null>(null);
-  const game = useRef<BreakoutGame>(createBreakoutGame());
-  const bestRef = useRef(getVisitorCreation().gameBest);
-  const onCompleteRef = useRef(onComplete);
-  const onResetRef = useRef(onReset);
-  const completionReported = useRef(false);
-  const activePointer = useRef<number | null>(null);
-  const keyboardDirection = useRef<-1 | 0 | 1>(0);
-  const heldDirection = useRef<-1 | 0 | 1>(0);
-  const heldPointer = useRef<number | null>(null);
-  const hoveredControl = useRef<GameControl | null>(null);
-  const focusedControl = useRef<GameControl | null>(null);
-  const transitionProgress = useRef(0);
-  const transitionState = useRef<"intro" | "ready" | "outro">("intro");
-  const transitionFrame = useRef<number | null>(null);
-  const renderFrame = useRef<number | null>(null);
-  const animationFrame = useRef<number | null>(null);
-  const focusFrame = useRef<number | null>(null);
   const monitorImage = useRef<HTMLImageElement | null>(null);
-  const trail = useRef<Array<{ x: number; y: number }>>([]);
-  const sparks = useRef<BlockSpark[]>([]);
-  const [snapshot, setSnapshot] = useState<BreakoutGame>(() => createBreakoutGame());
-  const [best, setBest] = useState(() => getVisitorCreation().gameBest);
+  const reported = useRef(false);
+  const complete = useRef(onComplete);
+  const [snapshot, setSnapshot] = useState(getSavedRace);
+  const [bestScore, setBestScore] = useState(() => getVisitorCreation().gameBest);
+  useEffect(() => { complete.current = onComplete; }, [onComplete]);
 
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-    onResetRef.current = onReset;
-  }, [onComplete, onReset]);
-
-  const applyGame = useCallback((next: BreakoutGame) => {
-    const previous = game.current;
-    game.current = next;
-    if (next.score !== previous.score) {
-      next.blocks.forEach((block) => {
-        if (block.alive || !previous.blocks[block.id]?.alive) return;
-        const x = block.x + block.width / 2;
-        const y = block.y + block.height / 2;
-        sparks.current.push({ x, y, startedAt: performance.now() });
-        interactionRuntime.gameHitId += 1;
-        interactionRuntime.gameHitX = x / canvasWidth;
-        interactionRuntime.gameHitY = y / canvasHeight;
-      });
-    }
-    if (next.status !== previous.status || next.score !== previous.score || next.lives !== previous.lives
-      || next.serves !== previous.serves || Math.ceil(breakoutBoard.duration - next.elapsed) !== Math.ceil(breakoutBoard.duration - previous.elapsed)) setSnapshot(next);
-    if (next.status === "complete" && !completionReported.current) {
-      activePointer.current = null;
-      keyboardDirection.current = 0;
-      heldDirection.current = 0;
-      heldPointer.current = null;
-      completionReported.current = true;
-      bestRef.current = completeGameResult(next.score);
-      setBest(bestRef.current);
-      onCompleteRef.current();
-    }
+  const release = useCallback(() => {
+    const held = heldControl.current;
+    heldControl.current = null;
+    if (held?.target.hasPointerCapture(held.id)) held.target.releasePointerCapture(held.id);
+    direction.current = 0;
+    pointer.current = null;
+    if (interactionRuntime.gestureStation === "game") interactionRuntime.gestureStation = null;
+    if (canvasRef.current) canvasRef.current.dataset.dragging = "false";
   }, []);
-
+  const apply = useCallback((next: RaceGame, publish = true) => {
+    game.current = next;
+    if (publish) setSnapshot(next);
+    if (next.status === "complete" && !reported.current) {
+      reported.current = true;
+      release();
+      best.current = completeGameResult(next.score);
+      setBestScore(best.current);
+      saveRace(next);
+      complete.current();
+    }
+  }, [release]);
   const paint = useCallback(() => {
-    if (!mountedRef.current) return;
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
-    const current = game.current;
-    const transition = transitionProgress.current;
-    interactionRuntime.gameVisibility = transition;
-    interactionRuntime.gameComplete = current.status === "complete";
-    canvas.dataset.transitionProgress = transition.toFixed(3);
-    canvas.dataset.transitionState = transitionState.current;
-    canvas.dataset.paddleX = current.paddleX.toFixed(1);
-    canvas.dataset.dragging = activePointer.current === null ? "false" : "true";
-    chromeRef.current?.style.setProperty("--game-ui-opacity", transition.toFixed(3));
-    if (chromeRef.current) chromeRef.current.dataset.gameExiting = transitionState.current === "outro" ? "true" : "false";
-    sparks.current = sparks.current.filter((spark) => performance.now() - spark.startedAt < 320);
-    paintBreakoutScreen(context, current, {
+    canvas.dataset.transitionProgress = transition.current.toFixed(3);
+    canvas.dataset.carX = String(game.current.x);
+    canvas.dataset.dragging = String(pointer.current !== null);
+    const time = performance.now();
+    if (time - diagnosticsAt.current >= 200 || game.current.status === "complete") {
+      canvas.dataset.traffic = JSON.stringify(game.current.traffic);
+      diagnosticsAt.current = time;
+    }
+    interactionRuntime.gameVisibility = transition.current;
+    interactionRuntime.gameComplete = game.current.status === "complete";
+    chromeRef.current?.style.setProperty("--game-ui-opacity", String(transition.current));
+    paintRaceScreen(context, game.current, {
       copy,
-      best: bestRef.current,
-      reducedMotion,
-      transition: transitionState.current === "outro" ? 1 : transition,
-      controlsTransition: transition,
-      background: transitionState.current === "intro" && entranceBackground.current ? entranceBackground.current : monitorImage.current,
-      trail: trail.current,
-      sparks: sparks.current,
-      hoveredControl: hoveredControl.current,
-      focusedControl: focusedControl.current,
+      best: best.current,
+      transition: transition.current,
+      focused: focused.current,
+      background: entranceBackground.current ?? monitorImage.current,
+      interactive: window.innerWidth > 760,
     });
     markInteractionCanvasDirty("game");
-  }, [copy, reducedMotion]);
-
-  const schedulePaint = useCallback(() => {
-    if (!mountedRef.current || renderFrame.current !== null) return;
-    renderFrame.current = window.requestAnimationFrame(() => {
-      renderFrame.current = null;
-      paint();
-    });
-  }, [paint]);
-  const releaseKeyboardControls = useCallback(() => {
-    keyboardDirection.current = 0;
-    heldDirection.current = 0;
-    heldPointer.current = null;
-  }, []);
-  const releaseControls = useCallback(() => {
-    releaseKeyboardControls();
-    activePointer.current = null;
-  }, [releaseKeyboardControls]);
-
-  const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
-    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-    const from = transitionProgress.current;
-    transitionState.current = target === 1 ? "intro" : "outro";
-    const duration = reducedMotion ? 0 : target === 1 ? 500 : 360;
-    if (duration === 0) {
-      transitionProgress.current = target;
-      transitionState.current = target === 1 ? "ready" : "outro";
-      paint();
-      onFinish?.();
-      return;
-    }
-    const startedAt = performance.now();
-    const tick = (time: number) => {
-      const elapsed = clamp((time - startedAt) / duration);
-      const eased = elapsed * elapsed * (3 - 2 * elapsed);
-      transitionProgress.current = from + (target - from) * eased;
-      paint();
-      if (elapsed < 1) transitionFrame.current = window.requestAnimationFrame(tick);
-      else {
-        transitionFrame.current = null;
-        transitionState.current = target === 1 ? "ready" : "outro";
-        onFinish?.();
-      }
-    };
-    transitionFrame.current = window.requestAnimationFrame(tick);
-  }, [paint, reducedMotion]);
+  }, [copy]);
   const action = useCallback(() => {
-    if (transitionState.current !== "ready") return;
-    releaseControls();
-    const current = game.current;
-    applyGame(current.status === "ready" ? serveBreakoutBall(current) : setBreakoutPaused(current, current.status === "running"));
-    trail.current = [];
-    schedulePaint();
-  }, [applyGame, releaseControls, schedulePaint]);
-  const reset = useCallback(() => {
-    if (transitionState.current !== "ready" || game.current.serves === 0) return;
-    const restoreFocus = chromeRef.current?.contains(document.activeElement);
-    releaseControls();
-    game.current = createBreakoutGame();
-    setSnapshot(game.current);
-    completionReported.current = false;
-    trail.current = [];
-    sparks.current = [];
-    onResetRef.current();
-    schedulePaint();
-    if (restoreFocus) {
-      if (focusFrame.current !== null) window.cancelAnimationFrame(focusFrame.current);
-      focusFrame.current = window.requestAnimationFrame(() => {
-        focusFrame.current = null;
-        if (!mountedRef.current || transitionState.current !== "ready") return;
-        const target = window.matchMedia("(max-width: 760px)").matches
-          ? chromeRef.current?.querySelector<HTMLButtonElement>("[data-mobile-game-action]")
-          : canvasRef.current;
-        target?.focus({ preventScroll: true });
-      });
-    }
-  }, [releaseControls, schedulePaint]);
-  const exitWithTransition = useCallback((callback: () => void) => {
-    if (transitionState.current === "outro") return;
-    releaseControls();
-    if (game.current.serves > 0) saveGameResult(game.current.score);
-    game.current = setBreakoutPaused(game.current, true);
-    animateTransition(0, callback);
-  }, [animateTransition, releaseControls]);
-  const finishOrContinue = useCallback(() => {
-    if (transitionState.current !== "ready" || game.current.serves === 0) return;
-    if (game.current.status === "complete") exitWithTransition(onContinue);
-    else {
-      releaseControls();
-      applyGame(finishBreakoutGame(game.current));
-      schedulePaint();
-    }
-  }, [applyGame, exitWithTransition, onContinue, releaseControls, schedulePaint]);
-  const movePaddle = useCallback((x: number) => {
-    game.current = moveBreakoutPaddle(game.current, x);
-    schedulePaint();
-  }, [schedulePaint]);
-  const focusGameCanvas = useCallback(() => {
-    if (window.matchMedia("(min-width: 761px)").matches) canvasRef.current?.focus({ preventScroll: true });
-  }, []);
+    if (!transitionReady.current || departingAt.current !== null || game.current.status === "complete") return;
+    reportInteractionParticipation("game");
+    release();
+    apply(toggleRace(game.current));
+    paint();
+  }, [apply, paint, release]);
+  const move = useCallback((x: number) => {
+    if (departingAt.current !== null || game.current.status === "complete") return;
+    reportInteractionParticipation("game");
+    game.current = steerRace(game.current, x);
+    paint();
+  }, [paint]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    mountedRef.current = true;
+    transitionReady.current = false;
+    departingAt.current = null;
     const retained = interactionRuntime.ambientGameSurface?.canvas;
     if (retained) {
-      const snapshot = document.createElement("canvas");
-      snapshot.width = canvasWidth;
-      snapshot.height = canvasHeight;
-      snapshot.getContext("2d")?.drawImage(retained, 0, 0, canvasWidth, canvasHeight);
-      entranceBackground.current = snapshot;
+      const background = document.createElement("canvas");
+      background.width = canvas.width;
+      background.height = canvas.height;
+      background.getContext("2d")?.drawImage(retained, 0, 0, canvas.width, canvas.height);
+      entranceBackground.current = background;
     }
-    let mounted = true;
-    let registered = false;
-    const begin = (image: HTMLImageElement | null) => {
-      if (!mounted) return;
-      monitorImage.current = image;
-      if (registered) {
-        schedulePaint();
-        return;
-      }
-      registered = true;
-      paint();
-      registerInteractionCanvas("game", canvas);
-      animateTransition(1);
-    };
-    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.game, begin, {
-      immediate: Boolean(entranceBackground.current),
-    });
-    void document.fonts?.ready.then(() => { if (mounted) schedulePaint(); });
-    return () => {
-      mounted = false;
-      mountedRef.current = false;
-      stopLoading();
-      if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
-      if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-      renderFrame.current = null;
-      transitionFrame.current = null;
-      registerInteractionCanvas("game", null);
-    };
-  }, [animateTransition, paint, schedulePaint]);
-
-  useEffect(() => {
-    let previousTime = performance.now();
+    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.game, (image) => { monitorImage.current = image; paint(); }, { immediate: true });
+    const stopArtwork = loadRaceArtwork(paint);
+    const started = performance.now();
+    let previous = started;
+    let lastPublish = started;
+    let frame: number;
+    paint();
+    registerInteractionCanvas("game", canvas);
     const tick = (time: number) => {
-      if (document.hidden) {
-        animationFrame.current = null;
-        return;
+      const dt = (time - previous) / 1000;
+      previous = time;
+      const previousTransition = transition.current;
+      const previousGame = game.current;
+      const amount = reducedMotion ? 1 : Math.min(1, (time - started) / 500);
+      const entrance = amount * amount * (3 - 2 * amount);
+      const departure = departingAt.current === null ? 0 : reducedMotion ? 1 : Math.min(1, (time - departingAt.current) / 400);
+      transition.current = entrance * (1 - departure * departure * (3 - 2 * departure));
+      if (amount === 1 && !transitionReady.current && departingAt.current === null) {
+        transitionReady.current = true;
+        if (game.current.status === "ready" || game.current.status === "paused") apply({ ...game.current, status: "running" });
+        else if (game.current.status === "complete") apply(game.current);
       }
-      const delta = Math.max(0, (time - previousTime) / 1000);
-      previousTime = time;
-      if (transitionState.current === "ready") {
-        if (delta > 1 && game.current.status === "running") {
-          releaseControls();
-          applyGame(setBreakoutPaused(game.current, true));
-          schedulePaint();
+      if (!document.hidden) {
+        if (transitionReady.current && departingAt.current === null && game.current.status === "running") {
+          const next = stepRace(game.current, dt, pointer.current === null ? direction.current : 0);
+          const publish = time - lastPublish >= 200 || next.status !== game.current.status;
+          apply(next, publish);
+          if (publish) lastPublish = time;
         }
-        const movement = activePointer.current === null ? keyboardDirection.current || heldDirection.current : 0;
-        if (movement) game.current = moveBreakoutPaddle(game.current, game.current.paddleX + movement * 470 * delta);
-        if (game.current.status === "running") {
-          const next = stepBreakoutGame(game.current, delta);
-          applyGame(next);
-          trail.current.push({ x: next.ball.x, y: next.ball.y });
-          if (trail.current.length > 7) trail.current.shift();
-          paint();
-        } else if (movement || (!reducedMotion && sparks.current.length)) paint();
+        if (previousTransition !== transition.current || previousGame !== game.current) paint();
       }
-      animationFrame.current = window.requestAnimationFrame(tick);
+      frame = requestAnimationFrame(tick);
     };
-    const handleVisibility = () => {
-      releaseControls();
-      if (document.hidden) {
-        applyGame(setBreakoutPaused(game.current, true));
-        if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current);
-        animationFrame.current = null;
-      } else {
-        previousTime = performance.now();
-        if (animationFrame.current === null) animationFrame.current = window.requestAnimationFrame(tick);
-        schedulePaint();
-      }
+    const pause = () => {
+      release();
+      if (game.current.status === "running") apply({ ...game.current, status: "paused" });
+      previous = performance.now();
+      paint();
     };
-    const handleBlur = () => {
-      releaseControls();
-      applyGame(setBreakoutPaused(game.current, true));
-      schedulePaint();
+    const departure = (event: Event) => {
+      if ((event as CustomEvent<{ station?: string }>).detail?.station !== "game") return;
+      departingAt.current = performance.now();
+      release();
+      canvas.dataset.departing = "true";
+      paint();
     };
-    const menuToggle = document.querySelector("header button[aria-controls='primary-navigation']");
-    const handleMenu = () => {
-      if (menuToggle?.getAttribute("aria-expanded") === "true") handleBlur();
-    };
-    const menuObserver = new MutationObserver(handleMenu);
-    if (menuToggle) menuObserver.observe(menuToggle, { attributes: true, attributeFilter: ["aria-expanded"] });
-    handleMenu();
-    animationFrame.current = window.requestAnimationFrame(tick);
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleBlur);
+    const visibility = () => { if (document.hidden) pause(); else previous = performance.now(); };
+    const menu = document.querySelector("header button[aria-controls='primary-navigation']");
+    const observer = new MutationObserver(() => { if (menu?.getAttribute("aria-expanded") === "true") pause(); });
+    if (menu) observer.observe(menu, { attributes: true, attributeFilter: ["aria-expanded"] });
+    window.addEventListener("blur", pause);
+    window.addEventListener("mandegar:interaction-departure", departure);
+    document.addEventListener("visibilitychange", visibility);
+    frame = requestAnimationFrame(tick);
     return () => {
-      if (animationFrame.current !== null) window.cancelAnimationFrame(animationFrame.current);
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleBlur);
-      menuObserver.disconnect();
+      cancelAnimationFrame(frame);
+      stopLoading();
+      stopArtwork();
+      observer.disconnect();
+      window.removeEventListener("blur", pause);
+      window.removeEventListener("mandegar:interaction-departure", departure);
+      document.removeEventListener("visibilitychange", visibility);
+      release();
+      saveRace(game.current);
+      best.current = completeGameResult(game.current.score);
+      // Hold the outgoing image until the autonomous renderer takes over.
+      interactionRuntime.ambientGameSurface = { canvas, revision: 1 };
+      registerInteractionCanvas("game", null);
+      interactionRuntime.gameVisibility = 0;
+      interactionRuntime.gameComplete = false;
     };
-  }, [applyGame, paint, reducedMotion, releaseControls, schedulePaint]);
+  }, [apply, paint, reducedMotion, release]);
 
   useEffect(() => {
-    const handleSceneInput = (event: SceneInteractionEvent) => {
-      if (transitionState.current !== "ready" || event.phase === "activate") return;
-      const control = gameControlAtPoint(event.x, event.y);
-      if (event.phase === "move") {
-        if (activePointer.current === event.pointerId) movePaddle(event.x * canvasWidth);
-        else {
-          hoveredControl.current = control;
-          schedulePaint();
+    registerSceneInteraction("game", (event) => {
+      if (event.phase === "activate" || departingAt.current !== null) return;
+      const control = window.innerWidth > 760 ? raceControlAtPoint(event.x, event.y) : null;
+      if (event.phase === "down") {
+        if (control === "action") action();
+        else if (event.y >= 0 && event.y <= 1 && game.current.status !== "complete") {
+          if (pointer.current !== null && pointer.current !== event.pointerId) return;
+          // Own a press during the entrance too, so holding through the fade
+          // remains one continuous steering gesture.
+          pointer.current = event.pointerId;
+          interactionRuntime.gestureStation = "game";
+          direction.current = 0;
+          move(event.x * raceBoard.width);
         }
-      } else if (event.phase === "down") {
-        if (control === "close") exitWithTransition(onClose);
-        else if (control === "reset") {
-          reset();
-        } else if (control === "action") {
-          action();
-        } else if (control === "finish") finishOrContinue();
-        else if (event.y >= breakoutBoard.top / canvasHeight && event.y <= 0.87 && game.current.status !== "complete") {
-          if (activePointer.current !== null && activePointer.current !== event.pointerId) return;
-          releaseKeyboardControls();
-          if ((game.current.status === "ready" || game.current.status === "paused") && event.y >= 0.45 && event.y <= 0.64) action();
-          activePointer.current = event.pointerId;
-          if (event.y > 0.74 || game.current.status === "running") movePaddle(event.x * canvasWidth);
-          schedulePaint();
-        }
+      } else if (event.phase === "move") {
+        if (pointer.current === event.pointerId) move(event.x * raceBoard.width);
+        else if (focused.current !== control) { focused.current = control; paint(); }
       } else if (event.phase === "up" || event.phase === "cancel") {
-        if (event.phase === "up" && game.current.status !== "complete") focusGameCanvas();
-        if (activePointer.current === event.pointerId) activePointer.current = null;
-        hoveredControl.current = null;
-        schedulePaint();
+        if (pointer.current !== event.pointerId) return;
+        release();
+        if (event.phase === "up") canvasRef.current?.focus({ preventScroll: true });
       }
-    };
-    registerSceneInteraction("game", handleSceneInput);
+    });
     return () => registerSceneInteraction("game", null);
-  }, [action, exitWithTransition, finishOrContinue, focusGameCanvas, movePaddle, onClose, releaseKeyboardControls, reset, schedulePaint]);
-  useEffect(() => () => {
-    if (renderFrame.current !== null) window.cancelAnimationFrame(renderFrame.current);
-    if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
-    if (focusFrame.current !== null) window.cancelAnimationFrame(focusFrame.current);
-    interactionRuntime.gameVisibility = 0;
-    interactionRuntime.gameComplete = false;
-  }, []);
+  }, [action, move, paint, release]);
 
-  const focusControl = (control: GameControl | null) => {
-    focusedControl.current = control;
-    releaseKeyboardControls();
-    schedulePaint();
-  };
-  const actionLabel = snapshot.status === "running" ? copy.game.pause : snapshot.status === "paused" ? copy.game.resume : snapshot.serves > 0 ? copy.game.serve : copy.game.action;
-  const cleared = snapshot.blocks.filter((block) => !block.alive).length;
-  const time = Math.max(0, Math.ceil(breakoutBoard.duration - snapshot.elapsed));
-  const holdPaddle = (event: React.PointerEvent<HTMLButtonElement>, direction: -1 | 1) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    heldPointer.current = event.pointerId;
-    heldDirection.current = direction;
-    movePaddle(game.current.paddleX + direction * 12);
-  };
-  const releasePaddle = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (heldPointer.current !== event.pointerId) return;
-    heldPointer.current = null;
-    heldDirection.current = 0;
-  };
-  const nudgePaddle = (event: React.MouseEvent<HTMLButtonElement>, direction: -1 | 1) => {
-    if (event.detail === 0) movePaddle(game.current.paddleX + direction * 38);
-  };
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (transitionState.current !== "ready" || game.current.status === "complete") return;
+  const keyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (game.current.status === "complete" || departingAt.current !== null) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
-      if (activePointer.current !== null) return;
-      keyboardDirection.current = event.key === "ArrowLeft" ? -1 : 1;
-      movePaddle(game.current.paddleX + keyboardDirection.current * 12);
-    } else if ((event.key === " " || event.key === "Enter")
-      && (event.target === canvasRef.current || (event.target as HTMLElement).hasAttribute("data-game-action")
-        || (event.target as HTMLElement).hasAttribute("data-mobile-game-action"))) {
+      if (pointer.current === null && heldControl.current === null) {
+        direction.current = event.key === "ArrowLeft" ? -1 : 1;
+        if (!event.repeat) move(game.current.x + direction.current * 12);
+      }
+    } else if ((event.key === " " || event.key === "Enter") && event.target === canvasRef.current) {
       event.preventDefault();
       if (!event.repeat) action();
     }
   };
-  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if ((event.key === "ArrowLeft" && keyboardDirection.current === -1)
-      || (event.key === "ArrowRight" && keyboardDirection.current === 1)) keyboardDirection.current = 0;
+  const keyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") direction.current = 0;
   };
-  const handleRegionBlur = (event: React.FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) releaseKeyboardControls();
+  const keyboardBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      // Clicking the physical WebGL screen can move semantic keyboard focus.
+      // That focus change must not cancel a newly captured mouse gesture.
+      if (pointer.current === null && heldControl.current === null) release();
+    }
   };
-
-  return (
-    <div ref={chromeRef} className={styles.gameChrome}>
-      <div
-        className={styles.spatialInteractionSemantics}
-        data-game-spatial-controls
-        data-game-type="breakout"
-        data-game-status={snapshot.status}
-        data-game-completed-count={cleared}
-        data-game-attempts={snapshot.serves}
-        data-game-score={snapshot.score}
-        data-game-best={best}
-        data-game-lives={snapshot.lives}
-        data-game-time={time}
-        role="region"
-        aria-label={copy.stations.game.title}
-        onKeyDown={handleKeyDown}
-        onKeyUp={handleKeyUp}
-        onBlur={handleRegionBlur}
-      >
-        <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} className={styles.textureSource} data-game-canvas tabIndex={0} aria-label={copy.game.keyboard} onFocus={schedulePaint} />
-        <p>{copy.stations.game.instruction}</p>
-        <button type="button" data-game-action disabled={snapshot.status === "complete"} onFocus={() => focusControl("action")} onBlur={() => focusControl(null)} onClick={action}>{actionLabel}</button>
-        <button type="button" data-game-replay disabled={snapshot.serves === 0} onFocus={() => focusControl("reset")} onBlur={() => focusControl(null)} onClick={reset}>{snapshot.status === "complete" ? copy.replay : copy.reset}</button>
-        <button type="button" data-game-finish data-interaction-continue disabled={snapshot.serves === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={finishOrContinue}>{snapshot.status === "complete" ? copy.continue : copy.game.finish}</button>
-        <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => exitWithTransition(onClose)}>{copy.close}</button>
-        <span role="status" aria-live="polite">
-          {snapshot.status === "complete" ? `${snapshot.outcome === "won" ? copy.game.win : copy.game.result}. ${copy.game.score}: ${snapshot.score}. ${copy.game.best}: ${best}.`
-            : `${copy.game.score}: ${snapshot.score}. ${copy.game.lives}: ${snapshot.lives}. ${copy.game.remaining}: ${cleared}.`}
-        </span>
-      </div>
-      {snapshot.status !== "complete" && (
-        <div className={styles.mobileGameDock} data-mobile-game-dock role="group" aria-label={copy.stations.game.title} onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} onBlur={handleRegionBlur}>
-          <div className={styles.mobileGameHeader}>
-            <strong>{copy.stations.game.title}</strong>
-            <dl className={styles.mobileGameStats} data-mobile-game-stats>
-              <div><dt>{copy.game.score}</dt><dd><bdi>{snapshot.score}</bdi></dd></div>
-              <div><dt>{copy.game.lives}</dt><dd><bdi>{snapshot.lives}</bdi></dd></div>
-              <div><dt>{copy.game.time}</dt><dd><bdi>{time}</bdi></dd></div>
-            </dl>
-          </div>
-          <div className={styles.mobileGameActions}>
-            <button type="button" data-mobile-game-left aria-label={copy.game.left} onPointerDown={(event) => holdPaddle(event, -1)} onPointerUp={releasePaddle} onPointerCancel={releasePaddle} onLostPointerCapture={releasePaddle} onBlur={releaseControls} onClick={(event) => nudgePaddle(event, -1)}>←</button>
-            <button type="button" data-mobile-game-action onClick={action}>{actionLabel}</button>
-            <button type="button" data-mobile-game-right aria-label={copy.game.right} onPointerDown={(event) => holdPaddle(event, 1)} onPointerUp={releasePaddle} onPointerCancel={releasePaddle} onLostPointerCapture={releasePaddle} onBlur={releaseControls} onClick={(event) => nudgePaddle(event, 1)}>→</button>
-          </div>
-          <div className={styles.mobileGameSecondary}>
-            <button type="button" data-mobile-game-reset disabled={snapshot.serves === 0} onClick={reset}>{copy.reset}</button>
-            <button type="button" data-mobile-game-finish disabled={snapshot.serves === 0} onClick={finishOrContinue}>{copy.game.finish}</button>
-          </div>
-        </div>
-      )}
-      {snapshot.status === "complete" && (
-        <aside className={styles.gameResult} data-game-result>
-          <strong>{snapshot.outcome === "won" ? copy.game.win : copy.game.result}</strong>
-          <dl className={styles.gameResultStats}>
-            <div><dt>{copy.game.score}</dt><dd><bdi>{snapshot.score}</bdi></dd></div>
-            <div><dt>{copy.game.remaining}</dt><dd><bdi>{cleared}</bdi></dd></div>
-            <div><dt>{copy.game.best}</dt><dd><bdi>{best}</bdi></dd></div>
-          </dl>
-          <button type="button" data-game-result-replay onClick={reset}>{copy.replay}</button>
-        </aside>
-      )}
+  const label = snapshot.status === "running" ? copy.game.pause : copy.game.resume;
+  const controlFocus = (control: RaceControl | null) => {
+    focused.current = control;
+    if (heldControl.current === null) direction.current = 0;
+    paint();
+  };
+  const steeringButton = (value: -1 | 1) => <button type="button" data-mobile-game-left={value === -1 ? "" : undefined} data-mobile-game-right={value === 1 ? "" : undefined}
+    aria-label={value === -1 ? copy.game.left : copy.game.right}
+    onPointerDown={(event) => {
+      event.preventDefault();
+      if (game.current.status === "complete" || departingAt.current !== null || pointer.current !== null || heldControl.current !== null || !event.isPrimary) return;
+      heldControl.current = { id: event.pointerId, target: event.currentTarget };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      direction.current = value;
+      move(game.current.x + value * 12);
+    }}
+    onPointerUp={(event) => { if (heldControl.current?.id === event.pointerId) release(); }}
+    onPointerCancel={(event) => { if (heldControl.current?.id === event.pointerId) release(); }}
+    onLostPointerCapture={(event) => { if (heldControl.current?.id === event.pointerId) release(); }}
+    onClick={(event) => { if (event.detail === 0) move(game.current.x + value * 30); }}>{value === -1 ? "←" : "→"}</button>;
+  return <div ref={chromeRef} className={styles.gameChrome}>
+    <div className={styles.spatialInteractionSemantics} data-game-spatial-controls data-game-type="race"
+      data-game-status={snapshot.status} data-game-score={snapshot.score} data-game-best={bestScore} data-game-outcome={snapshot.outcome ?? "none"}
+      role="region" aria-label={copy.stations.game.title} onKeyDown={keyDown} onKeyUp={keyUp} onBlur={keyboardBlur}>
+      <canvas ref={canvasRef} width={raceBoard.width} height={raceBoard.height} className={styles.textureSource} data-game-canvas tabIndex={0} aria-label={copy.game.keyboard} />
+      <p>{copy.stations.game.instruction}</p>
+      {snapshot.status !== "complete" && <button type="button" data-game-action onFocus={() => controlFocus("action")} onBlur={() => controlFocus(null)} onClick={action}>{label}</button>}
+      <span role="status" aria-live="polite">{snapshot.status === "complete" ? copy.game.result : copy.game.distance}: {snapshot.score} m</span>
     </div>
-  );
+    {snapshot.status !== "complete" && <div className={styles.mobileGameDock} data-mobile-game-dock role="group" aria-label={copy.stations.game.title}
+      onKeyDown={keyDown} onKeyUp={keyUp} onBlur={keyboardBlur}>
+      <div className={styles.mobileGameActions}>
+        {steeringButton(-1)}
+        <button type="button" data-mobile-game-action onClick={action}>{label}</button>
+        {steeringButton(1)}
+      </div>
+    </div>}
+  </div>;
 }

@@ -1,6 +1,7 @@
 import { experienceState } from "./experience-state";
 import { getNarrativeFrame } from "./narrative-score";
 import { getStageFrame } from "./stage-presets";
+import { syncScrollScenes } from "./interactions/scroll-scenes";
 
 /**
  * Computes the authored narrative once for a progress update and publishes the
@@ -11,6 +12,7 @@ export function directNarrative(progress: number) {
   experienceState.progress = frame.progress;
   experienceState.narrative = frame;
   experienceState.stage = getStageFrame(frame.progress);
+  syncScrollScenes(frame.progress);
   return frame;
 }
 

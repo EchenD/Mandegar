@@ -8,7 +8,7 @@ import * as THREE from "three";
 import type { Locale } from "@/lib/i18n";
 import { getCrowdReadoutPoint, type CrowdPersonRuntime } from "./crowd-person-inspection";
 import { crowdSignalHeight, crowdSignalWidth, getCrowdSignalHead, getCrowdSignalLayout, type CrowdSignalLayout } from "./crowd-signal-geometry";
-import { getIntelligenceSignalSeed, getIntelligenceSignalUnit } from "./intelligence-monitor-graphics";
+import { getIntelligencePersonProfile } from "./intelligence-person-profile";
 import {
   getFocusedIntelligencePerson,
   getIntelligenceSnapshot,
@@ -39,6 +39,7 @@ type ReadoutRuntime = {
   reducedMotion: boolean;
   element: HTMLElement | null;
   paintCount: number;
+  locale: Locale;
 };
 
 function paintSignal(runtime: ReadoutRuntime, layout: CrowdSignalLayout, progress: number) {
@@ -46,38 +47,33 @@ function paintSignal(runtime: ReadoutRuntime, layout: CrowdSignalLayout, progres
   const height = crowdSignalHeight;
   if (runtime.canvas.width !== width * resolution) runtime.canvas.width = width * resolution;
   const context = runtime.context;
-  const seed = getIntelligenceSignalSeed(runtime.person);
-  const phase = runtime.reducedMotion ? 0 : runtime.animationAge * 1.7;
+  const profile = getIntelligencePersonProfile(runtime.person ?? "Human_0", runtime.locale);
   context.clearRect(0, 0, runtime.canvas.width, runtime.canvas.height);
   context.save();
   context.scale(resolution, resolution);
-  // The two small glyphs emerge upwards with the leader; the canvas stays transparent.
+  // A warm, translucent plaque follows the real head without intercepting hits.
   context.beginPath();
   context.rect(0, height * (1 - progress), width, height * progress);
   context.clip();
   context.lineJoin = "round";
-  const columnX = layout.origin.x + layout.side * 28;
-  const ringX = columnX;
-  const ringY = layout.origin.y - 64;
   context.beginPath();
-  context.arc(ringX, ringY, 7.5, 0, Math.PI * 2);
-  context.strokeStyle = "rgba(55, 122, 255, .4)";
-  context.lineWidth = 1;
+  context.roundRect(1, 1, width - 2, height - 2, 10);
+  context.fillStyle = "rgba(28, 30, 29, .88)";
+  context.fill();
+  context.strokeStyle = "rgba(205, 183, 143, .65)";
   context.stroke();
-  context.beginPath();
-  const angle = phase * 0.65 + seed * Math.PI * 2;
-  context.arc(ringX, ringY, 7.5, angle, angle + Math.PI * 1.25);
-  context.lineWidth = 1.5;
-  context.strokeStyle = "#87e3ff";
-  context.stroke();
-  const center = layout.origin.y - 26;
-  for (let index = 0; index < 4; index += 1) {
-    const unit = getIntelligenceSignalUnit(seed, index + 9);
-    const movement = Math.sin(phase * (0.8 + unit * 0.4) + unit * 8) * 0.5 + 0.5;
-    const halfHeight = 2 + (0.22 + unit * 0.32 + movement * 0.46) * 6;
-    context.fillStyle = index === 2 ? "#f6f7f3" : index % 2 === 0 ? "#62cfff" : "#377aff";
-    context.fillRect(columnX - 8.5 + index * 5, center - halfHeight, 2, halfHeight * 2);
-  }
+  const rtl = runtime.locale !== "en";
+  const textX = rtl ? width - 14 : 14;
+  context.direction = rtl ? "rtl" : "ltr";
+  context.textAlign = rtl ? "right" : "left";
+  context.fillStyle = "#ceb991";
+  context.font = '600 11px "Vazirmatn Variable", sans-serif';
+  context.fillText(profile.copy.title, textX, 22, width - 28);
+  profile.lines.forEach((line, index) => {
+    context.fillStyle = index === 0 ? "#f4f0e6" : "#d1cec3";
+    context.font = `${index === 0 ? 600 : 500} ${index === 0 ? 15 : 13}px "Vazirmatn Variable", sans-serif`;
+    context.fillText(line, textX, 48 + index * 24, width - 28);
+  });
   context.restore();
   runtime.texture.needsUpdate = true;
   runtime.paintedProgress = progress;
@@ -103,14 +99,10 @@ function publishPresentation(runtime: ReadoutRuntime, person: string | null, sta
     worldReadoutState: state,
     worldReadoutRect: rect ? JSON.stringify(rect) : "",
     worldReadoutLeader: line ? JSON.stringify(line) : "",
-    worldReadoutKind: "vertical-signal",
-    worldReadoutFontSize: "0",
-    worldReadoutText: "none",
+    worldReadoutKind: "person-insight",
+    worldReadoutFontSize: "15",
+    worldReadoutText: person ? getIntelligencePersonProfile(person, runtime.locale).lines.join(" | ") : "none",
     worldReadoutSide: layout?.side === -1 ? "left" : "right",
-    worldReadoutGlyphs: layout ? JSON.stringify({
-      ring: { x: layout.origin.x + layout.side * 28, y: layout.origin.y - 64 },
-      bars: { x: layout.origin.x + layout.side * 28, y: layout.origin.y - 26 },
-    }) : "",
     worldReadoutPaintCount: String(runtime.paintCount),
     worldReadoutMotion: runtime.reducedMotion ? "reduced" : "animated",
   };
@@ -120,7 +112,7 @@ function publishPresentation(runtime: ReadoutRuntime, person: string | null, sta
 }
 
 /** One compact signal follows the chosen head; its geometry never intercepts a person hit. */
-export function CrowdPersonReadout({ getPeople, getPointerHit }: {
+export function CrowdPersonReadout({ locale, getPeople, getPointerHit }: {
   locale: Locale;
   getPeople: () => readonly CrowdPersonRuntime[];
   getPointerHit: (id: string) => THREE.Vector3 | undefined;
@@ -147,16 +139,16 @@ export function CrowdPersonReadout({ getPeople, getPointerHit }: {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.minFilter = THREE.LinearFilter;
     texture.generateMipmaps = false;
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true, depthWrite: false, toneMapped: false }));
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
     const geometry = new THREE.BufferGeometry();
     const positions = new THREE.BufferAttribute(new Float32Array(6), 3).setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("position", positions);
-    const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: "#62cfff", transparent: true, opacity: 0.85, depthTest: true, depthWrite: false, toneMapped: false }));
+    const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: "#ceb991", transparent: true, opacity: 0.85, depthTest: false, depthWrite: false, toneMapped: false }));
     const dots = new THREE.Points(geometry, new THREE.ShaderMaterial({
-      uniforms: { uOpacity: { value: 1 }, uPixelRatio: { value: gl.getPixelRatio() }, uColor: { value: new THREE.Color("#b6eeff") } },
+      uniforms: { uOpacity: { value: 1 }, uPixelRatio: { value: gl.getPixelRatio() }, uColor: { value: new THREE.Color("#e2d7bd") } },
       vertexShader: "uniform float uPixelRatio; void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_PointSize = 4.5 * uPixelRatio; }",
       fragmentShader: "uniform float uOpacity; uniform vec3 uColor; void main() { float radius = length(gl_PointCoord - 0.5); if (radius > 0.5) discard; gl_FragColor = vec4(uColor, (1.0 - smoothstep(0.28, 0.5, radius)) * uOpacity);\n#include <colorspace_fragment>\n }",
-      transparent: true, depthTest: true, depthWrite: false, toneMapped: false,
+      transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
     }));
     sprite.raycast = line.raycast = dots.raycast = noRaycast;
     sprite.renderOrder = 22;
@@ -165,11 +157,12 @@ export function CrowdPersonReadout({ getPeople, getPointerHit }: {
     sprite.frustumCulled = line.frustumCulled = dots.frustumCulled = false;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const runtime: ReadoutRuntime = {
-      canvas, context, texture, sprite, line, dots, positions,
+      canvas, context, texture, sprite, line, dots, positions, locale,
       person: null, entryAge: 0, fadeAge: null, animationAge: 0, nextPaint: 0,
       paintedProgress: -1, paintedOriginX: -1, paintedOriginY: -1, dirty: true, reducedMotion: motion.matches, element: null, paintCount: 0,
     };
     runtimeRef.current = runtime;
+    void document.fonts.ready.then(() => { if (runtimeRef.current === runtime) runtime.dirty = true; });
     group.visible = false;
     group.add(line, dots, sprite);
     const updateMotion = () => { runtime.reducedMotion = motion.matches; runtime.dirty = true; };
@@ -198,7 +191,7 @@ export function CrowdPersonReadout({ getPeople, getPointerHit }: {
       sprite.material.dispose();
       texture.dispose();
     };
-  }, [gl, group]);
+  }, [gl, group, locale]);
 
   useFrame((_, delta) => {
     const runtime = runtimeRef.current;
@@ -246,7 +239,7 @@ export function CrowdPersonReadout({ getPeople, getPointerHit }: {
     const opacity = runtime.fadeAge === null ? 1 : Math.max(0, 1 - runtime.fadeAge / 0.06);
     const toWorld = (x: number, y: number, target: THREE.Vector3) => target.set(x / bounds.width * 2 - 1, 1 - y / bounds.height * 2, scratch.projected.z).unproject(camera);
     toWorld(layout.start.x, layout.start.y, scratch.start);
-    toWorld(layout.start.x, THREE.MathUtils.lerp(layout.start.y, layout.end.y, lineProgress), scratch.end);
+    toWorld(THREE.MathUtils.lerp(layout.start.x, layout.end.x, lineProgress), THREE.MathUtils.lerp(layout.start.y, layout.end.y, lineProgress), scratch.end);
     runtime.positions.setXYZ(0, scratch.start.x, scratch.start.y, scratch.start.z);
     runtime.positions.setXYZ(1, scratch.end.x, scratch.end.y, scratch.end.z);
     runtime.positions.needsUpdate = true;
@@ -258,8 +251,7 @@ export function CrowdPersonReadout({ getPeople, getPointerHit }: {
     runtime.line.material.opacity = opacity * 0.85;
     runtime.dots.material.uniforms.uOpacity.value = opacity * 0.9;
     runtime.dots.material.uniforms.uPixelRatio.value = gl.getPixelRatio();
-    runtime.dirty ||= Math.abs(runtime.paintedOriginX - layout.origin.x) > 0.5 || Math.abs(runtime.paintedOriginY - layout.origin.y) > 0.5;
-    if (runtime.animationAge >= runtime.nextPaint && (runtime.dirty || !runtime.reducedMotion || runtime.paintedProgress !== graphProgress)) {
+    if (runtime.animationAge >= runtime.nextPaint && (runtime.dirty || runtime.paintedProgress !== graphProgress)) {
       paintSignal(runtime, layout, graphProgress);
       runtime.nextPaint = runtime.animationAge + paintInterval;
     }

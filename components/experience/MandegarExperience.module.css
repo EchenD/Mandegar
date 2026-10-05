@@ -308,17 +308,27 @@
   transform: rotate(11deg);
 }
 
-.copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; }
+.copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; transition: opacity .25s ease; }
 .root[data-interaction-active] .copyLayer,
+.root[data-interaction-result] .copyLayer,
+.root[data-interaction-departing] .copyLayer { opacity: 0 !important; pointer-events: none; }
 .root[data-interaction-active] .phaseRail,
 .root[data-interaction-active] .scrollCue,
-.root[data-interaction-active] .soundControl {
+.root[data-interaction-active] .soundControl,
+.root[data-interaction-result] .phaseRail,
+.root[data-interaction-result] .scrollCue,
+.root[data-interaction-result] .soundControl,
+.root[data-interaction-departing] .phaseRail,
+.root[data-interaction-departing] .scrollCue,
+.root[data-interaction-departing] .soundControl {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none;
 }
 
 .root[data-interaction-active] .workShortcut,
+.root[data-interaction-result] .workShortcut,
+.root[data-interaction-departing] .workShortcut,
 .root[data-intro-active="true"] .workShortcut,
 .root[data-story-stage="loop"] .workShortcut {
   opacity: 0;
@@ -329,6 +339,7 @@
 .root[data-interaction-active] {
   transition-delay: 0s;
 }
+.root[data-interaction-active="game"] .vignette { background: radial-gradient(ellipse at 50% 45%, transparent 15%, rgba(7,10,13,.4) 75%); }
 
 .root[data-intro-active="true"] .copyLayer,
 .root[data-intro-active="true"] .phaseRail,
@@ -371,6 +382,8 @@
 .sceneCopy[data-scene-copy="proof"] { --copy-y: 72%; }
 .sceneCopy[data-scene-copy="intelligence"] { --copy-y: 76%; }
 .sceneCopy[data-scene-copy="invitation"] { --copy-y: 67%; --copy-y-mobile: 67%; }
+.sceneCopy[data-interaction-cue] { --copy-x: 50%; --copy-y: 91%; --copy-y-mobile: 87%; --copy-width: min(34rem, 80vw); }
+.sceneCopy[data-interaction-cue] p { font-size: .875rem; }
 
 .sceneCopy > span {
   display: inline-flex;

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
-export const crowdSignalWidth = 64;
-export const crowdSignalHeight = 98;
+export const crowdSignalWidth = 190;
+export const crowdSignalHeight = 116;
 
 type SignalPoint = { x: number; y: number };
 export type CrowdSignalLayout = {
@@ -29,14 +29,14 @@ export function getCrowdSignalLayout(head: THREE.Vector3, viewportWidth: number,
   if (!Number.isFinite(viewportWidth + viewportHeight) || viewportWidth < crowdSignalWidth + margin * 2 || viewportHeight < crowdSignalHeight + margin * 2) return null;
   const x = (head.x * 0.5 + 0.5) * viewportWidth;
   const y = (-head.y * 0.5 + 0.5) * viewportHeight;
-  if (x < margin + 2 || x > viewportWidth - margin - 2 || y < margin + 76 || y > viewportHeight - margin) return null;
+  if (x < margin + 2 || x > viewportWidth - margin - 2 || y < margin || y > viewportHeight - margin) return null;
   const side = x <= viewportWidth / 2 ? 1 : -1;
-  const left = THREE.MathUtils.clamp(x - (side === 1 ? 12 : 52), margin, viewportWidth - crowdSignalWidth - margin);
-  const top = THREE.MathUtils.clamp(y - 90, margin, viewportHeight - crowdSignalHeight - margin);
+  const left = THREE.MathUtils.clamp(side === 1 ? x + 24 : x - crowdSignalWidth - 24, margin, viewportWidth - crowdSignalWidth - margin);
+  const top = THREE.MathUtils.clamp(y - 98, margin, viewportHeight - crowdSignalHeight - margin);
   return {
     rect: { x: left, y: top, width: crowdSignalWidth, height: crowdSignalHeight },
     start: { x, y },
-    end: { x, y: y - 76 },
+    end: { x: side === 1 ? left : left + crowdSignalWidth, y: top + crowdSignalHeight - 20 },
     origin: { x: x - left, y: y - top },
     side,
   };

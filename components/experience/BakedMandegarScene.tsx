@@ -40,6 +40,7 @@ import type { SceneProject } from "./experience-types";
 import { resolveInteractionAnchors, type InteractionAnchorRuntime } from "./interactions/interaction-anchors";
 import { stageBeamColors } from "./interactions/interaction-palette";
 import { getVisitorCreation } from "./interactions/visitor-creation";
+import { photoScrollTiming } from "./interactions/scroll-scenes";
 import { getVisitorPresentation } from "./interactions/visitor-presentation";
 import {
   dispatchSceneInteraction,
@@ -56,6 +57,8 @@ import {
   type SceneQuality,
 } from "./scene-config";
 import { TransitionParticleField } from "./TransitionParticleField";
+import { IntelligenceStationAnchors, canInspectIntelligenceStations } from "./IntelligenceStationAnchors";
+import { getIntelligenceSnapshot, hoverIntelligenceStation, pinIntelligenceStation } from "./intelligence-inspector-store";
 
 type SectionRuntime = {
   root: THREE.Object3D;
@@ -426,8 +429,10 @@ function InteractionBeamEffects({
     rig.wasComplete = interactionRuntime.stageComplete;
     rig.finaleAge += delta;
     const finaleProgress = Math.min(1, rig.finaleAge / 1.05);
-    const finalePulse = rig.finaleAge < 1.05 ? Math.sin(finaleProgress * Math.PI) : 0;
-    const inStage = interactionRuntime.activeStation === "stage";
+    const inStage = interactionRuntime.stageProgress > 0 && interactionRuntime.stageProgress < 1;
+    const finalePulse = inStage
+      ? Math.sin(THREE.MathUtils.smoothstep(interactionRuntime.stageProgress, 0.7, 0.88) * Math.PI)
+      : rig.finaleAge < 1.05 ? Math.sin(finaleProgress * Math.PI) : 0;
     const lighting = inStage ? interactionRuntime.activeBeams : getVisitorCreation().lighting;
     const presentation = getVisitorPresentation(experienceState.progress);
     const showingSavedLighting = !inStage && experienceState.sequence === "loop";
@@ -454,7 +459,7 @@ function InteractionBeamEffects({
       const reveal = THREE.MathUtils.smoothstep(rig.playbackAge, revealStart, revealStart + 0.5);
       const playback = inStage ? 1 : 0.14 + 0.86 * reveal * fade;
       if (enabled) selectedIndex += 1;
-      const target = enabled ? visibility * playback * (quality === "full" ? 1 : 0.8) : 0;
+      const target = enabled ? visibility * playback * (inStage ? interactionRuntime.beamIntensities[index] : 1) * (quality === "full" ? 1 : 0.8) : 0;
       const intensity = THREE.MathUtils.damp(current, target, enabled ? 10 : 14, delta);
       rig.intensities[index] = intensity;
       visibleEnergy += intensity;
@@ -977,7 +982,10 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     }
     previousStep.current = step;
     const showPhone = step === "captured";
-    captureAge.current += delta;
+    // Sample the existing flight and flash from scroll instead of elapsed time.
+    // Pausing scroll holds the photograph; reversing retraces the same curve.
+    captureAge.current = showPhone ? Math.max(0, (interactionRuntime.photoProgress - photoScrollTiming.capture) / (photoScrollTiming.deliveryEnd - photoScrollTiming.capture)) * 0.92 : 1;
+    flashAge.current = showPhone ? Math.max(0, (interactionRuntime.photoProgress - photoScrollTiming.capture) / 0.06) * 0.52 : 1;
     phone.visible = showPhone || phoneMaterial.opacity > 0.01;
     phoneFrame.visible = phone.visible;
     const phoneTargetOpacity = showPhone ? Math.pow(interfaceTarget, 1.35) : 0;
@@ -1066,7 +1074,6 @@ function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntim
     );
     phoneFrame.scale.set(scale * 0.6, scale, 1);
     phone.scale.set(scale * 0.52, scale * 0.92, 1);
-    flashAge.current += delta;
     const volumeProgress = THREE.MathUtils.clamp(flashAge.current / 0.52, 0, 1);
     const volumeEnergy = Math.pow(1 - volumeProgress, 2);
     flashVolumeMaterial.opacity = volumeEnergy * photoFlashVolumeTuning.opacity;
@@ -1319,6 +1326,16 @@ export function BakedMandegarScene({
     }
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
+    if (canInspectIntelligenceStations()) {
+      if (station) {
+        event.stopPropagation();
+        if (event.pointerType !== "touch") hoverIntelligenceStation(station);
+        document.body.style.cursor = "pointer";
+        return;
+      }
+      hoverIntelligenceStation(null);
+    }
+    if (station === "touch") { clearInteraction(); return; }
     if (station && interactionRuntime.activeStation === station && event.uv) {
       event.stopPropagation();
       document.body.style.cursor = station === "game" || station === "stage" ? "pointer" : "crosshair";
@@ -1337,13 +1354,13 @@ export function BakedMandegarScene({
     }
     event.stopPropagation();
     document.body.style.cursor = "pointer";
-  }, []);
+  }, [clearInteraction]);
   const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
     if (interactionRuntime.activeStation === "touch" && getPuzzleState().dragging?.surface === "table") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || interactionRuntime.activeStation !== station || !event.uv) return;
-    if (station === "touch" && (event.button !== 0 || !event.isPrimary)) return;
+    if (station === "touch") return;
     event.stopPropagation();
     if (station === "game") {
       if (gamePointer.current && gamePointer.current.pointerId !== event.pointerId) return;
@@ -1402,6 +1419,7 @@ export function BakedMandegarScene({
     if (gamePointer.current && interactionRuntime.activeStation === "game") return;
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
+    if (station && getIntelligenceSnapshot().hoveredStation === station) hoverIntelligenceStation(null);
     if (station && interactionRuntime.activeStation === station) {
       dispatchSceneInteraction(station, {
         phase: "cancel",
@@ -1418,6 +1436,12 @@ export function BakedMandegarScene({
     const screenId = findScreenId(event.object);
     const station = screenId ? screenStations[screenId] : null;
     if (!station || !event.uv) return;
+    if (canInspectIntelligenceStations()) {
+      event.stopPropagation();
+      pinIntelligenceStation(station);
+      return;
+    }
+    if (station === "touch") return;
     const suppressed = suppressedScreenClick.current;
     suppressedScreenClick.current = null;
     if (suppressed?.station === station && performance.now() <= suppressed.until) {
@@ -1441,6 +1465,9 @@ export function BakedMandegarScene({
   }, []);
   useEffect(() => clearInteraction, [clearInteraction]);
   useEffect(() => {
+    const departure = (event: Event) => {
+      if ((event as CustomEvent<{ station: InteractionStation }>).detail?.station === "game") cancelGamePointer();
+    };
     const lostCapture = (event: PointerEvent) => {
       if (interactionRuntime.activeStation === "touch") {
         dispatchSceneInteraction("touch", { phase: "cancel", x: 0, y: 0, pointerId: event.pointerId, input: "pointer" });
@@ -1448,10 +1475,12 @@ export function BakedMandegarScene({
       if (gamePointer.current?.pointerId === event.pointerId) cancelGamePointer();
     };
     window.addEventListener("blur", cancelGamePointer);
+    window.addEventListener("mandegar:interaction-departure", departure);
     gl.domElement.addEventListener("lostpointercapture", lostCapture);
     gl.domElement.addEventListener("pointercancel", lostCapture);
     return () => {
       window.removeEventListener("blur", cancelGamePointer);
+      window.removeEventListener("mandegar:interaction-departure", departure);
       gl.domElement.removeEventListener("lostpointercapture", lostCapture);
       gl.domElement.removeEventListener("pointercancel", lostCapture);
       cancelGamePointer();
@@ -1551,6 +1580,7 @@ export function BakedMandegarScene({
       />
       <DataFlowNetwork exhibition={exhibition} />
       <DeferredBakedCrowd locale={locale} quietMap={textures[2]} peakMap={textures[3]} />
+      <IntelligenceStationAnchors anchors={interactionAnchors} exhibition={exhibition} getSurfacePoint={getWorldPointAtUv} />
     </group>
   );
 }

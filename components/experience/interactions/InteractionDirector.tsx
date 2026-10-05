@@ -17,8 +17,11 @@ import type {
   InteractionInput,
   InteractionStation,
 } from "./interaction-types";
-import { PhotoBoothInteraction } from "./PhotoBoothInteraction";
-import { StageBeamInteraction } from "./StageBeamInteraction";
+import { resetPuzzle, getPuzzleState } from "./puzzle-store";
+import { clearDrawing, clearDrawingDraft } from "./visitor-creation";
+import { resetRace } from "./race-game";
+import { ScrollScenes } from "./ScrollScenes";
+import { photoScrollTiming, scrollHoldTiming } from "./scroll-scenes";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
 import styles from "./HeroInteractions.module.css";
 
@@ -67,14 +70,24 @@ export const InteractionDirector = memo(function InteractionDirector({
   const [reducedMotion] = useState(() => (
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ));
+  const [scrollSkipProgress, setScrollSkipProgress] = useState(0);
+  const [interactionRun, setInteractionRun] = useState(0);
+  const [departing, setDeparting] = useState(false);
+  const scrollSkipAmount = useRef(0);
+  const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const continuingTouch = useRef<number | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const autoStarted = useRef<Partial<Record<InteractionStation, boolean>>>({});
+  const previousExpectedStation = useRef<InteractionStation | null>(null);
   const savedScroll = useRef(0);
-  const savedScrollProgress = useRef<{
-    distance: number;
-    progress: number;
-    rootTop: number;
-  } | null>(null);
+  const enteredAt = useRef(0);
+  const entryProgress = useRef(0);
+  const resultAt = useRef<number | null>(null);
+  const departureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wheelIntent = useRef({ at: -Infinity, gap: Infinity, deltaY: 0 });
+  const touching = useRef(false);
+  const touchEndedAt = useRef(-Infinity);
+  const nativeScrolledAt = useRef(-Infinity);
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
   const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
@@ -102,14 +115,54 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   useEffect(() => {
+    if (previousExpectedStation.current !== expectedStation) {
+      const previous = previousExpectedStation.current;
+      if (previous) autoStarted.current[previous] = false;
+      previousExpectedStation.current = expectedStation;
+    }
     dispatch({ type: "AVAILABILITY", station: expectedStation });
     interactionRuntime.availableStation = expectedStation;
   }, [expectedStation]);
 
-  const exit = useCallback((cancelled: boolean) => {
+  const finishExit = useCallback((cancelled: boolean) => {
+    if (completionTimer.current !== null) clearTimeout(completionTimer.current);
+    completionTimer.current = null;
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    root?.removeAttribute("data-interaction-active");
+    root?.removeAttribute("data-lenis-prevent");
+    root?.removeAttribute("data-interaction-result");
+    root?.removeAttribute("data-interaction-departing");
+    const copyLayer = root?.querySelector<HTMLElement>("[data-copy-layer]");
+    if (copyLayer) { copyLayer.inert = false; copyLayer.removeAttribute("aria-hidden"); }
+    if (panelRoot.current?.contains(document.activeElement) || document.activeElement === document.body) {
+      if (previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
+    }
+    root?.dispatchEvent(new Event("mandegar:interaction-release"));
     dispatch({ type: "EXIT", cancelled });
     interactionRuntime.activeStation = null;
+    resultAt.current = null;
+    setDeparting(false);
   }, []);
+
+  const exit = useCallback((cancelled: boolean, delta = 0, immediate = false) => {
+    if (departureTimer.current !== null) return;
+    const station = interactionRuntime.activeStation;
+    if (!station) { finishExit(cancelled); return; }
+    // Reverse input can turn forward again within the departure fade, before
+    // the idle arrival sampler runs. Rearm at the reverse departure itself.
+    if (delta < 0 || window.scrollY < savedScroll.current - 2) autoStarted.current[station] = false;
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    root?.setAttribute("data-interaction-departing", station);
+    setDeparting(true);
+    window.dispatchEvent(new CustomEvent("mandegar:interaction-departure", { detail: { station } }));
+    root?.removeAttribute("data-interaction-active");
+    root?.dispatchEvent(new Event("mandegar:interaction-release"));
+    if (delta) root?.dispatchEvent(new CustomEvent("mandegar:continue-scroll", { detail: { delta, immediate } }));
+    departureTimer.current = setTimeout(() => {
+      departureTimer.current = null;
+      finishExit(cancelled);
+    }, reducedMotion ? 0 : 400);
+  }, [finishExit, reducedMotion]);
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
     if (
@@ -119,30 +172,31 @@ export const InteractionDirector = memo(function InteractionDirector({
       || state.activeStation
     ) return;
     autoStarted.current[station] = true;
+    resultAt.current = null;
+    setDeparting(false);
+    // A new forward visit always offers a fresh interaction. Saved creations
+    // remain elsewhere in the journey until this station is visited again.
+    if (station === "touch") resetPuzzle();
+    if (station === "game") resetRace();
+    if (station === "draw") { clearDrawing(); clearDrawingDraft(); }
+    dispatch({ type: "RESTART", station });
+    setInteractionRun((previous) => previous + 1);
+    scrollSkipAmount.current = 0;
+    setScrollSkipProgress(0);
+    if (station === "photo" || station === "stage") {
+      interactionRuntime.scrollSceneVisit += 1;
+      if (station === "photo") interactionRuntime.photoHoldProgress = photoScrollTiming.countdownStart;
+      else interactionRuntime.stageHoldProgress = 0.2;
+    }
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
-    const rootTop = root ? root.getBoundingClientRect().top + window.scrollY : 0;
-    const distance = root ? Math.max(1, root.offsetHeight - window.innerHeight) : 1;
-    const nativeProgress = Number(root?.dataset.nativeProgress);
-    const progress = Number.isFinite(nativeProgress)
-      ? Math.max(0, Math.min(1, nativeProgress))
-      : Math.max(0, Math.min(1, (window.scrollY - rootTop) / distance));
-    const canonicalScroll = root
-      ? Math.max(0, Math.min(
-        document.documentElement.scrollHeight - window.innerHeight,
-        rootTop + distance * progress,
-      ))
-      : window.scrollY;
-    savedScroll.current = Math.abs(window.scrollY - canonicalScroll) <= 2
-      ? window.scrollY
-      : canonicalScroll;
-    savedScrollProgress.current = root
-      ? {
-        distance,
-        progress,
-        rootTop,
-      }
-      : null;
+    savedScroll.current = window.scrollY;
+    entryProgress.current = Number(root?.dataset.nativeProgress ?? 0);
+    enteredAt.current = performance.now();
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // Acquire before React commits: otherwise the arrival's remaining Lenis
+    // movement can immediately look like a new scroll-to-leave gesture.
+    interactionRuntime.activeStation = station;
+    root?.setAttribute("data-interaction-active", station);
     dispatch({ type: "ENTER", station, input });
   }, [runtime, state.activeStation, state.availableStation]);
 
@@ -152,50 +206,104 @@ export const InteractionDirector = memo(function InteractionDirector({
       || (runtime !== "adaptive" && runtime !== "full")
       || state.availableStation !== expectedStation
       || state.activeStation
-      || autoStarted.current[expectedStation]
     ) return;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const beat = narrativeScore.find((item) => item.id === activePhase);
     if (!root || !beat) return;
-    let frame: number | undefined;
-    const triggerProgress = Number(beat.preview.toFixed(4));
+    // The authored Touch camera still frames the booth at its midpoint.
+    // Each automatic experience starts only at its usable composition.
+    const arrival = beat.start + (beat.end - beat.start) * (expectedStation === "touch" ? 0.7 : 0.5);
+    let frame: number;
+    let lastProgress = Number(root.dataset.nativeProgress);
+    let lastFrameAt = performance.now();
+    let lastMotionAt = lastFrameAt;
+    let sampled = false;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     const checkArrival = () => {
-      if (
-        root.dataset.storyStage !== beat.id
-        || interactionRuntime.activeStation
-        || interactionRuntime.availableStation !== expectedStation
-        || autoStarted.current[expectedStation]
-      ) {
-        frame = window.requestAnimationFrame(checkArrival);
+      const now = performance.now();
+      const nativeProgress = Number(root.dataset.nativeProgress);
+      // A reverse visit rearms the next forward arrival, without reopening a
+      // station immediately after Skip or completion at the same position.
+      if (root.dataset.scrollDirection === "backward"
+        || nativeProgress < arrival - 0.004) autoStarted.current[expectedStation] = false;
+      const movement = Math.abs(nativeProgress - lastProgress) * Math.max(1, root.offsetHeight - window.innerHeight);
+      const speed = movement / Math.max(16, now - lastFrameAt);
+      lastProgress = nativeProgress;
+      lastFrameAt = now;
+      if (movement > 1) lastMotionAt = now;
+      const fastWheel = now - wheelIntent.current.at < 250 && Math.abs(wheelIntent.current.deltaY) > window.innerHeight * 1.5;
+      const touchSettled = !touching.current && now - touchEndedAt.current > 160
+        && (!coarsePointer || (now - lastMotionAt >= 100 && now - nativeScrolledAt.current >= 160));
+      if (sampled && root.dataset.storyStage === beat.id
+        && !interactionRuntime.activeStation
+        && interactionRuntime.availableStation === expectedStation
+        && !autoStarted.current[expectedStation]
+        && nativeProgress >= arrival - 0.0001 && nativeProgress <= beat.end - 0.006
+        && root.dataset.scrollDirection === "forward"
+        && speed <= 2.4 && !fastWheel && touchSettled) {
+        enter(expectedStation, "automatic");
         return;
       }
-      const narrativeProgress = Number(root.dataset.narrativeProgress);
-      if (
-        !Number.isFinite(narrativeProgress)
-        || narrativeProgress < triggerProgress
-        || narrativeProgress >= beat.end
-        || root.dataset.scrollDirection !== "forward"
-      ) {
-        frame = window.requestAnimationFrame(checkArrival);
-        return;
-      }
-      root.dispatchEvent(new CustomEvent("mandegar:seek", {
-        detail: { progress: beat.preview, sync: true },
-      }));
-      enter(expectedStation, "automatic");
+      sampled = true;
+      frame = window.requestAnimationFrame(checkArrival);
     };
     frame = window.requestAnimationFrame(checkArrival);
-    return () => {
-      if (frame !== undefined) window.cancelAnimationFrame(frame);
-    };
+    return () => window.cancelAnimationFrame(frame);
   }, [activePhase, enter, expectedStation, runtime, state.activeStation, state.availableStation]);
 
   const complete = useCallback((station: InteractionStation) => {
-    dispatch({ type: "COMPLETING" });
-    window.queueMicrotask(() => dispatch({ type: "COMPLETE", station }));
+    // Report each run once, then keep its result until the visitor continues.
+    if (resultAt.current !== null || departureTimer.current !== null) return;
+    // Guard duplicate completion and input until the result has been painted.
+    resultAt.current = Infinity;
+    dispatch({ type: "COMPLETE", station });
+    scrollSkipAmount.current = 0;
+    setScrollSkipProgress(0);
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    root?.setAttribute("data-interaction-result", station);
   }, []);
 
+  useEffect(() => {
+    if (state.lifecycle !== "complete" || !state.activeStation) return;
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    // Start readability after React commits the result and it can be painted.
+    // Slow rendering must not consume the visitor's protected reading period.
+    const frame = requestAnimationFrame(() => {
+      if (departureTimer.current !== null) return;
+      resultAt.current = performance.now();
+      completionTimer.current = setTimeout(() => {
+        completionTimer.current = null;
+        root?.removeAttribute("data-interaction-active");
+        root?.removeAttribute("data-lenis-prevent");
+        root?.dispatchEvent(new Event("mandegar:interaction-release"));
+        savedScroll.current = window.scrollY;
+      }, 900);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (completionTimer.current !== null) clearTimeout(completionTimer.current);
+      completionTimer.current = null;
+    };
+  }, [state.activeStation, state.lifecycle]);
+
   const restart = useCallback((station: InteractionStation) => {
+    resultAt.current = null;
+    setDeparting(false);
+    if (departureTimer.current !== null) clearTimeout(departureTimer.current);
+    departureTimer.current = null;
+    if (completionTimer.current !== null) clearTimeout(completionTimer.current);
+    completionTimer.current = null;
+    scrollSkipAmount.current = 0;
+    setScrollSkipProgress(0);
+    savedScroll.current = window.scrollY;
+    enteredAt.current = performance.now();
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    root?.removeAttribute("data-interaction-result");
+    root?.removeAttribute("data-interaction-departing");
+    entryProgress.current = Number(root?.dataset.nativeProgress ?? 0);
+    root?.setAttribute("data-interaction-active", station);
+    const copyLayer = root?.querySelector<HTMLElement>("[data-copy-layer]");
+    if (copyLayer) { copyLayer.inert = true; copyLayer.setAttribute("aria-hidden", "true"); }
     dispatch({ type: "RESTART", station });
   }, []);
 
@@ -210,13 +318,27 @@ export const InteractionDirector = memo(function InteractionDirector({
       anchors.current = detail;
       applyAnchorFrame(detail);
     };
+    const handleParticipation = (event: Event) => {
+      const station = (event as CustomEvent<{ station: InteractionStation }>).detail?.station;
+      if (!station || interactionRuntime.activeStation !== station) return;
+      scrollSkipAmount.current = 0;
+      setScrollSkipProgress(0);
+    };
+    const handlePassiveComplete = (event: Event) => {
+      const station = (event as CustomEvent<{ station: InteractionStation }>).detail?.station;
+      if (station && interactionRuntime.activeStation === station) complete(station);
+    };
     window.addEventListener("mandegar:interaction-request", handleRequest);
     window.addEventListener("mandegar:interaction-anchors", handleAnchors);
+    window.addEventListener("mandegar:interaction-participation", handleParticipation);
+    window.addEventListener("mandegar:passive-complete", handlePassiveComplete);
     return () => {
       window.removeEventListener("mandegar:interaction-request", handleRequest);
       window.removeEventListener("mandegar:interaction-anchors", handleAnchors);
+      window.removeEventListener("mandegar:interaction-participation", handleParticipation);
+      window.removeEventListener("mandegar:passive-complete", handlePassiveComplete);
     };
-  }, [applyAnchorFrame, enter]);
+  }, [applyAnchorFrame, complete, enter]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
@@ -235,184 +357,187 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, [expectedStation, exit, runtime, state.activeStation]);
 
   useEffect(() => {
+    // A swipe begun on the held scene keeps moving after React releases the
+    // station. Its touch-action was chosen at touchstart, so forward the rest
+    // of that same gesture rather than requiring a second swipe.
+    const move = (event: TouchEvent) => {
+      const previousY = continuingTouch.current;
+      const y = event.touches[0]?.clientY;
+      if (previousY === null || y === undefined) return;
+      continuingTouch.current = y;
+      document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new CustomEvent("mandegar:continue-scroll", {
+        detail: { delta: previousY - y, immediate: true },
+      }));
+      if (event.cancelable) event.preventDefault();
+    };
+    const wheel = (event: WheelEvent) => {
+      const now = performance.now();
+      wheelIntent.current = { at: now, gap: now - wheelIntent.current.at, deltaY: event.deltaY };
+    };
+    const start = () => { touching.current = true; };
+    const scroll = () => { nativeScrolledAt.current = performance.now(); };
+    const end = (event: TouchEvent) => {
+      touching.current = event.touches.length > 0;
+      if (!touching.current) {
+        continuingTouch.current = null;
+        touchEndedAt.current = performance.now();
+      }
+    };
+    window.addEventListener("wheel", wheel, { capture: true, passive: true });
+    window.addEventListener("scroll", scroll, { passive: true });
+    window.addEventListener("touchstart", start, { capture: true, passive: true });
+    window.addEventListener("touchmove", move, { capture: true, passive: false });
+    window.addEventListener("touchend", end, true);
+    window.addEventListener("touchcancel", end, true);
+    return () => {
+      window.removeEventListener("touchmove", move, true);
+      window.removeEventListener("wheel", wheel, true);
+      window.removeEventListener("scroll", scroll);
+      window.removeEventListener("touchstart", start, true);
+      window.removeEventListener("touchend", end, true);
+      window.removeEventListener("touchcancel", end, true);
+      touching.current = false;
+      continuingTouch.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!state.activeStation || state.activeStation !== expectedStation) return;
-    const html = document.documentElement;
-    const body = document.body;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+    const oldTouch = canvas?.style.touchAction ?? "";
+    const restoreFocus = previousFocus.current;
     const focusScope = panelRoot.current;
-    const focusToRestore = previousFocus.current;
-    const snapshot = savedScrollProgress.current;
     interactionRuntime.activeStation = state.activeStation;
-    if (root && snapshot) {
-      const canonicalScroll = snapshot.rootTop + snapshot.distance * snapshot.progress;
-      if (Math.abs(window.scrollY - canonicalScroll) <= 2) savedScroll.current = window.scrollY;
-    }
-    const previous = {
-      bodyOverscrollBehavior: body.style.overscrollBehavior,
-      canvasTouchAction: canvas?.style.touchAction ?? "",
-      htmlOverscrollBehavior: html.style.overscrollBehavior,
-      rootOverflowAnchor: root?.style.overflowAnchor ?? "",
-      rootLenisPrevent: root?.getAttribute("data-lenis-prevent") ?? null,
-    };
-    html.style.overscrollBehavior = "none";
-    body.style.overscrollBehavior = "none";
-    if (canvas) canvas.style.touchAction = "none";
-    if (root) {
-      root.style.overflowAnchor = "none";
-      root.setAttribute("data-lenis-prevent", "");
-    }
     root?.setAttribute("data-interaction-active", state.activeStation);
-
-    const getRestoredScrollPosition = () => {
-      const snapshot = savedScrollProgress.current;
-      if (!root || !snapshot) return savedScroll.current;
-      const rootTop = root.getBoundingClientRect().top + window.scrollY;
-      const distance = Math.max(1, root.offsetHeight - window.innerHeight);
-      const layoutChanged = Math.abs(distance - snapshot.distance) > 1
-        || Math.abs(rootTop - snapshot.rootTop) > 1;
-      return layoutChanged
-        ? rootTop + distance * snapshot.progress
-        : savedScroll.current;
+    const copyLayer = root?.querySelector<HTMLElement>("[data-copy-layer]");
+    if (copyLayer) { copyLayer.inert = true; copyLayer.setAttribute("aria-hidden", "true"); }
+    // Canvas gestures are classified below: controls keep their drag; a swipe
+    // on the rest of the scene leaves and continues the page in one gesture.
+    if (canvas) canvas.style.touchAction = "none";
+    let released = false;
+    let touchY: number | null = null;
+    let touchOwnsControl = false;
+    const passive = state.activeStation === "photo" || state.activeStation === "stage";
+    let arrivalWheel = performance.now() - wheelIntent.current.at < 160;
+    const leave = (delta = 0, immediate = false) => { if (!released) { released = true; exit(resultAt.current === null, delta, immediate); } };
+    const fillSkip = (amount: number, threshold: number, immediate = false) => {
+      if (departureTimer.current !== null) return true;
+      if (resultAt.current !== null) {
+        // The unlock timer owns the end of reading protection. A residual
+        // wheel RAF must not depart before that timer releases the real hold.
+        if (performance.now() - resultAt.current >= 900 && root && !root.hasAttribute("data-interaction-active")) leave(amount, immediate);
+        return false;
+      }
+      scrollSkipAmount.current = Math.min(1, scrollSkipAmount.current + amount / threshold);
+      setScrollSkipProgress(scrollSkipAmount.current);
+      const beat = narrativeScore.find((item) => item.id === activePhase)!;
+      const travel = Math.max(0, Math.min(0.012, beat.end - entryProgress.current - 0.012));
+      root?.dispatchEvent(new CustomEvent("mandegar:interaction-scrub", {
+        detail: { progress: entryProgress.current + travel * scrollSkipAmount.current },
+      }));
+      if (scrollSkipAmount.current >= 1 - 0.000001) {
+        // Passive sequences reach their result first. Further scroll then
+        // continues; no old scroll packet can eject a freshly captured photo.
+        if (!passive) leave(amount, immediate);
+      }
+      return false;
     };
-    const holdScrollPosition = () => {
-      if (Math.abs(window.scrollY - savedScroll.current) < 0.5) return;
-      window.scrollTo({ top: savedScroll.current, left: 0, behavior: "auto" });
-    };
-
-    const preventScrollKeys = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-dismiss]")?.click();
+    const wheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey || event.deltaY === 0) return;
+      if (departureTimer.current !== null) return;
+      if (event.deltaY < 0) { leave(event.deltaY); if (event.cancelable) event.preventDefault(); return; }
+      if (arrivalWheel && performance.now() - enteredAt.current < 160 && wheelIntent.current.gap < 160) {
+        if (event.cancelable) event.preventDefault();
         return;
       }
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (event.key === "Tab") {
-        const focusable = Array.from(
-          panelRoot.current?.querySelectorAll<HTMLElement>(
-            "button:not(:disabled), [href], input:not(:disabled), [tabindex]:not([tabindex='-1'])",
-          ) ?? [],
-        ).filter((element) => element.offsetParent !== null);
-        const first = focusable[0];
-        const last = focusable.at(-1);
-        const focusIsInside = focusable.some((element) => element === document.activeElement);
-        if (first && last && !focusIsInside) {
-          event.preventDefault();
-          (event.shiftKey ? last : first).focus({ preventScroll: true });
-        } else if (first && last && event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus({ preventScroll: true });
-        } else if (first && last && !event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus({ preventScroll: true });
-        }
+      arrivalWheel = false;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      // A large mouse notch gets the same grace as a normal notch. Small
+      // trackpad packets accumulate continuously instead of counting events.
+      const threshold = passive ? scrollHoldTiming.wheelThreshold : scrollHoldTiming.interactionWheelThreshold;
+      if (!fillSkip(Math.min(120, event.deltaY * unit), threshold) && event.cancelable) event.preventDefault();
+    };
+    const touchStart = (event: TouchEvent) => {
+      touchY = event.touches[0]?.clientY ?? null;
+      const target = event.target as HTMLElement | null;
+      touchOwnsControl = Boolean(target?.closest("[data-puzzle-grid], [data-mobile-game-dock], [data-mobile-drawing-dock], button"));
+    };
+    const touchMove = (event: TouchEvent) => {
+      if (continuingTouch.current !== null) return;
+      const y = event.touches[0]?.clientY;
+      if (y === undefined || touchY === null) return;
+      if (touchOwnsControl || getPuzzleState().dragging || interactionRuntime.gestureStation) {
+        if (event.cancelable) event.preventDefault();
         return;
       }
-      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
-        const target = event.target as HTMLElement | null;
-        const editable = target?.closest(
-          "input, select, textarea, [contenteditable='true']",
-        );
-        if (editable) return;
-        if (event.key === " " && target?.closest("button")) return;
-        event.preventDefault();
-        const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
-        if (!scroller) return;
-        const pageStep = Math.max(48, scroller.clientHeight * .8);
-        const delta = event.key === "ArrowUp" ? -40
-          : event.key === "ArrowDown" ? 40
-            : event.key === "PageUp" ? -pageStep
-              : event.key === "PageDown" || event.key === " " ? pageStep
-                : 0;
-        if (event.key === "Home") scroller.scrollTo({ top: 0, behavior: "auto" });
-        else if (event.key === "End") scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
-        else scroller.scrollBy({ top: delta, behavior: "auto" });
+      const delta = touchY - y;
+      touchY = y;
+      if (delta === 0) return;
+      const threshold = passive ? scrollHoldTiming.touchThreshold : scrollHoldTiming.interactionTouchThreshold;
+      if (delta > 0) {
+        fillSkip(delta, threshold, true);
+        // The packet that releases the hold is already forwarded by leave().
+        // Keep ownership of the same swipe so later packets continue moving.
+        if (released) continuingTouch.current = y;
+        if (event.cancelable) event.preventDefault();
+        return;
       }
+      leave(delta, true);
+      continuingTouch.current = y;
+      touchY = y;
+      if (event.cancelable) event.preventDefault();
     };
-    const cancelForWebglLoss = () => exit(true);
-    const preventWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.metaKey) return;
-      event.preventDefault();
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); leave(); return; }
+      if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
-      const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
-      if (scroller && scroller.scrollHeight > scroller.clientHeight) {
-        scroller.scrollBy({ top: event.deltaY, left: event.deltaX, behavior: "auto" });
-      }
+      const ownsInput = target?.closest("[data-puzzle-grid], [data-game-spatial-controls], [data-mobile-game-dock], [data-drawing-spatial-controls], input, textarea, button");
+      if (!ownsInput && ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) leave();
+      else if (["PageUp", "PageDown"].includes(event.key)) leave();
     };
-    let previousTouchY: number | null = null;
-    const rememberTouchPosition = (event: TouchEvent) => {
-      previousTouchY = event.touches[0]?.clientY ?? null;
+    const nativeScroll = () => {
+      if (performance.now() - enteredAt.current < 80) return;
+      if (Math.abs(window.scrollY - savedScroll.current) > 2) leave();
     };
-    const preventTouchScroll = (event: TouchEvent) => {
-      const target = event.target as HTMLElement | null;
-      const scroller = target?.closest<HTMLElement>(`.${styles.experienceBody}`);
-      const currentTouchY = event.touches[0]?.clientY;
-      const deltaY = currentTouchY !== undefined && previousTouchY !== null
-        ? previousTouchY - currentTouchY
-        : 0;
-      previousTouchY = currentTouchY ?? null;
-      const maxScroll = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
-      const canScrollInside = Boolean(scroller)
-        && maxScroll > 1
-        && ((deltaY > 0 && scroller!.scrollTop < maxScroll - 1)
-          || (deltaY < 0 && scroller!.scrollTop > 1));
-      if (!canScrollInside && event.cancelable) event.preventDefault();
-    };
-    const forgetTouchPosition = () => { previousTouchY = null; };
-    window.addEventListener("keydown", preventScrollKeys);
-    window.addEventListener("wheel", preventWheel, { capture: true, passive: false });
-    window.addEventListener("touchstart", rememberTouchPosition, { capture: true, passive: true });
-    window.addEventListener("touchmove", preventTouchScroll, { capture: true, passive: false });
-    window.addEventListener("touchend", forgetTouchPosition, true);
-    window.addEventListener("touchcancel", forgetTouchPosition, true);
-    window.addEventListener("scroll", holdScrollPosition, { passive: true });
-    document.addEventListener("webglcontextlost", cancelForWebglLoss, true);
-    holdScrollPosition();
-    const focusFrame = window.requestAnimationFrame(() => {
-      panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus({ preventScroll: true });
-    });
-
+    const loss = () => leave();
+    window.addEventListener("wheel", wheel, { capture: true, passive: false });
+    window.addEventListener("touchstart", touchStart, { capture: true, passive: true });
+    window.addEventListener("touchmove", touchMove, { capture: true, passive: false });
+    window.addEventListener("keydown", key);
+    window.addEventListener("scroll", nativeScroll, { passive: true });
+    document.addEventListener("webglcontextlost", loss, true);
+    const frame = requestAnimationFrame(() => panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus({ preventScroll: true }));
     return () => {
-      window.cancelAnimationFrame(focusFrame);
-      window.removeEventListener("keydown", preventScrollKeys);
-      window.removeEventListener("wheel", preventWheel, true);
-      window.removeEventListener("touchstart", rememberTouchPosition, true);
-      window.removeEventListener("touchmove", preventTouchScroll, true);
-      window.removeEventListener("touchend", forgetTouchPosition, true);
-      window.removeEventListener("touchcancel", forgetTouchPosition, true);
-      window.removeEventListener("scroll", holdScrollPosition);
-      document.removeEventListener("webglcontextlost", cancelForWebglLoss, true);
-      html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
-      body.style.overscrollBehavior = previous.bodyOverscrollBehavior;
-      if (canvas) canvas.style.touchAction = previous.canvasTouchAction;
-      if (root) {
-        root.style.overflowAnchor = previous.rootOverflowAnchor;
-        if (previous.rootLenisPrevent === null) root.removeAttribute("data-lenis-prevent");
-        else root.setAttribute("data-lenis-prevent", previous.rootLenisPrevent);
-      }
-      const restoredScroll = getRestoredScrollPosition();
-      if (Math.abs(window.scrollY - restoredScroll) >= 0.5) {
-        window.scrollTo({ top: restoredScroll, left: 0, behavior: "auto" });
-      }
+      cancelAnimationFrame(frame);
+      window.removeEventListener("wheel", wheel, true);
+      window.removeEventListener("touchstart", touchStart, true);
+      window.removeEventListener("touchmove", touchMove, true);
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("scroll", nativeScroll);
+      document.removeEventListener("webglcontextlost", loss, true);
+      if (canvas) canvas.style.touchAction = oldTouch;
       root?.removeAttribute("data-interaction-active");
-      savedScrollProgress.current = null;
-      if (document.activeElement === body || focusScope?.contains(document.activeElement)) {
-        window.requestAnimationFrame(() => {
-          if (focusToRestore?.isConnected) focusToRestore.focus({ preventScroll: true });
-        });
-      }
+      root?.removeAttribute("data-lenis-prevent");
+      if (copyLayer) { copyLayer.inert = false; copyLayer.removeAttribute("aria-hidden"); }
+      interactionRuntime.gestureStation = null;
+      if (focusScope?.contains(document.activeElement) && restoreFocus?.isConnected) restoreFocus.focus({ preventScroll: true });
     };
-  }, [exit, expectedStation, state.activeStation, state.input]);
-
+  }, [activePhase, exit, expectedStation, state.activeStation]);
   useEffect(() => {
     if (state.lifecycle !== "cancelled") return;
     const frame = requestAnimationFrame(() => dispatch({ type: "AVAILABILITY", station: expectedStation }));
     return () => cancelAnimationFrame(frame);
   }, [expectedStation, state.lifecycle]);
 
-  useEffect(() => () => resetInteractionRuntime(), []);
+  useEffect(() => () => {
+    if (completionTimer.current !== null) clearTimeout(completionTimer.current);
+    if (departureTimer.current !== null) clearTimeout(departureTimer.current);
+    resetInteractionRuntime();
+  }, []);
 
   const station = state.activeStation;
+  const isResult = state.lifecycle === "complete";
   return (
     <div
       ref={panelRoot}
@@ -421,11 +546,14 @@ export const InteractionDirector = memo(function InteractionDirector({
       data-available-station={state.availableStation ?? "none"}
       data-active-station={station ?? "none"}
       data-lifecycle={state.lifecycle}
-      data-scroll-locked={station ? "true" : "false"}
+      data-presentation={departing ? "departing" : isResult ? "result" : station ? "active" : "arrival"}
+      data-completed-touch={String(state.completed.touch)}
+      data-scroll-locked={station && state.lifecycle !== "complete" ? "true" : "false"}
       data-runtime={runtime}
     >
       {station === "touch" && (
         <TouchComposerInteraction
+          key={interactionRun}
           copy={copy}
           onClose={() => exit(true)}
           onComplete={() => complete("touch")}
@@ -434,18 +562,9 @@ export const InteractionDirector = memo(function InteractionDirector({
         />
       )}
 
-      {station === "stage" && (
-        <StageBeamInteraction
-          copy={copy}
-          onClose={() => exit(true)}
-          onComplete={() => complete("stage")}
-          onReset={() => restart("stage")}
-          onContinue={() => exit(false)}
-        />
-      )}
-
       {station === "game" && (
         <GameInteraction
+          key={interactionRun}
           copy={copy}
           reducedMotion={reducedMotion}
           onClose={() => exit(true)}
@@ -457,6 +576,7 @@ export const InteractionDirector = memo(function InteractionDirector({
 
       {station === "draw" && (
         <DrawingInteraction
+          key={interactionRun}
           copy={copy}
           onClose={() => exit(true)}
           onComplete={() => complete("draw")}
@@ -464,40 +584,25 @@ export const InteractionDirector = memo(function InteractionDirector({
         />
       )}
 
-      {station === "photo" && (
-        <PhotoBoothInteraction
-          copy={copy}
-          reducedMotion={reducedMotion}
-          onClose={() => exit(true)}
-          onComplete={() => complete("photo")}
-          onReset={() => restart("photo")}
-          onContinue={() => exit(false)}
-        />
-      )}
-
-      {station && state.lifecycle !== "complete" && (
-        <p className={styles.interactionHint} data-interaction-hint role="status">
-          {copy.stations[station].instruction}
-        </p>
-      )}
-
-      {station && station !== "touch" && (
-        <button
-          type="button"
-          className={styles.mobileSkipButton}
-          data-interaction-escape
-          data-mobile-interaction-skip
-          data-complete={state.lifecycle === "complete" ? "true" : "false"}
-          onClick={() => {
-            const continueControl = panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-continue]");
-            const exitControl = state.lifecycle === "complete" && continueControl && !continueControl.disabled
-              ? continueControl
-              : panelRoot.current?.querySelector<HTMLButtonElement>("[data-interaction-dismiss]");
-            exitControl?.click();
-          }}
-        >
-          {state.lifecycle === "complete" ? copy.continue : copy.skip}
-        </button>
+      <ScrollScenes locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
+      {station && (
+        <div className={styles.journeyControl} data-journey-control data-phase={activePhase}>
+          <p className={styles.journeyMessage} data-interaction-result={isResult ? station : undefined} role={isResult ? "status" : undefined} tabIndex={isResult ? -1 : undefined}>
+            {isResult ? station === "touch" ? copy.touch.complete : station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : copy.stations[station].instruction}
+          </p>
+          {!isResult &&
+          <button type="button" className={styles.journeyButton} data-interaction-escape data-mobile-interaction-skip
+            data-scroll-skip-progress={scrollSkipProgress.toFixed(3)}
+            aria-describedby="interaction-scroll-hint"
+            onClick={() => exit(true)}>
+            {copy.skip}
+            <i className={styles.skipTrack} data-scroll-skip-fill aria-hidden="true">
+              <i style={{ transform: `scaleX(${scrollSkipProgress})` }} />
+            </i>
+          </button>
+          }
+          <span id="interaction-scroll-hint">{isResult ? copy.scrollNext : copy.scrollContinue}</span>
+        </div>
       )}
 
       {showAnchorDebug && (

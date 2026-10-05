@@ -32,7 +32,8 @@ test("nine tile corners fit the authored sloped surface and physical slot projec
   expect(frame.cornersFit).toBe(true);
   expect(frame.normal.dot(normal)).toBeCloseTo(1);
   expect(frame.width / frame.height).toBeCloseTo(1.5);
-  expect(frame.width).toBeLessThanOrEqual(1.15);
+  expect(frame.width).toBeLessThanOrEqual(1.2);
+  expect(frame.center.clone().sub(tabletop.position).dot(right)).toBeGreaterThan(0.25);
   const local = new THREE.Vector3();
   for (let slot = 0; slot < 9; slot += 1) {
     const x = (slot % 3 + 0.5) / 3;

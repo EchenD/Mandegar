@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, continueFromResult, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
 
@@ -24,22 +24,25 @@ test("drawing wall accepts a scene stroke and finishes", async ({ page }) => {
   const { director, controls } = await openDrawing(page);
   await drawOnScreen(page, 550, 250, 750, 290);
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
-  await controls.locator("button:nth-of-type(3)").evaluate((button: HTMLButtonElement) => button.click());
+  await activateWithKeyboard(page, "[data-drawing-finish]");
+  await expect(director).toHaveAttribute("data-presentation", "result");
   await expect(controls).toHaveAttribute("data-drawing-finished", "true");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await controls.locator("button:nth-of-type(3)").evaluate((button: HTMLButtonElement) => button.click());
-  await expect(director).toHaveAttribute("data-active-station", "none", { timeout: 3_000 });
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await expect(page.locator("p[data-interaction-result='draw']")).toBeVisible();
+  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
+  await continueFromResult(page, "draw");
+  await expect(page.locator("[data-drawing-canvas]")).toHaveCount(0);
 });
 
 test("drawing wall undo and clear remove local strokes", async ({ page }) => {
   const { controls } = await openDrawing(page);
   await drawOnScreen(page, 570, 270, 740, 300);
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
-  await controls.locator("button:nth-of-type(1)").evaluate((button: HTMLButtonElement) => button.click());
+  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(1)");
   await expect(controls).toHaveAttribute("data-stroke-count", "0");
   await drawOnScreen(page, 560, 260, 745, 310);
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
-  await controls.locator("button:nth-of-type(2)").evaluate((button: HTMLButtonElement) => button.click());
+  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(2)");
   await expect(controls).toHaveAttribute("data-stroke-count", "0");
 });
 
@@ -59,11 +62,12 @@ test("drawing wall can create and finish a mark entirely with the keyboard", asy
   await page.keyboard.press("Space");
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
-  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
+  await activateWithKeyboard(page, "[data-drawing-finish]");
+  await expect(director).toHaveAttribute("data-presentation", "result");
   await expect(controls).toHaveAttribute("data-drawing-finished", "true");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
-  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(controls).toHaveAttribute("data-stroke-count", "1");
+  await expect(page.locator("p[data-interaction-result='draw']")).toBeVisible();
+  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
 });
 
 test("Finish traces a highlight without clearing the completed drawing", async ({ page }) => {
@@ -75,29 +79,36 @@ test("Finish traces a highlight without clearing the completed drawing", async (
   await page.keyboard.press("Space");
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
 
-  const samples = await canvas.evaluate(async (element: HTMLCanvasElement) => {
+  const capture = canvas.evaluate(async (element: HTMLCanvasElement) => {
     const context = element.getContext("2d")!;
-    const button = element.parentElement!.querySelectorAll("button")[2];
     const values: number[] = [];
-    button.click();
-    const startedAt = performance.now();
+    const deadline = performance.now() + 5_000;
+    let startedAt: number | null = null;
     await new Promise<void>((resolve) => {
       const sample = () => {
-        values.push(context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data[0]);
-        if (performance.now() - startedAt >= 850) resolve();
+        if (element.parentElement?.dataset.drawingFinished === "true") {
+          if (startedAt === null) startedAt = performance.now();
+          values.push(context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data[0]);
+        }
+        if ((startedAt !== null && performance.now() - startedAt >= 850) || performance.now() >= deadline) resolve();
         else requestAnimationFrame(sample);
       };
       requestAnimationFrame(sample);
     });
     return values;
   });
+  await activateWithKeyboard(page, "[data-drawing-finish]");
+  const samples = await capture;
 
   expect(samples.length).toBeGreaterThan(1);
   expect(Math.min(...samples)).toBeGreaterThan(180);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-presentation", "result");
   await expect(controls).toHaveAttribute("data-drawing-finished", "true");
+  await expect(page.locator("p[data-interaction-result='draw']")).toBeVisible();
+  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
 });
 
-test("an immediate Continue fades controls into the retained drawing", async ({ page }) => {
+test("the next onward scroll fades controls into the retained completed drawing", async ({ page }) => {
   const { director } = await openDrawing(page);
   const canvas = page.locator("[data-drawing-canvas]");
   await canvas.focus();
@@ -105,16 +116,19 @@ test("an immediate Continue fades controls into the retained drawing", async ({ 
   for (let index = 0; index < 4; index += 1) await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Space");
 
-  const handoff = await canvas.evaluate(async (element: HTMLCanvasElement) => {
+  await activateWithKeyboard(page, "[data-drawing-finish]");
+  await expect(director).toHaveAttribute("data-presentation", "result");
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-interaction-active", "draw");
+  const capture = canvas.evaluate(async (element: HTMLCanvasElement) => {
     const context = element.getContext("2d")!;
-    const button = element.parentElement!.querySelectorAll("button")[2];
     const values: number[] = [];
-    button.click();
-    button.click();
-    await new Promise<void>((resolve) => {
+    const deadline = performance.now() + 8_000;
+    element.dataset.drawingFadeObserverReady = "true";
+    await new Promise<void>((resolve, reject) => {
       const sample = () => {
         values.push(context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data[0]);
         if (!element.isConnected) resolve();
+        else if (performance.now() >= deadline) reject(new Error("Onward scroll did not release the finished drawing."));
         else requestAnimationFrame(sample);
       };
       requestAnimationFrame(sample);
@@ -126,6 +140,9 @@ test("an immediate Continue fades controls into the retained drawing", async ({ 
       artwork: [...context.getImageData(element.width / 2 + 36, element.height / 2, 1, 1).data],
     };
   });
+  await expect(canvas).toHaveAttribute("data-drawing-fade-observer-ready", "true");
+  await page.mouse.wheel(0, 120);
+  const handoff = await capture;
 
   expect(Math.min(...handoff.values)).toBeGreaterThan(180);
   expect(handoff.finalProgress).toBe("0.000");

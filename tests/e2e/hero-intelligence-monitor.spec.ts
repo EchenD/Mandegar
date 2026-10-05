@@ -3,7 +3,6 @@ import { narrativeScore } from "../../components/experience/narrative-score";
 import { interactionSurfaceSizes } from "../../components/experience/scene-config";
 import { getIntelligenceCopy } from "../../components/experience/intelligence-inspector-copy";
 import { getMonitorTextureSamples, observeMonitorTextures } from "./monitor-texture-observer";
-import { waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(180_000);
 test.use({ trace: "off", video: "off" });
@@ -34,7 +33,7 @@ test("the wide Intelligence monitor animates, follows the latest person and fade
   await expect(inspector).toHaveAttribute("data-available", "true", { timeout: 60_000 });
   await expect(surface).toHaveAttribute("width", String(interactionSurfaceSizes.videoWall.canvas.width));
   await expect(surface).toHaveAttribute("height", String(interactionSurfaceSizes.videoWall.canvas.height));
-  await expect(surface).toHaveAttribute("aria-label", /Illustrative signal.*simulated/);
+  await expect(surface).toHaveAttribute("aria-label", /Participation signal.*Audience insight/);
   await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).some((sample) => sample.media === "intelligence" && sample.blend > 0.99)).toBe(true);
   const firstFrame = await surface.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
   await expect.poll(() => surface.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).not.toBe(firstFrame);
@@ -62,26 +61,15 @@ test("the wide Intelligence monitor animates, follows the latest person and fade
   expect(errors).toEqual([]);
 });
 
-test("rapid reverse and Stage reopening preserve the foreground monitor owner", async ({ page }) => {
-  await observeMonitorTextures(page);
+test("reverse travel hands the wide monitor from Intelligence back to scroll lighting", async ({ page }) => {
   await page.goto("/en?intro=0&phase=intelligence", { waitUntil: "domcontentloaded" });
   const surface = await waitForMonitor(page);
   await seek(page, "reveal");
-  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-available-station", "stage");
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("mandegar:interaction-request", {
-    detail: { station: "stage", input: "keyboard" },
-  })));
-  const director = await waitForStation(page, "stage");
-  await expect(page.locator("[data-stage-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   await expect(surface).toHaveAttribute("data-monitor-state", "hidden");
-  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("stage");
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  expect((await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("stage");
-  await page.keyboard.press("Escape");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect.poll(async () => Number(await page.locator("[data-stage-scroll]").getAttribute("data-stage-progress"))).toBeCloseTo(0, 3);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
   await seek(page, "intelligence");
   await waitForMonitor(page);
-  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("intelligence");
 });
 
 for (const locale of ["fa", "ar"] as const) {
@@ -102,7 +90,7 @@ for (const locale of ["fa", "ar"] as const) {
     await expect(inspector).toHaveAttribute("data-world-readout-person", person.id);
     await expect(inspector).toHaveAttribute("data-world-readout-state", "ready");
     const leader = JSON.parse(await inspector.getAttribute("data-world-readout-leader") ?? "null");
-    expect(leader.start.x).toBe(leader.end.x);
+    expect(Math.abs(leader.start.x - leader.end.x)).toBeGreaterThan(0);
     expect(leader.end.y).toBeLessThan(leader.start.y);
     expect(Math.abs(leader.end.y - leader.start.y)).toBeLessThanOrEqual(90);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

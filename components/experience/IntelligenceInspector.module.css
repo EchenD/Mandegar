@@ -33,7 +33,62 @@
 .explore span { color: var(--experience-accent, #225cff); }
 .explore[hidden] { display: none; }
 .explore:disabled { opacity: .45; cursor: default; }
+.exploreControls { display: flex; flex-wrap: wrap; gap: .4rem; }
+.stationTarget {
+  position: fixed;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  color: #e2d7bd;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.stationTarget span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(205, 183, 143, .8);
+  border-radius: 50%;
+  background: rgba(28, 30, 29, .76);
+  box-shadow: 0 0 16px rgba(205, 183, 143, .18);
+  font-size: 17px;
+  line-height: 1;
+  transition: color .15s ease, background .15s ease;
+}
+.stationTarget:hover span, .stationTarget[aria-pressed="true"] span { color: #1c1e1d; background: #ceb991; }
+.stationTarget:focus-visible { outline: 2px solid #ceb991; outline-offset: 1px; border-radius: 50%; }
+.stationReadout {
+  position: fixed;
+  visibility: hidden;
+  box-sizing: border-box;
+  width: 218px;
+  height: 150px;
+  padding: 12px 14px;
+  border: 1px solid rgba(205, 183, 143, .65);
+  border-radius: 10px;
+  color: #f4f0e6;
+  background: rgba(28, 30, 29, .92);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .14);
+  line-height: 1.3;
+  text-shadow: none;
+  pointer-events: none;
+}
+.stationReadout p { margin: 0 0 4px; color: #ceb991; font-size: 11px; font-weight: 600; }
+.stationReadout h3 { margin: 0 0 11px; font-size: 15px; font-weight: 600; }
+.stationReadout dl { margin: 0; }
+.stationReadout dl div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 8px; margin-block-start: 7px; }
+.stationReadout dt { color: #d1cec3; font-size: 11px; }
+.stationReadout dd { margin: 0; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.stationLeader { position: fixed; inset: 0; width: 100vw; height: 100svh; overflow: visible; pointer-events: none; }
+.stationLeader line { stroke: #ceb991; stroke-width: 1; opacity: .8; }
 
 @media (max-width: 760px) {
   .root { inset-block-end: 5.25rem; width: min(18rem, calc(100% - 2rem)); }
+  .explore { padding-inline: .65rem; font-size: .68rem; }
 }

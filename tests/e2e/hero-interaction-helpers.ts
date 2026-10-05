@@ -1,4 +1,52 @@
 import { expect, type Page } from "@playwright/test";
+import { raceBoard } from "../../components/experience/interactions/race-game";
+import { narrativeScore, type ScenePhaseId } from "../../components/experience/narrative-score";
+
+const reviewPhases = { photo: "activation", touch: "engagement", stage: "reveal", game: "experiences", draw: "connection" } satisfies Record<string, ScenePhaseId>;
+type ReviewStation = keyof typeof reviewPhases;
+
+function stationArrival(station: ReviewStation) {
+  const beat = narrativeScore.find((item) => item.id === reviewPhases[station])!;
+  return beat.start + (beat.end - beat.start) * (station === "touch" ? 0.7 : 0.5);
+}
+
+export async function seekStationReview(page: Page, station: ReviewStation) {
+  const director = page.locator("[data-interaction-director]");
+  await expect(director).toHaveAttribute("data-runtime", /^(full|adaptive)$/, { timeout: 80_000 });
+  await page.locator("[data-experience-root]").evaluate((root: HTMLElement, { station: expectedStation, progress }) => {
+    const currentDirector = root.querySelector<HTMLElement>("[data-interaction-director]");
+    if (currentDirector?.dataset.activeStation === expectedStation && currentDirector.dataset.presentation === "active") return;
+    // Automatic arrival acquires the root hold before React commits its
+    // director state. A review seek during that gap would begin departure.
+    if (root.dataset.interactionActive === expectedStation && !root.hasAttribute("data-interaction-result") && !root.hasAttribute("data-interaction-departing")) return;
+    root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+  }, { station, progress: stationArrival(station) + (station === "touch" ? 0.002 : 0) });
+}
+
+export async function returnToStationForward(page: Page, station: ReviewStation) {
+  const root = page.locator("[data-experience-root]");
+  if (await page.locator("[data-interaction-director]").getAttribute("data-presentation") === "result") {
+    await expect(root).not.toHaveAttribute("data-interaction-active", station);
+  }
+  await root.evaluate((element, progress) => {
+    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+  }, stationArrival(station) - 0.004);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+  const distance = await root.evaluate((element: HTMLElement) => element.offsetHeight - innerHeight);
+  await page.mouse.wheel(0, distance * 0.008);
+  return waitForStation(page, station);
+}
+
+export async function continueFromResult(page: Page, station: ReviewStation) {
+  const director = page.locator("[data-interaction-director]");
+  await expect(director).toHaveAttribute("data-presentation", "result");
+  await expect(page.locator(`p[data-interaction-result='${station}']`)).toBeVisible();
+  // The semantic lock ends when the result appears; the root retains the
+  // actual scroll hold for its protected reading period.
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-interaction-active", station);
+  await page.mouse.wheel(0, 120);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+}
 
 export async function waitForStation(page: Page, station: string) {
   const director = page.locator("[data-interaction-director]");
@@ -46,6 +94,44 @@ export async function solvePuzzle(page: Page, input: "keyboard" | "touch" = "key
     [swapped[first], swapped[second]] = [swapped[second], swapped[first]];
     if (leaveFinalSwap && swapped.every((piece, slot) => piece === slot)) return { first, second };
     await swapPuzzleSlots(page, first, second, input);
+    if (swapped.every((piece, slot) => piece === slot)) return null;
   }
   throw new Error("Puzzle did not solve within eight swaps");
+}
+
+// End a run through visitor keyboard input and an actual traffic collision.
+// Read the same observable car/traffic positions used by the pointer tests;
+// never replace the saved game or invoke a private completion callback.
+export async function driveRaceToCollision(page: Page) {
+  await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "running");
+  return page.locator("[data-game-canvas]").evaluate((element: HTMLCanvasElement, playerY) => new Promise<number>((resolve, reject) => {
+    const started = performance.now();
+    const controls = document.querySelector<HTMLElement>("[data-game-spatial-controls]")!;
+    let held: string | null = null;
+    element.focus({ preventScroll: true });
+    const steer = (next: string | null) => {
+      if (held === next) return;
+      if (held) element.dispatchEvent(new KeyboardEvent("keyup", { key: held, bubbles: true, cancelable: true }));
+      held = next;
+      if (next) element.dispatchEvent(new KeyboardEvent("keydown", { key: next, bubbles: true, cancelable: true }));
+    };
+    const tick = (now: number) => {
+      if (!element.isConnected || now - started > 30_000) {
+        steer(null);
+        reject(new Error("Keyboard steering did not produce a traffic collision."));
+        return;
+      }
+      if (controls.dataset.gameStatus === "complete") {
+        steer(null);
+        resolve(Number(controls.dataset.gameScore));
+        return;
+      }
+      const traffic = JSON.parse(element.dataset.traffic ?? "[]") as Array<{ x: number; y: number }>;
+      const approaching = traffic.filter((car) => car.y <= playerY + 24).sort((first, second) => second.y - first.y)[0];
+      const delta = approaching ? approaching.x - Number(element.dataset.carX) : 0;
+      steer(Math.abs(delta) <= 12 ? null : delta < 0 ? "ArrowLeft" : "ArrowRight");
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), raceBoard.playerY);
 }

@@ -99,6 +99,9 @@ export function CameraRig({ source }: { source: string }) {
   const handoffLookQuaternion = useRef(new THREE.Quaternion());
   const cameraLifeTime = useRef(0);
   const cameraLifeBlend = useRef(0);
+  const touchFraming = useRef({ amount: 0, from: 0, target: 0, elapsed: 0 });
+  const reducedMotion = useMemo(() => typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)") : null, []);
 
   const authored = useMemo(() => {
     const source = gltf.scene.getObjectByName(sceneTokens.authoredCamera.node);
@@ -210,6 +213,20 @@ export function CameraRig({ source }: { source: string }) {
         handoffProgress,
       );
     }
+    // Keep the tabletop above the shared controls while retaining the authored
+    // shot. Mobile uses its accessible puzzle grid and keeps the original view.
+    const framing = touchFraming.current;
+    const framingTarget = !mobile && !introActive && interactionRuntime.activeStation === "touch" ? 1 : 0;
+    if (framing.target !== framingTarget) {
+      framing.from = framing.amount;
+      framing.target = framingTarget;
+      framing.elapsed = 0;
+    }
+    framing.elapsed += Math.min(delta, 0.1);
+    const framingDuration = framingTarget === 1 ? 0.55 : 0.4;
+    const framingProgress = reducedMotion?.matches ? 1 : smoothstep(framing.elapsed / framingDuration);
+    framing.amount = THREE.MathUtils.lerp(framing.from, framing.target, framingProgress);
+    if (!mobile && framing.amount > 0) camera.rotateX(-0.05 * framing.amount);
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {
         fov: baseFov,

@@ -9,7 +9,7 @@ import { bakedSceneContract } from "./baked-scene-contract";
 import { createPuzzleScreenFrame, createPuzzleTableFrame, createPuzzleTileGeometry, getPuzzleWorldPoint, projectPuzzlePoint } from "./composer-puzzle-geometry";
 import { experienceState } from "./experience-state";
 import { getPuzzleSlotCenter } from "./interactions/puzzle-engine";
-import { puzzleArtworkUrl } from "./interactions/puzzle-artwork";
+import { puzzleArtworkUrl, puzzleArtworkFallbackUrl } from "./interactions/puzzle-artwork";
 import { beginPuzzleDrag, cancelPuzzleDrag, finishPuzzleDrag, getPuzzleState, setPuzzleFocusedSlot, subscribePuzzle, updatePuzzleDrag } from "./interactions/puzzle-store";
 import { interactionRuntime, requestInteraction } from "./interactions/interaction-runtime";
 import { getVisitorCreation } from "./interactions/visitor-creation";
@@ -89,7 +89,7 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
   useEffect(() => {
     let disposed = false;
     let artwork: THREE.Texture | null = null;
-    new THREE.TextureLoader().load(puzzleArtworkUrl, (texture) => {
+    const loaded = (texture: THREE.Texture) => {
       if (disposed) { texture.dispose(); return; }
       artwork = texture;
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -99,7 +99,11 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
         faceMaterial.color.set("#ffffff");
         faceMaterial.needsUpdate = true;
       });
-    }, undefined, () => {});
+    };
+    const loader = new THREE.TextureLoader();
+    loader.load(puzzleArtworkUrl, loaded, undefined, () => {
+      if (!disposed) loader.load(puzzleArtworkFallbackUrl, loaded, undefined, () => {});
+    });
     const cancel = () => {
       const current = capture.current;
       capture.current = null;
@@ -244,8 +248,8 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
       finishPuzzleDrag(event.pointerId);
       setPuzzleFocusedSlot(focusSlot);
       if (window.matchMedia("(min-width: 761px)").matches) {
-        const selector = getPuzzleState().solved ? "[data-interaction-continue]" : `[data-puzzle-slot="${focusSlot}"]`;
-        semantic.current?.querySelector<HTMLButtonElement>(selector)?.focus({ preventScroll: true });
+        if (getPuzzleState().solved) document.querySelector<HTMLElement>("p[data-interaction-result]")?.focus({ preventScroll: true });
+        else semantic.current?.querySelector<HTMLButtonElement>(`[data-puzzle-slot="${focusSlot}"]`)?.focus({ preventScroll: true });
       }
     }
     releaseCapture();

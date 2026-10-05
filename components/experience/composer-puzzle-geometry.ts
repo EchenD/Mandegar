@@ -134,22 +134,25 @@ export function createPuzzleTableFrame(root: THREE.Object3D, screen: PuzzleScree
     // box alone would allow a board to bridge a cutout in an authored counter.
     for (const dx of [-0.5, 0, 0.5]) {
       for (const dy of [-0.5, 0, 0.5]) {
-        testPoint.copy(center).addScaledVector(right, x + dx * (width + 0.04))
-          .addScaledVector(back, y + dy * (width / 1.5 + 0.04));
+        testPoint.copy(center).addScaledVector(right, x + dx * (width + 0.08))
+          .addScaledVector(back, y + dy * (width / 1.5 + 0.08));
         if (!triangles.some((triangle) => triangle.containsPoint(testPoint))) return false;
       }
     }
     return true;
   };
-  const maximum = Math.min(maxX - minX - 0.04, (maxY - minY - 0.04) * 1.5, 1.15);
-  // Choose the largest safe 3:2 rectangle; prefer the counter center when tied.
-  const candidates: Array<{ x: number; y: number }> = [];
-  for (let row = 0; row <= 8; row += 1) {
-    for (let column = 0; column <= 12; column += 1) {
-      candidates.push({ x: minX + (maxX - minX) * column / 12, y: minY + (maxY - minY) * row / 8 });
+  const maximum = Math.min(maxX - minX - 0.08, (maxY - minY - 0.08) * 1.5, 1.2);
+  // The left foreground visitor covers a centered board in the authored shot.
+  // Prefer the clear space to the right, retaining the triangle fit and inset
+  // on the sloped counter. A slightly smaller board clears both visitors.
+  const preferredX = Math.min(0.35, (maxX - minX) * 0.14);
+  const candidates: Array<{ x: number; y: number }> = [{ x: preferredX, y: 0 }];
+  for (let row = 0; row <= 12; row += 1) {
+    for (let column = 0; column <= 16; column += 1) {
+      candidates.push({ x: minX + (maxX - minX) * column / 16, y: minY + (maxY - minY) * row / 12 });
     }
   }
-  candidates.sort((first, second) => Math.hypot(first.x, first.y) - Math.hypot(second.x, second.y));
+  candidates.sort((first, second) => Math.hypot(first.x - preferredX, first.y) - Math.hypot(second.x - preferredX, second.y));
   for (let width = maximum; width >= 0.3; width -= 0.02) {
     const candidate = candidates.find((point) => fits(point.x, point.y, width));
     if (!candidate) continue;

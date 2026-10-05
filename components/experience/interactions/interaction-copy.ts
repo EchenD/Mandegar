@@ -7,6 +7,8 @@ export type InteractionCopy = {
   preview: string;
   close: string;
   skip: string;
+  scrollContinue: string;
+  scrollNext: string;
   continue: string;
   replay: string;
   finish: string;
@@ -24,6 +26,8 @@ export type InteractionCopy = {
   };
   stage: { beam: string; finale: string; play: string; showing: string; ready: string };
   game: {
+    distance: string;
+    crashed: string;
     action: string;
     serve: string;
     pause: string;
@@ -47,6 +51,8 @@ const english: InteractionCopy = {
   preview: "Experience preview",
   close: "Close experience",
   skip: "Skip interaction",
+  scrollContinue: "Keep scrolling to skip",
+  scrollNext: "Scroll to continue",
   continue: "Continue journey",
   replay: "Replay",
   finish: "Finish",
@@ -56,31 +62,33 @@ const english: InteractionCopy = {
   stations: {
     photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch a moment arrive on your phone." },
     touch: { label: "Open picture puzzle", title: "Picture puzzle", instruction: "Swap two pieces to reveal the picture." },
-    stage: { label: "Open stage controls", title: "Your lighting look", instruction: "Choose your lights. Play the show or finish your look." },
-    game: { label: "Play Breakout", title: "Breakout", instruction: "Drag the paddle or use ← / → to clear the lights." },
+    stage: { label: "Watch the lighting show", title: "Light brings the space to life", instruction: "Watch light bring the space to life." },
+    game: { label: "Play road race", title: "Road race", instruction: "Drag to steer or use ← / →. Avoid traffic." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
   photo: { ready: "Capture the moment.", capture: "Watch delivery", captured: "On your phone.", delivery: "Straight to your phone.", example: "Demo · example photo" },
   touch: {
     instruction: "Drag a piece onto another, or tap two pieces, to swap them.",
-    complete: "The picture is complete.",
+    complete: "Mandegar brings every part together into one experience.",
     keyboard: "Use arrow keys to move between pieces. Press Enter or Space to select two pieces to swap. Grid directions follow the picture.",
     tile: "Piece {piece}, row {row}, column {column}",
     moves: "{count} swaps",
   },
   stage: { beam: "Beam", finale: "Your lighting look is ready", play: "Play your show", showing: "Your show is playing", ready: "Pick any lights to create your look" },
   game: {
+    distance: "Distance",
+    crashed: "Race over",
     action: "Start game",
     serve: "Serve ball",
     pause: "Pause",
     resume: "Resume",
     finish: "Finish round",
-    left: "Move paddle left",
-    right: "Move paddle right",
+    left: "Steer left",
+    right: "Steer right",
     lives: "Lives",
     time: "Time",
     remaining: "Lights cleared",
-    keyboard: "Breakout. Use left and right arrow keys to move the paddle. Press Space to serve, pause or resume.",
+    keyboard: "Road race. Use left and right arrow keys to steer. Press Space to pause or resume. A crash ends the race. Scroll or press Escape to leave.",
     result: "Round complete",
     win: "You cleared every light",
     score: "Score",
@@ -99,6 +107,8 @@ const persian: InteractionCopy = {
   preview: "پیش‌نمایش تجربه",
   close: "بستن تجربه",
   skip: "رد کردن تعامل",
+  scrollContinue: "برای عبور، اسکرول را ادامه دهید",
+  scrollNext: "برای ادامهٔ مسیر اسکرول کنید",
   continue: "ادامه مسیر",
   replay: "تکرار",
   finish: "پایان",
@@ -108,31 +118,33 @@ const persian: InteractionCopy = {
   stations: {
     photo: { label: "نمایش تحویل عکس رویداد", title: "تحویل فوری عکس", instruction: "رسیدن یک لحظه به گوشی خود را ببینید." },
     touch: { label: "باز کردن پازل تصویر", title: "پازل تصویر", instruction: "دو قطعه را جابه‌جا کنید تا تصویر کامل شود." },
-    stage: { label: "کنترل نور صحنه", title: "نورپردازی شما", instruction: "نورها را انتخاب کنید؛ نمایش را پخش کنید یا ترکیب را پایان دهید." },
-    game: { label: "بازی آجرشکن", title: "آجرشکن", instruction: "سکو را بکشید یا با ← و → حرکت دهید و نورها را پاک کنید." },
+    stage: { label: "تماشای نورپردازی", title: "نور، فضا را زنده می‌کند", instruction: "ببینید نور چگونه فضا را زنده می‌کند." },
+    game: { label: "بازی مسابقه ماشین", title: "مسابقه ماشین", instruction: "برای فرمان دادن بکشید یا از ← و → استفاده کنید. از ماشین‌ها دوری کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
   photo: { ready: "ثبت یک لحظه.", capture: "نمایش تحویل", captured: "روی گوشی شما.", delivery: "مستقیم روی گوشی شما.", example: "نمایش خدمات · تصویر نمونه" },
   touch: {
     instruction: "یک قطعه را روی دیگری بکشید یا دو قطعه را لمس کنید تا جابه‌جا شوند.",
-    complete: "تصویر کامل شد.",
+    complete: "ماندگار همهٔ بخش‌ها را به یک تجربهٔ پیوسته تبدیل می‌کند.",
     keyboard: "با کلیدهای جهت میان قطعه‌ها حرکت کنید. با Enter یا فاصله دو قطعه را برای جابه‌جایی انتخاب کنید. جهت‌ها مطابق تصویر هستند.",
     tile: "قطعه {piece}، ردیف {row}، ستون {column}",
     moves: "{count} جابه‌جایی",
   },
   stage: { beam: "پرتو", finale: "نورپردازی شما آماده است", play: "پخش نمایش شما", showing: "نمایش شما در حال پخش است", ready: "نورهای دلخواه را برای ترکیب خود انتخاب کنید" },
   game: {
+    distance: "مسافت",
+    crashed: "پایان مسابقه",
     action: "شروع بازی",
     serve: "رها کردن توپ",
     pause: "مکث",
     resume: "ادامه بازی",
     finish: "پایان دور",
-    left: "حرکت سکو به چپ",
-    right: "حرکت سکو به راست",
+    left: "فرمان به چپ",
+    right: "فرمان به راست",
     lives: "فرصت‌ها",
     time: "زمان",
     remaining: "نورهای پاک‌شده",
-    keyboard: "آجرشکن. با کلیدهای جهت چپ و راست، سکو را حرکت دهید. با فاصله، توپ را رها کنید یا بازی را متوقف و ادامه دهید.",
+    keyboard: "مسابقه ماشین. با کلیدهای چپ و راست فرمان دهید. با فاصله مکث یا ادامه دهید. تصادف مسابقه را تمام می‌کند. برای خروج اسکرول کنید یا Escape را بزنید.",
     result: "دور بازی تمام شد",
     win: "همه نورها را پاک کردید",
     score: "امتیاز",
@@ -151,6 +163,8 @@ const arabic: InteractionCopy = {
   preview: "معاينة التجربة",
   close: "إغلاق التجربة",
   skip: "تخطي التفاعل",
+  scrollContinue: "واصل التمرير للتخطي",
+  scrollNext: "مرّر لمتابعة الرحلة",
   continue: "متابعة الرحلة",
   replay: "إعادة",
   finish: "إنهاء",
@@ -160,31 +174,33 @@ const arabic: InteractionCopy = {
   stations: {
     photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد اللحظة تصل إلى هاتفك." },
     touch: { label: "افتح أحجية الصورة", title: "أحجية الصورة", instruction: "بدّل قطعتين لتكتمل الصورة." },
-    stage: { label: "فتح تحكم المسرح", title: "إضاءتك", instruction: "اختر الأضواء ثم شغّل العرض أو أنهِ تنسيقك." },
-    game: { label: "العب كاسر الطوب", title: "كاسر الطوب", instruction: "اسحب المضرب أو استخدم ← و → لإزالة الأضواء." },
+    stage: { label: "شاهد عرض الإضاءة", title: "الضوء يمنح المكان حياة", instruction: "شاهد كيف يمنح الضوء المكان حياة." },
+    game: { label: "العب سباق السيارات", title: "سباق السيارات", instruction: "اسحب للتوجيه أو استخدم ← و →. تجنّب السيارات." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },
   photo: { ready: "التقط اللحظة.", capture: "شاهد التسليم", captured: "على هاتفك.", delivery: "مباشرةً إلى هاتفك.", example: "عرض تجريبي · صورة نموذجية" },
   touch: {
     instruction: "اسحب قطعة فوق أخرى أو المس قطعتين لتبديلهما.",
-    complete: "اكتملت الصورة.",
+    complete: "تجمع ماندگار كل الأجزاء في تجربة واحدة مترابطة.",
     keyboard: "استخدم الأسهم للتنقل بين القطع. اضغط Enter أو المسافة لاختيار قطعتين وتبديلهما. تتبع الاتجاهات ترتيب الصورة.",
     tile: "القطعة {piece}، الصف {row}، العمود {column}",
     moves: "{count} تبديلات",
   },
   stage: { beam: "شعاع", finale: "إضاءتك جاهزة", play: "شغّل عرضك", showing: "عرضك قيد التشغيل", ready: "اختر الأضواء لتشكّل أجواءك" },
   game: {
+    distance: "المسافة",
+    crashed: "انتهى السباق",
     action: "ابدأ اللعب",
     serve: "أطلق الكرة",
     pause: "إيقاف مؤقت",
     resume: "متابعة",
     finish: "إنهاء الجولة",
-    left: "حرّك المضرب يسارًا",
-    right: "حرّك المضرب يمينًا",
+    left: "التوجيه إلى اليسار",
+    right: "التوجيه إلى اليمين",
     lives: "المحاولات",
     time: "الوقت",
     remaining: "الأضواء المُزالة",
-    keyboard: "كاسر الطوب. استخدم سهمي اليسار واليمين لتحريك المضرب. اضغط المسافة لإطلاق الكرة أو إيقاف اللعب ومتابعته.",
+    keyboard: "سباق السيارات. استخدم سهمي اليسار واليمين للتوجيه والمسافة للتوقف أو الاستئناف. ينهي الاصطدام السباق. مرّر أو اضغط Escape للخروج.",
     result: "اكتملت الجولة",
     win: "أزلت جميع الأضواء",
     score: "النتيجة",

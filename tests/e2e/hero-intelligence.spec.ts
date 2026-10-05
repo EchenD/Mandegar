@@ -4,6 +4,7 @@ import { createCrowdPeople, getCrowdPersonAtRay, getCrowdReadoutPoint, isCrowdPe
 import { createBakedSceneMaterial } from "../../components/experience/baked-scene-material";
 import { restoreRuntimeMaterial } from "../../components/experience/baked-material-binding";
 import { getCrowdSignalHead, getCrowdSignalLayout } from "../../components/experience/crowd-signal-geometry";
+import { getIntelligenceCopy } from "../../components/experience/intelligence-inspector-copy";
 
 test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
@@ -51,27 +52,11 @@ async function expectWorldReadout(page: Page, id: string) {
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
   expect(bounds!.y).toBeGreaterThanOrEqual(0);
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
-  expect(bounds!.width).toBeLessThanOrEqual(64);
-  expect(bounds!.height).toBeLessThanOrEqual(105);
-  const leader = JSON.parse(await inspector.getAttribute("data-world-readout-leader") ?? "null") as {
-    start: { x: number; y: number }; end: { x: number; y: number }; points: number;
-  };
-  expect(leader.points).toBe(2);
-  expect(Math.abs(leader.end.x - leader.start.x)).toBeLessThan(0.01);
-  const length = leader.start.y - leader.end.y;
-  expect(length).toBeGreaterThanOrEqual(63.99);
-  expect(length).toBeLessThanOrEqual(82.01);
-  await expect(inspector).toHaveAttribute("data-world-readout-kind", "vertical-signal");
-  await expect(inspector).toHaveAttribute("data-world-readout-text", "none");
-  await expect(inspector).toHaveAttribute("data-world-readout-font-size", "0");
-  const glyphs = JSON.parse(await inspector.getAttribute("data-world-readout-glyphs") ?? "null") as {
-    ring: { x: number; y: number }; bars: { x: number; y: number };
-  };
-  expect(glyphs.ring.x).toBe(glyphs.bars.x);
-  expect(glyphs.bars.y - glyphs.ring.y).toBeGreaterThanOrEqual(36);
-  const columnX = bounds!.x + glyphs.ring.x;
-  const side = await inspector.getAttribute("data-world-readout-side");
-  expect((columnX - leader.start.x) * (side === "left" ? -1 : 1)).toBeGreaterThan(20);
+  expect(bounds!.width).toBe(190);
+  expect(bounds!.height).toBe(116);
+  await expect(inspector).toHaveAttribute("data-world-readout-kind", "person-insight");
+  await expect(inspector).toHaveAttribute("data-world-readout-text", /.+/);
+  await expect(inspector).toHaveAttribute("data-world-readout-font-size", "15");
   await expect(page.locator("[data-scene-copy='intelligence']")).toBeVisible();
 }
 
@@ -91,7 +76,7 @@ test("hovering and clicking a real scene person previews and pins a compact head
   await hoverPerson(page, point.id);
   await expect(inspector).toHaveAttribute("data-person", point.id);
   await expect(inspector).toHaveAttribute("data-pinned", "false");
-  await expect(inspector).toContainText("Example data · simulated");
+  await expect(inspector).toContainText(getIntelligenceCopy("en").example);
   await expectWorldReadout(page, point.id);
   await expect(page.locator("[data-scene-copy='intelligence']")).toHaveText(chapterCopy!);
   await expect(inspector.locator("[data-intelligence-explore]")).toBeFocused();
@@ -105,8 +90,7 @@ test("hovering and clicking a real scene person previews and pins a compact head
   }
   const activities = await inspector.locator("[data-example-activities]").textContent();
   const time = await inspector.locator("[data-example-time]").textContent();
-  const firstPaint = Number(await inspector.getAttribute("data-world-readout-paint-count"));
-  await expect.poll(async () => Number(await inspector.getAttribute("data-world-readout-paint-count")), { timeout: 10_000 }).toBeGreaterThan(firstPaint);
+  const profile = await inspector.getAttribute("data-world-readout-text");
   const semanticBounds = await inspector.locator("[data-intelligence-readout]").boundingBox();
   expect(semanticBounds!.width).toBeLessThanOrEqual(1);
   expect(semanticBounds!.height).toBeLessThanOrEqual(1);
@@ -117,6 +101,7 @@ test("hovering and clicking a real scene person previews and pins a compact head
   await expect(inspector).toHaveAttribute("data-person", point.id);
   await expect(inspector.locator("[data-example-activities]")).toHaveText(activities!);
   await expect(inspector.locator("[data-example-time]")).toHaveText(time!);
+  await expect(inspector).toHaveAttribute("data-world-readout-text", profile!);
   const screenshotPath = testInfo.outputPath("intelligence-person-example.png");
   await page.screenshot({ path: screenshotPath });
   await testInfo.attach("intelligence-person-example", { path: screenshotPath, contentType: "image/png" });
@@ -177,10 +162,10 @@ test.describe("mobile head signal", () => {
     await page.touchscreen.tap(point.x, point.y);
     await expect(inspector).toHaveAttribute("data-person", point.id);
     await expect(inspector).toHaveAttribute("data-pinned", "true");
-    await expect(inspector).toContainText("داده نمونه · شبیه‌سازی‌شده");
+    await expect(inspector).toContainText(getIntelligenceCopy("fa").example);
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intelligence-selected", "true");
     await expectWorldReadout(page, point.id);
-    await expect(inspector).toHaveAttribute("data-world-readout-font-size", "0");
+    await expect(inspector).toHaveAttribute("data-world-readout-font-size", "15");
     const semanticReadout = await inspector.locator("[data-intelligence-readout]").boundingBox();
     expect(semanticReadout?.width).toBeLessThanOrEqual(1);
     expect(semanticReadout?.height).toBeLessThanOrEqual(1);
@@ -207,7 +192,7 @@ test("Arabic examples use localized labels and retain keyboard access", async ({
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await inspector.locator("[data-intelligence-explore]").focus();
   await page.keyboard.press("Enter");
-  await expect(inspector).toContainText("بيانات نموذجية · محاكاة");
+  await expect(inspector).toContainText(getIntelligenceCopy("ar").example);
   await expectWorldReadout(page, (await inspector.getAttribute("data-person"))!);
   await expect(inspector.locator("[data-intelligence-next]")).toBeFocused();
   await page.keyboard.press("Escape");
@@ -228,49 +213,19 @@ test("head signal uses the crowd particle origin after the actor transform", () 
   material.dispose();
 });
 
-test("head signal keeps a short vertical leader rising from the actual projected head", () => {
-  const layout = getCrowdSignalLayout(new THREE.Vector3(-0.3, 0.2, 0.4), 1440, 900)!;
-  expect(layout.start.x).toBeCloseTo(504);
-  expect(layout.start.y).toBeCloseTo(360);
-  expect(layout.end.x).toBe(layout.start.x);
-  expect(layout.start.y - layout.end.y).toBeCloseTo(76);
-  expect(layout.rect.y).toBeLessThan(layout.end.y);
-  expect(layout.rect.width).toBe(64);
-  expect(layout.rect.height).toBe(98);
-});
-
-test("head signal fits a small mobile viewport without moving the head anchor", () => {
-  for (const x of [-0.9, 0, 0.9]) {
-    const layout = getCrowdSignalLayout(new THREE.Vector3(x, 0, 0.4), 320, 640)!;
-    expect(layout).not.toBeNull();
-    expect(layout.start.x).toBeCloseTo((x * 0.5 + 0.5) * 320);
-    expect(layout.start.y).toBe(320);
-    expect(layout.rect.x).toBeGreaterThanOrEqual(12);
-    expect(layout.rect.x + layout.rect.width).toBeLessThanOrEqual(308);
-    expect(layout.start.y - layout.end.y).toBeGreaterThanOrEqual(63.99);
-    expect(layout.start.y - layout.end.y).toBeLessThanOrEqual(82.01);
-    expect(layout.end.x).toBe(layout.start.x);
-    expect(layout.side).toBe(x > 0 ? -1 : 1);
-    const columnX = layout.origin.x + layout.side * 28;
-    expect(columnX - 8.5).toBeGreaterThanOrEqual(0);
-    expect(columnX + 8.5).toBeLessThanOrEqual(layout.rect.width);
-  }
-});
-
-test("head signal clamps its glyphs at viewport edges while its leader stays vertical", () => {
-  for (const y of [0.78, -0.96]) {
-    const layout = getCrowdSignalLayout(new THREE.Vector3(0.1, y, 0.4), 390, 844)!;
-    expect(layout).not.toBeNull();
-    expect(layout.rect.y).toBeGreaterThanOrEqual(12);
-    expect(layout.rect.y + layout.rect.height).toBeLessThanOrEqual(832);
-    expect(layout.start.y).toBeCloseTo((-y * 0.5 + 0.5) * 844);
-    expect(layout.end.x).toBe(layout.start.x);
-    expect(layout.start.y - layout.end.y).toBeCloseTo(76);
-    const ringX = layout.origin.x + layout.side * 28;
-    const ringY = layout.origin.y - 64;
-    expect(ringX - 7.5).toBeGreaterThanOrEqual(0);
-    expect(ringY - 7.5).toBeGreaterThanOrEqual(0);
-    expect(ringX + 8.5).toBeLessThanOrEqual(layout.rect.width);
+test("person insights stay inside the viewport while their leader stays anchored at the real head", () => {
+  for (const [width, height] of [[1440, 900], [320, 640], [390, 844]]) {
+    for (const x of [-0.9, 0, 0.9]) {
+      const layout = getCrowdSignalLayout(new THREE.Vector3(x, 0, 0.4), width, height)!;
+      expect(layout.start.x).toBeCloseTo((x * 0.5 + 0.5) * width);
+      expect(layout.start.y).toBe(height / 2);
+      expect(layout.rect.x).toBeGreaterThanOrEqual(12);
+      expect(layout.rect.x + layout.rect.width).toBeLessThanOrEqual(width - 12);
+      expect(layout.rect.y).toBeGreaterThanOrEqual(12);
+      expect(layout.rect.y + layout.rect.height).toBeLessThanOrEqual(height - 12);
+      expect(layout.end.x).toBeGreaterThanOrEqual(layout.rect.x);
+      expect(layout.end.x).toBeLessThanOrEqual(layout.rect.x + layout.rect.width);
+    }
   }
 });
 
@@ -278,8 +233,8 @@ test("head signal hides an offscreen or behind-camera origin instead of detachin
   for (const head of [new THREE.Vector3(1.01, 0, 0), new THREE.Vector3(0, -1.01, 0), new THREE.Vector3(0, 0, 1.01), new THREE.Vector3(Number.NaN, 0, 0)]) {
     expect(getCrowdSignalLayout(head, 390, 844)).toBeNull();
   }
-  // A line must have room to rise, and both tiny glyphs must stay beside its actual origin.
-  expect(getCrowdSignalLayout(new THREE.Vector3(0, 0.9, 0), 390, 844)).toBeNull();
+  // A visible head keeps its real anchor, while the card can fit below it.
+  expect(getCrowdSignalLayout(new THREE.Vector3(0, 0.9, 0), 390, 844)).not.toBeNull();
   expect(getCrowdSignalLayout(new THREE.Vector3(-0.98, 0, 0), 390, 844)).toBeNull();
 });
 

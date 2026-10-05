@@ -203,8 +203,8 @@ export const sceneTokens = {
     },
     screens: {
       videoWall: publicAssetPath("/media/mandegar/screens/screen-center-21x9.webp"),
-      interactive: publicAssetPath("/media/mandegar/screens/screen-interactive-16x9.webp"),
-      game: publicAssetPath("/media/mandegar/screens/screen-game-3x4.webp"),
+      interactive: publicAssetPath("/media/hero/connected-experience.webp"),
+      game: publicAssetPath("/media/hero/race-idle.webp"),
       main: publicAssetPath("/media/mandegar/screens/screen-main-4x3.webp"),
     },
   },

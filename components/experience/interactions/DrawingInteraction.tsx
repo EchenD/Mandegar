@@ -12,11 +12,12 @@ import {
 import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
 import { loadMonitorArtwork } from "./monitor-artwork";
-import { clearDrawing, getVisitorCreation, saveDrawing } from "./visitor-creation";
+import { reportInteractionParticipation } from "./interaction-participation";
+import { clearDrawing, getDrawingDraft, getVisitorCreation, saveDrawing, saveDrawingDraft } from "./visitor-creation";
 
 type Point = { x: number; y: number };
 type Stroke = Point[];
-type DrawingControl = "close" | "undo" | "clear" | "finish";
+type DrawingControl = "undo" | "clear" | "finish";
 
 const { width: canvasWidth, height: canvasHeight } = interactionSurfaceSizes.main.canvas;
 const drawingArea = { left: 0.055, top: 0.205, width: 0.89, height: 0.57 } as const;
@@ -73,7 +74,6 @@ function revealProgress(progress: number, start: number, end: number) {
 }
 
 function controlAtPoint(x: number, y: number): DrawingControl | null {
-  if (Math.hypot(x - 0.945, y - 0.07) <= 0.045) return "close";
   if (y < 0.83 || y > 0.955) return null;
   const control = controlDefinitions.find(({ left, width }) => hitRect(x, y, left, 0.83, width, 0.125));
   return control?.id ?? null;
@@ -96,9 +96,7 @@ function clampDrawingPoint(point: Point) {
 
 export function DrawingInteraction({
   copy,
-  onClose,
   onComplete,
-  onContinue,
 }: {
   copy: InteractionCopy;
   onClose: () => void;
@@ -106,9 +104,10 @@ export function DrawingInteraction({
   onContinue: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const strokes = useRef<Stroke[]>([]);
+  const strokes = useRef<Stroke[]>(getDrawingDraft());
   const activeStroke = useRef<Stroke | null>(null);
   const activePointer = useRef<number | null>(null);
+  const capturedPointer = useRef<number | null>(null);
   const renderFrame = useRef<number | null>(null);
   const transitionFrame = useRef<number | null>(null);
   const finaleFrame = useRef<number | null>(null);
@@ -118,13 +117,13 @@ export function DrawingInteraction({
   const monitorImage = useRef<HTMLImageElement | null>(null);
   const hoverControl = useRef<DrawingControl | null>(null);
   const keyboardFocus = useRef<DrawingControl | null>(null);
-  const finishedRef = useRef(false);
+  const finishedRef = useRef(Boolean(getVisitorCreation().drawing));
   const completionReported = useRef(false);
   const replayProgress = useRef(1);
   const savedWall = useRef<HTMLCanvasElement | null>(null);
   const keyboardPoint = useRef<Point>({ x: canvasWidth / 2, y: canvasHeight / 2 });
-  const [strokeCount, setStrokeCount] = useState(0);
-  const [finished, setFinished] = useState(false);
+  const [strokeCount, setStrokeCount] = useState(() => getDrawingDraft().length);
+  const [finished, setFinished] = useState(() => Boolean(getVisitorCreation().drawing));
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -181,10 +180,7 @@ export function DrawingInteraction({
     context.fillText("MANDEGAR", width / 2, 37);
     context.fillStyle = "#f7f7f4";
     context.font = '620 30px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(isFinished ? finaleStartedAt.current !== null ? copy.draw.replaying : copy.draw.complete : copy.stations.draw.title, width / 2, 78, width - 170);
-    context.fillStyle = "rgba(247,247,244,.56)";
-    context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillText(copy.draw.local, width / 2, 107, width - 170);
+    context.fillText(copy.stations.draw.title, width / 2, 78, width - 170);
     context.restore();
 
     context.fillStyle = "rgba(247,247,244,.14)";
@@ -248,32 +244,16 @@ export function DrawingInteraction({
     }
     context.restore();
 
-    const closeFocused = hoverControl.current === "close" || keyboardFocus.current === "close";
-    context.fillStyle = closeFocused ? "rgba(117,216,255,.15)" : "rgba(247,247,244,.06)";
-    context.beginPath();
-    context.arc(width * 0.945, height * 0.07, 25, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = closeFocused ? "#75d8ff" : "rgba(247,247,244,.3)";
-    context.lineWidth = closeFocused ? 3 : 1.5;
-    context.stroke();
-    context.strokeStyle = "#f7f7f4";
-    context.lineWidth = 1.7;
-    context.beginPath();
-    context.moveTo(width * 0.945 - 6, height * 0.07 - 6);
-    context.lineTo(width * 0.945 + 6, height * 0.07 + 6);
-    context.moveTo(width * 0.945 + 6, height * 0.07 - 6);
-    context.lineTo(width * 0.945 - 6, height * 0.07 + 6);
-    context.stroke();
-
     const labels: Record<(typeof controlDefinitions)[number]["id"], string> = {
       undo: copy.undo,
       clear: copy.clear,
-      finish: isFinished ? copy.continue : copy.finish,
+      finish: copy.finish,
     };
     context.save();
     context.globalAlpha = controlsReveal;
     controlDefinitions.forEach(({ id, left, width: controlWidth }) => {
-      const enabled = id === "finish" ? count > 0 : count > 0 && !isFinished;
+      if (isFinished) return;
+      const enabled = count > 0;
       const focused = hoverControl.current === id || keyboardFocus.current === id;
       const x = left * width;
       const y = 0.83 * height;
@@ -326,18 +306,25 @@ export function DrawingInteraction({
   }, [schedulePaint]);
 
   const cancelActiveStroke = useCallback(() => {
+    const pointerId = capturedPointer.current ?? activePointer.current;
+    capturedPointer.current = null;
     activePointer.current = null;
     activeStroke.current = null;
+    if (interactionRuntime.gestureStation === "draw") interactionRuntime.gestureStation = null;
+    const surface = canvasRef.current?.closest("[data-experience-root]")?.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
+    if (pointerId !== null && pointerId >= 0 && surface?.hasPointerCapture(pointerId)) surface.releasePointerCapture(pointerId);
   }, []);
 
   const beginStroke = useCallback((point: Point, pointerId: number) => {
-    if (activePointer.current !== null || finishedRef.current) return;
+    if (activePointer.current !== null || finishedRef.current || transitionState.current === "outro") return;
+    reportInteractionParticipation("draw");
     if (!strokes.current.length) {
       clearDrawing();
       savedWall.current = null;
     }
     const nextStroke = [clampDrawingPoint(point)];
     activePointer.current = pointerId;
+    interactionRuntime.gestureStation = "draw";
     activeStroke.current = nextStroke;
     strokes.current.push(nextStroke);
     updateStrokeCount();
@@ -361,6 +348,7 @@ export function DrawingInteraction({
 
   const undo = useCallback(() => {
     if (finishedRef.current || strokes.current.length === 0) return;
+    reportInteractionParticipation("draw");
     cancelActiveStroke();
     strokes.current.pop();
     updateStrokeCount();
@@ -368,6 +356,7 @@ export function DrawingInteraction({
 
   const clear = useCallback(() => {
     if (finishedRef.current || strokes.current.length === 0) return;
+    reportInteractionParticipation("draw");
     cancelActiveStroke();
     strokes.current = [];
     clearDrawing();
@@ -400,6 +389,7 @@ export function DrawingInteraction({
 
   const completeDrawing = useCallback(() => {
     if (strokes.current.length === 0 || finishedRef.current) return;
+    reportInteractionParticipation("draw");
     cancelActiveStroke();
     finishedRef.current = true;
     setFinished(true);
@@ -431,7 +421,7 @@ export function DrawingInteraction({
     }
   }, [cancelActiveStroke, onComplete, startFinale]);
 
-  const animateTransition = useCallback((target: 0 | 1, onFinish?: () => void) => {
+  const animateTransition = useCallback((target: 0 | 1) => {
     if (transitionFrame.current !== null) window.cancelAnimationFrame(transitionFrame.current);
     const from = transitionProgress.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -441,7 +431,6 @@ export function DrawingInteraction({
       transitionProgress.current = target;
       transitionState.current = target === 1 ? "ready" : "outro";
       paint();
-      onFinish?.();
       return;
     }
     const startedAt = performance.now();
@@ -456,12 +445,11 @@ export function DrawingInteraction({
       }
       transitionFrame.current = null;
       transitionState.current = target === 1 ? "ready" : "outro";
-      onFinish?.();
     };
     transitionFrame.current = window.requestAnimationFrame(tick);
   }, [paint]);
 
-  const exitWithTransition = useCallback((callback: () => void) => {
+  const exitWithTransition = useCallback(() => {
     if (transitionState.current === "outro") return;
     cancelActiveStroke();
     if (finaleFrame.current !== null) window.cancelAnimationFrame(finaleFrame.current);
@@ -469,22 +457,38 @@ export function DrawingInteraction({
     finaleStartedAt.current = null;
     replayProgress.current = 1;
     hoverControl.current = null;
-    animateTransition(0, callback);
+    animateTransition(0);
   }, [animateTransition, cancelActiveStroke]);
 
   const handleControl = useCallback((control: DrawingControl) => {
-    if (control === "close") {
-      exitWithTransition(onClose);
-    } else if (control === "undo") {
+    if (finishedRef.current || transitionState.current === "outro") return;
+    if (control === "undo") {
       undo();
     } else if (control === "clear") {
       clear();
-    } else if (finishedRef.current) {
-      exitWithTransition(onContinue);
     } else {
       completeDrawing();
     }
-  }, [clear, completeDrawing, exitWithTransition, onClose, onContinue, undo]);
+  }, [clear, completeDrawing, undo]);
+
+  useEffect(() => {
+    const departure = (event: Event) => {
+      if ((event as CustomEvent<{ station?: string }>).detail?.station !== "draw") return;
+      if (canvasRef.current) canvasRef.current.dataset.departing = "true";
+      exitWithTransition();
+    };
+    const cancel = () => { cancelActiveStroke(); schedulePaint(); };
+    const visibility = () => { if (document.hidden) cancel(); };
+    window.addEventListener("mandegar:interaction-departure", departure);
+    window.addEventListener("blur", cancel);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("mandegar:interaction-departure", departure);
+      window.removeEventListener("blur", cancel);
+      document.removeEventListener("visibilitychange", visibility);
+      cancelActiveStroke();
+    };
+  }, [cancelActiveStroke, exitWithTransition, schedulePaint]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -496,6 +500,7 @@ export function DrawingInteraction({
     const begin = (image: HTMLImageElement | null) => {
       if (!mounted) return;
       monitorImage.current = image;
+      if (transitionState.current === "outro") return;
       if (registered) {
         schedulePaint();
         return;
@@ -514,6 +519,7 @@ export function DrawingInteraction({
     });
     return () => {
       mounted = false;
+      saveDrawingDraft(strokes.current);
       stopLoading();
       if (interactionRuntime.monitorEntries.main?.canvas === canvas) {
         registerInteractionCanvas("main", experience?.isConnected ? savedWall.current : null);
@@ -523,8 +529,8 @@ export function DrawingInteraction({
 
   useEffect(() => {
     const handleSceneInput = (event: SceneInteractionEvent) => {
-      if (transitionState.current !== "ready" || event.phase === "activate") return;
-      const control = controlAtPoint(event.x, event.y);
+      if (transitionState.current === "outro" || event.phase === "activate") return;
+      const control = finishedRef.current ? null : controlAtPoint(event.x, event.y);
       if (event.phase === "move") {
         if (activePointer.current === event.pointerId && activeStroke.current) {
           queuePoint({ x: event.x * canvasWidth, y: event.y * canvasHeight });
@@ -535,8 +541,10 @@ export function DrawingInteraction({
         return;
       }
       if (event.phase === "down") {
+        if (capturedPointer.current !== null && capturedPointer.current !== event.pointerId) return;
+        capturedPointer.current = event.pointerId;
         if (control) {
-          handleControl(control);
+          if (transitionState.current === "ready") handleControl(control);
           return;
         }
         if (pointInDrawingArea(event.x, event.y)) {
@@ -549,11 +557,15 @@ export function DrawingInteraction({
       }
       if (event.phase === "cancel") {
         finishStroke(event.pointerId);
+        if (capturedPointer.current === event.pointerId) capturedPointer.current = null;
         hoverControl.current = null;
         schedulePaint();
         return;
       }
-      if (event.phase === "up") finishStroke(event.pointerId);
+      if (event.phase === "up") {
+        finishStroke(event.pointerId);
+        if (capturedPointer.current === event.pointerId) capturedPointer.current = null;
+      }
     };
     registerSceneInteraction("draw", handleSceneInput);
     return () => registerSceneInteraction("draw", null);
@@ -607,24 +619,24 @@ export function DrawingInteraction({
             schedulePaint();
           }}
         />
-        <p>{copy.stations.draw.instruction}</p>
-        <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
-        <button type="button" disabled={strokeCount === 0 || finished} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
-        <button type="button" data-interaction-continue disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
-        <button type="button" data-interaction-dismiss onFocus={() => focusControl("close")} onBlur={() => focusControl(null)} onClick={() => handleControl("close")}>{copy.close}</button>
+        {!finished && <>
+          <button type="button" disabled={strokeCount === 0} onFocus={() => focusControl("undo")} onBlur={() => focusControl(null)} onClick={undo}>{copy.undo}</button>
+          <button type="button" disabled={strokeCount === 0} onFocus={() => focusControl("clear")} onBlur={() => focusControl(null)} onClick={clear}>{copy.clear}</button>
+          <button type="button" data-drawing-finish data-interaction-continue disabled={strokeCount === 0} onFocus={() => focusControl("finish")} onBlur={() => focusControl(null)} onClick={() => handleControl("finish")}>{copy.finish}</button>
+        </>}
         <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
       </div>
-      <div className={styles.mobileDrawingDock} data-mobile-drawing-dock role="group" aria-label={copy.stations.draw.title}>
+      {!finished && <div className={styles.mobileDrawingDock} data-mobile-drawing-dock role="group" aria-label={copy.stations.draw.title}>
         <div className={styles.mobileDrawingDockHeader}>
           <strong>{copy.stations.draw.title}</strong>
-          <span role="status" aria-live="polite">{finished ? copy.draw.complete : `${strokeCount}`}</span>
+          <span role="status" aria-live="polite">{strokeCount}</span>
         </div>
         <div className={styles.mobileDrawingActions}>
-          <button type="button" disabled={strokeCount === 0 || finished} onClick={undo}>{copy.undo}</button>
-          <button type="button" disabled={strokeCount === 0 || finished} onClick={clear}>{copy.clear}</button>
-          <button type="button" data-mobile-drawing-finish disabled={strokeCount === 0} onClick={() => handleControl("finish")}>{finished ? copy.continue : copy.finish}</button>
+          <button type="button" disabled={strokeCount === 0} onClick={undo}>{copy.undo}</button>
+          <button type="button" disabled={strokeCount === 0} onClick={clear}>{copy.clear}</button>
+          <button type="button" data-mobile-drawing-finish disabled={strokeCount === 0} onClick={() => handleControl("finish")}>{copy.finish}</button>
         </div>
-      </div>
+      </div>}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { activateWithKeyboard, solvePuzzle, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, continueFromResult, driveRaceToCollision, returnToStationForward, seekStationReview, solvePuzzle, waitForStation } from "./hero-interaction-helpers";
 import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures, type MonitorTextureSample } from "./monitor-texture-observer";
 
 test.setTimeout(240_000);
@@ -13,8 +13,9 @@ async function assertPaintedOwnership(page: Page, screen: MonitorTextureSample["
   }, { timeout: 15_000 }).toBe(true);
   const samples = await getMonitorTextureSamples(page, screen);
   expect(samples.filter((sample) => sample.media === "image" || sample.media === "unknown"), JSON.stringify(samples)).toEqual([]);
-  // Entrance blending must use the outgoing painted canvas as its base.
-  expect(samples.filter((sample) => sample.blend < 0.999 && sample.base === "image"), JSON.stringify(samples)).toEqual([]);
+  // Interactive entrance uses the outgoing painted canvas. A retained
+  // drawing fades over its authored idle image during the reverse retreat.
+  expect(samples.filter((sample) => sample.media === "interactive" && sample.blend < 0.999 && sample.base === "image"), JSON.stringify(samples)).toEqual([]);
 }
 
 async function seek(page: Page, id: string, progress?: number) {
@@ -24,37 +25,29 @@ async function seek(page: Page, id: string, progress?: number) {
   }, progress ?? beat.preview);
 }
 
-async function reopen(page: Page, station: string) {
-  await page.evaluate((target) => window.dispatchEvent(new CustomEvent("mandegar:interaction-request", {
-    detail: { station: target, input: "keyboard" },
-  })), station);
-  await waitForStation(page, station);
-}
-
-test("the rendered game keeps painted ownership through Continue, autoplay and a delayed reopening", async ({ page }) => {
+test("the rendered game keeps painted ownership through a collision, autoplay and a fresh forward return", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/en?intro=0&phase=experiences", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "game");
   await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await activateWithKeyboard(page, "[data-game-action]");
-  await activateWithKeyboard(page, "[data-game-finish]");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await driveRaceToCollision(page);
   await clearMonitorTextureSamples(page);
-  await activateWithKeyboard(page, "[data-game-finish]");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await continueFromResult(page, "game");
   await expect(page.locator("[data-game-ambient]")).toHaveAttribute("data-ambient-state", "playing");
   await assertPaintedOwnership(page, "game", "ambient");
 
   // Routing disables the image cache, exposing the legitimate loading gap
   // between the active station and its first painted interactive canvas.
-  await page.route("**/screen-game-3x4.webp", async (route) => {
+  await page.route("**/race-idle.webp", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 180));
     await route.continue();
   });
   await clearMonitorTextureSamples(page);
-  await reopen(page, "game");
+  await returnToStationForward(page, "game");
   await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+  await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-outcome", "none");
+  await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
   await assertPaintedOwnership(page, "game", "interactive");
   await clearMonitorTextureSamples(page);
   await activateWithKeyboard(page, "[data-interaction-escape]");
@@ -66,34 +59,32 @@ test("the rendered game keeps painted ownership through Continue, autoplay and a
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("puzzle and drawing keep painted surfaces after finishing and use them when reopening", async ({ page }) => {
+test("puzzle releases its monitor after the readable result and drawing keeps a painted forward handoff", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   await solvePuzzle(page);
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
   await clearMonitorTextureSamples(page);
-  await activateWithKeyboard(page, "[data-interaction-escape]");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(director).toHaveAttribute("data-presentation", "result");
+  await expect(page.locator("p[data-interaction-result='touch']")).toBeVisible();
   await assertPaintedOwnership(page, "interactive", "interactive");
-
-  const engagement = narrativeScore.find((beat) => beat.id === "engagement")!;
-  await clearMonitorTextureSamples(page);
-  await seek(page, "engagement", engagement.start + 0.01);
-  await expect.poll(async () => (await getMonitorTextureSamples(page, "interactive")).some((sample) => sample.blend > 0 && sample.blend < 0.9)).toBe(true);
-  await seek(page, "engagement");
-  await expect(director).toHaveAttribute("data-available-station", "touch");
-  await clearMonitorTextureSamples(page);
-  await reopen(page, "touch");
+  await continueFromResult(page, "touch");
+  await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
+  await seek(page, "activation");
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
+  await returnToStationForward(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "true");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "false");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
+  await clearMonitorTextureSamples(page);
   await assertPaintedOwnership(page, "interactive", "interactive");
   await activateWithKeyboard(page, "[data-interaction-escape]");
   await expect(director).toHaveAttribute("data-active-station", "none");
 
-  await seek(page, "connection");
+  await seekStationReview(page, "draw");
   await waitForStation(page, "draw");
   const canvas = page.locator("[data-drawing-canvas]");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
@@ -101,15 +92,15 @@ test("puzzle and drawing keep painted surfaces after finishing and use them when
   await page.keyboard.press("Space");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Space");
-  await activateWithKeyboard(page, "[data-drawing-spatial-controls] button:nth-of-type(3)");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await activateWithKeyboard(page, "[data-drawing-finish]");
   await clearMonitorTextureSamples(page);
-  await activateWithKeyboard(page, "[data-interaction-escape]");
-  await expect(director).toHaveAttribute("data-active-station", "none");
+  await continueFromResult(page, "draw");
   await assertPaintedOwnership(page, "main", "retained");
   await clearMonitorTextureSamples(page);
-  await reopen(page, "draw");
+  await returnToStationForward(page, "draw");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  await expect(page.locator("[data-drawing-spatial-controls]")).toHaveAttribute("data-stroke-count", "0");
+  await expect(page.locator("[data-drawing-spatial-controls]")).toHaveAttribute("data-drawing-finished", "false");
   await assertPaintedOwnership(page, "main", "interactive");
   await activateWithKeyboard(page, "[data-interaction-escape]");
   await expect(director).toHaveAttribute("data-active-station", "none");

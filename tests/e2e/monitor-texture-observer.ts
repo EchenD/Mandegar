@@ -34,16 +34,16 @@ export async function observeMonitorTextures(page: Page) {
     };
     const describe = (source: HTMLCanvasElement | HTMLImageElement): Source => {
       if (source instanceof HTMLImageElement) {
-        const screen = source.src.includes("screen-game-") ? "game"
+        const screen = source.src.includes("screen-game-") || source.src.includes("race-idle.webp") ? "game"
           : source.src.includes("screen-main-") ? "main"
-            : source.src.includes("screen-interactive-") ? "interactive"
+            : source.src.includes("screen-interactive-") || source.src.includes("connected-experience.webp") ? "interactive"
               : source.src.includes("screen-center-") ? "videoWall" : null;
         return { label: "image", screen };
       }
       const screen = source.hasAttribute("data-game-canvas") || source.hasAttribute("data-game-ambient") ? "game"
         : source.hasAttribute("data-drawing-canvas") ? "main"
           : source.hasAttribute("data-composer-canvas") ? "interactive"
-            : source.hasAttribute("data-stage-canvas") || source.hasAttribute("data-intelligence-monitor-canvas") ? "videoWall" : null;
+            : source.hasAttribute("data-stage-scroll") || source.hasAttribute("data-stage-canvas") || source.hasAttribute("data-intelligence-monitor-canvas") ? "videoWall" : null;
       const label = source.hasAttribute("data-game-ambient") ? "ambient"
         : source.hasAttribute("data-intelligence-monitor-canvas") ? "intelligence"
           : screen === "videoWall" ? "stage" : screen ? "interactive" : "retained";

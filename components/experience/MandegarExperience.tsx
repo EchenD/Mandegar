@@ -11,6 +11,7 @@ import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
+import { getInteractionCopy } from "./interactions/interaction-copy";
 import { AmbientGame } from "./interactions/AmbientGame";
 import { IntelligenceInspector } from "./IntelligenceInspector";
 import { IntelligenceMonitor } from "./IntelligenceMonitor";
@@ -167,6 +168,7 @@ export function MandegarExperience({
   lenisEnabled = false,
 }: ExperienceProps) {
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
+  const interactionCopy = useMemo(() => getInteractionCopy(locale), [locale]);
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(12);
   const [interactionReady, setInteractionReady] = useState(false);
@@ -438,7 +440,7 @@ export function MandegarExperience({
           <IntelligenceInspector locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
           <IntelligenceMonitor locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
 
-          <div className={styles.copyLayer}>
+          <div className={styles.copyLayer} data-copy-layer>
             <section className={styles.sceneCopy} data-scene-copy="arrival" data-cinematic-beat>
               <span data-copy-line>01 / {copy.phases.arrival}</span>
               <h2 data-copy-line>{copy.arrivalLabel}</h2>
@@ -450,30 +452,20 @@ export function MandegarExperience({
               <h2 data-copy-line>{copy.discoveryTitle}</h2>
               <p data-copy-line>{copy.discoveryBody}</p>
             </section>
-            <section className={styles.sceneCopy} data-scene-copy="activation" data-cinematic-beat>
-              <span data-copy-line>{copy.activationEyebrow}</span>
-              <h2 data-copy-line>{copy.activationTitle}</h2>
-              <p data-copy-line>{copy.activationBody}</p>
+            <section className={styles.sceneCopy} data-scene-copy="activation" data-interaction-cue data-cinematic-beat>
+              <p data-copy-line>{interactionCopy.stations.photo.instruction}</p>
             </section>
-            <section className={styles.sceneCopy} data-scene-copy="engagement" data-cinematic-beat>
-              <span data-copy-line>{copy.engagementEyebrow}</span>
-              <h2 data-copy-line>{copy.engagementTitle}</h2>
-              <p data-copy-line>{copy.engagementBody}</p>
+            <section className={styles.sceneCopy} data-scene-copy="engagement" data-interaction-cue data-cinematic-beat>
+              <p data-copy-line>{interactionCopy.stations.touch.instruction}</p>
             </section>
-            <section className={styles.sceneCopy} data-scene-copy="reveal" data-cinematic-beat>
-              <span data-copy-line>{copy.revealEyebrow}</span>
-              <h2 data-copy-line>{copy.revealTitle}</h2>
-              <p data-copy-line>{copy.revealBody}</p>
+            <section className={styles.sceneCopy} data-scene-copy="reveal" data-interaction-cue data-cinematic-beat>
+              <p data-copy-line>{interactionCopy.stations.stage.instruction}</p>
             </section>
-            <section className={styles.sceneCopy} data-scene-copy="experiences" data-cinematic-beat>
-              <span data-copy-line>{copy.experiencesEyebrow}</span>
-              <h2 data-copy-line>{copy.experiencesTitle}</h2>
-              <p data-copy-line>{copy.experiencesBody}</p>
+            <section className={styles.sceneCopy} data-scene-copy="experiences" data-interaction-cue data-cinematic-beat>
+              <p data-copy-line>{interactionCopy.stations.game.instruction}</p>
             </section>
-            <section className={styles.sceneCopy} data-scene-copy="connection" data-cinematic-beat>
-              <span data-copy-line>{copy.connectionEyebrow}</span>
-              <h2 data-copy-line>{copy.connectionTitle}</h2>
-              <p data-copy-line>{copy.connectionBody}</p>
+            <section className={styles.sceneCopy} data-scene-copy="connection" data-interaction-cue data-cinematic-beat>
+              <p data-copy-line>{interactionCopy.stations.draw.instruction}</p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="proof" data-cinematic-beat>
               <span data-copy-line>{copy.proofEyebrow}</span>

@@ -22,9 +22,15 @@ type SceneInteractionHandler = (event: SceneInteractionEvent) => void;
 export const interactionRuntime: {
   availableStation: InteractionStation | null;
   activeStation: InteractionStation | null;
+  gestureStation: InteractionStation | null;
+  scrollSceneVisit: number;
+  photoHoldProgress: number | null;
+  stageHoldProgress: number | null;
   activeBeams: boolean[];
   stageComplete: boolean;
   stageVisibility: number;
+  stageProgress: number;
+  beamIntensities: number[];
   gameVisibility: number;
   gameHitId: number;
   gameHitX: number;
@@ -35,15 +41,22 @@ export const interactionRuntime: {
   photoStep: "idle" | "ready" | "countdown" | "captured";
   photoCount: number;
   photoVisibility: number;
+  photoProgress: number;
   photoSurface: PhotoSurfaceEntry | null;
   monitorEntries: Partial<Record<BakedScreenId, MonitorEntry>>;
   sceneHandlers: Partial<Record<InteractionStation, SceneInteractionHandler>>;
 } = {
   availableStation: null,
   activeStation: null,
+  gestureStation: null,
+  scrollSceneVisit: 0,
+  photoHoldProgress: null,
+  stageHoldProgress: null,
   activeBeams: [false, false, false, false, false],
   stageComplete: false,
   stageVisibility: 0,
+  stageProgress: 0,
+  beamIntensities: [0, 0, 0, 0, 0],
   gameVisibility: 0,
   gameHitId: 0,
   gameHitX: 0,
@@ -54,6 +67,7 @@ export const interactionRuntime: {
   photoStep: "idle",
   photoCount: 3,
   photoVisibility: 0,
+  photoProgress: 0,
   photoSurface: null,
   monitorEntries: {},
   sceneHandlers: {},
@@ -121,9 +135,15 @@ export function dispatchSceneInteraction(
 export function resetInteractionRuntime() {
   interactionRuntime.availableStation = null;
   interactionRuntime.activeStation = null;
+  interactionRuntime.gestureStation = null;
+  interactionRuntime.scrollSceneVisit = 0;
+  interactionRuntime.photoHoldProgress = null;
+  interactionRuntime.stageHoldProgress = null;
   interactionRuntime.activeBeams = [false, false, false, false, false];
   interactionRuntime.stageComplete = false;
   interactionRuntime.stageVisibility = 0;
+  interactionRuntime.stageProgress = 0;
+  interactionRuntime.beamIntensities = [0, 0, 0, 0, 0];
   interactionRuntime.gameVisibility = 0;
   interactionRuntime.gameHitId = 0;
   interactionRuntime.gameHitX = 0;
@@ -134,6 +154,7 @@ export function resetInteractionRuntime() {
   interactionRuntime.photoStep = "idle";
   interactionRuntime.photoCount = 3;
   interactionRuntime.photoVisibility = 0;
+  interactionRuntime.photoProgress = 0;
   interactionRuntime.photoSurface = null;
   interactionRuntime.monitorEntries = {};
   interactionRuntime.sceneHandlers = {};

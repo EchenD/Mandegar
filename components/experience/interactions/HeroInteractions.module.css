@@ -5,6 +5,50 @@
   pointer-events: none;
 }
 
+.journeyControl {
+  position: absolute;
+  left: 50%;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: .45rem;
+  width: min(34rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  text-align: center;
+  transition: opacity .4s ease, transform .4s ease;
+}
+.journeyMessage { max-width: 32rem; margin: 0; color: #f7f4eb; font-size: clamp(.8rem, 1vw, .95rem); line-height: 1.55; text-wrap: balance; text-shadow: 0 2px 12px #000; }
+.root[data-presentation="departing"] .journeyControl { opacity: 0; transform: translate(-50%, .4rem); pointer-events: none; }
+.root[data-presentation="departing"] button { pointer-events: none; }
+.root[data-presentation="departing"] .mobileDrawingDock { opacity: 0; transition: opacity .38s ease; }
+.journeyControl > span { color: #f0ebe1; padding: .2rem .65rem; border-radius: 1rem; background: rgba(22,25,29,.55); font-size: .7rem; white-space: nowrap; }
+.journeyButton, .replayButton {
+  min-height: 2.75rem;
+  padding: .55rem 1.3rem;
+  border: 1px solid rgba(226,216,194,.5);
+  border-radius: 999px;
+  color: #f7f4eb;
+  background: rgba(22,25,29,.88);
+  box-shadow: 0 .4rem 1.5rem rgba(0,0,0,.12);
+  font: inherit;
+  font-size: .8rem;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background .2s ease, border-color .2s ease;
+}
+.journeyButton:hover, .replayButton:hover { border-color: #c9b28a; background: #293137; }
+.journeyButton:focus-visible, .replayButton:focus-visible { outline: 2px solid #225cff; outline-offset: 4px; }
+.journeyReplay { min-height: 2.75rem; padding: .4rem 1rem; border: 0; border-radius: 999px; color: #f7f4eb; background: rgba(22,25,29,.75); font: inherit; font-size: .8rem; cursor: pointer; pointer-events: auto; }
+.journeyReplay:focus-visible { outline: 2px solid #225cff; outline-offset: 4px; }
+.journeyButton { position: relative; overflow: hidden; padding-block-end: .8rem; }
+.skipTrack { position: absolute; inset-inline: 1rem; bottom: .3rem; height: 3px; overflow: hidden; border-radius: 999px; background: rgba(226,216,194,.2); }
+.skipTrack > i { display: block; width: 100%; height: 100%; background: #d9bc85; transform-origin: left center; transition: transform .18s ease-out; }
+[dir="rtl"] .skipTrack > i { transform-origin: right center; }
+@media (prefers-reduced-motion: reduce) { .skipTrack > i { transition: none; } }
+.replayButton { position: absolute; top: 100%; left: 50%; display: block; width: fit-content; margin: 1rem 0 0; transform: translateX(-50%); color: var(--experience-ink); border-color: var(--experience-muted); background: var(--experience-control); box-shadow: none; }
+.replayButton:hover { color: #f7f4eb; }
+
 .mobileSkipButton {
   position: absolute;
   right: 1.5rem;
@@ -352,9 +396,10 @@
 @keyframes photoCopyArrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 760px) {
+  .journeyControl[data-phase] { left: 50%; bottom: max(1rem, env(safe-area-inset-bottom)); }
   .puzzleInteraction {
     left: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
     z-index: 2;
     display: grid;
     gap: .35rem;
@@ -376,7 +421,7 @@
   .mobileGameDock {
     position: absolute;
     left: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
     z-index: 2;
     display: grid;
     gap: .5rem;
@@ -391,7 +436,7 @@
   }
   .mobileGameHeader { display: flex; align-items: center; justify-content: space-between; gap: .65rem; font-size: .7rem; }
   .mobileGameHeader > strong { min-width: 0; font-size: .875rem; font-weight: 600; }
-  .mobileGameStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; min-width: 10rem; margin: 0; text-align: center; }
+  .mobileGameStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; min-width: 10rem; margin: 0; text-align: center; }
   .mobileGameStats dt { color: rgba(247,247,244,.62); font-size: .625rem; line-height: 1.5; }
   .mobileGameStats dd { margin: .1rem 0 0; color: #75d8ff; font-size: .875rem; font-weight: 650; line-height: 1.4; }
   .mobileGameActions { display: grid; grid-template-columns: minmax(2.75rem, 1fr) minmax(6rem, 2fr) minmax(2.75rem, 1fr); gap: .4rem; direction: ltr; }
@@ -443,7 +488,7 @@
   .mobileDrawingDock {
     position: absolute;
     left: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
     z-index: 2;
     display: grid;
     gap: .65rem;
@@ -490,6 +535,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .journeyControl { transition: none; }
   .puzzleGrid button { transition: none; }
   .photoSceneCopy,
   .photoSceneContent { animation: none !important; transition: none !important; }

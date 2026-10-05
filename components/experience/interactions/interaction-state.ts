@@ -53,10 +53,10 @@ export function interactionReducer(
         completed: { ...state.completed, [action.station]: true },
       };
     case "RESTART":
-      if (state.activeStation !== action.station) return state;
+      if (state.activeStation !== action.station && state.availableStation !== action.station) return state;
       return {
         ...state,
-        lifecycle: "active",
+        lifecycle: state.activeStation ? "active" : state.lifecycle,
         completed: { ...state.completed, [action.station]: false },
       };
     case "EXIT":

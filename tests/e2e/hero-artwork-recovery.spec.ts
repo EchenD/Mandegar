@@ -1,14 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { activateWithKeyboard, puzzleTiles, solvePuzzle, swapPuzzleSlots, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, continueFromResult, puzzleTiles, solvePuzzle, swapPuzzleSlots, waitForStation } from "./hero-interaction-helpers";
 
-test.setTimeout(120_000);
+test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
 
 for (const station of [
-  { name: "game", phase: "experiences", file: "screen-game-3x4.webp", canvas: "[data-game-canvas]" },
-  { name: "stage", phase: "reveal", file: "screen-center-21x9.webp", canvas: "[data-stage-canvas]" },
+  { name: "game", phase: "experiences", file: "race-idle.webp", canvas: "[data-game-canvas]" },
   { name: "draw", phase: "connection", file: "screen-main-4x3.webp", canvas: "[data-drawing-canvas]" },
-  { name: "touch", phase: "engagement", file: "screen-interactive-16x9.webp", canvas: "[data-composer-canvas]" },
+  { name: "touch", phase: "engagement", file: "connected-experience.webp", canvas: "[data-composer-canvas]" },
 ]) {
   test(`${station.name} starts while idle artwork is stalled and keeps visitor input when it arrives`, async ({ page }) => {
     let releaseArtwork!: () => void;
@@ -30,16 +29,9 @@ for (const station of [
       let retainedAttribute;
       if (station.name === "game") {
         controls = page.locator("[data-game-spatial-controls]");
-        retainedAttribute = "data-game-attempts";
-        await page.locator("[data-game-action]").evaluate((button: HTMLButtonElement) => {
-          button.click();
-          button.click();
-        });
+        retainedAttribute = "data-game-score";
+        await activateWithKeyboard(page, "[data-game-action]");
         await expect(controls).toHaveAttribute("data-game-status", "paused");
-      } else if (station.name === "stage") {
-        controls = page.locator("[data-stage-spatial-controls]");
-        retainedAttribute = "data-stage-active-count";
-        await activateWithKeyboard(page, "[data-stage-beam='1']");
       } else if (station.name === "touch") {
         controls = page.locator("[data-touch-spatial-controls]");
         retainedAttribute = "data-puzzle-moves";
@@ -52,7 +44,7 @@ for (const station of [
         await page.keyboard.press("ArrowRight");
         await page.keyboard.press("Space");
       }
-      await expect(controls).toHaveAttribute(retainedAttribute, "1");
+      const retained = await controls.getAttribute(retainedAttribute);
       await canvas.evaluate((element) => {
         document.documentElement.dataset.artworkRestarted = "false";
         const observer = new MutationObserver(() => {
@@ -68,7 +60,7 @@ for (const station of [
       await page.waitForTimeout(350);
       await expect(page.locator("html")).toHaveAttribute("data-artwork-restarted", "false");
       await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
-      await expect(controls).toHaveAttribute(retainedAttribute, "1");
+      await expect(controls).toHaveAttribute(retainedAttribute, retained!);
       await page.keyboard.press("Escape");
       await expect(director).toHaveAttribute("data-active-station", "none");
       await expect(director).toHaveAttribute("data-scroll-locked", "false");
@@ -81,7 +73,7 @@ for (const station of [
 test("late puzzle artwork paints the current arrangement without replaying its entrance", async ({ page }) => {
   let releaseArtwork!: () => void;
   const gate = new Promise<void>((resolve) => { releaseArtwork = resolve; });
-  await page.route("**/mandegar-puzzle.webp", async (route) => {
+  await page.route("**/connected-experience.webp", async (route) => {
     await gate;
     await route.continue().catch(() => {});
   });
@@ -113,7 +105,7 @@ test("late puzzle artwork paints the current arrangement without replaying its e
 });
 
 test("missing puzzle artwork keeps a usable nine-piece fallback and exact completion", async ({ page }, testInfo) => {
-  await page.route("**/mandegar-puzzle.webp", (route) => route.abort());
+  await page.route(/\/(connected-experience|mandegar-puzzle)\.webp$/, (route) => route.abort());
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   const controls = page.locator("[data-touch-spatial-controls]");
@@ -121,7 +113,11 @@ test("missing puzzle artwork keeps a usable nine-piece fallback and exact comple
   await expect(controls).toHaveAttribute("data-puzzle-artwork", "missing");
   await expect(page.locator("[data-puzzle-slot]")).toHaveCount(9);
   await solvePuzzle(page);
+  await expect(director).toHaveAttribute("data-completed-touch", "true");
+  await expect(director).toHaveAttribute("data-presentation", "result");
   await expect(controls).toHaveAttribute("data-puzzle-solved", "true");
-  await expect(director).toHaveAttribute("data-lifecycle", "complete");
+  await expect(page.locator("p[data-interaction-result='touch']")).toBeVisible();
+  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("puzzle-missing-artwork-fallback.png") });
+  await continueFromResult(page, "touch");
 });

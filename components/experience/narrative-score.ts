@@ -258,7 +258,8 @@ export function getNarrativeFrame(progress: number): NarrativeFrame {
 }
 
 export function getNarrativePreview(value: string | null) {
-  return narrativeScore.find((beat) => beat.id === value)?.preview;
+  const beat = narrativeScore.find((beat) => beat.id === value);
+  return beat?.id === "engagement" ? beat.start + (beat.end - beat.start) * 0.7 : beat?.preview;
 }
 
 export function validateNarrativeScore(score: readonly NarrativeBeat[] = narrativeScore) {

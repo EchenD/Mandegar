@@ -1,5 +1,11 @@
 import { isValidPuzzleTiles, shufflePuzzleTiles, type PuzzleProgress } from "./puzzle-engine";
 
+export type DrawingStroke = Array<{ x: number; y: number }>;
+let drawingDraft: DrawingStroke[] = [];
+export function getDrawingDraft() { return drawingDraft.map((stroke) => stroke.map((point) => ({ ...point }))); }
+export function saveDrawingDraft(strokes: DrawingStroke[]) { drawingDraft = strokes.map((stroke) => stroke.map((point) => ({ ...point }))); }
+export function clearDrawingDraft() { drawingDraft = []; }
+
 export type VisitorCreation = {
   lighting: boolean[];
   puzzle: PuzzleProgress;
