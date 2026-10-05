@@ -1,0 +1,25 @@
+# Hero flow feedback
+
+This records the earlier flow revisions. The current approved behavior is in [hero-final-polish.md](hero-final-polish.md), including fresh forward starts, removal of Replay, camera movement during Skip scrolling, and the new artwork.
+
+Earlier approved behavior:
+
+- Photo capture, phone delivery, and stage lighting enter a short camera hold on normal forward arrival, using the same central Skip meter. Three normal wheel increments or 180 pixels of outside touch movement fill it. Photo keeps its original world placement and flight path: a 1.5-second countdown, 0.55-second delivery, and 0.55-second viewing interval. Beams build over 2.4 seconds. Filling early queues the final forward increment until the short sequence finishes. Clicking Skip, Escape, and reverse scrolling leave immediately. Forward travel retains the delivered photo and lit beams until the native timeline catches up; reverse scrolling retraces them.
+- Puzzle, race, and drawing enter on each normal forward visit across the chapter's reading interval, including ordinary scrolling from the real intro. A reverse retreat or leaving the chapter rearms the next forward visit; exiting at the same position never immediately reopens it. Entry acquires the scroll hold immediately so the arriving gesture's remaining movement does not cancel the station. Fast passes never pull the camera back. Reverse visits preserve the previous result. Replay appears after actual participation and leaving or completion; untouched automatic visits do not enable it. A completed result on a new forward visit retains Skip and, when earned, Replay until the visitor chooses what to do.
+- Skip occupies the chapter text position and displays a fill bar. For puzzle, race, and drawing its fill now takes 1080 pixels of forward wheel input (nine normal increments) or 540 pixels of outside touch movement, three times its previous distance. Small trackpad packets accumulate, and oversized wheel packets are capped to one normal increment. Actual drawing, tile dragging, and steering retain their own gestures and reset the fill. Clicking Skip, Escape, and reverse scrolling leave immediately.
+- Completion restores chapter text and releases scrolling. Replay explicitly resets the current activity. Existing monitor controls remain available.
+- The top-down race starts automatically, has no time limit, and ends on a traffic collision or Finish. Leaving switches to independent autonomous driving; that driving never changes the visitor's best distance.
+- Unfinished puzzle and drawing progress survives leaving and returning during the visit. A race left in progress is retained paused until resumed or replayed.
+- Authored age, gender, interest, and expression appear beside the selected person in English, Persian, and Arabic. Booth and activity monitor readouts add authored participation figures on hover or selection. The wide Intelligence monitor retains its signal graphics and data; labels describe participation without demo/test wording.
+
+The camera now samples Lenis's fractional animated scroll position rather than rounded DOM scroll positions. Identical updates from native scroll and GSAP are deduplicated. This preserves the deceleration curve without a stepped tail.
+
+Direction changes accumulate more than one pixel, keeping native rounding from turning a first arrival into a reverse visit. Mobile arrival waits for the gesture and native momentum to settle. Deduplication also checks narrative state, preserving the chapter after reduced-motion recovery.
+
+Regression coverage for the retired photo buttons, selectable beam controls, and Breakout round moved to `tests/e2e/hero-flow.spec.ts`. Separate tests retain native game pointer capture, keyboard access, mobile layout, runtime recovery, puzzle geometry and dragging, drawing, and monitor ownership.
+
+No CMS schema, credentials, model geometry, or environment variables are required for these changes.
+
+The earlier implementation was validated with lint, TypeScript, a production build of all three locales, and focused Chromium checks covering real intro traversal, automatic activity entry, trackpad packets, mobile swipes, played-only Replay, saved progress, race pointer capture and autonomous driving, completion release, focus restoration, reduced-motion recovery, and station/person insight selection. Review captures are in `Docs/hero-flow-review/`. Repeat-visit and protected photo/beam hold regression cases are in `tests/e2e/hero-scroll-hold.spec.ts`.
+
+The slower Skip and repeat-visit revision passes focused Chromium checks for nine wheel increments through the real Persian intro, small scroll packets, three longer mobile swipes, retained unfinished puzzle progress, repeated forward visits, protected photo/beam holds, smooth continuation, reverse exits, a mobile swipe continuing with the same finger, completed puzzle/race/drawing results, explicit Replay, reduced motion, and the fractional scroll tail. The release listener handles each lock transition once so its MutationObserver cannot discard the queued forward scroll.
