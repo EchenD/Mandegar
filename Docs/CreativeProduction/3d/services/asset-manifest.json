@@ -1,0 +1,150 @@
+{
+  "source": "Blender 5.0; authored by scripts/blender/build-services.py",
+  "nodes": [
+    "ServicesPlatform",
+    "ServicesEvent",
+    "ServicesExhibition",
+    "ServicesDigital",
+    "ServicesContent",
+    "ServicesAdvertising"
+  ],
+  "detailNodes": [
+    "ServicesEvent_Details",
+    "ServicesExhibition_Details",
+    "ServicesDigital_Details",
+    "ServicesContent_Details",
+    "ServicesAdvertising_Details"
+  ],
+  "deckHeight": 0.24,
+  "platformSize": [
+    4.8,
+    4
+  ],
+  "glbBytes": 3516172,
+  "materials": 11,
+  "totalDrawCalls": 16,
+  "drawCallsPerPose": {
+    "ServicesEvent": 4,
+    "ServicesExhibition": 4,
+    "ServicesDigital": 4,
+    "ServicesContent": 4,
+    "ServicesAdvertising": 4
+  },
+  "textureBytes": 916209,
+  "animation": "Runtime deterministic rotation and staggered architecture/equipment assembly; no animation clips",
+  "externalMedia": false,
+  "triangles": 42830,
+  "textures": [
+    {
+      "name": "platform",
+      "mimeType": "image/jpeg",
+      "bytes": 69716
+    },
+    {
+      "name": "events",
+      "mimeType": "image/jpeg",
+      "bytes": 165796
+    },
+    {
+      "name": "events-shadow",
+      "mimeType": "image/png",
+      "bytes": 20501
+    },
+    {
+      "name": "exhibitions",
+      "mimeType": "image/jpeg",
+      "bytes": 134834
+    },
+    {
+      "name": "exhibitions-shadow",
+      "mimeType": "image/png",
+      "bytes": 21113
+    },
+    {
+      "name": "web-apps",
+      "mimeType": "image/jpeg",
+      "bytes": 166542
+    },
+    {
+      "name": "web-apps-shadow",
+      "mimeType": "image/png",
+      "bytes": 18725
+    },
+    {
+      "name": "content",
+      "mimeType": "image/jpeg",
+      "bytes": 137567
+    },
+    {
+      "name": "content-shadow",
+      "mimeType": "image/png",
+      "bytes": 19150
+    },
+    {
+      "name": "advertising",
+      "mimeType": "image/jpeg",
+      "bytes": 142018
+    },
+    {
+      "name": "advertising-shadow",
+      "mimeType": "image/png",
+      "bytes": 20247
+    }
+  ],
+  "uv0": true,
+  "unlit": true,
+  "groundShadowNodes": [
+    "ServicesEvent_GroundShadow",
+    "ServicesExhibition_GroundShadow",
+    "ServicesDigital_GroundShadow",
+    "ServicesContent_GroundShadow",
+    "ServicesAdvertising_GroundShadow"
+  ],
+  "bake": {
+    "script": "scripts/blender/bake-services.py",
+    "engine": "Cycles",
+    "samples": 512,
+    "device": "GPU",
+    "atlasSize": 1024,
+    "shadowSize": 512,
+    "jpegQuality": 90,
+    "isolation": "One kit plus platform per bake; platform is neutral",
+    "displayTransform": "Authored view transform saved into JPEG, then unlit Standard/sRGB output",
+    "closedWindingValidated": 166,
+    "shadowMethod": "Single key direct-only grayscale illumination ratio; no world/GI; smoothstep threshold .04; rounded RGBA mask",
+    "shadowBlurRadius": 3,
+    "shadowBlurSigma": 1,
+    "sourcePreserved": "mandegar-services.blend",
+    "bakedSource": "mandegar-services-baked.blend",
+    "durationSeconds": 451.45,
+    "quality": "studio",
+    "adaptiveThreshold": 0.003,
+    "adaptiveMinSamples": 64,
+    "denoiser": "OpenImageDenoise",
+    "denoisingInput": "Color + Albedo + Normal",
+    "denoisingPrefilter": "Accurate",
+    "denoisingQuality": "High",
+    "uvMarginPixels": 12,
+    "uvMarginType": "Adjacent Faces",
+    "maxBounces": 4,
+    "diffuseBounces": 2,
+    "glossyBounces": 2,
+    "indirectClamp": 3,
+    "shadowMaxAlpha": 0.26,
+    "lighting": "Neutral world .5; key 1000W/5m; fill 450W/6m and rim 600W/5m without shadows",
+    "references": [
+      "https://developer.blender.org/docs/release_notes/3.0/cycles/",
+      "https://developer.blender.org/docs/release_notes/3.1/cycles/",
+      "https://docs.blender.org/manual/en/5.0/render/cycles/render_settings/sampling.html",
+      "https://docs.blender.org/manual/en/5.0/render/lights/light_object.html"
+    ],
+    "postersSource": "mandegar-services-baked.blend"
+  },
+  "posters": {
+    "events": 14438,
+    "exhibitions": 12306,
+    "web-apps": 13140,
+    "content": 13506,
+    "advertising": 13526
+  }
+}
