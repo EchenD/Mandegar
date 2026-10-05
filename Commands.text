@@ -1,7 +1,7 @@
 npm run dev
-http://localhost:3100/fa?intro=0&phase=discovery&creative=1
-http://localhost:3100/fa?intro=0&phase=experiences
-http://localhost:3100/fa?intro=0&phase=reveal
+http://localhost:3300/fa?intro=0&phase=discovery&creative=1
+http://localhost:3300/fa?intro=0&phase=experiences
+http://localhost:3300/fa?intro=0&phase=reveal
 
 
 npm run build:pages

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3100",
+    "dev": "next dev --port 3300",
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib sanity tests sanity.config.ts sanity.cli.ts next.config.ts playwright.config.ts",
