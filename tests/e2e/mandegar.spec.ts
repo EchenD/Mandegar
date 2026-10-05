@@ -506,12 +506,8 @@ test.describe("Mandegar responsive layout", () => {
     await root.evaluate((node) => {
       node.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: .995 } }));
     });
-    await page.evaluate(() => {
-      const projects = document.querySelector<HTMLElement>("[data-connected-journey]");
-      if (projects) {
-        const travel = projects.clientHeight - window.innerHeight;
-        window.scrollTo({ top: projects.offsetTop + travel * .08, behavior: "auto" });
-      }
+    await journey.evaluate((node) => {
+      node.dispatchEvent(new CustomEvent("mandegar:journey-seek", { detail: { label: "Work" } }));
     });
     await expect.poll(() => journey.locator("[data-journey-surface]").evaluate((node) => (
       Math.round(node.getBoundingClientRect().top)
@@ -532,8 +528,11 @@ test.describe("Mandegar responsive layout", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     expect(Math.round(await page.evaluate(() => window.scrollY))).toBe(0);
     await page.waitForLoadState("networkidle");
+    await expect(page.locator("[aria-label*='Preparing the exhibition world']")).toHaveAttribute("data-complete", "true", { timeout: 30_000 });
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
-    await expect.poll(() => page.locator("[data-experience-root]").getAttribute("data-native-progress")).toBe("0.0000");
+    await expect.poll(async () => Number.parseFloat(
+      await page.locator("[data-experience-root]").getAttribute("data-native-progress") ?? "NaN",
+    )).toBe(0);
   });
 
   test("connected journey keeps native scroll and holds the active project", async ({ page }) => {
@@ -544,12 +543,9 @@ test.describe("Mandegar responsive layout", () => {
     const journey = page.locator("[data-connected-journey]");
     const firstProject = journey.locator("[data-project-copy='0']");
     const heading = firstProject.getByRole("heading", { level: 2 });
-    const start = await journey.evaluate((node) => {
-      const top = node.getBoundingClientRect().top + window.scrollY;
-      const travel = node.clientHeight - window.innerHeight;
-      return top + travel * .08;
+    await journey.evaluate((node) => {
+      node.dispatchEvent(new CustomEvent("mandegar:journey-seek", { detail: { label: "Work" } }));
     });
-    await page.evaluate((top) => window.scrollTo(0, top), start);
     await expect(firstProject.getByRole("link")).toBeVisible();
     await expect.poll(() => journey.locator("[data-journey-surface]").evaluate((node) => (
       Math.round(node.getBoundingClientRect().top)

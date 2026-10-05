@@ -15,6 +15,10 @@ import {
   type PartnerFinaleBridge,
   type PartnerFinaleMedia,
 } from "./PartnerFinaleCanvas";
+import { preloadServicesScene, ServicesSceneCanvas, type ServicesSceneBridge } from "./ServicesSceneCanvas";
+import { ServicesShowcase } from "./ServicesShowcase";
+import { serviceChapters } from "./services-copy";
+import { getServicesColorReveal, getServicesMotionState, SERVICE_POSES, SERVICE_TURN_PADDING } from "./services-score";
 
 export type JourneyProject = {
   slug: string;
@@ -85,6 +89,26 @@ function isHeroPhotoResult(src: string) {
   return src.split(/[?#]/, 1)[0].endsWith("/media/placeholders/photo-experience.webp");
 }
 
+function serviceWritingProgress(progress: number, index: number) {
+  const pose = SERVICE_POSES[index];
+  const previousPose = SERVICE_POSES[index - 1];
+  const turnStart = index ? previousPose + SERVICE_TURN_PADDING : 0;
+  const turnEnd = index ? pose - SERVICE_TURN_PADDING : .1;
+  const titleStart = index ? turnStart + (turnEnd - turnStart) * .65 : .032;
+  const titleEnd = pose - .022;
+  const descriptionStart = pose - .055;
+  const descriptionEnd = pose;
+  const titleEraseStart = index === SERVICE_POSES.length - 1 ? .92 : pose + .0625;
+  const titleEraseEnd = index === SERVICE_POSES.length - 1 ? .974 : (pose + SERVICE_POSES[index + 1]) / 2;
+  const descriptionEraseStart = index === SERVICE_POSES.length - 1 ? .9 : pose + .035;
+  const descriptionEraseEnd = index === SERVICE_POSES.length - 1 ? .942 : pose + .06;
+  const portion = (start: number, end: number) => THREE.MathUtils.clamp((progress - start) / (end - start), 0, 1);
+  return {
+    title: portion(titleStart, titleEnd) * (1 - portion(titleEraseStart, titleEraseEnd)),
+    description: portion(descriptionStart, descriptionEnd) * (1 - portion(descriptionEraseStart, descriptionEraseEnd)),
+  };
+}
+
 export function ConnectedJourney({ locale, projects, copy, clients = emptyClients, aboutHref, onWorkReady }: Props) {
   const root = useRef<HTMLElement>(null);
   const [reduced, setReduced] = useState(false);
@@ -92,8 +116,14 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const [spatialEnabled, setSpatialEnabled] = useState(true);
   const [partnerCanvasMounted, setPartnerCanvasMounted] = useState(false);
   const [partnerMediaSeed, setPartnerMediaSeed] = useState<number | null>(null);
+  const [servicesCanvasMounted, setServicesCanvasMounted] = useState(false);
+  const [serviceSceneReady, setServiceSceneReady] = useState(false);
+  const [serviceSpatialFailed, setServiceSpatialFailed] = useState(false);
+  const [activeServiceIndex, setActiveServiceIndex] = useState(0);
   const partnerCanvasMountedRef = useRef(false);
+  const servicesCanvasMountedRef = useRef(false);
   const partnerFinaleBridge = useRef<PartnerFinaleBridge>({ progress: 0, ready: false });
+  const servicesBridge = useRef<ServicesSceneBridge>({ progress: 0, ready: false });
   const selected = useMemo(() => projects.filter(project => project.mediaSrc).slice(0, 8), [projects]);
   const sphereProjects = useMemo(() => selected.length
     ? Array.from({ length: 8 }, (_, index) => selected[index % selected.length])
@@ -141,6 +171,21 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const typing = aboutTyping[locale];
   const firstPartnerImage = partnerFinaleMedia.find((item) => item.kind !== "video"
     && !/\.(mp4|webm|mov)(?:$|\?)/i.test(item.src));
+  const staticJourney = reduced || !selected.length;
+  const servicesSpatialEnabled = spatialEnabled && !serviceSpatialFailed;
+
+  useEffect(() => {
+    const bridge = servicesBridge.current;
+    const ready = (value: boolean) => setServiceSceneReady(value);
+    const failed = () => setServiceSpatialFailed(true);
+    bridge.onReady = ready;
+    bridge.onError = failed;
+    if (bridge.ready) ready(true);
+    return () => {
+      if (bridge.onReady === ready) bridge.onReady = undefined;
+      if (bridge.onError === failed) bridge.onError = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -173,6 +218,13 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       setReduced(motion.matches);
       setMobile(size.matches);
       setSpatialEnabled(nextSpatialEnabled);
+      if (nextSpatialEnabled && selected.length && !servicesCanvasMountedRef.current) {
+        // Fetch and warm the inactive services scene during the opening experience.
+        // A fast native scroll through Projects must not start its first load.
+        preloadServicesScene();
+        servicesCanvasMountedRef.current = true;
+        setServicesCanvasMounted(true);
+      }
       if (nextSpatialEnabled && !partnerCanvasMountedRef.current) {
         partnerCanvasMountedRef.current = true;
         setPartnerCanvasMounted(true);
@@ -182,7 +234,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     motion.addEventListener("change", sync);
     size.addEventListener("change", sync);
     return () => { motion.removeEventListener("change", sync); size.removeEventListener("change", sync); };
-  }, []);
+  }, [selected.length]);
 
   useLayoutEffect(() => {
     const node = root.current;
@@ -191,15 +243,46 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       const link = node.querySelector<HTMLElement>("[data-project-copy='0'] a");
       (link ?? node).focus({ preventScroll: true });
     };
-    if (!selected.length || reduced) {
+    if (staticJourney) {
+      const seekStatic = (label: string) => {
+        const index = /^Service([1-5])$/.exec(label)?.[1];
+        const target = index
+          ? node.querySelector<HTMLElement>(`[data-service-index="${Number(index) - 1}"]`)
+          : label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]") : node;
+        target?.scrollIntoView({ behavior: "instant", block: "start" });
+      };
+      const handleSeek = (event: Event) => {
+        const label = (event as CustomEvent<{ label?: string }>).detail?.label;
+        if (label) seekStatic(label);
+      };
+      node.addEventListener("mandegar:journey-seek", handleSeek);
       onWorkReady?.(() => {
         node.scrollIntoView({ behavior: "instant", block: "start" });
         focusWork();
       });
-      return () => onWorkReady?.(null);
+      return () => {
+        onWorkReady?.(null);
+        node.removeEventListener("mandegar:journey-seek", handleSeek);
+      };
     }
     let jumpToWork: (() => void) | undefined;
+    let seekToLabel: ((label: string) => void) | undefined;
+    const handleJourneySeek = (event: Event) => {
+      const label = (event as CustomEvent<{ label?: string }>).detail?.label;
+      if (label) seekToLabel?.(label);
+    };
+    node.addEventListener("mandegar:journey-seek", handleJourneySeek);
     const partnerBridge = partnerFinaleBridge.current;
+    const serviceBridge = servicesBridge.current;
+    const servicesLayer = node.querySelector<HTMLElement>("[data-services]")!;
+    const servicePanels = Array.from(node.querySelectorAll<HTMLElement>("[data-service-copy]"));
+    const serviceText = serviceChapters.map((service, index) => ({
+      panel: servicePanels[index],
+      title: servicePanels[index].querySelector<HTMLElement>("[data-service-title-text]")!,
+      description: servicePanels[index].querySelector<HTMLElement>("[data-service-description-text]")!,
+      titleCharacters: Array.from(service.title[locale]),
+      descriptionCharacters: Array.from(service.description[locale]),
+    }));
     gsap.registerPlugin(ScrollTrigger);
     const rtl = locale !== "en";
     const chapter = (i: number) => `[data-project-copy="${i}"]`;
@@ -398,10 +481,16 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       if (event.pointerType === "touch") return;
       cameraMotion.targetX = THREE.MathUtils.clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
       cameraMotion.targetY = THREE.MathUtils.clamp((event.clientY / window.innerHeight) * 2 - 1, -1, 1);
+      serviceBridge.pointerX = cameraMotion.targetX;
+      serviceBridge.pointerY = cameraMotion.targetY;
+      if (serviceBridge.active) serviceBridge.invalidate?.();
     };
     const resetPointer = () => {
       cameraMotion.targetX = 0;
       cameraMotion.targetY = 0;
+      serviceBridge.pointerX = 0;
+      serviceBridge.pointerY = 0;
+      if (serviceBridge.active) serviceBridge.invalidate?.();
     };
     let motionFrame = 0;
     let previousFrame = performance.now();
@@ -428,6 +517,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       gsap.set("[data-projects-world]", { autoAlpha: 1 });
       gsap.set("[data-about]", { autoAlpha: 1 });
       gsap.set("[data-about-backdrop], [data-about-kicker], [data-about-link]", { autoAlpha: 0 });
+      gsap.set("[data-services-copy-shell]", { autoAlpha: 0 });
       gsap.set("[data-partners]", { autoAlpha: 0 });
       gsap.set("[data-partners-kicker], [data-partner-center]", { autoAlpha: 0 });
       gsap.set("[data-partner-scene]", { autoAlpha: 1 });
@@ -437,6 +527,10 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       typingWord.textContent = "";
       const projectTitles = Array.from(node.querySelectorAll<HTMLElement>("[data-project-title]"));
       projectTitles.forEach((title) => { title.textContent = ""; });
+      serviceText.forEach(({ title, description }) => {
+        title.textContent = "";
+        description.textContent = "";
+      });
       [aboutKickerText, aboutLinkText, partnerKickerText, partnerCenterText, finaleKickerText, finaleTitleText, finaleCtaText].forEach((element) => {
         element.textContent = "";
       });
@@ -445,8 +539,43 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       renderOrbit();
       renderPartnerWheel();
       let partnerWarmupAt = Number.POSITIVE_INFINITY;
+      let activeService = -1;
+      const renderServices = () => {
+        const motion = getServicesMotionState(serviceBridge.progress);
+        const index = motion.index;
+        servicesLayer.style.setProperty("--services-scale", String(motion.scale));
+        servicesLayer.style.setProperty("--services-presence", String(motion.entry * (1 - motion.exit)));
+        servicesLayer.style.setProperty("--services-color-reveal", String(getServicesColorReveal(motion)));
+        node.dataset.serviceProgress = serviceBridge.progress.toFixed(4);
+        serviceText.forEach(({ panel, title, description, titleCharacters, descriptionCharacters }, serviceIndex) => {
+          const writing = serviceWritingProgress(serviceBridge.progress, serviceIndex);
+          const titleCount = Math.round(writing.title * titleCharacters.length);
+          const descriptionCount = Math.round(writing.description * descriptionCharacters.length);
+          const nextTitle = titleCharacters.slice(0, titleCount).join("");
+          const nextDescription = descriptionCharacters.slice(0, descriptionCount).join("");
+          if (title.textContent !== nextTitle) title.textContent = nextTitle;
+          if (description.textContent !== nextDescription) description.textContent = nextDescription;
+          panel.dataset.titleWriting = String(titleCount > 0 && titleCount < titleCharacters.length);
+          panel.dataset.descriptionWriting = String(descriptionCount > 0 && descriptionCount < descriptionCharacters.length);
+        });
+        if (index !== activeService) {
+          activeService = index;
+          setActiveServiceIndex(index);
+        }
+        serviceBridge.invalidate?.();
+      };
       const tl = gsap.timeline({ defaults: { ease: "power3.inOut" }, onUpdate() {
         const time = this.time();
+        node.dataset.journeyProgress = this.progress().toFixed(4);
+        node.dataset.journeyPhase = time >= this.labels.Finale ? "finale"
+          : time >= this.labels.Partners ? "partners"
+            : time >= this.labels.About ? "about"
+              : time >= this.labels.ServicesEntry ? "services" : "projects";
+        const active = time >= this.labels.ServicesEntry && time < this.labels.About;
+        if (active !== serviceBridge.active) {
+          serviceBridge.active = active;
+          serviceBridge.invalidate?.();
+        }
         if (time >= partnerWarmupAt && !partnerCanvasMountedRef.current) {
           partnerCanvasMountedRef.current = true;
           setPartnerCanvasMounted(true);
@@ -528,6 +657,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       });
       tl.addLabel("Projects", tl.labels.Project1);
       const last = selected.length - 1;
+      tl.addLabel("LastProjectRead", tl.labels[`Project${selected.length}`] + .98);
       dismissProject(last, cursor - .2);
       tl.fromTo(typingCursor, {
           autoAlpha: 0,
@@ -558,7 +688,38 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           onUpdate: renderOrbit,
         }, cursor + .58)
         .set("[data-about-backdrop]", { autoAlpha: 1 }, cursor + 2.12)
-        .set("[data-projects-world]", { autoAlpha: 0 }, cursor + 2.12)
+        .set("[data-projects-world]", { autoAlpha: 0 }, cursor + 2.12);
+
+      const servicesStart = cursor + 2.12;
+      const servicesDuration = mobile ? 8 : 9;
+      const servicesEnd = servicesStart + servicesDuration;
+      tl.addLabel("ProjectsServicesStart", cursor + .58)
+        .addLabel("ProjectsServicesMid", cursor + 1.35)
+        .addLabel("ProjectsServicesEnd", servicesStart + servicesDuration * .12)
+        .addLabel("ServicesEntry", servicesStart)
+        .addLabel("Services", servicesStart + servicesDuration * SERVICE_POSES[0])
+        .set("[data-services]", { autoAlpha: 1 }, servicesStart)
+        .to(serviceBridge, {
+          progress: 1,
+          duration: servicesDuration,
+          ease: "none",
+          onUpdate: renderServices,
+        }, servicesStart)
+        .to(typingCursor, { autoAlpha: 0, duration: .58, ease: "power2.inOut" }, servicesStart + .22)
+        .to("[data-services-copy-shell]", { autoAlpha: 1, duration: .48, ease: "power2.out" }, servicesStart + servicesDuration * .05)
+        .addLabel("ServicesExit", servicesStart + servicesDuration * .9)
+        .addLabel("ServicesAboutStart", servicesStart + servicesDuration * .9)
+        .addLabel("ServicesAboutMid", servicesEnd - .16)
+        .to("[data-services-copy-shell]", { autoAlpha: 0, duration: .48, ease: "power2.in" }, servicesStart + servicesDuration * .9)
+        .to(typingCursor, { autoAlpha: 1, scale: 1, duration: .35, ease: "power2.out" }, servicesStart + servicesDuration * .945)
+        .set("[data-services]", { autoAlpha: 0 }, servicesEnd);
+      SERVICE_POSES.forEach((progress, index) => {
+        tl.addLabel(`Service${index + 1}`, servicesStart + servicesDuration * progress);
+      });
+
+      // Resume the original dot-to-cursor transition after the services platform closes.
+      cursor = servicesEnd - 2.12;
+      tl
         .addLabel("About", cursor + 2.12)
         .to(typingCursor, { autoAlpha: .18, duration: .12, ease: "none" }, cursor + 2.2)
         .to(typingCursor, { autoAlpha: 1, duration: .12, ease: "none" }, cursor + 2.32)
@@ -606,8 +767,10 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         typingCursorTime += Math.max(.48, characters.length * .105);
         tl.addLabel(`About${wordIndex + 1}`, typingCursorTime);
         if (wordIndex === 0) {
+          tl.addLabel("AboutRead", typingCursorTime)
+            .addLabel("ServicesAboutEnd", typingCursorTime);
           tl.set("[data-about-kicker], [data-about-link]", { autoAlpha: 1 }, typingCursorTime - .28);
-          typeText(aboutKickerText, `02 / ${ui.aboutLabel}`, typingCursorTime - .28, .035, .92);
+          typeText(aboutKickerText, `03 / ${ui.aboutLabel}`, typingCursorTime - .28, .035, .92);
           typeText(aboutLinkText, ui.more, typingCursorTime - .18, .04, .88);
         }
         typingCursorTime += mobile ? .66 : .82;
@@ -635,7 +798,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           typingWord.textContent = finalCharacters.slice(0, Math.round(eraseFinalState.count)).join("");
         },
       }, typingCursorTime);
-      eraseText(aboutKickerText, `02 / ${ui.aboutLabel}`, typingCursorTime + .05, .025, .7);
+      eraseText(aboutKickerText, `03 / ${ui.aboutLabel}`, typingCursorTime + .05, .025, .7);
       eraseText(aboutLinkText, ui.more, typingCursorTime + .08, .03, .68);
       tl.set("[data-about-kicker], [data-about-link]", { autoAlpha: 0 }, typingCursorTime + .82);
       typingCursorTime += Math.max(.38, finalCharacters.length * .075) + .12;
@@ -686,7 +849,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         .set("[data-partner-center]", { autoAlpha: 1 }, partnerStart + 3.48)
         .set("[data-partners-kicker]", { autoAlpha: 1 }, partnerStart + 3.62);
       typeText(partnerCenterText, ui.partnersLabel, partnerStart + 3.48, .07, 1.05);
-      typeText(partnerKickerText, `03 / ${ui.partnersLabel}`, partnerStart + 3.62, .035, .9);
+      typeText(partnerKickerText, `04 / ${ui.partnersLabel}`, partnerStart + 3.62, .035, .9);
       tl.to(partnerWheel, {
         rotation: Math.PI / 2,
         duration: 3.25,
@@ -694,7 +857,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         onUpdate: renderPartnerWheel,
       }, partnerStart + 4.5);
       eraseText(partnerCenterText, ui.partnersLabel, foldStart, .045, .72);
-      eraseText(partnerKickerText, `03 / ${ui.partnersLabel}`, foldStart + .06, .028, .72);
+      eraseText(partnerKickerText, `04 / ${ui.partnersLabel}`, foldStart + .06, .028, .72);
 
       tl.to("[data-partner-center], [data-partners-kicker]", { autoAlpha: 0, duration: .28 }, foldStart + .38)
         .to(partnerWheel, {
@@ -730,15 +893,23 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       tl.set("[data-finale-kicker]", { autoAlpha: 1 }, mosaicStart + 9.28)
         .set("[data-final-title]", { autoAlpha: 1 }, mosaicStart + 9.75)
         .set("[data-final-cta]", { autoAlpha: 1 }, mosaicStart + 10.2);
-      typeText(finaleKickerText, "04 / MANDEGAR", mosaicStart + 9.28, .045, .8);
+      typeText(finaleKickerText, "05 / MANDEGAR", mosaicStart + 9.28, .045, .8);
       typeText(finaleTitleText, ui.finale, mosaicStart + 9.75, .052, 1.25);
       typeText(finaleCtaText, ui.contact, mosaicStart + 10.2, .045, .92);
       tl.to({}, { duration: 1.5 });
       node.style.setProperty("--journey-height", `${Math.ceil(tl.duration() * 90 + 100)}svh`);
-      jumpToWork = () => {
+      node.dataset.journeyLabels = JSON.stringify(Object.fromEntries(
+        Object.entries(tl.labels).map(([label, time]) => [label, time / tl.duration()]),
+      ));
+      seekToLabel = (label: string) => {
         const trigger = tl.scrollTrigger;
-        if (!trigger) return;
-        const top = trigger.labelToScroll("Work");
+        if (!trigger || tl.labels[label] === undefined) return;
+        const currentTop = node.getBoundingClientRect().top + window.scrollY;
+        const currentTravel = node.clientHeight - window.innerHeight;
+        if (Math.abs(trigger.start - currentTop) > 1 || Math.abs(trigger.end - trigger.start - currentTravel) > 1) {
+          ScrollTrigger.refresh();
+        }
+        const top = trigger.labelToScroll(label);
         const previousBehavior = document.documentElement.style.scrollBehavior;
         document.documentElement.style.scrollBehavior = "auto";
         document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(
@@ -747,9 +918,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         window.scrollTo({ top, left: 0, behavior: "auto" });
         ScrollTrigger.update();
         trigger.getTween()?.progress(1);
-        tl.time(tl.labels.Work, false);
-        focusWork();
+        tl.time(tl.labels[label], false);
         document.documentElement.style.scrollBehavior = previousBehavior;
+      };
+      jumpToWork = () => {
+        seekToLabel?.("Work");
+        focusWork();
       };
     }, node);
     const refresh = requestAnimationFrame(() => {
@@ -758,6 +932,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     });
     return () => {
       onWorkReady?.(null);
+      node.removeEventListener("mandegar:journey-seek", handleJourneySeek);
       cancelAnimationFrame(refresh);
       cancelAnimationFrame(motionFrame);
       window.removeEventListener("pointermove", handlePointerMove);
@@ -772,6 +947,24 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         partnerBridge.onReady = undefined;
       }
       partnerBridge.invalidate?.();
+      serviceBridge.progress = 0;
+      serviceBridge.active = false;
+      serviceBridge.pointerX = 0;
+      serviceBridge.pointerY = 0;
+      serviceBridge.invalidate?.();
+      serviceText.forEach(({ panel, title, description, titleCharacters, descriptionCharacters }) => {
+        title.textContent = titleCharacters.join("");
+        description.textContent = descriptionCharacters.join("");
+        delete panel.dataset.titleWriting;
+        delete panel.dataset.descriptionWriting;
+      });
+      servicesLayer.style.removeProperty("--services-scale");
+      servicesLayer.style.removeProperty("--services-presence");
+      servicesLayer.style.removeProperty("--services-color-reveal");
+      delete node.dataset.journeyLabels;
+      delete node.dataset.journeyProgress;
+      delete node.dataset.journeyPhase;
+      delete node.dataset.serviceProgress;
       partnerCards.forEach((card) => {
         card.style.removeProperty("transform");
         card.style.removeProperty("opacity");
@@ -787,11 +980,13 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       Array.from(node.querySelectorAll<HTMLElement>("[data-project-title]")).forEach((title, index) => {
         title.textContent = selected[index]?.title || "";
       });
-      aboutKickerText.textContent = `02 / ${ui.aboutLabel}`;
+      aboutKickerText.textContent = `03 / ${ui.aboutLabel}`;
       aboutLinkText.textContent = ui.more;
-      partnerKickerText.textContent = `03 / ${ui.partnersLabel}`;
+      typingBase.textContent = typing.base;
+      typingWord.textContent = typing.words[0];
+      partnerKickerText.textContent = `04 / ${ui.partnersLabel}`;
       partnerCenterText.textContent = ui.partnersLabel;
-      finaleKickerText.textContent = "04 / MANDEGAR";
+      finaleKickerText.textContent = "05 / MANDEGAR";
       finaleTitleText.textContent = ui.finale;
       finaleCtaText.textContent = ui.contact;
       delete document.documentElement.dataset.mandegarTone;
@@ -804,6 +999,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     partnerItems,
     reduced,
     selected,
+    spatialEnabled,
+    staticJourney,
     typing.base,
     typing.words,
     ui.aboutLabel,
@@ -813,8 +1010,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     ui.partnersLabel,
   ]);
 
-  if (!selected.length) return <section ref={root} tabIndex={-1} className={styles.empty}><h2>{copy.projectTitle}</h2><p>{copy.projectsEmpty}</p></section>;
-  return <section ref={root} tabIndex={-1} className={styles.root} data-connected-journey data-post-experience data-motion={reduced ? "reduced" : "full"} aria-label={ui.work}>
+  return <section ref={root} tabIndex={-1} className={styles.root} data-connected-journey data-post-experience data-motion={staticJourney ? "reduced" : "full"} data-active-service={activeServiceIndex} aria-label={ui.work}>
     <div className={styles.stage} data-journey-surface>
       <div className={styles.world} data-world data-layer aria-hidden="true"><span className={styles.orbit} /><span className={styles.worldRule} /></div>
       <div className={styles.projectsWorld} data-projects-world data-layer>
@@ -825,22 +1021,34 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           </div>)}
         </div>
       </div>
+      {!selected.length ? <div className={styles.empty}><h2>{copy.projectTitle}</h2><p>{copy.projectsEmpty}</p></div> : null}
       {selected.map((project, index) => <article className={styles.projectCopy} key={project.slug} data-project-copy={index} data-layer>
-        <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
         <div className={styles.titlePosition}>
-          <small className={styles.projectCategory} data-project-category>
-            {project.category ? `${project.isPlaceholder ? `${ui.demo} / ` : ""}${project.category}` : project.eyebrow || (project.isPlaceholder ? ui.demo : "")}
-          </small>
           <Link href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title}>
             <h2><span data-project-title>{project.title}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
             <span className={styles.projectAction} data-project-action>{copy.viewProject}<span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></span>
           </Link>
         </div>
+        <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
       </article>)}
+
+      <section className={styles.servicesLayer} data-services data-layer aria-label={locale === "fa" ? "خدمات ما" : locale === "ar" ? "خدماتنا" : "Our services"}>
+        {servicesCanvasMounted && servicesSpatialEnabled && !staticJourney ? <div className={styles.servicesScene} aria-hidden="true">
+          <ServicesSceneCanvas bridge={servicesBridge} locale={locale} mobile={mobile} />
+        </div> : null}
+        <ServicesShowcase
+          locale={locale}
+          reduced={staticJourney}
+          mobile={mobile}
+          activeIndex={activeServiceIndex}
+          spatialEnabled={servicesSpatialEnabled}
+          sceneReady={serviceSceneReady}
+        />
+      </section>
 
       <section className={styles.about} data-about data-layer aria-label={ui.aboutLabel}>
         <span className={styles.aboutBackdrop} data-about-backdrop aria-hidden="true" />
-        <small className={styles.kicker} data-about-kicker><span data-about-kicker-text>02 / {ui.aboutLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
+        <small className={styles.kicker} data-about-kicker><span data-about-kicker-text>03 / {ui.aboutLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
         <div className={styles.aboutTyping}>
           <h2 className={styles.typingLine} data-typing-line aria-label={`${typing.base} ${typing.words.join(", ")}`}>
             <span className={styles.typingCopy} aria-hidden="true">
@@ -853,7 +1061,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         <Link className={styles.aboutLink} data-about-link href={aboutHref || localizedPath(locale, "about")}><span data-about-link-text>{ui.more}</span><i className={styles.inlineCursor} aria-hidden="true" /><span aria-hidden="true">↗</span></Link>
       </section>
       <section className={styles.partners} data-partners data-layer aria-label={ui.partnersLabel}>
-        <small className={styles.kicker} data-partners-kicker><span data-partners-kicker-text>03 / {ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
+        <small className={styles.kicker} data-partners-kicker><span data-partners-kicker-text>04 / {ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
         {firstPartnerImage ? <div className={styles.partnerFallback} data-partner-fallback aria-hidden="true">
           <Image
             src={firstPartnerImage.src}
@@ -865,7 +1073,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
             sizes="100vw"
           />
         </div> : null}
-        {partnerCanvasMounted && partnerMediaSeed !== null && spatialEnabled && !reduced ? <PartnerFinaleCanvas
+        {partnerCanvasMounted && partnerMediaSeed !== null && spatialEnabled && !staticJourney ? <PartnerFinaleCanvas
           className={styles.partnerFinaleCanvas}
           bridge={partnerFinaleBridge}
           media={partnerFinaleMedia}
@@ -888,8 +1096,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           </div>
           <h2 className={styles.partnerCenter} data-partner-center><span data-partner-center-text>{ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
         </div>
-        <small className={`${styles.kicker} ${styles.finaleKicker}`} data-finale-kicker><span data-finale-kicker-text>04 / MANDEGAR</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
-        {(!spatialEnabled || reduced) ? <div className={styles.logo} data-logo-fallback role="img" aria-label="Mandegar">
+        <small className={`${styles.kicker} ${styles.finaleKicker}`} data-finale-kicker><span data-finale-kicker-text>05 / MANDEGAR</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
+        {(!spatialEnabled || staticJourney) ? <div className={styles.logo} data-logo-fallback role="img" aria-label="Mandegar">
           <span style={{ WebkitMaskImage: `url("${logo}")`, maskImage: `url("${logo}")` } as CSSProperties} />
         </div> : null}
         <div className={styles.finaleDetail}><h2 data-final-title aria-label={ui.finale}><span data-finale-title-text>{ui.finale}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2><Link data-final-cta href={localizedPath(locale, "contact")}><span data-finale-cta-text>{ui.contact}</span><i className={styles.inlineCursor} aria-hidden="true" /><span aria-hidden="true">↗</span></Link></div>
