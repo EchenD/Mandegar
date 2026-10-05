@@ -1,5 +1,6 @@
 import { narrativeScore } from "./narrative-score";
 import { interactionSurfaceSizes } from "./scene-config";
+import { createIntelligenceMonitorArtwork } from "./intelligence-monitor-painter";
 
 export const intelligenceMonitorSize = interactionSurfaceSizes.videoWall.canvas;
 export const intelligenceMonitorFrameInterval = 1000 / 24;
@@ -13,8 +14,6 @@ const binaryRowCount = 3;
 const binaryFrameCount = 32;
 const binaryBitCount = 56;
 const intelligenceBeat = narrativeScore.find((beat) => beat.id === "intelligence")!;
-const waveColors = ["rgba(107, 225, 255, .9)", "rgba(34, 92, 255, .74)", "rgba(247, 247, 244, .28)"];
-const binaryColors = ["rgba(117, 216, 255, .34)", "rgba(79, 125, 255, .38)", "rgba(247, 247, 244, .22)"];
 
 export type IntelligenceSignalState = {
   person: string | null;
@@ -160,88 +159,6 @@ export function advanceIntelligenceMonitorBlend(current: number, target: number,
 }
 
 /** Resources and text are cached once; painting reuses the same state and canvas. */
-export function createIntelligenceMonitorPainter(context: CanvasRenderingContext2D, _signal: string, example: string, rtl: boolean) {
-  const { width, height } = intelligenceMonitorSize;
-  const background = context.createLinearGradient(0, 0, width, height);
-  background.addColorStop(0, "#09141c");
-  background.addColorStop(0.6, "#111a23");
-  background.addColorStop(1, "#0c1320");
-  const startX = width * 0.045;
-  const waveWidth = width * 0.665;
-  const baseline = height * 0.48;
-  const amplitude = height * 0.235;
-  const ringX = width * 0.893;
-  const ringY = height * 0.39;
-  const ringRadius = height * 0.135;
-  return (state: IntelligenceSignalState) => {
-    context.fillStyle = background;
-    context.fillRect(0, 0, width, height);
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.direction = "ltr";
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-    context.font = '500 16px ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace';
-    for (let row = 0; row < binaryRowCount; row += 1) {
-      context.fillStyle = binaryColors[row];
-      context.fillText(getIntelligenceBinaryRow(state, row), startX, height * 0.13 + row * 24);
-    }
-    context.strokeStyle = "rgba(117, 216, 255, .065)";
-    context.lineWidth = 1;
-    for (let row = -1; row <= 1; row += 1) {
-      context.beginPath();
-      context.moveTo(startX, baseline + row * height * 0.16);
-      context.lineTo(startX + waveWidth, baseline + row * height * 0.16);
-      context.stroke();
-    }
-    for (let wave = waveCount - 1; wave >= 0; wave -= 1) {
-      context.strokeStyle = waveColors[wave];
-      context.lineWidth = wave === 0 ? 3.6 : 2;
-      context.beginPath();
-      for (let index = 0; index < waveSamples; index += 1) {
-        const x = startX + index / (waveSamples - 1) * waveWidth;
-        const y = baseline + state.waves[wave * waveSamples + index] * amplitude;
-        if (index === 0) context.moveTo(x, y);
-        else context.lineTo(x, y);
-      }
-      context.stroke();
-    }
-    context.fillStyle = "rgba(155, 234, 255, .72)";
-    for (let index = 0; index < pointCount; index += 1) {
-      context.beginPath();
-      context.arc(startX + state.points[index * 2] * waveWidth, baseline + state.points[index * 2 + 1] * amplitude, index % 5 === 0 ? 3 : 1.5, 0, tau);
-      context.fill();
-    }
-    context.strokeStyle = "rgba(34, 92, 255, .4)";
-    context.lineWidth = 2.5;
-    context.beginPath();
-    context.arc(ringX, ringY, ringRadius, 0, tau);
-    context.stroke();
-    context.strokeStyle = "rgba(117, 216, 255, .78)";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.arc(ringX, ringY, ringRadius, state.time * 0.38, state.time * 0.38 + Math.PI * 0.7);
-    context.stroke();
-    context.strokeStyle = "rgba(247, 247, 244, .22)";
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.arc(ringX, ringY, ringRadius * 0.67, -state.time * 0.21, -state.time * 0.21 + Math.PI * 1.35);
-    context.stroke();
-    const barWidth = 9;
-    const barGap = 9;
-    const histogramWidth = barCount * (barWidth + barGap) - barGap;
-    const histogramX = ringX - histogramWidth / 2;
-    const histogramY = height * 0.81;
-    for (let index = 0; index < barCount; index += 1) {
-      const barHeight = state.bars[index] * height * 0.2;
-      context.fillStyle = index % 4 === 0 ? "rgba(34, 92, 255, .8)" : "rgba(117, 216, 255, .55)";
-      context.fillRect(histogramX + index * (barWidth + barGap), histogramY - barHeight, barWidth, barHeight);
-    }
-    context.direction = rtl ? "rtl" : "ltr";
-    context.textAlign = rtl ? "right" : "left";
-    context.textBaseline = "middle";
-    context.font = '450 17px "Vazirmatn Variable", Tahoma, sans-serif';
-    context.fillStyle = "rgba(247, 247, 244, .5)";
-    context.fillText(example, rtl ? width - startX : startX, height * 0.91, width * 0.6);
-  };
+export function createIntelligenceMonitorPainter(context: CanvasRenderingContext2D, signal: string, example: string, rtl: boolean) {
+  return createIntelligenceMonitorArtwork(context, signal, example, rtl);
 }

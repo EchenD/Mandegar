@@ -139,7 +139,7 @@ test("temporal monitor fading handles scroll jumps and reverses from the current
   expect(advanceIntelligenceMonitorBlend(Number.NaN, -1, 0.1)).toBe(0);
 });
 
-test("the painter shows a compact binary stream and simulated footer without visible signal titles", () => {
+test("the painter shows localized participation and audience labels without binary rows", () => {
   const labels: string[] = [];
   const rectangles: number[][] = [];
   const context = {
@@ -156,10 +156,8 @@ test("the painter shows a compact binary stream and simulated footer without vis
   const paint = createIntelligenceMonitorPainter(context, "سیگنال نمونه", "داده نمونه · شبیه‌سازی‌شده", true);
   paint(createIntelligenceSignalState("Human_11"));
   expect(rectangles[0]).toEqual([0, 0, 1740, 450]);
-  expect(labels).toHaveLength(4);
-  for (const row of labels.slice(0, 3)) expect(row).toMatch(/^[01 ]+$/);
-  expect(labels[3]).toBe("داده نمونه · شبیه‌سازی‌شده");
-  expect(labels).not.toContain("سیگنال نمونه");
+  expect(labels).toEqual(["سیگنال نمونه", "داده نمونه · شبیه‌سازی‌شده"]);
+  expect(labels.some((label) => /^[01 ]+$/.test(label))).toBe(false);
   expect(context.direction).toBe("rtl");
   expect(context.textAlign).toBe("right");
 });
