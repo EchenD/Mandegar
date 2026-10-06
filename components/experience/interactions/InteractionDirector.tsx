@@ -308,6 +308,16 @@ export const InteractionDirector = memo(function InteractionDirector({
   }, []);
 
   useEffect(() => {
+    const leaveForSection = () => {
+      if (departureTimer.current !== null) clearTimeout(departureTimer.current);
+      departureTimer.current = null;
+      if (interactionRuntime.activeStation) finishExit(true);
+    };
+    window.addEventListener("mandegar:home-section", leaveForSection);
+    return () => window.removeEventListener("mandegar:home-section", leaveForSection);
+  }, [finishExit]);
+
+  useEffect(() => {
     const handleRequest = (event: Event) => {
       const detail = (event as CustomEvent<{ station: InteractionStation; input: InteractionInput }>).detail;
       if (detail) enter(detail.station, detail.input);

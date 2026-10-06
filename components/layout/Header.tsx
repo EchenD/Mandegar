@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getText } from "@/lib/content";
 import type { SiteSettings } from "@/lib/content-source";
+import { navigateHomeSection, type HomeSection } from "@/lib/home-navigation";
 import { getUi, locales, localizedPath, type Locale } from "@/lib/i18n";
 import styles from "./Header.module.css";
 
@@ -17,6 +18,7 @@ export function Header({ locale, settings }: HeaderProps) {
   const navigation = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const copy = getUi(locale);
+  const home = pathname.replace(/\/+$/, "") === localizedPath(locale).replace(/\/+$/, "");
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 760px)");
@@ -85,9 +87,19 @@ export function Header({ locale, settings }: HeaderProps) {
         aria-hidden={mobileNavigation && !open ? true : undefined}
         inert={mobileNavigation && !open ? true : undefined}
       >
-        {links.map((link) => (
-          <Link prefetch={false} key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
-        ))}
+        {links.map((link) => {
+          const slug = link.href.replace(/\/+$/, "").split("/").at(-1);
+          const section: HomeSection | null = home
+            ? slug === "projects" ? "showcase" : slug === "services" ? "services" : slug === "about" ? "about" : slug === "contact" ? "contact" : null
+            : null;
+          return <Link prefetch={false} key={link.href} href={section ? `#${section}` : link.href} onClick={(event) => {
+            setOpen(false);
+            if (section && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.button === 0) {
+              event.preventDefault();
+              navigateHomeSection(section);
+            }
+          }}>{link.label}</Link>;
+        })}
         <div className={styles.mobileLanguage} aria-label="Language switcher">
           <LanguageLink locale={locale} target="fa" pathname={pathname} />
           <LanguageLink locale={locale} target="en" pathname={pathname} />

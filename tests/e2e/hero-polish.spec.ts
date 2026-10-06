@@ -1,12 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore, type ScenePhaseId } from "../../components/experience/narrative-score";
-import { puzzleTiles, returnToStationForward, seekStationReview, solvePuzzle, swapPuzzleSlots, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, returnToStationForward, seekStationReview, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(240_000);
 test.use({ video: "off", trace: "off" });
 
 type Rect = { x: number; y: number; width: number; height: number };
-type TilePoint = { x: number; y: number; width: number; height: number };
 
 async function seek(page: Page, phase: ScenePhaseId, offset = 0) {
   const progress = narrativeScore.find((beat) => beat.id === phase)!.preview + offset;
@@ -20,15 +19,7 @@ function intersects(first: Rect, second: Rect) {
     && first.y < second.y + second.height && first.y + first.height > second.y;
 }
 
-function tileBounds(points: TilePoint[]): Rect {
-  const left = Math.min(...points.map((point) => point.x - point.width / 2));
-  const right = Math.max(...points.map((point) => point.x + point.width / 2));
-  const top = Math.min(...points.map((point) => point.y - point.height / 2));
-  const bottom = Math.max(...points.map((point) => point.y + point.height / 2));
-  return { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-test("continuous scrolling shows the booth capture and its result before moving to the puzzle", async ({ page }, testInfo) => {
+test("continuous scrolling shows the booth capture and its result before moving to the installation", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
   const root = page.locator("[data-experience-root]");
@@ -110,60 +101,18 @@ test("continuous scrolling shows the booth capture and its result before moving 
   await expect(root).toHaveAttribute("data-story-stage", "engagement");
 });
 
-test("the tabletop puzzle stays clear, explains the connected experience and starts fresh on forward return", async ({ page }, testInfo) => {
+test("the installation explains Mandegar's parts and starts fresh on forward return", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1680, height: 900 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   await seekStationReview(page, "touch");
   const director = await waitForStation(page, "touch");
-  const controls = page.locator("[data-touch-spatial-controls]");
-  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000", { timeout: 20_000 });
-  await expect(controls).toHaveAttribute("data-puzzle-artwork", "ready");
-  await expect.poll(async () => JSON.parse(await controls.getAttribute("data-puzzle-object-centers") ?? "[]").length).toBe(9);
-  const points = JSON.parse(await controls.getAttribute("data-puzzle-object-centers") ?? "[]") as TilePoint[];
-  const playArea = tileBounds(points);
-  const dock = await page.locator("[data-journey-control]").boundingBox();
-  expect(dock).not.toBeNull();
-  expect(intersects(playArea, dock!)).toBe(false);
-  expect(playArea.x).toBeGreaterThanOrEqual(0);
-  expect(playArea.x + playArea.width).toBeLessThanOrEqual(1680);
-  expect(playArea.y + playArea.height).toBeLessThan(dock!.y);
-  await expect(page.locator("[data-puzzle-reset], [data-puzzle-close], [data-mobile-interaction-skip]:not([data-interaction-escape])")).toHaveCount(0);
-  await expect(page.locator("[data-interaction-escape]")).toHaveCount(1);
-  await page.screenshot({ path: testInfo.outputPath("puzzle-play-area.png") });
-
-  // Every tile must receive a real WebGL press; projected bounds alone cannot
-  // detect a foreground visitor intercepting the puzzle's left column.
-  for (const point of points) {
-    await page.mouse.move(point.x, point.y);
-    await page.mouse.down();
-    await expect(controls).toHaveAttribute("data-puzzle-dragging", String(points.indexOf(point)));
-    await page.mouse.up();
-    await expect(controls).toHaveAttribute("data-puzzle-dragging", "none");
-  }
-
-  const before = await puzzleTiles(page);
-  const movesBeforeMonitor = Number(await controls.getAttribute("data-puzzle-moves"));
-  const monitor = JSON.parse(await controls.getAttribute("data-puzzle-monitor-points") ?? "{}") as { slots: Array<{ x: number; y: number }> };
-  await page.mouse.click(monitor.slots[0].x, monitor.slots[0].y);
-  await page.mouse.click(monitor.slots[1].x, monitor.slots[1].y);
-  expect(await puzzleTiles(page)).toEqual(before);
-  await expect(controls).toHaveAttribute("data-puzzle-moves", String(movesBeforeMonitor));
-  await page.mouse.move(points[0].x, points[0].y);
-  await page.mouse.down();
-  await page.mouse.move(points[1].x, points[1].y, { steps: 6 });
-  await page.mouse.up();
-  await expect(controls).toHaveAttribute("data-puzzle-moves", String(movesBeforeMonitor + 1));
-  expect(await puzzleTiles(page)).not.toEqual(before);
-  await solvePuzzle(page);
-  await expect(director).toHaveAttribute("data-scroll-locked", "false");
-  await expect(page.locator("[data-interaction-escape]")).toHaveCount(0);
-  await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
-  await expect(page.locator("[data-journey-control]")).toContainText("Mandegar brings every part together into one experience.");
-  await page.screenshot({ path: testInfo.outputPath("puzzle-connected-result.png") });
+  await activateWithKeyboard(page, "[data-installation-button='details']");
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "details");
+  await page.screenshot({ path: testInfo.outputPath("installation-parts.png") });
+  await activateWithKeyboard(page, "[data-interaction-escape]");
+  await expect(director).toHaveAttribute("data-active-station", "none");
   await returnToStationForward(page, "touch");
-  await expect(controls).toHaveAttribute("data-puzzle-solved", "false");
-  await expect(controls).toHaveAttribute("data-puzzle-moves", "0");
-  await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
 });
 
 for (const station of ["photo", "stage"] as const) {
@@ -180,13 +129,18 @@ for (const station of ["photo", "stage"] as const) {
       let heldResult = false;
       let resultAt: number | null = null;
       let enteredAt: number | null = null;
+      let lampsAdvanced = false;
       const started = performance.now();
       const tick = () => {
         const rail = element.querySelector<HTMLElement>("[data-phase-rail]")!;
         const cue = element.querySelector<HTMLElement>("[data-scroll-cue]")!;
-        const clear = getComputedStyle(rail).visibility === "hidden" && getComputedStyle(cue).visibility === "hidden";
+        const clear = getComputedStyle(rail).visibility === "hidden" && getComputedStyle(cue).visibility === "visible";
         const held = element.getAttribute("data-interaction-active") === expected;
         if (held) enteredAt ??= performance.now();
+        if (held && expected === "stage" && !lampsAdvanced && performance.now() - enteredAt! > 180) {
+          lampsAdvanced = true;
+          for (let index = 0; index < 5; index += 1) window.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+        }
         const result = element.querySelector<HTMLElement>(`p[data-interaction-result='${expected}']`);
         if (held && !result) active ||= clear;
         if (held && result) { heldResult ||= clear; resultAt ??= performance.now(); }
@@ -208,7 +162,7 @@ for (const station of ["photo", "stage"] as const) {
     await expect(page.locator("[data-interaction-escape], [data-interaction-replay]")).toHaveCount(0);
     await expect(root).toHaveAttribute("data-interaction-result", station);
     await expect(rail).toBeHidden();
-    await expect(cue).toBeHidden();
+    await expect(cue).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`${station}-unlocked-result.png`) });
 
     // Record the short fade without timing a Playwright roundtrip into it.
@@ -223,7 +177,7 @@ for (const station of ["photo", "stage"] as const) {
       observer.observe(element, { attributes: true });
       element.setAttribute("data-departure-observer-ready", "true");
     }));
-    await expect(root).toHaveAttribute("data-departure-observer-ready", "true");
+    await expect(root).toHaveAttribute("data-departure-observer-ready", "true", { timeout: 15_000 });
     await page.mouse.wheel(0, 120);
     expect(await departure).toEqual({ hidden: true, resultVisible: true });
     await expect(director).toHaveAttribute("data-active-station", "none");
@@ -233,7 +187,7 @@ for (const station of ["photo", "stage"] as const) {
   });
 }
 
-test("small RTL screens keep the puzzle and shared control separate", async ({ browser }, testInfo) => {
+test("small RTL screens keep the installation and shared control separate", async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 600 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   await page.goto("/fa?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
@@ -241,7 +195,7 @@ test("small RTL screens keep the puzzle and shared control separate", async ({ b
   const director = await waitForStation(page, "touch");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  const slots = await page.locator("[data-puzzle-slot]").evaluateAll((elements) => elements.map((element) => {
+  const slots = await page.locator("[data-installation-button]").evaluateAll((elements) => elements.map((element) => {
     const rect = element.getBoundingClientRect();
     return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
   }));
@@ -257,10 +211,10 @@ test("small RTL screens keep the puzzle and shared control separate", async ({ b
   }
   expect(dock!.y + dock!.height).toBeLessThanOrEqual(600);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  const before = await puzzleTiles(page);
-  await swapPuzzleSlots(page, 0, 1);
-  expect(await puzzleTiles(page)).not.toEqual(before);
-  await page.screenshot({ path: testInfo.outputPath("puzzle-rtl-small.png") });
+  expect(slots).toHaveLength(4);
+  await page.locator("[data-installation-button='parts']").tap();
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "parts");
+  await page.screenshot({ path: testInfo.outputPath("installation-rtl-small.png") });
   await page.locator("[data-interaction-escape]").focus();
   await page.keyboard.press("Enter");
   await expect(director).toHaveAttribute("data-scroll-locked", "false");

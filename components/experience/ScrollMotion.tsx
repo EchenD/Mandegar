@@ -143,7 +143,7 @@ export function ScrollMotion({
       root.dataset.scrollEngaged = "true";
       phaseRail?.removeAttribute("inert");
       phaseRail?.setAttribute("aria-hidden", "false");
-      scrollCue?.setAttribute("aria-hidden", "true");
+      scrollCue?.setAttribute("aria-hidden", "false");
     };
 
     root.dataset.scrollEngaged = "false";

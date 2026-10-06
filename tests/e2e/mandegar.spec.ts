@@ -275,7 +275,7 @@ test.describe("Mandegar responsive layout", () => {
 
     await page.mouse.wheel(0, 120);
     await expect(root).toHaveAttribute("data-scroll-engaged", "true");
-    await expect(cue).toBeHidden();
+    await expect(cue).toBeVisible();
     await expect(journeyProgress).toHaveAttribute("aria-hidden", "false");
     await expect(journeyProgress).toHaveAttribute("aria-valuemax", "11");
 

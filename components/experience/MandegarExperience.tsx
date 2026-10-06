@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { getHomeSection, homeSectionLabels, type HomeSection } from "@/lib/home-navigation";
 import type { JourneyClient, JourneyVoice } from "./ConnectedJourney";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
@@ -176,6 +177,7 @@ export function MandegarExperience({
   const [introComplete, setIntroComplete] = useState(false);
   const [workReady, setWorkReady] = useState(false);
   const workJump = useRef<(() => void) | null>(null);
+  const pendingSection = useRef<HomeSection | null>(null);
   const handleWorkReady = useCallback((jump: (() => void) | null) => {
     workJump.current = jump;
     setWorkReady(jump !== null);
@@ -206,7 +208,10 @@ export function MandegarExperience({
     window.history.scrollRestoration = "manual";
     document.documentElement.style.scrollBehavior = "auto";
 
-    const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const resetScroll = () => {
+      if (getHomeSection(window.location.hash)) return;
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    };
     const resetInitialScroll = () => {
       if (document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollSeekRequested === "true") return;
       resetScroll();
@@ -231,6 +236,34 @@ export function MandegarExperience({
       document.documentElement.style.scrollBehavior = previousBehavior;
     };
   }, []);
+
+  useEffect(() => {
+    const seekSection = (event?: Event) => {
+      const section = event?.type === "mandegar:home-section"
+        ? (event as CustomEvent<{ section: HomeSection }>).detail.section
+        : getHomeSection(window.location.hash);
+      if (!section) return;
+      pendingSection.current = section;
+      const root = document.querySelector<HTMLElement>("[data-experience-root]");
+      if (root) root.dataset.scrollSeekRequested = "true";
+      window.dispatchEvent(new Event("mandegar:skip-intro"));
+      setIntroComplete(true);
+      if (loadProgress !== 100 || !workReady || !interactionReady) return;
+      document.querySelector<HTMLElement>("[data-connected-journey]")?.dispatchEvent(
+        new CustomEvent("mandegar:journey-seek", { detail: { label: homeSectionLabels[section], focus: true } }),
+      );
+      pendingSection.current = null;
+    };
+    window.addEventListener("mandegar:home-section", seekSection);
+    window.addEventListener("hashchange", seekSection);
+    window.addEventListener("popstate", seekSection);
+    if (pendingSection.current || getHomeSection(window.location.hash)) seekSection();
+    return () => {
+      window.removeEventListener("mandegar:home-section", seekSection);
+      window.removeEventListener("hashchange", seekSection);
+      window.removeEventListener("popstate", seekSection);
+    };
+  }, [interactionReady, loadProgress, workReady]);
 
   useEffect(() => {
     return subscribeHeroLoading((progress) => setLoadProgress((current) => Math.max(current, progress)));

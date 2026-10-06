@@ -30,7 +30,7 @@ export function ExperienceIntro({
 
     const parameters = new URLSearchParams(window.location.search);
     const introPreference = parameters.get("intro");
-    const skipIntro = introPreference === "0" || parameters.has("phase");
+    const skipIntro = introPreference === "0" || parameters.has("phase") || Boolean(window.location.hash);
     const requestedDurationParameter = parameters.get("introDuration");
     const requestedDuration = requestedDurationParameter === null ? null : Number(requestedDurationParameter);
     const duration = process.env.NODE_ENV !== "production" && requestedDuration !== null && Number.isFinite(requestedDuration)
@@ -60,10 +60,11 @@ export function ExperienceIntro({
       onComplete();
     };
     finishRef.current = finish;
+    window.addEventListener("mandegar:skip-intro", finish);
 
     if (!shouldPlay) {
       finish();
-      return;
+      return () => window.removeEventListener("mandegar:skip-intro", finish);
     }
 
     directIntro(0);
@@ -84,6 +85,7 @@ export function ExperienceIntro({
     });
 
     return () => {
+      window.removeEventListener("mandegar:skip-intro", finish);
       finished = true;
       if (animationFrame !== undefined) window.cancelAnimationFrame(animationFrame);
       finishRef.current = () => undefined;

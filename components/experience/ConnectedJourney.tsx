@@ -248,8 +248,11 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         const index = /^Service([1-5])$/.exec(label)?.[1];
         const target = index
           ? node.querySelector<HTMLElement>(`[data-service-index="${Number(index) - 1}"]`)
-          : label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]") : node;
+          : label === "Services" ? node.querySelector<HTMLElement>("[data-services]")
+          : label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]")
+          : label === "Finale" || label === "Contact" ? node.querySelector<HTMLElement>("[data-final-cta]") : node;
         target?.scrollIntoView({ behavior: "instant", block: "start" });
+        (target?.querySelector<HTMLElement>("a, button") ?? target)?.focus({ preventScroll: true });
       };
       const handleSeek = (event: Event) => {
         const label = (event as CustomEvent<{ label?: string }>).detail?.label;
@@ -268,8 +271,16 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     let jumpToWork: (() => void) | undefined;
     let seekToLabel: ((label: string) => void) | undefined;
     const handleJourneySeek = (event: Event) => {
-      const label = (event as CustomEvent<{ label?: string }>).detail?.label;
-      if (label) seekToLabel?.(label);
+      const detail = (event as CustomEvent<{ label?: string; focus?: boolean }>).detail;
+      if (!detail?.label) return;
+      seekToLabel?.(detail.label);
+      if (detail.focus) {
+        const target = detail.label === "Services" ? node.querySelector<HTMLElement>("[data-services]")
+          : detail.label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]")
+          : detail.label === "Finale" || detail.label === "Contact" ? node.querySelector<HTMLElement>("[data-final-cta]")
+          : node.querySelector<HTMLElement>("[data-project-copy='0']");
+        requestAnimationFrame(() => (target?.querySelector<HTMLElement>("a, button") ?? target ?? node).focus({ preventScroll: true }));
+      }
     };
     node.addEventListener("mandegar:journey-seek", handleJourneySeek);
     const partnerBridge = partnerFinaleBridge.current;
@@ -896,6 +907,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       typeText(finaleKickerText, "05 / MANDEGAR", mosaicStart + 9.28, .045, .8);
       typeText(finaleTitleText, ui.finale, mosaicStart + 9.75, .052, 1.25);
       typeText(finaleCtaText, ui.contact, mosaicStart + 10.2, .045, .92);
+      tl.addLabel("Contact", mosaicStart + 11.12);
       tl.to({}, { duration: 1.5 });
       node.style.setProperty("--journey-height", `${Math.ceil(tl.duration() * 90 + 100)}svh`);
       node.dataset.journeyLabels = JSON.stringify(Object.fromEntries(
@@ -1032,7 +1044,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
       </article>)}
 
-      <section className={styles.servicesLayer} data-services data-layer aria-label={locale === "fa" ? "خدمات ما" : locale === "ar" ? "خدماتنا" : "Our services"}>
+      <section className={styles.servicesLayer} tabIndex={-1} data-services data-layer aria-label={locale === "fa" ? "خدمات ما" : locale === "ar" ? "خدماتنا" : "Our services"}>
         {servicesCanvasMounted && servicesSpatialEnabled && !staticJourney ? <div className={styles.servicesScene} aria-hidden="true">
           <ServicesSceneCanvas bridge={servicesBridge} locale={locale} mobile={mobile} />
         </div> : null}
@@ -1046,7 +1058,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         />
       </section>
 
-      <section className={styles.about} data-about data-layer aria-label={ui.aboutLabel}>
+      <section className={styles.about} tabIndex={-1} data-about data-layer aria-label={ui.aboutLabel}>
         <span className={styles.aboutBackdrop} data-about-backdrop aria-hidden="true" />
         <small className={styles.kicker} data-about-kicker><span data-about-kicker-text>03 / {ui.aboutLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
         <div className={styles.aboutTyping}>
