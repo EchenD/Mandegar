@@ -66,7 +66,7 @@ const english: InteractionCopy = {
     game: { label: "Play road race", title: "Road race", instruction: "Drag to steer or use ← / →. Avoid traffic." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
-  photo: { ready: "Capture the moment.", capture: "Watch delivery", captured: "On your phone.", delivery: "Straight to your phone.", example: "Demo · example photo" },
+  photo: { ready: "Ready!", capture: "Watch delivery", captured: "On your phone.", delivery: "Straight to your phone.", example: "Demo · example photo" },
   touch: {
     instruction: "Drag a piece onto another, or tap two pieces, to swap them.",
     complete: "Mandegar brings every part together into one experience.",
@@ -122,7 +122,7 @@ const persian: InteractionCopy = {
     game: { label: "بازی مسابقه ماشین", title: "مسابقه ماشین", instruction: "برای فرمان دادن بکشید یا از ← و → استفاده کنید. از ماشین‌ها دوری کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
-  photo: { ready: "ثبت یک لحظه.", capture: "نمایش تحویل", captured: "روی گوشی شما.", delivery: "مستقیم روی گوشی شما.", example: "نمایش خدمات · تصویر نمونه" },
+  photo: { ready: "آماده!", capture: "نمایش تحویل", captured: "روی گوشی شما.", delivery: "مستقیم روی گوشی شما.", example: "نمایش خدمات · تصویر نمونه" },
   touch: {
     instruction: "یک قطعه را روی دیگری بکشید یا دو قطعه را لمس کنید تا جابه‌جا شوند.",
     complete: "ماندگار همهٔ بخش‌ها را به یک تجربهٔ پیوسته تبدیل می‌کند.",
@@ -178,7 +178,7 @@ const arabic: InteractionCopy = {
     game: { label: "العب سباق السيارات", title: "سباق السيارات", instruction: "اسحب للتوجيه أو استخدم ← و →. تجنّب السيارات." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },
-  photo: { ready: "التقط اللحظة.", capture: "شاهد التسليم", captured: "على هاتفك.", delivery: "مباشرةً إلى هاتفك.", example: "عرض تجريبي · صورة نموذجية" },
+  photo: { ready: "جاهز!", capture: "شاهد التسليم", captured: "على هاتفك.", delivery: "مباشرةً إلى هاتفك.", example: "عرض تجريبي · صورة نموذجية" },
   touch: {
     instruction: "اسحب قطعة فوق أخرى أو المس قطعتين لتبديلهما.",
     complete: "تجمع ماندگار كل الأجزاء في تجربة واحدة مترابطة.",

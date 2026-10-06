@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
+import { getInteractionCopy } from "./interaction-copy";
 import { interactionRuntime, markInteractionCanvasDirty, markPhotoSurfaceDirty, registerInteractionCanvas, registerPhotoSurface } from "./interaction-runtime";
 import { getPhotoScrollProgress, getScrollScenes, syncScrollScenes } from "./scroll-scenes";
 import { saveLightingLook } from "./visitor-creation";
@@ -18,6 +19,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     const photoContext = photo?.getContext("2d");
     const context = stage?.getContext("2d");
     if (!enabled || !photo || !stage || !photoContext || !context) return;
+    const copy = getInteractionCopy(locale);
     const root = photo.closest<HTMLElement>("[data-experience-root]");
     const image = new Image();
     image.src = sceneTokens.bakedScene.screens.videoWall;
@@ -74,9 +76,10 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
             photoContext.font = '600 180px "Vazirmatn Variable", sans-serif';
             photoContext.textAlign = "center";
             photoContext.textBaseline = "middle";
+            photoContext.direction = locale === "en" ? "ltr" : "rtl";
             photoContext.shadowColor = "#225cff";
             photoContext.shadowBlur = 8;
-            photoContext.fillText(String(sample.photoCount), photo.width / 2, photo.height / 2);
+            photoContext.fillText(copy.photo.ready, photo.width / 2, photo.height / 2, photo.width * 0.84);
           }
           photo.dataset.photoState = sample.photoStep;
           photo.dataset.photoProgress = String(nativeSample.photo);

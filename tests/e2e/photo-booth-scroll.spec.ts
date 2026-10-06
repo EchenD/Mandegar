@@ -11,7 +11,7 @@ const sceneStart = beat.preview;
 const sceneEnd = beat.end - (beat.end - beat.start) * 0.08;
 const scenePoint = (amount: number) => sceneStart + (sceneEnd - sceneStart) * amount;
 const capturePoint = scenePoint(0.28);
-const countdownPoint = (amount: number) => copyTiming.enterStart + (capturePoint - copyTiming.enterStart) * amount;
+const readyPoint = (amount: number) => copyTiming.enterStart + (capturePoint - copyTiming.enterStart) * amount;
 
 async function openBooth(page: Page, locale: string) {
   await page.goto(`/${locale}?intro=0&phase=discovery`, { waitUntil: "domcontentloaded" });
@@ -44,7 +44,7 @@ async function photoAnchor(page: Page) {
   }));
 }
 
-test("photo countdown starts with the text, pauses without scrolling and reverses without a Skip button", async ({ page }, testInfo) => {
+test("photo cue starts with the text, pauses without scrolling and reverses without a Skip button", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -64,16 +64,14 @@ test("photo countdown starts with the text, pauses without scrolling and reverse
   expect(opacity).toBeGreaterThan(0);
   expect(opacity).toBeLessThan(1);
   await expect(photo).toHaveAttribute("data-photo-state", "countdown");
-  await expect(photo).toHaveAttribute("data-photo-count", "3");
   const paused = await photo.getAttribute("data-photo-animation-progress");
   // Longer than the former automatic countdown and phone delivery combined.
   await page.waitForTimeout(2_500);
   await expect(photo).toHaveAttribute("data-photo-animation-progress", paused!);
-  await expect(photo).toHaveAttribute("data-photo-count", "3");
 
-  for (const [amount, count] of [[0.5, "2"], [0.85, "1"], [0.5, "2"], [0.1, "3"]] as const) {
-    await seek(page, countdownPoint(amount));
-    await expect(photo).toHaveAttribute("data-photo-count", count);
+  for (const amount of [0.5, 0.85, 0.5, 0.1]) {
+    await seek(page, readyPoint(amount));
+    await expect.poll(async () => Number(await photo.getAttribute("data-photo-animation-progress"))).toBeCloseTo(amount * 0.28, 3);
     await expect(photo).toHaveAttribute("data-photo-state", "countdown");
   }
   await expect(director).toHaveAttribute("data-active-station", "none");
@@ -81,7 +79,7 @@ test("photo countdown starts with the text, pauses without scrolling and reverse
   await expect(page.locator("[data-interaction-escape], [data-interaction-replay]")).toHaveCount(0);
   await expect(root).not.toHaveAttribute("data-interaction-active");
   await expect(page.locator("[data-scroll-cue]")).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("photo-countdown-desktop.png") });
+  await page.screenshot({ path: testInfo.outputPath("photo-ready-desktop.png") });
   await seek(page, copyTiming.enterStart - 0.001);
   await expect(photo).toHaveAttribute("data-photo-state", "idle");
   await expect(text).toBeHidden();
@@ -120,9 +118,8 @@ test("scrolling advances the camera and photo delivery together and retraces the
   await expect(photo).toHaveAttribute("data-photo-state", "idle");
   await seek(page, scenePoint(0.48));
   await expect(photo).toHaveAttribute("data-photo-state", "captured");
-  await seek(page, countdownPoint(0.85));
+  await seek(page, readyPoint(0.85));
   await expect(photo).toHaveAttribute("data-photo-state", "countdown");
-  await expect(photo).toHaveAttribute("data-photo-count", "1");
   await expect(root).not.toHaveAttribute("data-interaction-active");
   await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
 });
@@ -135,8 +132,8 @@ for (const locale of ["fa", "ar"] as const) {
       await openBooth(page, locale);
       const root = page.locator("[data-experience-root]");
       const photo = page.locator("[data-photo-scroll]");
-      await seek(page, countdownPoint(0.45));
-      await expect(photo).toHaveAttribute("data-photo-count", "2");
+      await seek(page, readyPoint(0.45));
+      await expect(photo).toHaveAttribute("data-photo-state", "countdown");
       const initialPhoto = Number(await photo.getAttribute("data-photo-animation-progress"));
       const initialScroll = await page.evaluate(() => scrollY);
       const session = await context.newCDPSession(page);
@@ -161,5 +158,52 @@ for (const locale of ["fa", "ar"] as const) {
     } finally {
       await context.close();
     }
+  });
+}
+
+for (const { locale, label, viewport } of [
+  { locale: "en", label: "Ready!", viewport: { width: 1440, height: 900 } },
+  { locale: "fa", label: "آماده!", viewport: { width: 1440, height: 900 } },
+  { locale: "fa", label: "آماده!", viewport: { width: 390, height: 844 } },
+  { locale: "ar", label: "جاهز!", viewport: { width: 390, height: 844 } },
+]) {
+  test(`${locale} ${viewport.width}px photo booth paints a localized Ready cue and clears it on capture`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.addInitScript(() => {
+      const observer = window as unknown as Window & { __photoCuePaints: { text: string; width: number; direction: string }[] };
+      observer.__photoCuePaints = [];
+      const paint = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+        if (this.canvas.hasAttribute("data-photo-scroll")) {
+          observer.__photoCuePaints.push({ text, width: Math.min(this.measureText(text).width, maxWidth ?? Infinity), direction: this.direction });
+        }
+        if (maxWidth === undefined) paint.call(this, text, x, y);
+        else paint.call(this, text, x, y, maxWidth);
+      };
+    });
+    await openBooth(page, locale);
+    const photo = page.locator("[data-photo-scroll]");
+    const paintedTexts = () => page.evaluate(() => (window as unknown as Window & { __photoCuePaints: { text: string }[] }).__photoCuePaints.map((paint) => paint.text));
+    const paintedPixels = () => photo.evaluate((canvas: HTMLCanvasElement) => {
+      const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+      let painted = 0;
+      for (let index = 3; index < pixels.length; index += 4) if (pixels[index] > 0) painted += 1;
+      return painted;
+    });
+    await seek(page, readyPoint(0.5));
+    await expect.poll(paintedTexts).toContain(label);
+    await expect.poll(paintedPixels).toBeGreaterThan(100);
+    const paint = await page.evaluate(() => (window as unknown as Window & { __photoCuePaints: { text: string; width: number; direction: string }[] }).__photoCuePaints.at(-1)!);
+    expect(paint.width).toBeLessThan(800);
+    expect(paint.direction).toBe(locale === "en" ? "ltr" : "rtl");
+    await page.screenshot({ path: testInfo.outputPath(`photo-ready-${locale}-${viewport.width}.png`) });
+    await seek(page, scenePoint(0.48));
+    await expect(photo).toHaveAttribute("data-photo-state", "captured");
+    await expect.poll(paintedPixels).toBe(0);
+    await seek(page, readyPoint(0.85));
+    await expect(photo).toHaveAttribute("data-photo-state", "countdown");
+    await expect.poll(paintedPixels).toBeGreaterThan(100);
+    expect((await paintedTexts()).every((text) => text === label)).toBe(true);
+    await expect(page.locator("[data-interaction-escape]")).toHaveCount(0);
   });
 }
