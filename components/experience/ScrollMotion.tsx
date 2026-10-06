@@ -8,7 +8,8 @@ import { type CSSProperties, useRef } from "react";
 import { experienceState } from "./experience-state";
 import { directNarrative, resetNarrative } from "./narrative-director";
 import { getNarrativeCopyTiming } from "./narrative-copy-timing";
-import { warpNarrativeProgress } from "./narrative-progress-curve";
+import { getInteractionDepartureTarget, sampleHeroTimeline } from "./hero-timeline";
+import { heroTimeline } from "./hero-timeline-config";
 import {
   getNarrativePreview,
   narrativeScore,
@@ -37,7 +38,6 @@ type SeekRequest = {
   top?: number;
 };
 
-type InteractionScrub = { progress?: number };
 
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
@@ -121,15 +121,9 @@ export function ScrollMotion({
     let smooth: Lenis | undefined;
     let lenisTick: ((time: number) => void) | undefined;
     let lenisScroll: (() => void) | undefined;
-    let interactionObserver: MutationObserver | undefined;
-    let interactionLocked = false;
-    let virtualProgress: number | null = null;
-    let virtualTarget: number | null = null;
-    let virtualMinimum = 0;
-    let virtualMaximum = 1;
+    let finishMotion: { from: number; target: number; startedAt: number } | null = null;
     let nativeScrollFraction = 0;
     let handingOffInteraction = false;
-    let lastSharedTickAt: number | null = null;
     let activePhase: ScenePhaseId = "arrival";
     let previousNativeProgress: number | null = null;
     let directionProgress: number | null = null;
@@ -229,10 +223,10 @@ export function ScrollMotion({
     };
 
     const syncExperience = (progress: number, force = false) => {
-      if (suspended || (!force && (handingOffInteraction || root.hasAttribute("data-interaction-active")))) return;
+      if (suspended || (!force && handingOffInteraction)) return;
       const timelineProgress = clamp01(progress);
       root.dataset.scrollVelocity = String(smooth?.velocity ?? 0);
-      const safeProgress = reduced ? timelineProgress : warpNarrativeProgress(timelineProgress);
+      const safeProgress = timelineProgress;
       if (timelineProgress === previousNativeProgress && experienceState.progress === safeProgress && root.dataset.narrativeProgress !== undefined) return;
       const nativeProgress = timelineProgress;
       if (directionProgress === null) directionProgress = nativeProgress;
@@ -248,6 +242,10 @@ export function ScrollMotion({
       previousNativeProgress = nativeProgress;
       const narrative = directNarrative(safeProgress);
       const phase = narrative.phase;
+      const sample = sampleHeroTimeline(heroTimeline, safeProgress);
+      root.dataset.heroFrame = sample.frame.toFixed(3);
+      root.dataset.inViewingWindow = String(sample.inViewingWindow);
+      root.dataset.windowProgress = String(sample.windowProgress);
       root.dataset.narrativeProgress = String(safeProgress);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
       root.style.setProperty("--hero-handoff", getHeroHandoffProgress(safeProgress).toFixed(4));
@@ -273,74 +271,6 @@ export function ScrollMotion({
       }
     };
 
-    const syncInteractionLock = () => {
-      const locked = root.hasAttribute("data-interaction-active");
-      if (locked === interactionLocked) return;
-      interactionLocked = locked;
-      if (locked) {
-        const displayedProgress = Number(root.dataset.nativeProgress);
-        virtualProgress = Number.isFinite(displayedProgress) ? clamp01(displayedProgress) : resume?.progress ?? getNativeProgress();
-        virtualTarget = virtualProgress;
-        virtualMinimum = virtualProgress;
-        const beat = narrativeScore.find((phase) => phase.id === root.dataset.storyStage);
-        virtualMaximum = beat ? Math.max(virtualMinimum, Math.min(virtualMinimum + 0.012, beat.end - 0.012)) : virtualMinimum;
-        smooth?.stop();
-        return;
-      }
-      // The document catches the exact displayed pose before Lenis resumes.
-      // Pending virtual easing and the arrival's old momentum are discarded.
-      const displayedProgress = virtualProgress;
-      const handoffTop = displayedProgress === null ? null : root.offsetTop + getScrollDistance() * displayedProgress;
-      handingOffInteraction = true;
-      if (handoffTop !== null) {
-        nativeScrollFraction = 0;
-        if (smooth) smooth.scrollTo(handoffTop, { immediate: true, force: true });
-        else {
-          const behavior = document.documentElement.style.scrollBehavior;
-          document.documentElement.style.scrollBehavior = "auto";
-          window.scrollTo({ top: handoffTop, left: 0, behavior: "instant" });
-          document.documentElement.style.scrollBehavior = behavior;
-        }
-      } else smooth?.scrollTo(window.scrollY, { immediate: true, force: true });
-      virtualProgress = null;
-      virtualTarget = null;
-      smooth?.start();
-      if (handoffTop !== null && displayedProgress !== null) {
-        // Lenis immediate scroll/start also reset to the DOM's rounded scroll.
-        // Carry that fractional remainder in both paths, after both resets.
-        nativeScrollFraction = handoffTop - (smooth?.animatedScroll ?? window.scrollY);
-        syncExperience(displayedProgress, true);
-      }
-      handingOffInteraction = false;
-    };
-
-    const scrubInteraction = (event: Event) => {
-      const target = (event as CustomEvent<InteractionScrub>).detail?.progress;
-      if (typeof target !== "number" || !Number.isFinite(target) || !root.hasAttribute("data-interaction-active")) return;
-      // A scrub can arrive in the same task as ENTER, before the observer runs.
-      syncInteractionLock();
-      if (virtualProgress === null) return;
-      virtualTarget = Math.max(virtualTarget ?? virtualProgress, Math.min(virtualMaximum, Math.max(virtualMinimum, target)));
-      if (staticMode) {
-        virtualProgress = virtualTarget;
-        syncExperience(virtualProgress, true);
-      }
-    };
-
-    const installInteractionMotion = () => {
-      interactionObserver = new MutationObserver(syncInteractionLock);
-      interactionObserver.observe(root, { attributes: true, attributeFilter: ["data-interaction-active"] });
-      root.addEventListener("mandegar:interaction-release", syncInteractionLock);
-      root.addEventListener("mandegar:interaction-scrub", scrubInteraction);
-      syncInteractionLock();
-    };
-
-    const removeInteractionMotion = () => {
-      interactionObserver?.disconnect();
-      root.removeEventListener("mandegar:interaction-release", syncInteractionLock);
-      root.removeEventListener("mandegar:interaction-scrub", scrubInteraction);
-    };
-
     if (!enabled || runtime === "pending") {
       directNarrative(0);
       root.style.setProperty("--scene-progress", "0");
@@ -359,11 +289,9 @@ export function ScrollMotion({
         ?? narrativeScore.find((phase) => phase.id === "reveal")?.preview
         ?? 0.409091;
       checkpoint.current ??= { progress: staticProgress, overflow: 0 };
-      installInteractionMotion();
       syncExperience(staticProgress, true);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
-        removeInteractionMotion();
         root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
         root.removeEventListener("mandegar:seek", seekExperience);
         resetNarrative();
@@ -383,24 +311,48 @@ export function ScrollMotion({
       smooth.on("scroll", lenisScroll);
     }
 
-    installInteractionMotion();
-    // Native motion and held interaction motion share one fractional ticker.
-    // This matches Lenis's lerp=.05 damping at 60 Hz without quantizing its tail.
-    lenisTick = (time) => {
-      const elapsed = lastSharedTickAt === null ? 1 / 60 : Math.min(0.1, Math.max(0, time - lastSharedTickAt));
-      lastSharedTickAt = time;
-      smooth?.raf(time * 1000);
-      if (!interactionLocked || suspended || virtualProgress === null || virtualTarget === null || virtualProgress === virtualTarget) return;
-      const distance = virtualTarget - virtualProgress;
-      virtualProgress = Math.abs(distance) * getScrollDistance() < 0.0001
-        ? virtualTarget : virtualProgress + distance * (1 - Math.exp(-3 * elapsed));
-      syncExperience(virtualProgress, true);
+    // Finish moves the real page through every authored frame. Scroll input
+    // cancels it immediately and retains the current page position.
+    const finishPhase = (event: Event) => {
+      const phase = (event as CustomEvent<{ phase?: ScenePhaseId }>).detail?.phase;
+      if (!phase) return;
+      const target = getInteractionDepartureTarget(heroTimeline, phase, getNativeProgress());
+      if (target === null) return;
+      finishMotion = { from: getNativeProgress(), target, startedAt: performance.now() };
+      root.dataset.finishScrolling = "true";
+    };
+    const cancelFinish = () => {
+      finishMotion = null;
+      root.removeAttribute("data-finish-scrolling");
+    };
+    root.addEventListener("mandegar:finish-phase", finishPhase);
+    lenisTick = () => {
+      // GSAP's lag smoothing adjusts ticker time after slow frames. Lenis
+      // needs real elapsed time so a wheel tail cannot stretch under load.
+      smooth?.raf(performance.now());
+      if (suspended || !finishMotion) return;
+      const amount = Math.min(1, (performance.now() - finishMotion.startedAt) / 850);
+      const progress = finishMotion.from + (finishMotion.target - finishMotion.from) * ease(amount);
+      const top = root.offsetTop + getScrollDistance() * progress;
+      handingOffInteraction = true;
+      nativeScrollFraction = 0;
+      if (smooth) smooth.scrollTo(top, { immediate: true, force: true });
+      else window.scrollTo({ top, behavior: "instant" });
+      nativeScrollFraction = top - (smooth?.animatedScroll ?? window.scrollY);
+      handingOffInteraction = false;
+      syncExperience(progress, true);
+      ScrollTrigger.update();
+      if (amount === 1) {
+        cancelFinish();
+        root.dispatchEvent(new Event("mandegar:phase-finished"));
+      }
     };
     gsap.ticker.add(lenisTick);
 
     const continueScroll = (event: Event) => {
       const detail = (event as CustomEvent<{ delta?: number; immediate?: boolean }>).detail;
       const delta = detail?.delta;
+      cancelFinish();
       if (typeof delta !== "number" || !Number.isFinite(delta) || delta === 0) return;
       if (detail?.immediate) {
         // All released touch packets share this owner. Cancel old easing even
@@ -455,6 +407,7 @@ export function ScrollMotion({
         document.documentElement.style.scrollBehavior = "auto";
         window.scrollTo({ top: target, left: 0, behavior: "auto" });
       }
+      nativeScrollFraction = target - (smooth?.animatedScroll ?? window.scrollY);
     };
 
     const goToProgress = (progress: number, syncTimeline = false) => {
@@ -470,10 +423,7 @@ export function ScrollMotion({
     };
 
     applySeek = (detail) => {
-      // Explicit seeks supersede an interaction's local camera drift. They
-      // must not be overwritten by its later release handoff.
-      virtualProgress = null;
-      virtualTarget = null;
+      cancelFinish();
       if (typeof detail.progress === "number") goToProgress(detail.progress, detail.sync);
       else if (typeof detail.top === "number") {
         goToScrollTop(detail.top);
@@ -482,7 +432,7 @@ export function ScrollMotion({
       syncExperience(getNativeProgress(), true);
     };
     const onNativeScroll = () => {
-      if (suspended || root.hasAttribute("data-interaction-active")) return;
+      if (suspended) return;
       initialPositionCancelled = true;
       // Lenis publishes on every fractional step, including steps too small
       // to generate a native scroll event. Do not overwrite it with DOM rounding.
@@ -492,7 +442,7 @@ export function ScrollMotion({
       if (currentProgress > 0.0008) showPhaseRail();
     };
     window.addEventListener("scroll", onNativeScroll, { passive: true });
-    const cancelInitialPosition = () => { initialPositionCancelled = true; };
+    const cancelInitialPosition = () => { initialPositionCancelled = true; cancelFinish(); };
     const cancelOnScrollKey = (event: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancelInitialPosition();
     };
@@ -547,7 +497,8 @@ export function ScrollMotion({
     return () => {
       window.cancelAnimationFrame(initialFrame);
       window.cancelAnimationFrame(restoreBehaviorFrame);
-      removeInteractionMotion();
+      cancelFinish();
+      root.removeEventListener("mandegar:finish-phase", finishPhase);
       // The explicit release runs before the leaving wheel event reaches Lenis.
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);

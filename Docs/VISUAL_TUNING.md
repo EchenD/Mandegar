@@ -12,9 +12,9 @@ Use the **search term** column in the named file. These are the shortest paths t
 | 3D palette, environment, particles, phase timing, camera path and quality limits | `components/experience/scene-config.ts` |
 | Renderer, shaders, model materials and animated light behavior | `components/experience/ExperienceCanvas.tsx` |
 | Scroll feel and copy reveal motion | `components/experience/ScrollMotion.tsx` |
-| Nine story anchors, cue ranges and camera-shot names | `components/experience/narrative-score.ts` |
-| Slow-at-stage / fast-between-stage scroll curve | `components/experience/narrative-progress-curve.ts` |
-| Shared text breathing and per-stage text animation | `components/experience/narrative-copy-timing.ts` |
+| Authored source frames for eleven viewing windows and effect cues | `Docs/CreativeProduction/camera-timing-handoff.template.json` |
+| Frame handoff validation and normalized runtime timing | `components/experience/hero-timeline.ts` and `hero-timeline-config.ts` |
+| Text windows and per-stage copy animation | `components/experience/narrative-copy-timing.ts` |
 | Per-stage camera, particles, lighting, labels and effects | `components/experience/stage-presets.ts` |
 | Development creative controls | `components/experience/CreativePanel.tsx` and `CreativePanel.module.css` |
 | Intro duration and camera/reveal handoff | `components/experience/ExperienceIntro.tsx` and `components/experience/intro-score.ts` |
@@ -42,20 +42,18 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Material finish | `ExperienceCanvas.tsx` → `envMapIntensity`, `roughness`, `metalness` | Lower roughness is glossier; higher metalness is more metallic |
 | Wireframe/reveal | `ExperienceCanvas.tsx` → `revealBindings` / `beaconVisibility` | Per-object bottom-to-top reveal, lift distance, wire opacity and reveal-light visibility |
 | Authored 3D camera | `scene-config.ts` → `sceneTokens.authoredCamera` | Enable/disable the GLB camera, mobile use, node/clip names and depth-of-field focus target |
-| Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used on mobile or when the authored camera/clip is missing; controls progress, position, target, roll and FOV |
-| Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Local position/rotation amplitudes, three low frequencies and mobile scale |
-| Pointer camera response | `scene-config.ts` → `cameraMotion.pointer` | Local position/rotation range plus frame-rate-independent spring stiffness and damping |
-| Final camera hold | `stage-presets.ts` → `getCameraLoopSampleProgress` | Holds the authored Loop composition while the sticky scene releases into the page |
+| Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used when the authored camera is disabled or unavailable; controls progress, position, target, roll and FOV |
+| Camera sampling | `CameraRig.tsx` and `camera-timeline.ts` | The GLB position and rotation follow native scroll directly; only responsive FOV and the separate assembly intro are added |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `3325`/`2981.25`, 25% longer than before; smaller advances faster, larger advances slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
-| Eleven review points | `narrative-score.ts` → `narrativeScore` → `preview` | Equally spaced camera stage, timeline marker and interpolation anchor for every stage |
-| Phase boundaries | `narrative-score.ts` → `narrativeScore` → `start` / `end` | Which stage owns each part of narrative progress |
+| Eleven review points | `camera-timing-handoff.template.json` → `phaseRestFrames` | Null uses the viewing-window start for participation chapters, otherwise the midpoint |
+| Phase boundaries | `camera-timing-handoff.template.json` → `phaseStartFrames` / `phaseEndFrames` | Source viewing windows; gaps remain authored camera travel |
 | Object activation timing | `narrative-score.ts` → `narrativeCueRanges` | Assembly, trails, screens, booths, reveal and loop-reset ranges |
-| Stage-to-stage speed | `narrative-progress-curve.ts` → `narrativeVelocity` | `minimum` slows near stages, `maximum` speeds transitions, and `tangentPower` concentrates acceleration; currently `.15`, `1.8`, `5` |
-| Shared text breathing | `narrative-copy-timing.ts` → `narrativeCopyRhythm` | `breathing` controls every internal blank gap; opening/closing ratios affect only the loop edges |
-| Individual text timing | `narrative-copy-timing.ts` → `narrativeCopyStageTuning` | Per-stage entry/exit duration and line stagger without changing shared blank gaps |
+| Stage-to-stage speed | `mandegar_environment.glb` → `camera_master_loop` | Author relative pacing in the camera animation; change `scrollLengthVh` for overall speed |
+| Text windows | `narrative-copy-timing.ts` → `getNarrativeCopyTiming` | Text stays inside each viewing window; photo text starts at `photoTextReady` |
+| Individual text timing | `narrative-copy-timing.ts` → `narrativeCopyStageTuning` | Per-stage entry/exit duration and line stagger inside the authored viewing windows |
 | Copy transition | `ScrollMotion.tsx` → `renderCopyState` | Entry/exit timing, vertical travel, depth, blur and bottom-to-top clip mask |
 | Font family | `globals.css` → `body` and `app/[locale]/layout.tsx` | CSS family and Fontsource import; currently `Vazirmatn Variable` |
 | Global type scale | `globals.css` → `h1`, `h2`, `h3`, `p` | Site-wide font sizes and weights |
@@ -79,7 +77,6 @@ http://localhost:3100/fa?intro=0&phase=discovery&creative=1
 The panel is deliberately excluded from production builds. It can:
 
 - jump to any of the eleven review stages;
-- tune camera breathing and pointer response;
 - tune particle presence, response, routed signal and halo strength;
 - tune lighting energy, contrast and spatial-HUD prominence;
 - preserve experiments in browser local storage;
@@ -92,17 +89,17 @@ The panel intentionally does not expose controls that are not yet production-wir
 
 ## Controls that should stay synchronized
 
-- Change a stage's `preview` only in `narrative-score.ts`. Camera anchors, timeline markers and stage-preset interpolation all read the same value.
-- Tune camera pacing with `narrativeVelocity`; do not move text timings to compensate. Text follows physical scroll while the 3D narrative follows warped progress.
-- Tune empty time with `narrativeCopyRhythm`. Tune how a message enters and exits with `narrativeCopyStageTuning`.
+- Change source frames in the handoff JSON and run `npm run camera:check -- --require-ready`. Camera, copy, effects and review markers use this one frame clock.
+- Author relative camera pacing in the GLB. Tune overall playback speed with `scrollLengthVh`; native scroll is not warped.
+- Tune message entrance and exit with `narrativeCopyStageTuning`; camera travel gaps stay clear.
 - Keep the intro end frame equal to `experienceHomeFrame` in `intro-score.ts`; this preserves the seamless handoff into the loop.
-- The timeline fill uses `--scroll-progress` (physical page position). `--scene-progress` is the warped 3D playhead and should not drive slider accuracy.
+- Both `--scroll-progress` and `--scene-progress` now follow the same physical page position.
 
 ## Recommended final-tuning order
 
-1. Set the eleven `preview` anchors and confirm the narrative order.
-2. Tune `scrollLengthVh`, then `narrativeVelocity.minimum`, `maximum` and `tangentPower`.
-3. Tune shared text breathing, followed by per-stage entry/exit durations.
+1. Set the eleven source viewing windows and confirm the narrative order.
+2. Tune `scrollLengthVh`; author relative timing in the GLB.
+3. Tune per-stage text entry and exit inside the viewing windows.
 4. Author the eleven camera shots and stage presets.
 5. Tune particles, lighting, labels and post-processing per stage.
 6. Finish typography, text blur, loader, scroll cue and responsive positions.

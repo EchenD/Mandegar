@@ -6,7 +6,7 @@ import { experienceState } from "../experience-state";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import { getInteractionCopy } from "./interaction-copy";
 import { interactionRuntime, markInteractionCanvasDirty, markPhotoSurfaceDirty, registerInteractionCanvas, registerPhotoSurface } from "./interaction-runtime";
-import { getPhotoScrollProgress, getScrollScenes, syncScrollScenes } from "./scroll-scenes";
+import { getScrollScenes, syncScrollScenes } from "./scroll-scenes";
 import { saveLightingLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
@@ -27,47 +27,22 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     let savedLighting = false;
     let frame: number;
     let disposed = false;
-    let completedVisit = -1;
-    let previousFrameAt = performance.now();
     image.onload = () => { previous = ""; };
     void document.fonts.ready.then(() => { if (!disposed) previous = ""; });
     registerPhotoSurface(photo);
     registerInteractionCanvas("videoWall", stage, 0);
     const tick = () => {
       if (!document.hidden) {
-        const now = performance.now();
-        const reverseBlend = 1 - Math.exp(-Math.min(0.1, (now - previousFrameAt) / 1000) / 0.045);
-        previousFrameAt = now;
-        const nativeSample = getScrollScenes(experienceState.progress, {
-          photo: getPhotoScrollProgress(Number(root?.dataset.nativeProgress ?? experienceState.progress)),
-        });
-        const holdingStage = interactionRuntime.activeStation === "stage";
-        const reverse = root?.dataset.scrollDirection === "backward";
-        const photoProgress = nativeSample.photo;
-        if (!holdingStage && (nativeSample.stage <= 0 || nativeSample.stage >= 1)) interactionRuntime.stageHoldProgress = null;
-        else if (reverse && interactionRuntime.stageHoldProgress !== null) {
-          const carried = interactionRuntime.stageHoldProgress;
-          interactionRuntime.stageHoldProgress = Math.abs(carried - nativeSample.stage) < 0.0001
-            ? null : carried + (nativeSample.stage - carried) * reverseBlend;
-        }
-        const stageProgress = holdingStage ? interactionRuntime.stageHoldProgress ?? 0.2
-          : Math.max(nativeSample.stage, interactionRuntime.stageHoldProgress ?? 0);
-        const sample = getScrollScenes(experienceState.progress, { photo: photoProgress, stage: stageProgress });
+        const sample = getScrollScenes(experienceState.progress);
+        const photoProgress = sample.photo;
         syncScrollScenes(experienceState.progress);
         const photoVisibility = sample.photoVisibility;
-        const stageVisibility = holdingStage ? sample.stageVisibility : nativeSample.stageVisibility;
+        const stageVisibility = sample.stageVisibility;
         interactionRuntime.photoProgress = photoProgress;
         interactionRuntime.photoStep = sample.photoStep;
         interactionRuntime.photoCount = sample.photoCount;
         interactionRuntime.photoVisibility = photoVisibility;
-        const stageDone = holdingStage && stageProgress >= 0.8 - 0.000001;
-        if (stageDone && completedVisit !== interactionRuntime.scrollSceneVisit) {
-          completedVisit = interactionRuntime.scrollSceneVisit;
-          window.dispatchEvent(new CustomEvent("mandegar:passive-complete", {
-            detail: { station: "stage" },
-          }));
-        }
-        const key = `${photoProgress.toFixed(5)}:${photoVisibility.toFixed(5)}:${sample.stage.toFixed(5)}:${stageVisibility.toFixed(5)}:${interactionRuntime.stageHoldProgress === null}`;
+        const key = `${photoProgress.toFixed(5)}:${photoVisibility.toFixed(5)}:${sample.stage.toFixed(5)}:${stageVisibility.toFixed(5)}`;
         if (previous !== key) {
           previous = key;
           photoContext.clearRect(0, 0, photo.width, photo.height);
@@ -82,7 +57,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
             photoContext.fillText(copy.photo.ready, photo.width / 2, photo.height / 2, photo.width * 0.84);
           }
           photo.dataset.photoState = sample.photoStep;
-          photo.dataset.photoProgress = String(nativeSample.photo);
+          photo.dataset.photoProgress = String(sample.photo);
           photo.dataset.photoAnimationProgress = String(photoProgress);
           photo.dataset.photoCount = String(sample.photoCount);
           markPhotoSurfaceDirty();
@@ -112,7 +87,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           stage.dataset.litLamps = String(sample.beams.filter((beam) => beam > 0.99).length);
           stage.dataset.stageProgress = String(sample.stage);
           markInteractionCanvasDirty("videoWall");
-          if (!savedLighting && sample.stage >= 0.8 - 0.000001 && root?.dataset.scrollDirection === "forward") {
+          if (!savedLighting && sample.beams.every((beam) => beam === 1) && root?.dataset.scrollDirection === "forward") {
             savedLighting = true;
             saveLightingLook([true, true, true, true, true]);
           }

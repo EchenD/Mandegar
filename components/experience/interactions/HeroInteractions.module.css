@@ -213,19 +213,6 @@
 .hotspot:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .hotspot[data-completed="true"] { border-color: rgba(117, 216, 255, .35); }
 
-/* In WebGL mode the authored scene cue is the visible entry point. Keep the
-   projected button in the accessibility tree and reveal it when keyboard-focused. */
-.root:not([data-runtime="fallback"]) .hotspot:not(:focus-visible) {
-  width: 1px;
-  min-height: 1px;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  opacity: 0;
-  clip-path: inset(50%);
-  pointer-events: none;
-}
-
 .activeLayer {
   position: absolute;
   inset: 0;

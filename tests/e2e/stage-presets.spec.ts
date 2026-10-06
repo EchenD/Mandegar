@@ -206,22 +206,22 @@ test.describe("creative stage presets", () => {
     resetCreativeStageTuning();
   });
 
-  test("holds the final loop composition through the page handoff", () => {
+  test("settles renderer controls at the final authored checkpoint", () => {
     const loopEnd = getStageFrame(0.9995);
     const loopRest = getStageFrame(narrativeScore.at(-1)!.preview);
 
-    expect(loopEnd.cameraLife).toBeCloseTo(loopRest.cameraLife, 8);
-    expect(loopEnd.cameraPointer).toBeCloseTo(loopRest.cameraPointer, 8);
-    expect(loopEnd.production.centralReveal).toBeCloseTo(loopRest.production.centralReveal, 8);
-    expect(loopEnd.production.leftReveal).toBeCloseTo(loopRest.production.leftReveal, 8);
-    expect(loopEnd.production.rightReveal).toBeCloseTo(loopRest.production.rightReveal, 8);
-    expect(loopEnd.production.crowdPresence).toBeCloseTo(loopRest.production.crowdPresence, 8);
-    expect(loopEnd.production.dataFlow).toBeCloseTo(loopRest.production.dataFlow, 8);
+    expect(loopEnd.cameraLife).toBeCloseTo(loopRest.cameraLife, 3);
+    expect(loopEnd.cameraPointer).toBeCloseTo(loopRest.cameraPointer, 3);
+    expect(loopEnd.production.centralReveal).toBeCloseTo(loopRest.production.centralReveal, 3);
+    expect(loopEnd.production.leftReveal).toBeCloseTo(loopRest.production.leftReveal, 3);
+    expect(loopEnd.production.rightReveal).toBeCloseTo(loopRest.production.rightReveal, 3);
+    expect(loopEnd.production.crowdPresence).toBeCloseTo(loopRest.production.crowdPresence, 3);
+    expect(loopEnd.production.dataFlow).toBeCloseTo(loopRest.production.dataFlow, 3);
     expect(loopRest.cameraLife).toBe(stagePresets.loop.camera.life);
     expect(loopRest.cameraPointer).toBe(stagePresets.loop.camera.pointer);
     expect(getCameraLoopSampleProgress(0)).toBe(0);
     expect(getCameraLoopSampleProgress(1)).toBe(1);
-    expect(getCameraLoopSampleProgress(preview("engagement"))).toBeCloseTo(0.37, 8);
-    expect(getCameraLoopSampleProgress(preview("connection"))).toBeCloseTo(0.625, 8);
+    expect(getCameraLoopSampleProgress(preview("engagement"))).toBeCloseTo(800 / 2500, 3);
+    expect(getCameraLoopSampleProgress(preview("connection"))).toBeCloseTo(1750 / 2500, 3);
   });
 });

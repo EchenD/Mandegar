@@ -7,7 +7,7 @@ type ReviewStation = keyof typeof reviewPhases;
 
 function stationArrival(station: ReviewStation) {
   const beat = narrativeScore.find((item) => item.id === reviewPhases[station])!;
-  return beat.start + (beat.end - beat.start) * (station === "touch" ? 0.7 : 0.5);
+  return beat.preview;
 }
 
 export async function seekStationReview(page: Page, station: ReviewStation) {
@@ -51,8 +51,11 @@ export async function continueFromResult(page: Page, station: ReviewStation) {
 export async function waitForStation(page: Page, station: string) {
   const director = page.locator("[data-interaction-director]");
   await expect(director).toHaveAttribute("data-available-station", station, { timeout: 80_000 });
+  if (await director.getAttribute("data-active-station") !== station) {
+    await page.locator(`[data-interaction-hotspot='${station}']`).click();
+  }
   await expect(director).toHaveAttribute("data-active-station", station, { timeout: 80_000 });
-  await expect(director).toHaveAttribute("data-scroll-locked", "true");
+  await expect(director).toHaveAttribute("data-scroll-locked", "false");
   return director;
 }
 

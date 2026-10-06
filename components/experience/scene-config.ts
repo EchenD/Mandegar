@@ -11,6 +11,7 @@ import {
   type ScenePhaseId,
 } from "./narrative-score";
 import { bakedSceneContract } from "./baked-scene-contract";
+import { heroTimeline, retimeEffectRange } from "./hero-timeline-config";
 
 export type { ScenePhaseId } from "./narrative-score";
 export type SceneQuality = "full" | "adaptive";
@@ -129,8 +130,8 @@ export const sceneTokens = {
       peakBrightness: 1.42,
     },
     audience: {
-      enter: [0.360963, 0.449091] as const,
-      exit: [0.852941, 0.914773] as const,
+      enter: retimeEffectRange([0.360963, 0.449091]),
+      exit: retimeEffectRange([0.852941, 0.914773]),
       opacity: { full: 0.42, adaptive: 0.48 },
       peakBoost: 0.2,
       gatherDistance: 0.58,
@@ -187,7 +188,7 @@ export const sceneTokens = {
     particleCount: { full: 11200, adaptive: 4400 },
     particleLeadProgress: 0.012,
     crowdPreloadProgress: 0.06,
-    dataFlowRange: [0.725455, 0.763636] as const,
+    dataFlowRange: retimeEffectRange([0.725455, 0.763636]),
     ambientDust: {
       count: { full: 220, adaptive: 110 },
       color: "#d2b99d",
@@ -297,8 +298,8 @@ export function phaseProgress(progress: number, range: readonly [number, number]
 }
 
 export const heroHandoffRange = [
-  narrativeScore.find((beat) => beat.id === "invitation")?.preview ?? 0.863636,
-  1,
+  heroTimeline.cues.heroHandoffStart,
+  heroTimeline.cues.heroHandoffEnd,
 ] as const;
 
 export const journeyBackgroundColor = "#080b10";

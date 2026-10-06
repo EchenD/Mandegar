@@ -40,8 +40,9 @@ camera and content timing will be integrated together across all chapters.
 Send a review export of `mandegar_environment.glb` with the same camera and clip
 names, together with a filled copy of
 [camera-timing-handoff.template.json](camera-timing-handoff.template.json).
-The template is an authoring handoff; the application does not load it yet. A
-preflight checker validates the completed handoff against the actual GLB.
+The completed handoff is the runtime source of truth, imported by
+`components/experience/hero-timeline-config.ts`. Run the preflight checker after
+every camera export or frame edit to validate it against the actual GLB.
 
 - `fps`: the source animation frame rate, including its fractional part if used.
 - `firstFrame` and `lastFrame`: the source frames corresponding to the exported
@@ -112,10 +113,12 @@ Set its status to `ready` when authoring is complete, then add `--require-ready`
 to make missing or invalid data fail the check. `--json` provides the frame
 report for development tooling. These paths are examples, not asset locations.
 
-Step 1 extracts the existing camera mapping to
-`components/experience/camera-timeline.ts` without changing its samples. The
-current narrative easing, interaction holds, text, and effect timings remain in
-place until the revised full clip and its cues are ready.
+The current handoff is ready and integrated for frames 0–2500 at 30 FPS.
+The camera samples native scroll directly; phase text stays inside each viewing
+window, photo delivery follows its four cues, and lamps fade on over eight source
+frames after their activation cues. Interactions open on deliberate input and
+never lock the page. Finish moves native scroll to the current window's end in
+850 ms and new wheel, touch or scroll-key input takes over immediately.
 
 ### Integration steps
 

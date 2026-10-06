@@ -8,7 +8,7 @@ const invitation = narrativeScore.find((beat) => beat.id === "invitation")!;
 const loop = narrativeScore.find((beat) => beat.id === "loop")!;
 
 function fade(progress: number, start: number, end: number) {
-  const amount = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  const amount = Math.max(0, Math.min(1, (progress - start) / Math.max(0.0001, end - start)));
   return amount * amount * (3 - 2 * amount);
 }
 

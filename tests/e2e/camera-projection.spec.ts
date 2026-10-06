@@ -42,7 +42,7 @@ test.describe("authored camera projection", () => {
   });
 });
 
-test("installation stays steady during pointer movement and restores motion after exit", async ({ page }) => {
+test("the authored installation camera stays steady before, during and after participation", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
@@ -76,5 +76,5 @@ test("installation stays steady during pointer movement and restores motion afte
   const moved = await sampleAnchor();
   const restoredOrigin = restored.at(-1)!;
   const movement = Math.max(...moved.map((point) => Math.hypot(point.x - restoredOrigin.x, point.y - restoredOrigin.y)));
-  expect(movement).toBeGreaterThan(1);
+  expect(movement).toBeLessThan(0.5);
 });

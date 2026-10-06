@@ -1,4 +1,5 @@
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
+import { heroTimeline } from "./hero-timeline-config";
 
 export type NarrativeCopyTiming = {
   enterStart: number;
@@ -40,57 +41,31 @@ export const narrativeCopyStageTuning = {
 } as const satisfies Record<ScenePhaseId, NarrativeCopyStageTuning>;
 
 export function getNarrativeCopyTiming(phaseId: ScenePhaseId): NarrativeCopyTiming {
-  const index = narrativeScore.findIndex((item) => item.id === phaseId);
-  if (index < 0) throw new Error(`Narrative copy timing is missing phase '${phaseId}'.`);
-  const phase = narrativeScore[index];
-  const previous = narrativeScore[index - 1];
-  const next = narrativeScore[index + 1];
+  const phase = narrativeScore.find((item) => item.id === phaseId);
+  if (!phase) throw new Error(`Narrative copy timing is missing phase '${phaseId}'.`);
   const tuning = narrativeCopyStageTuning[phaseId];
-  const halfBreath = narrativeCopyRhythm.breathing * 0.5;
-  const openingBreath = narrativeCopyRhythm.breathing * narrativeCopyRhythm.openingBreathingRatio;
-  const closingBreath = narrativeCopyRhythm.breathing * narrativeCopyRhythm.closingBreathingRatio;
-  const leftBoundary = previous ? (previous.preview + phase.preview) * 0.5 : 0;
-  const rightBoundary = next
-    ? (phase.preview + next.preview) * 0.5
-    : narrativeCopyRhythm.loopBoundary;
-  const enterStart = previous ? leftBoundary + halfBreath : openingBreath;
-  const exitEnd = next ? rightBoundary - halfBreath : rightBoundary - closingBreath;
-
+  const enterStart = phaseId === "activation" ? heroTimeline.cues.photoTextReady : phase.start;
+  const span = Math.max(0, phase.end - enterStart);
+  const enterDuration = Math.min(tuning.enterDuration, span * 0.25);
+  const exitDuration = Math.min(tuning.exitDuration, span * 0.25);
   return {
     enterStart,
-    enterEnd: Math.min(phase.preview, enterStart + tuning.enterDuration),
-    exitStart: Math.max(phase.preview, exitEnd - tuning.exitDuration),
-    exitEnd,
-    enterStagger: tuning.enterStagger,
-    exitStagger: tuning.exitStagger,
+    enterEnd: enterStart + enterDuration,
+    exitStart: phase.end - exitDuration,
+    exitEnd: phase.end,
+    enterStagger: Math.min(tuning.enterStagger, enterDuration * 0.5),
+    exitStagger: Math.min(tuning.exitStagger, exitDuration * 0.5),
   };
 }
 
 export function validateNarrativeCopyTimings() {
-  const timings = narrativeScore.map((phase) => getNarrativeCopyTiming(phase.id));
-  timings.forEach((timing, index) => {
-    const phase = narrativeScore[index];
-    if (!(timing.enterStart < timing.enterEnd && timing.enterEnd <= phase.preview)) {
-      throw new Error(`Narrative copy '${phase.id}' must finish entering by its resting point.`);
-    }
-    if (!(phase.preview <= timing.exitStart && timing.exitStart < timing.exitEnd)) {
-      throw new Error(`Narrative copy '${phase.id}' must begin exiting after its resting point.`);
-    }
-    if (index > 0) {
-      const gap = timing.enterStart - timings[index - 1].exitEnd;
-      if (Math.abs(gap - narrativeCopyRhythm.breathing) > 0.000001) {
-        throw new Error(`Narrative copy gap before '${phase.id}' does not match the shared breathing length.`);
-      }
+  narrativeScore.forEach((phase) => {
+    const timing = getNarrativeCopyTiming(phase.id);
+    if (!(phase.start <= timing.enterStart && timing.enterStart <= timing.enterEnd
+      && timing.enterEnd <= timing.exitStart && timing.exitStart <= timing.exitEnd && timing.exitEnd <= phase.end)) {
+      throw new Error(`Narrative copy '${phase.id}' must stay inside its authored viewing window.`);
     }
   });
-  const openingBreath = narrativeCopyRhythm.breathing * narrativeCopyRhythm.openingBreathingRatio;
-  const closingBreath = narrativeCopyRhythm.breathing * narrativeCopyRhythm.closingBreathingRatio;
-  if (Math.abs(timings[0].enterStart - openingBreath) > 0.000001) {
-    throw new Error("Arrival does not preserve the opening breathing length.");
-  }
-  if (Math.abs(narrativeCopyRhythm.loopBoundary - timings[timings.length - 1].exitEnd - closingBreath) > 0.000001) {
-    throw new Error("Loop does not preserve the closing breathing length.");
-  }
   return true;
 }
 

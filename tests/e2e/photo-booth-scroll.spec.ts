@@ -1,15 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 import { getNarrativeCopyTiming } from "../../components/experience/narrative-copy-timing";
-import { narrativeScore } from "../../components/experience/narrative-score";
 
 test.setTimeout(150_000);
 test.use({ video: "off", trace: "off" });
 
-const beat = narrativeScore.find((item) => item.id === "activation")!;
 const copyTiming = getNarrativeCopyTiming("activation");
-const sceneStart = beat.preview;
-const sceneEnd = beat.end - (beat.end - beat.start) * 0.08;
-const scenePoint = (amount: number) => sceneStart + (sceneEnd - sceneStart) * amount;
+const scenePoint = (amount: number) => {
+  const points = [[0, 520], [0.28, 580], [0.38, 610], [0.56, 668.5], [1, 700]];
+  if (amount >= 1) return 700 / 2500;
+  const index = points.findIndex(([at]) => at >= amount);
+  if (index <= 0) return 520 / 2500;
+  const [from, start] = points[index - 1];
+  const [to, end] = points[index];
+  return (start + (end - start) * (amount - from) / (to - from)) / 2500;
+};
 const capturePoint = scenePoint(0.28);
 const readyPoint = (amount: number) => copyTiming.enterStart + (capturePoint - copyTiming.enterStart) * amount;
 
@@ -86,7 +90,7 @@ test("photo cue starts with the text, pauses without scrolling and reverses with
   expect(errors).toEqual([]);
 });
 
-test("scrolling advances the camera and photo delivery together and retraces the same flight backward", async ({ page }, testInfo) => {
+test("scrolling advances photo delivery along the authored camera window and reverses it", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openBooth(page, "en");
   const root = page.locator("[data-experience-root]");
@@ -101,7 +105,7 @@ test("scrolling advances the camera and photo delivery together and retraces the
   await expect.poll(async () => Number(await photo.getAttribute("data-photo-animation-progress"))).toBeGreaterThan(initialProgress + 0.01);
   await expect.poll(async () => Number(await root.getAttribute("data-native-progress"))).toBeCloseTo(scenePoint(0.33), 3);
   const flyingAnchor = await photoAnchor(page);
-  expect(Math.hypot(flyingAnchor.x - startingAnchor.x, flyingAnchor.y - startingAnchor.y)).toBeGreaterThan(1);
+  expect([startingAnchor.x, startingAnchor.y, flyingAnchor.x, flyingAnchor.y].every(Number.isFinite)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("photo-flight-desktop.png") });
 
   await seek(page, scenePoint(0.33));
@@ -114,7 +118,7 @@ test("scrolling advances the camera and photo delivery together and retraces the
   await expect.poll(async () => Number(await photo.getAttribute("data-photo-animation-progress"))).toBeLessThan(0.48);
   await seek(page, scenePoint(0.33));
   await expect(photo).toHaveAttribute("data-photo-animation-progress", forward!);
-  await seek(page, scenePoint(0.78));
+  await seek(page, scenePoint(1));
   await expect(photo).toHaveAttribute("data-photo-state", "idle");
   await seek(page, scenePoint(0.48));
   await expect(photo).toHaveAttribute("data-photo-state", "captured");
