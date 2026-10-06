@@ -16,7 +16,7 @@ export async function seekStationReview(page: Page, station: ReviewStation) {
   await page.locator("[data-experience-root]").evaluate((root: HTMLElement, { station: expectedStation, progress }) => {
     const currentDirector = root.querySelector<HTMLElement>("[data-interaction-director]");
     if (currentDirector?.dataset.activeStation === expectedStation && currentDirector.dataset.presentation === "active") return;
-    // Automatic arrival acquires the root hold before React commits its
+    // Automatic arrival publishes the active station before React commits its
     // director state. A review seek during that gap would begin departure.
     if (root.dataset.interactionActive === expectedStation && !root.hasAttribute("data-interaction-result") && !root.hasAttribute("data-interaction-departing")) return;
     root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
@@ -25,15 +25,14 @@ export async function seekStationReview(page: Page, station: ReviewStation) {
 
 export async function returnToStationForward(page: Page, station: ReviewStation) {
   const root = page.locator("[data-experience-root]");
-  if (await page.locator("[data-interaction-director]").getAttribute("data-presentation") === "result") {
-    await expect(root).not.toHaveAttribute("data-interaction-active", station);
-  }
+  const beat = narrativeScore.find((item) => item.id === reviewPhases[station])!;
+  const beforeWindow = Math.max(0, beat.start - 0.004);
   await root.evaluate((element, progress) => {
     element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
-  }, stationArrival(station) - 0.004);
+  }, beforeWindow);
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
   const distance = await root.evaluate((element: HTMLElement) => Number(element.dataset.cameraScrollDistance) || element.offsetHeight - innerHeight);
-  await page.mouse.wheel(0, distance * 0.008);
+  await page.mouse.wheel(0, distance * (beat.preview + 0.004 - beforeWindow));
   return waitForStation(page, station);
 }
 
@@ -41,10 +40,7 @@ export async function continueFromResult(page: Page, station: ReviewStation) {
   const director = page.locator("[data-interaction-director]");
   await expect(director).toHaveAttribute("data-presentation", "result");
   await expect(page.locator(`p[data-interaction-result='${station}']`)).toBeVisible();
-  // The semantic lock ends when the result appears; the root retains the
-  // actual scroll hold for its protected reading period.
-  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-interaction-active", station);
-  await page.mouse.wheel(0, 120);
+  // Completion advances automatically after the result's reading interval.
   await expect(director).toHaveAttribute("data-active-station", "none");
 }
 

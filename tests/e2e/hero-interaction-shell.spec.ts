@@ -29,11 +29,32 @@ test("reverse travel never automatically opens a station", async ({ page }) => {
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
 });
 
-test("navigation away from an active station releases its gesture and scroll ownership", async ({ page }) => {
+test("section navigation cancels a completed station's pending advance and releases its ownership", async ({ page }) => {
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   await waitForStation(page, "touch");
-  await page.getByLabel("Primary navigation").getByRole("link", { name: "Projects", exact: true }).click();
-  await expect(page).toHaveURL(/\/en\/projects/, { timeout: 30_000 });
-  await expect(page.locator("[data-interaction-director]")).toHaveCount(0);
+  const sample = await page.locator("[data-experience-root]").evaluate((root) => new Promise<{
+    requests: number;
+    resultPresent: boolean;
+  }>((resolve) => {
+    let requests = 0;
+    const finish = () => { requests += 1; };
+    root.addEventListener("mandegar:finish-phase", finish);
+    root.querySelector<HTMLButtonElement>("[data-interaction-finish]")!.click();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const resultPresent = root.querySelector("p[data-interaction-result='touch']") !== null;
+      document.querySelector<HTMLAnchorElement>("header nav a[href='#showcase']")!.click();
+      setTimeout(() => {
+        root.removeEventListener("mandegar:finish-phase", finish);
+        resolve({ requests, resultPresent });
+      }, 2_000);
+    }));
+  }));
+  expect(sample.resultPresent).toBe(true);
+  expect(sample.requests).toBe(0);
+  await expect(page).toHaveURL(/#showcase$/);
+  await expect(page.locator("[data-connected-journey]")).toHaveAttribute("data-journey-phase", "projects");
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-interaction-active");
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-finish-scrolling");
   expect(await page.evaluate(() => document.documentElement.style.overscrollBehavior)).not.toBe("none");
 });

@@ -1,13 +1,70 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { heroTimeline } from "../../components/experience/hero-timeline-config";
 import { driveRaceToCollision, returnToStationForward, seekStationReview, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
 
-test("Skip restores the previous keyboard focus without moving the reading position", async ({ page }) => {
+function observeRaceDeparture(page: Page) {
+  return page.locator("[data-experience-root]").evaluate((root: HTMLElement) => new Promise<{
+    readingMs: number;
+    requests: number;
+    resultPainted: boolean;
+    controlsCompleted: boolean;
+    replayControls: number;
+    intermediateFrames: boolean;
+    finalFrame: number;
+  }>((resolve, reject) => {
+    const started = performance.now();
+    let resultAt: number | null = null;
+    let advanceAt: number | null = null;
+    let requests = 0;
+    let resultPainted = false;
+    let controlsCompleted = false;
+    let replayControls = -1;
+    let intermediateFrames = false;
+    const finish = () => { requests += 1; };
+    root.addEventListener("mandegar:finish-phase", finish);
+    root.dataset.resultObserverReady = "true";
+    const tick = () => {
+      const now = performance.now();
+      const frame = Number(root.dataset.heroFrame);
+      if (root.dataset.interactionResult === "game") {
+        const result = root.querySelector<HTMLElement>("p[data-interaction-result='game']");
+        if (result && getComputedStyle(result).visibility !== "hidden") {
+          resultAt ??= now;
+          resultPainted = true;
+          controlsCompleted ||= root.querySelector<HTMLElement>("[data-game-spatial-controls]")?.dataset.gameStatus === "complete";
+          replayControls = root.querySelectorAll("[data-game-finish], [data-game-replay], [data-interaction-replay]").length;
+        }
+      }
+      if (root.dataset.finishScrolling === "true") advanceAt ??= now;
+      intermediateFrames ||= advanceAt !== null && frame > 1535 && frame < 1620;
+      if (frame >= 1629.99 && advanceAt !== null && resultAt !== null) {
+        root.removeEventListener("mandegar:finish-phase", finish);
+        resolve({
+          readingMs: advanceAt - resultAt,
+          requests,
+          resultPainted,
+          controlsCompleted,
+          replayControls,
+          intermediateFrames,
+          finalFrame: frame,
+        });
+      } else if (now - started > 40_000) {
+        root.removeEventListener("mandegar:finish-phase", finish);
+        reject(new Error("The completed race did not advance through its authored window."));
+      } else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+}
+
+test("Escape restores the previous keyboard focus without moving the reading position", async ({ page }) => {
   await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
   const root = page.locator("[data-experience-root]");
   await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
+  await page.keyboard.press("Tab");
   const previous = page.getByLabel("Primary navigation").getByRole("link", { name: "Projects", exact: true });
   await previous.focus();
   await seekStationReview(page, "touch");
@@ -20,158 +77,62 @@ test("Skip restores the previous keyboard focus without moving the reading posit
   expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
 });
 
-test("a completed race keeps its result and a fresh forward race remains active without Replay", async ({ page }) => {
+test("a completed race advances once and a fresh forward race resets while retaining the best score", async ({ page }) => {
   await page.goto("/en?intro=0&phase=experiences", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "game");
   await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+  const departure = observeRaceDeparture(page);
+  await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-result-observer-ready", "true");
   const score = await driveRaceToCollision(page);
-  const root = page.locator("[data-experience-root]");
-  await expect(director).toHaveAttribute("data-presentation", "result");
-  await expect(root).not.toHaveAttribute("data-interaction-active", "game");
-  await expect(director).toHaveAttribute("data-active-station", "game");
-  await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "complete");
-  await expect(page.locator("p[data-interaction-result='game']")).toBeVisible();
-  await expect(page.locator("[data-game-finish], [data-game-replay], [data-interaction-replay]")).toHaveCount(0);
+  const sample = await departure;
+  expect(sample.resultPainted).toBe(true);
+  expect(sample.controlsCompleted).toBe(true);
+  expect(sample.replayControls).toBe(0);
+  expect(sample.readingMs).toBeGreaterThanOrEqual(900);
+  expect(sample.requests).toBe(1);
+  expect(sample.intermediateFrames).toBe(true);
+  expect(sample.finalFrame).toBeCloseTo(1630, 1);
+  await expect(director).toHaveAttribute("data-active-station", "none");
   await returnToStationForward(page, "game");
   await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-outcome", "none");
   await expect.poll(async () => Number(await page.locator("[data-game-spatial-controls]").getAttribute("data-game-best"))).toBeGreaterThanOrEqual(score);
-  // A new run must survive past the previous result's protection interval.
   await page.waitForTimeout(1_100);
   await expect(director).toHaveAttribute("data-active-station", "game");
   await expect(director).toHaveAttribute("data-presentation", "active");
-  await expect(root).toHaveAttribute("data-interaction-active", "game");
   await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "running");
 });
 
-test("a race result protects its reading moment then forwards a mobile swipe before the monitor leaves", async ({ browser }) => {
+test("a mobile race result remains readable before automatically scrolling through its authored window", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
-  await page.goto("/en?intro=0&phase=experiences", { waitUntil: "domcontentloaded" });
-  await waitForStation(page, "game");
-  await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  const root = page.locator("[data-experience-root]");
-  const protection = root.evaluate((element: HTMLElement) => new Promise<{
-    protectedMs: number;
-    movedDuringProtection: boolean;
-    monitorPresent: boolean;
-    activeStation: string | undefined;
-  }>((resolve, reject) => {
-    const started = performance.now();
-    let resultAt: number | null = null;
-    let heldScroll = 0;
-    let movedDuringProtection = false;
-    let wheelAt = 0;
-    const resultStarted = new MutationObserver(() => {
-      if (element.dataset.interactionResult === "game" && resultAt === null) {
-        resultAt = performance.now();
-        heldScroll = scrollY;
-      }
-    });
-    resultStarted.observe(element, { attributes: true, attributeFilter: ["data-interaction-result"] });
-    element.dataset.resultProtectionObserverReady = "true";
-    const tick = (now: number) => {
-      if (now - started > 35_000) {
-        resultStarted.disconnect();
-        reject(new Error("Race completion did not release its protected result."));
-        return;
-      }
-      if (element.dataset.interactionResult === "game") {
-        if (resultAt === null) { resultAt = now; heldScroll = scrollY; }
-        const held = element.dataset.interactionActive === "game";
-        if (held) {
-          movedDuringProtection ||= Math.abs(scrollY - heldScroll) > 2;
-          // Residual wheel packets cannot erase a freshly completed race.
-          if (now - wheelAt > 100) {
-            window.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
-            wheelAt = now;
-          }
-        } else {
-          resultStarted.disconnect();
-          resolve({
-            protectedMs: now - resultAt,
-            movedDuringProtection,
-            monitorPresent: document.querySelector("[data-game-canvas]") !== null,
-            activeStation: document.querySelector<HTMLElement>("[data-interaction-director]")?.dataset.activeStation,
-          });
-          return;
-        }
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }));
-  await expect(root).toHaveAttribute("data-result-protection-observer-ready", "true");
-  await driveRaceToCollision(page);
-  const sample = await protection;
-  expect(sample.protectedMs).toBeGreaterThanOrEqual(800);
-  expect(sample.movedDuringProtection).toBe(false);
-  expect(sample.monitorPresent).toBe(true);
-  expect(sample.activeStation).toBe("game");
-  await expect(page.locator("p[data-interaction-result='game']")).toBeVisible();
-  await expect(root).not.toHaveAttribute("data-interaction-active", "game");
-
-  const handoff = await root.evaluate(async (element: HTMLElement) => {
-    const director = document.querySelector<HTMLElement>("[data-interaction-director]")!;
-    const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true'] canvas")!;
-    const scrollBefore = scrollY;
-    const point = (y: number) => new Touch({ identifier: 1, target: canvas, clientX: 10, clientY: y });
-    const start = point(450);
-    canvas.dispatchEvent(new TouchEvent("touchstart", {
-      bubbles: true, cancelable: true, touches: [start], changedTouches: [start],
-    }));
-    const moves = [430, 390].map((y) => {
-      const moved = point(y);
-      const move = new TouchEvent("touchmove", {
-        bubbles: true, cancelable: true, touches: [moved], changedTouches: [moved],
-      });
-      canvas.dispatchEvent(move);
-      return move.defaultPrevented;
-    });
-    const moved = point(390);
-    canvas.dispatchEvent(new TouchEvent("touchend", {
-      bubbles: true, cancelable: true, touches: [], changedTouches: [moved],
-    }));
-    const snapshot = {
-      monitorPresent: document.querySelector("[data-game-canvas]") !== null,
-      activeStation: director.dataset.activeStation,
-      departing: element.dataset.interactionDeparting,
-      scrollAdvance: scrollY - scrollBefore,
-      prevented: moves,
-    };
-    // A pending smooth-scroll target must not pull the released finger's
-    // later native movement back after its final packet or touchend.
-    const finalPacketScroll = scrollY;
-    const scrollSamples = [finalPacketScroll];
-    const started = performance.now();
-    await new Promise<void>((resolve) => {
-      const sampleScroll = () => {
-        scrollSamples.push(scrollY);
-        if (performance.now() - started >= 200) resolve();
-        else requestAnimationFrame(sampleScroll);
-      };
-      requestAnimationFrame(sampleScroll);
-    });
-    return { ...snapshot, finalPacketScroll, scrollSamples };
-  });
-  expect(handoff.monitorPresent).toBe(true);
-  expect(handoff.activeStation).toBe("game");
-  expect(handoff.departing).toBe("game");
-  expect(handoff.scrollAdvance).toBeGreaterThan(20);
-  expect(handoff.prevented).toEqual([true, true]);
-  expect(handoff.scrollSamples.length).toBeGreaterThan(1);
-  expect(Math.min(...handoff.scrollSamples)).toBeGreaterThanOrEqual(handoff.finalPacketScroll - 1);
-  for (let index = 1; index < handoff.scrollSamples.length; index += 1) {
-    expect(handoff.scrollSamples[index]).toBeGreaterThanOrEqual(handoff.scrollSamples[index - 1] - 1);
+  try {
+    await page.goto("/fa?intro=0&phase=experiences", { waitUntil: "domcontentloaded" });
+    const director = await waitForStation(page, "game");
+    await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+    const departure = observeRaceDeparture(page);
+    await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-result-observer-ready", "true");
+    await driveRaceToCollision(page);
+    const sample = await departure;
+    expect(sample.resultPainted).toBe(true);
+    expect(sample.controlsCompleted).toBe(true);
+    expect(sample.readingMs).toBeGreaterThanOrEqual(900);
+    expect(sample.requests).toBe(1);
+    expect(sample.intermediateFrames).toBe(true);
+    expect(sample.finalFrame).toBeCloseTo(1630, 1);
+    await expect(director).toHaveAttribute("data-active-station", "none");
+    await expect(director).toHaveAttribute("data-scroll-locked", "false");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+  } finally {
+    await context.close();
   }
-  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
-  await expect(page.locator("[data-game-canvas]")).toHaveCount(0);
-  await context.close();
 });
 
-test("fresh installation visits restore navigation focus after their buttons unmount", async ({ page }) => {
+test("fresh installation visits restore navigation focus after Escape and authored Skip", async ({ page }) => {
   await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
+  await page.keyboard.press("Tab");
   const previous = page.getByLabel("Primary navigation").getByRole("link", { name: "Projects", exact: true });
   await previous.focus();
   await seekStationReview(page, "touch");
@@ -182,7 +143,8 @@ test("fresh installation visits restore navigation focus after their buttons unm
       await returnToStationForward(page, "touch");
     }
     await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000", { timeout: 20_000 });
-    await expect(page.locator("[data-interaction-escape]")).toBeFocused();
+    if (index === 0) await expect(page.locator("[data-interaction-escape]")).toBeFocused();
+    else await expect(previous).toBeFocused();
     await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
     await page.locator("[data-installation-button='details']").focus();
     await page.keyboard.press("Enter");
@@ -193,6 +155,11 @@ test("fresh installation visits restore navigation focus after their buttons unm
     await expect(director).toHaveAttribute("data-active-station", "none");
     await expect(previous).toBeFocused();
     await expect(page.locator("[data-installation-button], [data-interaction-replay]")).toHaveCount(0);
-    expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
+    if (exitKey === "Escape") expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
+    else {
+      expect(await page.evaluate(() => scrollY)).toBeGreaterThan(before);
+      const phase = heroTimeline.phases.find((item) => item.id === "engagement")!;
+      expect(Number(await page.locator("[data-experience-root]").getAttribute("data-hero-frame"))).toBeCloseTo(phase.end * heroTimeline.lastFrame, 1);
+    }
   }
 });
