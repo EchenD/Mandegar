@@ -1,0 +1,170 @@
+[
+  {
+    "name": "desktop",
+    "samples": [
+      {
+        "frame": 2129,
+        "visible": [
+          {
+            "phase": "proof",
+            "opacity": 0.0094,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2140,
+        "visible": []
+      },
+      {
+        "frame": 2150,
+        "visible": []
+      },
+      {
+        "frame": 2190,
+        "visible": [
+          {
+            "phase": "intelligence",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2250,
+        "visible": [
+          {
+            "phase": "intelligence",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2330,
+        "visible": []
+      },
+      {
+        "frame": 2340,
+        "visible": []
+      },
+      {
+        "frame": 2350,
+        "visible": []
+      },
+      {
+        "frame": 2385,
+        "visible": [
+          {
+            "phase": "invitation",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2420,
+        "visible": [
+          {
+            "phase": "invitation",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2490,
+        "visible": []
+      },
+      {
+        "frame": 2500,
+        "visible": []
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "samples": [
+      {
+        "frame": 2129,
+        "visible": [
+          {
+            "phase": "proof",
+            "opacity": 0.0094,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2140,
+        "visible": []
+      },
+      {
+        "frame": 2150,
+        "visible": []
+      },
+      {
+        "frame": 2190,
+        "visible": [
+          {
+            "phase": "intelligence",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2250,
+        "visible": [
+          {
+            "phase": "intelligence",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2330,
+        "visible": []
+      },
+      {
+        "frame": 2340,
+        "visible": []
+      },
+      {
+        "frame": 2350,
+        "visible": []
+      },
+      {
+        "frame": 2385,
+        "visible": [
+          {
+            "phase": "invitation",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2420,
+        "visible": [
+          {
+            "phase": "invitation",
+            "opacity": 1,
+            "insideViewport": true
+          }
+        ]
+      },
+      {
+        "frame": 2490,
+        "visible": []
+      },
+      {
+        "frame": 2500,
+        "visible": []
+      }
+    ],
+    "errors": []
+  }
+]

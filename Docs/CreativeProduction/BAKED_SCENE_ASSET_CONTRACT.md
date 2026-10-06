@@ -115,11 +115,20 @@ report for development tooling. These paths are examples, not asset locations.
 
 The current handoff is ready and integrated for frames 0–2500 at 30 FPS.
 The camera clip samples native scroll directly, with its original breathing and
-mouse response restored. Phase text stays inside each viewing window, photo
+mouse response continuing during participation. Opening an activity does not
+reframe the camera, suppress those movements, or apply a game-only vignette.
+Phase text stays inside each viewing window, photo
 delivery follows its four cues, and lamps fade on over eight source frames after
 their activation cues. Touch, game and drawing enter automatically on settled
 forward arrival and keep native scroll available. Finish moves native scroll to the current window's end in
 850 ms and new wheel, touch or scroll-key input takes over immediately.
+Completed results receive a 900 ms reading period after painting before that
+smooth advance begins. Native scroll remains available during the reading
+period; deliberate scroll or Escape cancels the queued advance. Each attempt
+reports completion once, and exit or restart cancels its pending timers and
+scroll movement. Mobile entry waits for finger release and settled scrolling;
+keyboard entry focuses the controls and exit restores the previous focus
+without scrolling the page.
 The original ending follows the completed camera clip at frame 2500. Its
 desktop/mobile timeline durations remain 3.88/3.47 with the original 90svh per
 timeline unit, 0.55 scrub, project reading time, and four-unit camera descent
