@@ -21,6 +21,7 @@ import { resetInstallation, installationCopy } from "./installation-demo";
 import styles from "./HeroInteractions.module.css";
 
 const interactionStationNames: readonly InteractionStation[] = ["photo", "touch", "stage", "game", "draw"];
+const pageScrollKeys = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
 
 function fallbackFrame(): InteractionAnchorFrame {
   const width = typeof window === "undefined" ? 1200 : window.innerWidth;
@@ -64,6 +65,14 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
   const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
+  const arrivalInput = useRef({
+    touching: false,
+    touchEndedAt: -Infinity,
+    nativeScrolledAt: -Infinity,
+    wheelAt: -Infinity,
+    wheelDelta: 0,
+    keyboard: false,
+  });
 
   const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
     interactionStationNames.forEach((name) => {
@@ -80,6 +89,48 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     const frame = requestAnimationFrame(() => setShowAnchorDebug(process.env.NODE_ENV === "development"
       && new URLSearchParams(window.location.search).get("anchors") === "1"));
     return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const input = arrivalInput.current;
+    const wheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey || event.deltaY === 0) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+      input.wheelAt = performance.now();
+      input.wheelDelta = event.deltaY * unit;
+      input.keyboard = false;
+    };
+    const start = () => { input.touching = true; input.keyboard = false; };
+    const end = (event: TouchEvent) => {
+      input.touching = event.touches.length > 0;
+      if (!input.touching) input.touchEndedAt = performance.now();
+    };
+    const scroll = () => { input.nativeScrolledAt = performance.now(); };
+    const pointer = () => { input.keyboard = false; };
+    const key = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")
+        || (event.key === " " && target?.closest("button"))) return;
+      if (event.key === "Tab" || pageScrollKeys.has(event.key)) input.keyboard = true;
+    };
+    window.addEventListener("wheel", wheel, { capture: true, passive: true });
+    window.addEventListener("touchstart", start, { capture: true, passive: true });
+    window.addEventListener("touchend", end, true);
+    window.addEventListener("touchcancel", end, true);
+    window.addEventListener("scroll", scroll, { passive: true });
+    window.addEventListener("pointerdown", pointer, true);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("wheel", wheel, true);
+      window.removeEventListener("touchstart", start, true);
+      window.removeEventListener("touchend", end, true);
+      window.removeEventListener("touchcancel", end, true);
+      window.removeEventListener("scroll", scroll);
+      window.removeEventListener("pointerdown", pointer, true);
+      window.removeEventListener("keydown", key);
+      input.touching = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -117,7 +168,8 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     root?.removeAttribute("data-interaction-departing");
     const copyLayer = root?.querySelector<HTMLElement>("[data-copy-layer]");
     if (copyLayer) { copyLayer.inert = false; copyLayer.removeAttribute("aria-hidden"); }
-    if (panelRoot.current?.contains(document.activeElement) && previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
+    if ((panelRoot.current?.contains(document.activeElement) || document.activeElement === document.body)
+      && previousFocus.current?.isConnected) previousFocus.current.focus({ preventScroll: true });
     interactionRuntime.activeStation = null;
     interactionRuntime.gestureStation = null;
     dispatch({ type: "EXIT", cancelled });
@@ -163,6 +215,8 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     let frame: number;
     let previousProgress = Number(root.dataset.nativeProgress ?? 0);
     let previousTime = performance.now();
+    let lastMotionAt = previousTime;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     let sampled = false;
     const checkArrival = () => {
       const now = performance.now();
@@ -170,14 +224,19 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       if (root.dataset.scrollDirection === "backward" || progress < phase.start) autoStarted.current[expectedStation] = false;
       const pixels = Math.abs(progress - previousProgress) * Math.max(1, Number(root.dataset.cameraScrollDistance) || root.offsetHeight - innerHeight);
       const speed = pixels / Math.max(16, now - previousTime);
+      if (pixels > 1) lastMotionAt = now;
+      const input = arrivalInput.current;
+      const fastWheel = now - input.wheelAt < 250 && Math.abs(input.wheelDelta) > innerHeight * 1.5;
+      const touchSettled = !input.touching && now - input.touchEndedAt >= 160
+        && (!coarsePointer || (now - lastMotionAt >= 100 && now - input.nativeScrolledAt >= 160));
       previousProgress = progress;
       previousTime = now;
       if (sampled && root.dataset.scrollDirection === "forward"
         && root.dataset.storyStage === phase.id && root.dataset.reducedMotion !== "true"
         && !autoStarted.current[expectedStation] && !interactionRuntime.activeStation
         && progress >= phase.preview - .0001 && progress < phase.end
-        && speed <= 2.4) {
-        enter(expectedStation, "automatic");
+        && speed <= 2.4 && touchSettled && !fastWheel && now - input.wheelAt >= 160) {
+        enter(expectedStation, input.keyboard ? "keyboard" : "automatic");
         return;
       }
       sampled = true;
@@ -240,6 +299,14 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   }, [applyAnchorFrame, enter]);
 
   useEffect(() => { applyAnchorFrame(anchors.current); }, [applyAnchorFrame, expectedStation, showAnchorDebug, state.activeStation]);
+
+  useEffect(() => {
+    if (!state.activeStation || state.input !== "keyboard") return;
+    const frame = requestAnimationFrame(() => {
+      panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [state.activeStation, state.input]);
 
   useEffect(() => {
     if (state.activeStation && state.activeStation !== expectedStation) exit(state.lifecycle !== "complete");
