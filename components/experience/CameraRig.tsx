@@ -10,7 +10,6 @@ import { getCameraLoopSampleProgress } from "./camera-timeline";
 import { heroTimeline } from "./hero-timeline-config";
 import { compileHeroTimeline } from "./hero-timeline";
 import handoff from "../../Docs/CreativeProduction/camera-timing-handoff.template.json";
-import { interactionRuntime } from "./interactions/interaction-runtime";
 import { heroEnding } from "./hero-ending";
 
 function smoothstep(value: number) {
@@ -166,7 +165,6 @@ export function CameraRig({ source }: { source: string }) {
     const progress = experienceState.progress;
     const cameraProgress = getCameraLoopSampleProgress(progress);
     const introActive = experienceState.sequence === "intro";
-    const interactionActive = interactionRuntime.activeStation !== null;
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
     let baseNear = fallbackProjection.current.near;
@@ -175,8 +173,8 @@ export function CameraRig({ source }: { source: string }) {
     const pointerMotion = sceneTokens.cameraMotion.pointer;
     const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
     cameraPointerInput.current.set(
-      introActive || interactionActive ? 0 : experienceState.pointerX * pointerInputScale,
-      introActive || interactionActive ? 0 : experienceState.pointerY * pointerInputScale,
+      introActive ? 0 : experienceState.pointerX * pointerInputScale,
+      introActive ? 0 : experienceState.pointerY * pointerInputScale,
     );
     const springDelta = Math.min(delta, pointerMotion.maximumDelta);
     const springDamping = Math.exp(-pointerMotion.damping * springDelta);
@@ -244,7 +242,7 @@ export function CameraRig({ source }: { source: string }) {
     const stage = experienceState.stage;
     cameraLifeBlend.current = introActive
       ? 0
-      : THREE.MathUtils.damp(cameraLifeBlend.current, interactionActive ? 0 : 1, interactionActive ? 8 : 1, springDelta);
+      : THREE.MathUtils.damp(cameraLifeBlend.current, 1, 1, springDelta);
     const lifeBlend = cameraLifeBlend.current;
     const heroPresence = 1 - handoffProgress;
     const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife * heroPresence;

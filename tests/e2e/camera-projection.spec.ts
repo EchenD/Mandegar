@@ -42,11 +42,16 @@ test.describe("authored camera projection", () => {
   });
 });
 
-test("the installation camera settles during participation and restores mouse response after exit", async ({ page }) => {
+test("the installation camera keeps mouse response during participation and after exit", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+  const root = page.locator("[data-experience-root]");
+  const base = await root.getAttribute("data-camera-base-pose");
+  const pose = await root.getAttribute("data-camera-pose");
+  await expect.poll(() => root.getAttribute("data-camera-pose")).not.toBe(pose);
+  await expect(root).toHaveAttribute("data-camera-base-pose", base!);
 
   const sampleAnchor = () => page.evaluate(() => new Promise<Array<{ x: number; y: number }>>((resolve) => {
     const points: Array<{ x: number; y: number }> = [];
@@ -67,7 +72,8 @@ test("the installation camera settles during participation and restores mouse re
   const right = await sampleAnchor();
   const origin = left.at(-1)!;
   const drift = Math.max(...right.map((point) => Math.hypot(point.x - origin.x, point.y - origin.y)));
-  expect(drift).toBeLessThan(0.5);
+  expect(drift).toBeGreaterThan(0.5);
+  await expect(root).toHaveAttribute("data-camera-base-pose", base!);
 
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");

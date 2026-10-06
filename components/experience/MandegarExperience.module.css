@@ -342,7 +342,6 @@
 .root[data-interaction-active] {
   transition-delay: 0s;
 }
-.root[data-interaction-active="game"] .vignette { background: radial-gradient(ellipse at 50% 45%, transparent 15%, rgba(7,10,13,.4) 75%); }
 
 .root[data-intro-active="true"] .copyLayer,
 .root[data-intro-active="true"] .phaseRail,
