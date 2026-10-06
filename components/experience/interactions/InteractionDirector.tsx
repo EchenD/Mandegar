@@ -18,7 +18,6 @@ import { resetRace } from "./race-game";
 import { ScrollScenes } from "./ScrollScenes";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
 import { resetInstallation, installationCopy } from "./installation-demo";
-import { InteractionHotspot, positionInteractionHotspot } from "./InteractionHotspot";
 import styles from "./HeroInteractions.module.css";
 
 const interactionStationNames: readonly InteractionStation[] = ["photo", "touch", "stage", "game", "draw"];
@@ -60,14 +59,13 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   const [departing, setDeparting] = useState(false);
   const previousFocus = useRef<HTMLElement | null>(null);
   const departureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoStarted = useRef<Partial<Record<InteractionStation, boolean>>>({});
+  const previousExpectedStation = useRef<InteractionStation | null>(null);
   const panelRoot = useRef<HTMLDivElement>(null);
-  const hotspot = useRef<HTMLButtonElement>(null);
   const anchors = useRef(initialAnchors);
   const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
 
   const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
-    const station = interactionRuntime.availableStation;
-    if (hotspot.current && station) positionInteractionHotspot(hotspot.current, frame.stations[station]);
     interactionStationNames.forEach((name) => {
       const element = debugAnchorElements.current[name];
       if (!element) return;
@@ -104,7 +102,13 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     return () => observer.disconnect();
   }, [activePhase, runtime]);
 
-  useEffect(() => { dispatch({ type: "AVAILABILITY", station: expectedStation }); }, [expectedStation, state.activeStation]);
+  useEffect(() => {
+    if (previousExpectedStation.current !== expectedStation) {
+      if (previousExpectedStation.current) autoStarted.current[previousExpectedStation.current] = false;
+      previousExpectedStation.current = expectedStation;
+    }
+    dispatch({ type: "AVAILABILITY", station: expectedStation });
+  }, [expectedStation, state.activeStation]);
 
   const finishExit = useCallback((cancelled: boolean) => {
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
@@ -139,6 +143,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     const sample = sampleHeroTimeline(heroTimeline, experienceState.progress);
     if (sample.phase.id !== interactionRegistry[station].phase
       || !sample.inViewingWindow || sample.progress >= sample.phase.end) return;
+    autoStarted.current[station] = true;
     if (station === "touch") resetInstallation();
     if (station === "game") resetRace();
     if (station === "draw") { clearDrawing(); clearDrawingDraft(); }
@@ -149,6 +154,38 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     dispatch({ type: "RESTART", station });
     dispatch({ type: "ENTER", station, input });
   }, [state.activeStation, state.availableStation]);
+
+  useEffect(() => {
+    if (!expectedStation || state.activeStation || state.availableStation !== expectedStation) return;
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    const phase = heroTimeline.phases.find((item) => item.id === interactionRegistry[expectedStation].phase);
+    if (!root || !phase) return;
+    let frame: number;
+    let previousProgress = Number(root.dataset.nativeProgress ?? 0);
+    let previousTime = performance.now();
+    let sampled = false;
+    const checkArrival = () => {
+      const now = performance.now();
+      const progress = Number(root.dataset.nativeProgress ?? 0);
+      if (root.dataset.scrollDirection === "backward" || progress < phase.start) autoStarted.current[expectedStation] = false;
+      const pixels = Math.abs(progress - previousProgress) * Math.max(1, root.offsetHeight - innerHeight);
+      const speed = pixels / Math.max(16, now - previousTime);
+      previousProgress = progress;
+      previousTime = now;
+      if (sampled && root.dataset.scrollDirection === "forward"
+        && root.dataset.storyStage === phase.id && root.dataset.reducedMotion !== "true"
+        && !autoStarted.current[expectedStation] && !interactionRuntime.activeStation
+        && progress >= phase.preview - .0001 && progress < phase.end
+        && speed <= 2.4) {
+        enter(expectedStation, "automatic");
+        return;
+      }
+      sampled = true;
+      frame = requestAnimationFrame(checkArrival);
+    };
+    frame = requestAnimationFrame(checkArrival);
+    return () => cancelAnimationFrame(frame);
+  }, [enter, expectedStation, state.activeStation, state.availableStation]);
 
   const continuePhase = useCallback((station: InteractionStation) => {
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
@@ -251,16 +288,6 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       data-scroll-locked="false"
       data-runtime={runtime}
     >
-      {!station && expectedStation && (
-        <InteractionHotspot
-          station={expectedStation}
-          label={copy.stations[expectedStation].label}
-          point={anchors.current.stations[expectedStation]}
-          completed={state.completed[expectedStation]}
-          onEnter={(input) => enter(expectedStation, input)}
-          elementRef={hotspot}
-        />
-      )}
       {station === "touch" && (
         <TouchComposerInteraction
           key={interactionRun}

@@ -51,9 +51,6 @@ export async function continueFromResult(page: Page, station: ReviewStation) {
 export async function waitForStation(page: Page, station: string) {
   const director = page.locator("[data-interaction-director]");
   await expect(director).toHaveAttribute("data-available-station", station, { timeout: 80_000 });
-  if (await director.getAttribute("data-active-station") !== station) {
-    await page.locator(`[data-interaction-hotspot='${station}']`).click();
-  }
   await expect(director).toHaveAttribute("data-active-station", station, { timeout: 80_000 });
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
   return director;
