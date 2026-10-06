@@ -74,6 +74,18 @@ export function syncPerspectiveCameraProjection(
   return true;
 }
 
+export function getResponsiveCameraFov(fov: number, width: number, height: number) {
+  if (width <= 0 || height <= 0 || !Number.isFinite(fov)) return fov;
+  const aspect = width / height;
+  if (width > 760 && aspect >= 1) return fov;
+  // Preserve the authored landscape shot's horizontal view on portrait screens.
+  // Only the lens changes; camera transforms and animation remain untouched.
+  const framingAspect = Math.max(aspect, 16 / 9);
+  return THREE.MathUtils.radToDeg(2 * Math.atan(
+    Math.tan(THREE.MathUtils.degToRad(fov) / 2) * framingAspect / aspect,
+  ));
+}
+
 export function CameraRig({ source }: { source: string }) {
   const gltf = useLoader(GLTFLoader, source);
   const { camera, size } = useThree();
@@ -229,7 +241,7 @@ export function CameraRig({ source }: { source: string }) {
     if (!mobile && framing.amount > 0) camera.rotateX(-0.05 * framing.amount);
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {
-        fov: baseFov,
+        fov: getResponsiveCameraFov(baseFov, size.width, size.height),
         near: baseNear,
         far: baseFar,
       });

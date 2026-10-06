@@ -1,9 +1,23 @@
 import { expect, test } from "@playwright/test";
 import * as THREE from "three";
-import { syncPerspectiveCameraProjection } from "../../components/experience/CameraRig";
+import { getResponsiveCameraFov, syncPerspectiveCameraProjection } from "../../components/experience/CameraRig";
 import { waitForStation } from "./hero-interaction-helpers";
 
 test.describe("authored camera projection", () => {
+  test("portrait framing retains the authored horizontal view without moving the camera", () => {
+    const desktop = new THREE.PerspectiveCamera(31.4, 16 / 9, 0.1, 10_000);
+    const mobile = new THREE.PerspectiveCamera(getResponsiveCameraFov(31.4, 390, 844), 390 / 844, 0.1, 10_000);
+    desktop.position.set(4, 8, 12);
+    mobile.position.copy(desktop.position);
+    const viewWidth = (camera: THREE.PerspectiveCamera) => 2 * 10
+      * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect;
+    expect(viewWidth(mobile)).toBeCloseTo(viewWidth(desktop), 8);
+    const tablet = new THREE.PerspectiveCamera(getResponsiveCameraFov(31.4, 768, 1024), 768 / 1024, 0.1, 10_000);
+    expect(viewWidth(tablet)).toBeCloseTo(viewWidth(desktop), 8);
+    expect(mobile.position.equals(desktop.position)).toBe(true);
+    expect(getResponsiveCameraFov(31.4, 1440, 900)).toBe(31.4);
+    expect(getResponsiveCameraFov(31.4, 0, 844)).toBe(31.4);
+  });
   test("copies the authored clipping range into the active camera", () => {
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 60);
 
