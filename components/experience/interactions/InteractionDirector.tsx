@@ -63,6 +63,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completionFrame = useRef<number | null>(null);
   const completionReported = useRef(false);
+  const completionInputVersion = useRef(0);
   const autoStarted = useRef<Partial<Record<InteractionStation, boolean>>>({});
   const previousExpectedStation = useRef<InteractionStation | null>(null);
   const panelRoot = useRef<HTMLDivElement>(null);
@@ -75,6 +76,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     wheelAt: -Infinity,
     wheelDelta: 0,
     keyboard: false,
+    version: 0,
   });
 
   const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
@@ -102,8 +104,9 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       input.wheelAt = performance.now();
       input.wheelDelta = event.deltaY * unit;
       input.keyboard = false;
+      input.version += 1;
     };
-    const start = () => { input.touching = true; input.keyboard = false; };
+    const start = () => { input.touching = true; input.keyboard = false; input.version += 1; };
     const end = (event: TouchEvent) => {
       input.touching = event.touches.length > 0;
       if (!input.touching) input.touchEndedAt = performance.now();
@@ -116,7 +119,10 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       if (target?.closest("input, textarea, select, [contenteditable='true']")
         || (event.key === " " && target?.closest("button"))) return;
       if (event.key === "Tab" || pageScrollKeys.has(event.key)) input.keyboard = true;
+      if (event.key === "Escape" || pageScrollKeys.has(event.key)) input.version += 1;
     };
+    const seek = () => { input.version += 1; };
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
     window.addEventListener("wheel", wheel, { capture: true, passive: true });
     window.addEventListener("touchstart", start, { capture: true, passive: true });
     window.addEventListener("touchend", end, true);
@@ -124,6 +130,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     window.addEventListener("scroll", scroll, { passive: true });
     window.addEventListener("pointerdown", pointer, true);
     window.addEventListener("keydown", key);
+    root?.addEventListener("mandegar:seek", seek);
     return () => {
       window.removeEventListener("wheel", wheel, true);
       window.removeEventListener("touchstart", start, true);
@@ -132,6 +139,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       window.removeEventListener("scroll", scroll);
       window.removeEventListener("pointerdown", pointer, true);
       window.removeEventListener("keydown", key);
+      root?.removeEventListener("mandegar:seek", seek);
       input.touching = false;
     };
   }, []);
@@ -274,6 +282,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   const complete = useCallback((station: InteractionStation) => {
     if (interactionRuntime.activeStation !== station || departureTimer.current !== null || completionReported.current) return;
     completionReported.current = true;
+    completionInputVersion.current = arrivalInput.current.version;
     dispatch({ type: "COMPLETE", station });
     document.querySelector<HTMLElement>("[data-experience-root]")?.setAttribute("data-interaction-result", station);
   }, []);
@@ -281,6 +290,9 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   useEffect(() => {
     const station = state.activeStation;
     if (!station || state.lifecycle !== "complete") return;
+    // New input can arrive between completion and React committing the result.
+    // The permanent input tracker covers that gap before these listeners exist.
+    if (arrivalInput.current.version !== completionInputVersion.current) return;
     // Start reading protection after React commits the result and the browser
     // has had a frame to paint it. The page remains scrollable throughout.
     completionFrame.current = requestAnimationFrame(() => {
@@ -300,16 +312,16 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       if (event.key === "Escape" || pageScrollKeys.has(event.key)) cancelResultAdvance();
     };
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    // Cancel on new scroll intent, not native scroll events: those also fire
+    // while an earlier wheel gesture is still easing toward its target.
     window.addEventListener("wheel", cancelResultAdvance, { passive: true });
     window.addEventListener("touchstart", cancelResultAdvance, { passive: true });
-    window.addEventListener("scroll", cancelResultAdvance, { passive: true });
     window.addEventListener("keydown", key);
     root?.addEventListener("mandegar:seek", cancelResultAdvance);
     return () => {
       cancelResultAdvance();
       window.removeEventListener("wheel", cancelResultAdvance);
       window.removeEventListener("touchstart", cancelResultAdvance);
-      window.removeEventListener("scroll", cancelResultAdvance);
       window.removeEventListener("keydown", key);
       root?.removeEventListener("mandegar:seek", cancelResultAdvance);
     };

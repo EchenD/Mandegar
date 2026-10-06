@@ -130,6 +130,41 @@ test("deliberate scroll cancels the queued result advance and keeps native scrol
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-scroll-locked", "false");
 });
 
+test("scrolling already in motion does not cancel a completed result's automatic departure", async ({ page }) => {
+  await open(page);
+  await seek(page, 825);
+  await waitForStation(page, "touch");
+  const sample = await page.locator("[data-interaction-finish]").evaluate((button: HTMLButtonElement) => new Promise<{
+    requests: number;
+    finalFrame: number;
+    movedBeforeAdvance: boolean;
+  }>((resolve) => {
+    const root = button.closest<HTMLElement>("[data-experience-root]")!;
+    const started = performance.now();
+    let requests = 0;
+    let movedBeforeAdvance = false;
+    const request = () => { requests += 1; };
+    root.addEventListener("mandegar:finish-phase", request);
+    const record = () => {
+      const frame = Number(root.dataset.heroFrame);
+      if (frame > 826 && requests === 0) movedBeforeAdvance = true;
+      if (frame >= 949.99 || performance.now() - started > 5_000) {
+        root.removeEventListener("mandegar:finish-phase", request);
+        resolve({ requests, finalFrame: frame, movedBeforeAdvance });
+      } else requestAnimationFrame(record);
+    };
+    // Begin the wheel gesture before completion. Its remaining Lenis motion
+    // is not a new request by the visitor to take over the result advance.
+    document.body.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+    button.click();
+    requestAnimationFrame(record);
+  }));
+  expect(sample.movedBeforeAdvance).toBe(true);
+  expect(sample.requests).toBe(1);
+  expect(sample.finalFrame).toBeCloseTo(950, 1);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+});
+
 test("leaving a completed interaction cancels its advance before a fresh forward attempt", async ({ page }) => {
   await open(page);
   await seek(page, 825);
@@ -150,27 +185,66 @@ test("leaving a completed interaction cancels its advance before a fresh forward
 });
 
 test("Escape cancels an advance already in motion and preserves the current authored frame", async ({ page }) => {
-  await page.clock.install();
   await open(page);
   await seek(page, 825);
-  const director = await waitForStation(page, "touch");
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
-  await page.locator("[data-interaction-finish]").click();
-  await page.clock.runFor(1_050);
-  const root = page.locator("[data-experience-root]");
-  await expect(root).toHaveAttribute("data-finish-scrolling", "true");
-  // The timer starts Finish; a subsequent GSAP tick moves the native page.
-  for (let count = 0; count < 5 && Number(await root.getAttribute("data-hero-frame")) <= 825; count += 1) {
-    await page.clock.runFor(100);
-  }
-  const frame = Number(await root.getAttribute("data-hero-frame"));
-  expect(frame).toBeGreaterThan(825);
-  expect(frame).toBeLessThan(950);
-  await page.keyboard.press("Escape");
-  await page.clock.runFor(1_200);
-  await expect(director).toHaveAttribute("data-active-station", "none");
-  await expect(root).not.toHaveAttribute("data-finish-scrolling");
-  expect(Number(await root.getAttribute("data-hero-frame"))).toBeCloseTo(frame, 1);
+  await waitForStation(page, "touch");
+  const sample = await page.locator("[data-interaction-finish]").evaluate((button: HTMLButtonElement) => new Promise<{
+    stoppedFrame: number;
+    framesAfterEscape: number[];
+  }>((resolve, reject) => {
+    const root = button.closest<HTMLElement>("[data-experience-root]")!;
+    const started = performance.now();
+    let stoppedFrame: number | null = null;
+    let stoppedAt: number | null = null;
+    const framesAfterEscape: number[] = [];
+    const record = () => {
+      const now = performance.now();
+      const frame = Number(root.dataset.heroFrame);
+      if (stoppedFrame === null && root.dataset.finishScrolling === "true" && frame > 835 && frame < 940) {
+        stoppedFrame = frame;
+        stoppedAt = now;
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      }
+      if (stoppedFrame !== null) framesAfterEscape.push(frame);
+      if (stoppedFrame !== null && stoppedAt !== null && now - stoppedAt >= 1_200) {
+        resolve({ stoppedFrame, framesAfterEscape });
+      } else if (now - started > 10_000) reject(new Error("No intermediate authored frame was available to cancel."));
+      else requestAnimationFrame(record);
+    };
+    button.click();
+    requestAnimationFrame(record);
+  }));
+  expect(sample.stoppedFrame).toBeGreaterThan(825);
+  expect(sample.stoppedFrame).toBeLessThan(950);
+  expect(sample.framesAfterEscape.length).toBeGreaterThan(1);
+  expect(sample.framesAfterEscape.every((frame) => Math.abs(frame - sample.stoppedFrame) < 0.1)).toBe(true);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-finish-scrolling");
+});
+
+test("scroll input immediately after completion cancels advancement before the result effect runs", async ({ page }) => {
+  await open(page);
+  await seek(page, 825);
+  await waitForStation(page, "touch");
+  const sample = await page.locator("[data-interaction-finish]").evaluate((button: HTMLButtonElement) => new Promise<{
+    requests: number;
+    finalFrame: number;
+  }>((resolve) => {
+    const root = button.closest<HTMLElement>("[data-experience-root]")!;
+    let requests = 0;
+    const finish = () => { requests += 1; };
+    root.addEventListener("mandegar:finish-phase", finish);
+    button.click();
+    document.body.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+    setTimeout(() => {
+      root.removeEventListener("mandegar:finish-phase", finish);
+      resolve({ requests, finalFrame: Number(root.dataset.heroFrame) });
+    }, 2_500);
+  }));
+  expect(sample.requests).toBe(0);
+  expect(sample.finalFrame).toBeGreaterThan(825);
+  expect(sample.finalFrame).toBeLessThan(900);
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-presentation", "result");
 });
 
 test("playing the game preserves the section's normal vignette and color presentation", async ({ page }, testInfo) => {
