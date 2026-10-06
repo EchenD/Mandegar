@@ -16,6 +16,13 @@ function readClip(file, handoff) {
   const jsonLength = buffer.readUInt32LE(12);
   if (20 + jsonLength > buffer.length) throw new Error("The GLB JSON chunk is truncated.");
   const data = JSON.parse(buffer.subarray(20, 20 + jsonLength).toString("utf8"));
+  const binaryHeader = 20 + jsonLength;
+  if (binaryHeader + 8 > buffer.length || buffer.readUInt32LE(binaryHeader + 4) !== 0x004e4942) {
+    throw new Error("The exported GLB needs its animation keyframes in the binary chunk.");
+  }
+  const binaryStart = binaryHeader + 8;
+  const binaryEnd = binaryStart + buffer.readUInt32LE(binaryHeader);
+  if (binaryEnd > buffer.length) throw new Error("The animation binary chunk is truncated.");
   const nodes = data.nodes ?? [];
   const cameraIndex = nodes.findIndex((node) => node.name === handoff.cameraNode);
   if (cameraIndex < 0 || data.cameras?.[nodes[cameraIndex].camera]?.type !== "perspective") {
@@ -30,17 +37,38 @@ function readClip(file, handoff) {
   if (!clip.channels?.some((channel) => ancestors.has(channel.target.node) && ["translation", "rotation"].includes(channel.target.path))) {
     throw new Error("The named clip does not animate the camera or its parent transform.");
   }
-  const bounds = clip.samplers.map((sampler) => data.accessors?.[sampler.input]);
-  if (!bounds.length || bounds.some((accessor) => !Number.isFinite(accessor?.min?.[0]) || !Number.isFinite(accessor?.max?.[0]))) {
-    throw new Error("The exported animation inputs need finite minimum and maximum time bounds.");
-  }
-  if (Math.abs(Math.min(...bounds.map((accessor) => accessor.min[0]))) > 0.001) {
+  const bounds = clip.samplers.map((sampler) => {
+    const accessor = data.accessors?.[sampler.input];
+    const view = data.bufferViews?.[accessor?.bufferView];
+    if (!view || view.buffer !== 0 || accessor.sparse || accessor.componentType !== 5126 || accessor.type !== "SCALAR"
+      || !Number.isInteger(accessor.count) || accessor.count < 1) {
+      throw new Error("Animation timestamps need a non-sparse float32 scalar accessor in the GLB binary chunk.");
+    }
+    const offset = binaryStart + (view.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+    const stride = view.byteStride ?? 4;
+    const end = offset + (accessor.count - 1) * stride + 4;
+    if (stride < 4 || offset < binaryStart || end > binaryEnd
+      || end > binaryStart + (view.byteOffset ?? 0) + view.byteLength) {
+      throw new Error("Animation timestamp data is outside its binary buffer view.");
+    }
+    let first = null;
+    let previous = -Infinity;
+    for (let index = 0; index < accessor.count; index += 1) {
+      const time = buffer.readFloatLE(offset + index * stride);
+      if (!Number.isFinite(time) || time < 0 || time <= previous) throw new Error("Animation timestamps must be finite, nonnegative and increasing.");
+      first ??= time;
+      previous = time;
+    }
+    return { first, last: previous };
+  });
+  if (!bounds.length) throw new Error("The exported camera clip has no animation timestamps.");
+  if (Math.abs(Math.min(...bounds.map((range) => range.first))) > 0.001) {
     throw new Error("The exported animation must start at clip time zero; firstFrame records the original source frame.");
   }
   return {
     cameraNode: nodes[cameraIndex].name,
     clipName: clip.name,
-    durationSeconds: Math.max(...bounds.map((accessor) => accessor.max[0])),
+    durationSeconds: Math.max(...bounds.map((range) => range.last)),
   };
 }
 

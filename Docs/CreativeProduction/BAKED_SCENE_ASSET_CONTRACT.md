@@ -46,21 +46,22 @@ preflight checker validates the completed handoff against the actual GLB.
 - `fps`: the source animation frame rate, including its fractional part if used.
 - `firstFrame` and `lastFrame`: the source frames corresponding to the exported
   clip's start and end. Cue values use this same absolute source frame numbering.
-- `phaseStartFrames`: the beginning of each chapter and its text entrance.
-  Arrival begins at `firstFrame`; each chapter ends at the next chapter's start,
-  and loop ends at `lastFrame`.
-- `phaseEndFrames`: optional explicit end boundaries. Leave them null to derive
-  them from the next chapter's start. Boundaries are shared: if one phase ends at
-  frame 200, the next starts at frame 200. The final phase ends at `lastFrame`.
-- `phaseRestFrames`: the intended main composition of each chapter, within that
-  chapter's frame range. These are review checkpoints, not camera pauses. A
-  moving shot can pass through its main composition without stopping. Supply
-  these for installation buttons (engagement), race (experiences), and drawing
-  (connection), with room for both approach and departure. Other chapters may
-  leave them null; their midpoint serves only as a review checkpoint.
+- `phaseStartFrames`: the start of each chapter's viewing window. Arrival begins
+  at `firstFrame`. For interaction chapters, this is where the authored camera
+  reaches its usable composition.
+- `phaseEndFrames`: the end of each viewing window and the target when an
+  interaction finishes. A gap before the next window is authored camera travel;
+  windows may not overlap. Null derives the end from the next chapter's start.
+  The final loop may be a single checkpoint at `lastFrame` rather than a window.
+- `phaseRestFrames`: optional main-view checkpoints within the viewing window.
+  For installation buttons (engagement), race (experiences), and drawing
+  (connection), null defaults to the window's start. Set another value only if
+  the usable composition is reached later; it must precede the window's end.
+  Other chapters default to their midpoint. These values do not add automatic
+  camera pauses.
 - `photoTextReady`: the first frame when the section text and Ready cue should
-  start appearing. Match `phaseStartFrames.activation` so both start together.
-  Ready remains until capture.
+  start appearing, within the photo viewing window. It can follow camera arrival;
+  text and Ready share this same cue. Ready remains until capture.
 - `photoCapture`: the capture moment and beginning of photo delivery.
 - `photoDelivered`: the moment the photo reaches the phone.
 - `photoExit`: the moment the photo and delivery result have disappeared.
@@ -69,11 +70,11 @@ preflight checker validates the completed handoff against the actual GLB.
   and releases into the following page content. Author any camera movement
   needed during that interval in the clip itself.
 
-Chapter starts and main compositions must follow the narrative order; the four
-photo cues and five lamp cues must be ordered within their respective chapters.
+Viewing windows must follow the narrative order; the four photo cues and five
+lamp cues must be ordered within their respective windows.
 All frames must be within the exported range. Leave unknown values null while
-drafting; they must not be treated as frame zero. Complete chapter starts, the
-three participation views, and the effect cues before integration. The chapter
+drafting; they must not be treated as frame zero. Complete chapter starts,
+viewing window ends, and the effect cues before integration. The chapter
 IDs follow the existing narrative order: arrival, discovery, photo booth (activation),
 installation buttons (engagement), lighting (reveal), race (experiences), drawing
 (connection), proof, intelligence, invitation, and loop.
@@ -94,7 +95,8 @@ alone does not slow a scroll-driven experience.
 For example, source frames 1 through 2500 at 30 FPS span `(2500 - 1) / 30`, or
 83.3 seconds between the first and last keys. Source frame zero is valid too.
 Camera time uses the actual exported clip duration so its first and last poses
-are sampled exactly. The preflight allows up to half a frame of rounding in exported key times and
+are sampled exactly. The preflight reads binary animation timestamps rather than
+trusting duration metadata. It allows up to half a frame of rounding in exported key times and
 rejects incorrect FPS, missing camera animation, overlapping chapter boundaries,
 misordered effects, and incomplete source timing.
 
@@ -130,11 +132,14 @@ place until the revised full clip and its cues are ready.
    FOV and the separate pre-hero assembly intro. Actual game and drawing input
    retain their own state; entering those activities must be deliberate rather
    than automatically stopping the journey.
-   Camera time pauses at its current authored frame only during deliberate
-   participation. Finish or scroll-to-leave advances the real scroll position
-   through the authored departure to the phase end, with no accumulated Skip
-   threshold or separate virtual camera. Backward departure follows the authored
-   approach in reverse. Photo and lighting stay entirely scroll-controlled.
+   While participating, control gestures belong to the activity; ordinary scroll
+   still advances the real playhead through the viewing window. Skip progress is
+   the current scroll fraction within that window, with no separate accumulated
+   threshold or virtual camera. Finish initiates a short, smooth movement of the
+   actual page scroll position to the window's end, sampling every intervening
+   camera frame. New scroll input immediately takes control. The subsequent
+   camera travel remains scroll-controlled. Photo and lighting stay entirely
+   scroll-controlled too.
 3. **Calibrate with a development timeline preview.** Display the animation frame,
    chapter, and active cues while scrubbing forward or backward. Tune overall
    desktop/mobile scroll distance and shared smoothing while preserving the

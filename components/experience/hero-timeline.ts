@@ -46,6 +46,7 @@ export type HeroTimelinePhase = {
   start: number;
   preview: number;
   end: number;
+  transitionEnd: number;
 };
 
 export type HeroTimeline = {
@@ -128,19 +129,21 @@ export function compileHeroTimeline(input: unknown, clip: CameraClipDetails): He
     const startFrame = starts[index];
     const boundary = starts[index + 1] ?? lastFrame;
     const endFrame = endFrames[id] == null ? boundary : number(endFrames[id], `phaseEndFrames.${id}`);
-    const needsView = participationPhases.includes(id);
-    const viewFrame = viewFrames[id] == null && !needsView
-      ? (startFrame + endFrame) / 2 : number(viewFrames[id], `phaseRestFrames.${id}`);
+    const terminalLoop = id === "loop" && startFrame === lastFrame && endFrame === lastFrame;
+    const viewFrame = viewFrames[id] == null
+      ? participationPhases.includes(id) ? startFrame : (startFrame + endFrame) / 2
+      : number(viewFrames[id], `phaseRestFrames.${id}`);
     within(startFrame, firstFrame, lastFrame, `phaseStartFrames.${id}`);
     within(endFrame, firstFrame, lastFrame, `phaseEndFrames.${id}`);
-    if (endFrame <= startFrame || boundary <= startFrame) issues.push(`${id} must end after it starts.`);
-    if (Number.isFinite(endFrame) && Number.isFinite(boundary) && endFrame !== boundary) {
-      issues.push(`phaseEndFrames.${id} must equal the next chapter's start, or lastFrame for loop. Chapter boundaries cannot overlap or leave gaps.`);
+    if (!terminalLoop && (endFrame <= startFrame || boundary <= startFrame)) issues.push(`${id} must end after it starts.`);
+    if (Number.isFinite(endFrame) && Number.isFinite(boundary) && endFrame > boundary) {
+      issues.push(`phaseEndFrames.${id} cannot extend beyond the next chapter's start. Viewing windows cannot overlap.`);
     }
-    if (Number.isFinite(viewFrame) && !(viewFrame > startFrame && viewFrame < endFrame)) {
-      issues.push(`phaseRestFrames.${id} must be inside its chapter, with room for approach and departure.`);
+    if (Number.isFinite(viewFrame) && (viewFrame < startFrame || viewFrame > endFrame
+      || participationPhases.includes(id) && viewFrame === endFrame)) {
+      issues.push(`phaseRestFrames.${id} must be within its viewing window; a participation view needs room before the window ends.`);
     }
-    return { id, startFrame, viewFrame, endFrame, start: normalize(startFrame), preview: normalize(viewFrame), end: normalize(endFrame) };
+    return { id, startFrame, viewFrame, endFrame, start: normalize(startFrame), preview: normalize(viewFrame), end: normalize(endFrame), transitionEnd: normalize(boundary) };
   });
   for (const id of heroCueIds) within(cueFrames[id], firstFrame, lastFrame, `cues.${id}`);
   const inChapter = (ids: readonly HeroCueId[], phaseId: ScenePhaseId) => {
@@ -152,9 +155,6 @@ export function compileHeroTimeline(input: unknown, clip: CameraClipDetails): He
   };
   inChapter(heroCueIds.slice(0, 4), "activation");
   inChapter(heroCueIds.slice(4, 9), "reveal");
-  if (Number.isFinite(cueFrames.photoTextReady) && cueFrames.photoTextReady !== starts[2]) {
-    issues.push("photoTextReady must match phaseStartFrames.activation so the section text and Ready cue start together.");
-  }
   if (cueFrames.heroHandoffEnd <= cueFrames.heroHandoffStart) issues.push("heroHandoffEnd must follow heroHandoffStart.");
   reject();
   return {
@@ -174,15 +174,19 @@ export function sampleHeroTimeline(timeline: HeroTimeline, progress: number) {
   const safeProgress = Math.min(1, Math.max(0, progress));
   const frame = timeline.firstFrame + (timeline.lastFrame - timeline.firstFrame) * safeProgress;
   const phase = timeline.phases.reduce((current, item) => safeProgress >= item.start ? item : current, timeline.phases[0]);
+  const inViewingWindow = safeProgress >= phase.start && safeProgress <= phase.end;
+  const windowProgress = phase.end === phase.start ? 1 : Math.min(1, Math.max(0, (safeProgress - phase.start) / (phase.end - phase.start)));
   return {
     progress: safeProgress,
     frame,
     clipSeconds: safeProgress * timeline.clipDurationSeconds,
     phase,
+    inViewingWindow,
+    windowProgress,
   };
 }
 
-/** Finish and scroll-to-leave share a real scroll target, never a camera pose. */
+/** Finish targets the viewing window's end; scroll uses its current real progress. */
 export function getInteractionDepartureTarget(
   timeline: HeroTimeline,
   phaseId: ScenePhaseId,
@@ -192,7 +196,7 @@ export function getInteractionDepartureTarget(
   if (!participationPhases.includes(phaseId)) return null;
   const sample = sampleHeroTimeline(timeline, progress);
   // Ignore late completion callbacks after the visitor has already left.
-  if (sample.phase.id !== phaseId) return null;
+  if (sample.phase.id !== phaseId || !sample.inViewingWindow) return null;
   const target = direction === "forward" ? sample.phase.end : sample.phase.start;
   return target === sample.progress ? null : target;
 }
