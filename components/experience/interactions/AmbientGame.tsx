@@ -3,7 +3,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
-import { sceneTokens } from "../scene-config";
 import { createRaceGame, getAutonomousTarget, raceBoard, stepRace } from "./race-game";
 import { getAmbientGameVisibility } from "./ambient-game-visibility";
 import { paintRaceScreen } from "./race-screen";
@@ -45,8 +44,6 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     });
     if (root) observer.observe(root);
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const background = new Image();
-    background.src = sceneTokens.bakedScene.screens.game;
     let state = createRaceGame(319);
     state.status = "running";
     let round = 1;
@@ -58,7 +55,6 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     let frame: number;
     const resumeClock = () => { lastTime = performance.now(); };
     document.addEventListener("visibilitychange", resumeClock);
-    background.onload = () => { lastVisibility = -1; };
     const stopArtwork = loadRaceArtwork(() => { lastVisibility = -1; });
 
     const releaseSurface = () => {
@@ -103,8 +99,8 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
         if ((!motion.matches && time - lastPaint >= 1000 / 30) || visibility !== lastVisibility) {
           const blend = motion.matches ? 1 : Math.min(1, (time - handoffAt) / 400);
           paintRaceScreen(context, state, {
-            copy, best: getVisitorCreation().gameBest, transition: visibility * blend * blend * (3 - 2 * blend),
-            background: handoff ?? (background.naturalWidth > 0 ? background : null), interactive: false,
+            copy, best: getVisitorCreation().gameBest, transition: blend * blend * (3 - 2 * blend),
+            background: handoff, interactive: false,
           });
           if (blend >= 1) handoff = null;
           canvas.dataset.ambientRound = String(round);
@@ -124,7 +120,6 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
       window.cancelAnimationFrame(frame);
       observer.disconnect();
       document.removeEventListener("visibilitychange", resumeClock);
-      background.onload = null;
       stopArtwork();
       releaseSurface();
     };

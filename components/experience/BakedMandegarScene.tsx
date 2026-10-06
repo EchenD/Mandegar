@@ -1558,7 +1558,7 @@ export function BakedMandegarScene({
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       />
-      <BakedScreenController root={exhibition} projects={projects} />
+      <BakedScreenController root={exhibition} />
       <ComposerObjects root={exhibition} />
       <InteractionPhotoEffects anchors={interactionAnchors} />
       <InteractionBeamEffects anchors={interactionAnchors} quality={quality} root={exhibition} />

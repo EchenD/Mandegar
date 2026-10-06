@@ -7,9 +7,7 @@ import { completeGameResult, getVisitorCreation } from "./visitor-creation";
 import { getSavedRace, raceBoard, saveRace, steerRace, stepRace, toggleRace, type RaceGame } from "./race-game";
 import { paintRaceScreen, raceControlAtPoint, type RaceControl } from "./race-screen";
 import { loadRaceArtwork } from "./race-artwork";
-import { loadMonitorArtwork } from "./monitor-artwork";
 import { reportInteractionParticipation } from "./interaction-participation";
-import { sceneTokens } from "../scene-config";
 import styles from "./HeroInteractions.module.css";
 
 export function GameInteraction({ copy, reducedMotion, onComplete }: {
@@ -33,7 +31,6 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
   const departingAt = useRef<number | null>(null);
   const diagnosticsAt = useRef(-Infinity);
   const entranceBackground = useRef<HTMLCanvasElement | null>(null);
-  const monitorImage = useRef<HTMLImageElement | null>(null);
   const reported = useRef(false);
   const complete = useRef(onComplete);
   const [snapshot, setSnapshot] = useState(getSavedRace);
@@ -79,9 +76,9 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
     paintRaceScreen(context, game.current, {
       copy,
       best: best.current,
-      transition: transition.current,
+      transition: departingAt.current === null ? transition.current : 1,
       focused: focused.current,
-      background: entranceBackground.current ?? monitorImage.current,
+      background: entranceBackground.current,
       interactive: window.innerWidth > 760,
     });
     markInteractionCanvasDirty("game");
@@ -113,7 +110,6 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
       background.getContext("2d")?.drawImage(retained, 0, 0, canvas.width, canvas.height);
       entranceBackground.current = background;
     }
-    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.game, (image) => { monitorImage.current = image; paint(); }, { immediate: true });
     const stopArtwork = loadRaceArtwork(paint);
     const started = performance.now();
     let previous = started;
@@ -169,7 +165,6 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
-      stopLoading();
       stopArtwork();
       observer.disconnect();
       window.removeEventListener("blur", pause);

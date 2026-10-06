@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
+import { interactionSurfaceSizes } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
 import {
   interactionRuntime,
@@ -11,7 +11,6 @@ import {
 } from "./interaction-runtime";
 import type { SceneInteractionEvent } from "./interaction-types";
 import styles from "./HeroInteractions.module.css";
-import { loadMonitorArtwork } from "./monitor-artwork";
 import { reportInteractionParticipation } from "./interaction-participation";
 import { clearDrawing, getDrawingDraft, getVisitorCreation, saveDrawing, saveDrawingDraft } from "./visitor-creation";
 
@@ -114,7 +113,6 @@ export function DrawingInteraction({
   const transitionProgress = useRef(0);
   const transitionState = useRef<"intro" | "ready" | "outro">("intro");
   const finaleStartedAt = useRef<number | null>(null);
-  const monitorImage = useRef<HTMLImageElement | null>(null);
   const hoverControl = useRef<DrawingControl | null>(null);
   const keyboardFocus = useRef<DrawingControl | null>(null);
   const finishedRef = useRef(Boolean(getVisitorCreation().drawing));
@@ -134,7 +132,7 @@ export function DrawingInteraction({
     const direction = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     const transition = transitionProgress.current;
     const retainedWall = transitionState.current === "outro" ? savedWall.current : null;
-    const interfaceProgress = retainedWall ? 1 : transition;
+    const interfaceProgress = transitionState.current === "outro" ? 1 : transition;
     const surfaceReveal = revealProgress(interfaceProgress, 0, 0.36);
     const contentReveal = revealProgress(interfaceProgress, 0.2, 0.68);
     const controlsReveal = revealProgress(interfaceProgress, 0.58, 1);
@@ -151,8 +149,6 @@ export function DrawingInteraction({
       context.drawImage(retainedWall, 0, 0, width, height);
     } else if (transitionState.current === "intro" && savedWall.current) {
       context.drawImage(savedWall.current, 0, 0, width, height);
-    } else if (monitorImage.current?.complete) {
-      context.drawImage(monitorImage.current, 0, 0, width, height);
     } else {
       context.fillStyle = "#080b10";
       context.fillRect(0, 0, width, height);
@@ -497,9 +493,8 @@ export function DrawingInteraction({
     savedWall.current = getVisitorCreation().drawingWall;
     let mounted = true;
     let registered = false;
-    const begin = (image: HTMLImageElement | null) => {
+    const begin = () => {
       if (!mounted) return;
-      monitorImage.current = image;
       if (transitionState.current === "outro") return;
       if (registered) {
         schedulePaint();
@@ -511,16 +506,13 @@ export function DrawingInteraction({
       registerInteractionCanvas("main", canvas);
       animateTransition(1);
     };
-    const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.main, begin, {
-      immediate: Boolean(savedWall.current),
-    });
+    begin();
     void document.fonts?.ready.then(() => {
       if (mounted) schedulePaint();
     });
     return () => {
       mounted = false;
       saveDrawingDraft(strokes.current);
-      stopLoading();
       if (interactionRuntime.monitorEntries.main?.canvas === canvas) {
         registerInteractionCanvas("main", experience?.isConnected ? savedWall.current : null);
       }
