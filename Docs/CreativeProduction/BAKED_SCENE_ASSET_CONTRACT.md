@@ -119,6 +119,10 @@ window, photo delivery follows its four cues, and lamps fade on over eight sourc
 frames after their activation cues. Interactions open on deliberate input and
 never lock the page. Finish moves native scroll to the current window's end in
 850 ms and new wheel, touch or scroll-key input takes over immediately.
+The next section's overlap and entrance also use the handoff cues, measured
+against the hero's actual scroll distance. The project surface starts rising at
+`heroHandoffStart` and reaches the top at `heroHandoffEnd`, in either direction;
+it does not cover intelligence or invitation before that range.
 
 ### Integration steps
 

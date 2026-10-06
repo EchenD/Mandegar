@@ -6,7 +6,7 @@
   position: relative;
   z-index: 3;
   height: var(--journey-height, 2600svh);
-  margin-block-start: -450svh;
+  margin-block-start: calc(-1 * var(--hero-overlap, 0px));
   color: var(--ink);
   isolation: isolate;
   pointer-events: none;
@@ -95,7 +95,6 @@
 .empty { padding: 10rem 8vw; background: #101317; color: #f1f2ed; }
 
 @media (max-width: 760px) {
-  .root { margin-block-start: -412svh; }
   .kicker { font-size: .55rem; }
   .projectsWorld { perspective: 900px; }
   .orbitCard { width: 64vw; height: 45svh; border-radius: clamp(1.35rem, 7vw, 2.6rem); }
@@ -120,7 +119,7 @@
   .finaleDetail { bottom: 17svh; }
 }
 
-.root[data-motion="reduced"] { height: auto; margin-top: 0; background: #101317; }
+.root[data-motion="reduced"] { height: auto; margin-block-start: 0; background: #101317; }
 .root[data-motion="reduced"] .stage { position: relative; height: auto; overflow: visible; transform: none !important; }
 .root[data-motion="reduced"] :is(.world, .seam, .entry, .projectsWorld) { display: none; }
 .root[data-motion="reduced"] :is(.projectCopy, .about, .partners) { position: relative; inset: auto; visibility: visible; min-height: 100svh; padding: 6rem 7vw; }

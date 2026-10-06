@@ -47,6 +47,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `3325`/`2981.25`, 25% longer than before; smaller advances faster, larger advances slower |
+| Transition into projects | `camera-timing-handoff.template.json` → `heroHandoffStart` / `heroHandoffEnd` | The next section's layout and entrance follow these source frames, including after viewport resizing |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
 | Eleven review points | `camera-timing-handoff.template.json` → `phaseRestFrames` | Null uses the viewing-window start for participation chapters, otherwise the midpoint |
 | Phase boundaries | `camera-timing-handoff.template.json` → `phaseStartFrames` / `phaseEndFrames` | Source viewing windows; gaps remain authored camera travel |

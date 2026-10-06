@@ -19,6 +19,7 @@ import { preloadServicesScene, ServicesSceneCanvas, type ServicesSceneBridge } f
 import { ServicesShowcase } from "./ServicesShowcase";
 import { serviceChapters } from "./services-copy";
 import { getServicesColorReveal, getServicesMotionState, SERVICE_POSES, SERVICE_TURN_PADDING } from "./services-score";
+import { heroTimeline } from "./hero-timeline-config";
 
 export type JourneyProject = {
   slug: string;
@@ -120,6 +121,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const [serviceSceneReady, setServiceSceneReady] = useState(false);
   const [serviceSpatialFailed, setServiceSpatialFailed] = useState(false);
   const [activeServiceIndex, setActiveServiceIndex] = useState(0);
+  const [heroGeometry, setHeroGeometry] = useState({ height: 0, viewport: 0 });
   const partnerCanvasMountedRef = useRef(false);
   const servicesCanvasMountedRef = useRef(false);
   const partnerFinaleBridge = useRef<PartnerFinaleBridge>({ progress: 0, ready: false });
@@ -173,6 +175,24 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     && !/\.(mp4|webm|mov)(?:$|\?)/i.test(item.src));
   const staticJourney = reduced || !selected.length;
   const servicesSpatialEnabled = spatialEnabled && !serviceSpatialFailed;
+
+  useLayoutEffect(() => {
+    const hero = document.querySelector<HTMLElement>("[data-experience-root]");
+    if (!hero) return;
+    const measure = () => {
+      const height = hero.offsetHeight;
+      const viewport = window.innerHeight;
+      setHeroGeometry((current) => current.height === height && current.viewport === viewport
+        ? current : { height, viewport });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(hero);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   useEffect(() => {
     const bridge = servicesBridge.current;
@@ -268,6 +288,10 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         node.removeEventListener("mandegar:journey-seek", handleSeek);
       };
     }
+    const hero = document.querySelector<HTMLElement>("[data-experience-root]");
+    if (!hero || !heroGeometry.viewport) return;
+    const heroTravel = Math.max(0, heroGeometry.height - heroGeometry.viewport);
+    const pixelsPerTimelineUnit = heroGeometry.viewport * .9;
     let jumpToWork: (() => void) | undefined;
     let seekToLabel: ((label: string) => void) | undefined;
     const handleJourneySeek = (event: Event) => {
@@ -642,19 +666,28 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         const duration = eraseText(projectTitle, selected[index].title, at, .027, .58);
         tl.set(project, { autoAlpha: 0 }, at + duration + .02);
       };
-      const handoffDuration = mobile ? 3.47 : 3.88;
+      const handoffDuration = Math.max(.0001, heroTravel
+        * (heroTimeline.cues.heroHandoffEnd - heroTimeline.cues.heroHandoffStart)
+        / pixelsPerTimelineUnit);
       const handoffEase = (value: number) => value * value * (3 - 2 * value);
 
-      // The project surface rises on the exact scroll range used by the 3D camera handoff.
-      tl.addLabel("Entry", 0)
-        .to("[data-journey-surface]", {
-          yPercent: 0,
-          clipPath: "polygon(0% 0%, 12.5% 0%, 25% 0%, 37.5% 0%, 50% 0%, 62.5% 0%, 75% 0%, 87.5% 0%, 100% 0%, 100% 100%, 0% 100%)",
-          duration: handoffDuration,
-          ease: handoffEase,
-        }, 0);
+      // This entrance uses the hero's physical scroll, without the later
+      // journey's extra scrub delay. It retraces the same cues on reverse scroll.
+      gsap.to("[data-journey-surface]", {
+        yPercent: 0,
+        clipPath: "polygon(0% 0%, 12.5% 0%, 25% 0%, 37.5% 0%, 50% 0%, 62.5% 0%, 75% 0%, 87.5% 0%, 100% 0%, 100% 100%, 0% 100%)",
+        ease: handoffEase,
+        scrollTrigger: {
+          trigger: hero,
+          start: () => hero.offsetTop + Math.max(0, hero.offsetHeight - window.innerHeight) * heroTimeline.cues.heroHandoffStart,
+          end: () => hero.offsetTop + Math.max(0, hero.offsetHeight - window.innerHeight) * heroTimeline.cues.heroHandoffEnd,
+          scrub: true,
+          invalidateOnRefresh: true,
+        },
+      });
+      tl.addLabel("Entry", 0).to({}, { duration: handoffDuration }, 0);
 
-      let cursor = handoffDuration - .38;
+      let cursor = Math.max(.08, handoffDuration - .38);
       selected.forEach((_, index) => {
         if (index > 0) {
           dismissProject(index - 1, cursor - .54);
@@ -909,7 +942,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       typeText(finaleCtaText, ui.contact, mosaicStart + 10.2, .045, .92);
       tl.addLabel("Contact", mosaicStart + 11.12);
       tl.to({}, { duration: 1.5 });
-      node.style.setProperty("--journey-height", `${Math.ceil(tl.duration() * 90 + 100)}svh`);
+      node.style.setProperty("--journey-height", `${tl.duration() * pixelsPerTimelineUnit + heroGeometry.viewport}px`);
       node.dataset.journeyLabels = JSON.stringify(Object.fromEntries(
         Object.entries(tl.labels).map(([label, time]) => [label, time / tl.duration()]),
       ));
@@ -1004,6 +1037,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       delete document.documentElement.dataset.mandegarTone;
     };
   }, [
+    heroGeometry,
     locale,
     logo,
     mobile,
@@ -1022,7 +1056,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     ui.partnersLabel,
   ]);
 
-  return <section ref={root} tabIndex={-1} className={styles.root} data-connected-journey data-post-experience data-motion={staticJourney ? "reduced" : "full"} data-active-service={activeServiceIndex} aria-label={ui.work}>
+  const heroOverlap = heroGeometry.viewport + Math.max(0, heroGeometry.height - heroGeometry.viewport)
+    * (1 - heroTimeline.cues.heroHandoffStart);
+
+  return <section ref={root} tabIndex={-1} className={styles.root}
+    style={{ "--hero-overlap": `${heroOverlap}px` } as CSSProperties}
+    data-connected-journey data-post-experience data-motion={staticJourney ? "reduced" : "full"} data-active-service={activeServiceIndex} aria-label={ui.work}>
     <div className={styles.stage} data-journey-surface>
       <div className={styles.world} data-world data-layer aria-hidden="true"><span className={styles.orbit} /><span className={styles.worldRule} /></div>
       <div className={styles.projectsWorld} data-projects-world data-layer>
