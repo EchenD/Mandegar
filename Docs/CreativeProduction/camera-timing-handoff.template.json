@@ -29,8 +29,8 @@
     "reveal": 1140,
     "experiences": 1500,
     "connection": 1750,
-    "proof": 2050,
-    "intelligence": 2200,
+    "proof": 2040,
+    "intelligence": 2150,
     "invitation": 2350,
     "loop": 2500
   },
@@ -42,9 +42,9 @@
     "reveal": 1300,
     "experiences": 1630,
     "connection": 1900,
-    "proof": 2150,
-    "intelligence": 2300,
-    "invitation": 2450,
+    "proof": 2130,
+    "intelligence": 2330,
+    "invitation": 2490,
     "loop": 2500
   },
   "phaseRestFrames": {

@@ -19,7 +19,8 @@ import { preloadServicesScene, ServicesSceneCanvas, type ServicesSceneBridge } f
 import { ServicesShowcase } from "./ServicesShowcase";
 import { serviceChapters } from "./services-copy";
 import { getServicesColorReveal, getServicesMotionState, SERVICE_POSES, SERVICE_TURN_PADDING } from "./services-score";
-import { heroTimeline } from "./hero-timeline-config";
+import { heroEnding } from "./hero-ending";
+import { experienceState } from "./experience-state";
 
 export type JourneyProject = {
   slug: string;
@@ -121,7 +122,6 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const [serviceSceneReady, setServiceSceneReady] = useState(false);
   const [serviceSpatialFailed, setServiceSpatialFailed] = useState(false);
   const [activeServiceIndex, setActiveServiceIndex] = useState(0);
-  const [heroGeometry, setHeroGeometry] = useState({ height: 0, viewport: 0 });
   const partnerCanvasMountedRef = useRef(false);
   const servicesCanvasMountedRef = useRef(false);
   const partnerFinaleBridge = useRef<PartnerFinaleBridge>({ progress: 0, ready: false });
@@ -175,24 +175,6 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     && !/\.(mp4|webm|mov)(?:$|\?)/i.test(item.src));
   const staticJourney = reduced || !selected.length;
   const servicesSpatialEnabled = spatialEnabled && !serviceSpatialFailed;
-
-  useLayoutEffect(() => {
-    const hero = document.querySelector<HTMLElement>("[data-experience-root]");
-    if (!hero) return;
-    const measure = () => {
-      const height = hero.offsetHeight;
-      const viewport = window.innerHeight;
-      setHeroGeometry((current) => current.height === height && current.viewport === viewport
-        ? current : { height, viewport });
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(hero);
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
 
   useEffect(() => {
     const bridge = servicesBridge.current;
@@ -259,6 +241,13 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   useLayoutEffect(() => {
     const node = root.current;
     if (!node) return;
+    const hero = document.querySelector<HTMLElement>("[data-experience-root]");
+    const publishHandoff = (progress: number) => {
+      experienceState.handoffProgress = progress;
+      hero?.style.setProperty("--hero-handoff", String(progress));
+      if (hero) hero.dataset.handoffProgress = String(progress);
+    };
+    publishHandoff(0);
     const focusWork = () => {
       const link = node.querySelector<HTMLElement>("[data-project-copy='0'] a");
       (link ?? node).focus({ preventScroll: true });
@@ -288,10 +277,6 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         node.removeEventListener("mandegar:journey-seek", handleSeek);
       };
     }
-    const hero = document.querySelector<HTMLElement>("[data-experience-root]");
-    if (!hero || !heroGeometry.viewport) return;
-    const heroTravel = Math.max(0, heroGeometry.height - heroGeometry.viewport);
-    const pixelsPerTimelineUnit = heroGeometry.viewport * .9;
     let jumpToWork: (() => void) | undefined;
     let seekToLabel: ((label: string) => void) | undefined;
     const handleJourneySeek = (event: Event) => {
@@ -542,6 +527,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
     window.addEventListener("blur", resetPointer);
     motionFrame = requestAnimationFrame(animateCamera);
+    const handoffDuration = mobile ? heroEnding.mobile.duration : heroEnding.desktop.duration;
+    const handoffEase = (value: number) => value * value * (3 - 2 * value);
     const ctx = gsap.context(() => {
       gsap.set("[data-layer], [data-project-copy]", { autoAlpha: 0 });
       gsap.set("[data-journey-surface]", {
@@ -601,6 +588,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       };
       const tl = gsap.timeline({ defaults: { ease: "power3.inOut" }, onUpdate() {
         const time = this.time();
+        publishHandoff(handoffEase(Math.min(1, time / handoffDuration)));
         node.dataset.journeyProgress = this.progress().toFixed(4);
         node.dataset.journeyPhase = time >= this.labels.Finale ? "finale"
           : time >= this.labels.Partners ? "partners"
@@ -618,7 +606,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         if (time > .6) document.documentElement.dataset.mandegarTone = "light";
         else delete document.documentElement.dataset.mandegarTone;
       }, scrollTrigger: {
-        trigger: node, start: "top top", end: "bottom bottom", scrub: .55,
+        trigger: node, start: "top top", end: "bottom bottom", scrub: heroEnding.scrub,
         onUpdate: self => {
           node.style.setProperty("--journey-progress", String(self.progress));
         },
@@ -666,28 +654,16 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         const duration = eraseText(projectTitle, selected[index].title, at, .027, .58);
         tl.set(project, { autoAlpha: 0 }, at + duration + .02);
       };
-      const handoffDuration = Math.max(.0001, heroTravel
-        * (heroTimeline.cues.heroHandoffEnd - heroTimeline.cues.heroHandoffStart)
-        / pixelsPerTimelineUnit);
-      const handoffEase = (value: number) => value * value * (3 - 2 * value);
+      // Preserve the original entrance and reading time after the camera ends.
+      tl.addLabel("Entry", 0)
+        .to("[data-journey-surface]", {
+          yPercent: 0,
+          clipPath: "polygon(0% 0%, 12.5% 0%, 25% 0%, 37.5% 0%, 50% 0%, 62.5% 0%, 75% 0%, 87.5% 0%, 100% 0%, 100% 100%, 0% 100%)",
+          duration: handoffDuration,
+          ease: handoffEase,
+        }, 0);
 
-      // This entrance uses the hero's physical scroll, without the later
-      // journey's extra scrub delay. It retraces the same cues on reverse scroll.
-      gsap.to("[data-journey-surface]", {
-        yPercent: 0,
-        clipPath: "polygon(0% 0%, 12.5% 0%, 25% 0%, 37.5% 0%, 50% 0%, 62.5% 0%, 75% 0%, 87.5% 0%, 100% 0%, 100% 100%, 0% 100%)",
-        ease: handoffEase,
-        scrollTrigger: {
-          trigger: hero,
-          start: () => hero.offsetTop + Math.max(0, hero.offsetHeight - window.innerHeight) * heroTimeline.cues.heroHandoffStart,
-          end: () => hero.offsetTop + Math.max(0, hero.offsetHeight - window.innerHeight) * heroTimeline.cues.heroHandoffEnd,
-          scrub: true,
-          invalidateOnRefresh: true,
-        },
-      });
-      tl.addLabel("Entry", 0).to({}, { duration: handoffDuration }, 0);
-
-      let cursor = Math.max(.08, handoffDuration - .38);
+      let cursor = handoffDuration - .38;
       selected.forEach((_, index) => {
         if (index > 0) {
           dismissProject(index - 1, cursor - .54);
@@ -942,7 +918,9 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       typeText(finaleCtaText, ui.contact, mosaicStart + 10.2, .045, .92);
       tl.addLabel("Contact", mosaicStart + 11.12);
       tl.to({}, { duration: 1.5 });
-      node.style.setProperty("--journey-height", `${tl.duration() * pixelsPerTimelineUnit + heroGeometry.viewport}px`);
+      node.style.setProperty("--journey-height", `${Math.ceil(tl.duration() * heroEnding.scrollVhPerUnit + 100)}svh`);
+      node.dataset.handoffDuration = String(handoffDuration);
+      node.dataset.journeyDuration = String(tl.duration());
       node.dataset.journeyLabels = JSON.stringify(Object.fromEntries(
         Object.entries(tl.labels).map(([label, time]) => [label, time / tl.duration()]),
       ));
@@ -983,6 +961,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("blur", resetPointer);
       ctx.revert();
+      publishHandoff(0);
       partnerScene.style.removeProperty("transform");
       partnerScene.style.removeProperty("z-index");
       partnerFallback?.style.removeProperty("opacity");
@@ -1007,6 +986,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       servicesLayer.style.removeProperty("--services-presence");
       servicesLayer.style.removeProperty("--services-color-reveal");
       delete node.dataset.journeyLabels;
+      delete node.dataset.handoffDuration;
+      delete node.dataset.journeyDuration;
       delete node.dataset.journeyProgress;
       delete node.dataset.journeyPhase;
       delete node.dataset.serviceProgress;
@@ -1037,7 +1018,6 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       delete document.documentElement.dataset.mandegarTone;
     };
   }, [
-    heroGeometry,
     locale,
     logo,
     mobile,
@@ -1056,11 +1036,8 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     ui.partnersLabel,
   ]);
 
-  const heroOverlap = heroGeometry.viewport + Math.max(0, heroGeometry.height - heroGeometry.viewport)
-    * (1 - heroTimeline.cues.heroHandoffStart);
-
   return <section ref={root} tabIndex={-1} className={styles.root}
-    style={{ "--hero-overlap": `${heroOverlap}px` } as CSSProperties}
+    style={{ "--hero-ending-overlap-desktop": `${heroEnding.desktop.overlapVh}svh`, "--hero-ending-overlap-mobile": `${heroEnding.mobile.overlapVh}svh` } as CSSProperties}
     data-connected-journey data-post-experience data-motion={staticJourney ? "reduced" : "full"} data-active-service={activeServiceIndex} aria-label={ui.work}>
     <div className={styles.stage} data-journey-surface>
       <div className={styles.world} data-world data-layer aria-hidden="true"><span className={styles.orbit} /><span className={styles.worldRule} /></div>

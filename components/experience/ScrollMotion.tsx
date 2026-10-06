@@ -15,7 +15,9 @@ import {
   narrativeScore,
   type ScenePhaseId,
 } from "./narrative-score";
-import { getHeroHandoffProgress, sceneTokens } from "./scene-config";
+import { sceneTokens } from "./scene-config";
+import { heroEnding } from "./hero-ending";
+import styles from "./ScrollMotion.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -96,6 +98,7 @@ export function ScrollMotion({
   onPhaseChange?: (phase: ScenePhaseId) => void;
 }) {
   const scope = useRef<HTMLDivElement>(null);
+  const cameraTrack = useRef<HTMLDivElement>(null);
   const checkpoint = useRef<ScrollCheckpoint | null>(null);
   const resumeRequested = useRef(false);
   const pendingSeek = useRef<SeekRequest | null>(null);
@@ -147,7 +150,15 @@ export function ScrollMotion({
     scrollCue?.setAttribute("aria-hidden", "false");
     if (preview !== undefined) showPhaseRail();
 
-    const getScrollDistance = () => Math.max(1, root.offsetHeight - window.innerHeight);
+    // Keep the authored frame clock independent of the original ending's
+    // additional scroll distance. Frame 2500 is reached before that ending.
+    const getScrollDistance = () => Math.max(1, (cameraTrack.current?.offsetHeight ?? root.offsetHeight) - window.innerHeight);
+    const syncViewport = () => {
+      root.style.setProperty("--experience-viewport-height", `${window.innerHeight}px`);
+      root.dataset.cameraScrollDistance = String(getScrollDistance());
+    };
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
     const getNativeProgress = () => {
       // DOM scroll positions can round away the subpixel tail of Lenis's
       // deceleration. All scene consumers must follow the same fractional clock.
@@ -248,7 +259,6 @@ export function ScrollMotion({
       root.dataset.windowProgress = String(sample.windowProgress);
       root.dataset.narrativeProgress = String(safeProgress);
       root.style.setProperty("--scene-progress", safeProgress.toFixed(4));
-      root.style.setProperty("--hero-handoff", getHeroHandoffProgress(safeProgress).toFixed(4));
       if (root.dataset.storyStage !== phase) root.dataset.storyStage = phase;
       const texturePeak = Math.max(
         experienceState.stage.production.environmentPeak,
@@ -275,6 +285,7 @@ export function ScrollMotion({
       directNarrative(0);
       root.style.setProperty("--scene-progress", "0");
       return () => {
+        window.removeEventListener("resize", syncViewport);
         root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
         root.removeEventListener("mandegar:seek", seekExperience);
         resetNarrative();
@@ -292,6 +303,7 @@ export function ScrollMotion({
       syncExperience(staticProgress, true);
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
+        window.removeEventListener("resize", syncViewport);
         root.removeEventListener("mandegar:runtime-change", prepareRuntimeChange);
         root.removeEventListener("mandegar:seek", seekExperience);
         resetNarrative();
@@ -385,7 +397,7 @@ export function ScrollMotion({
       scrollTrigger: {
         trigger: root,
         start: "top top",
-        end: "bottom bottom",
+        end: () => root.offsetTop + getScrollDistance(),
         // The scene follows the page directly and releases into the content
         // below when the experience root reaches its natural end.
         scrub: true,
@@ -412,7 +424,7 @@ export function ScrollMotion({
 
     const goToProgress = (progress: number, syncTimeline = false) => {
       const safeProgress = clamp01(progress);
-      const distance = Math.max(0, root.offsetHeight - window.innerHeight);
+      const distance = getScrollDistance();
       goToScrollTop(root.offsetTop + distance * safeProgress);
       if (syncTimeline) {
         playhead.progress = safeProgress;
@@ -495,6 +507,7 @@ export function ScrollMotion({
     });
 
     return () => {
+      window.removeEventListener("resize", syncViewport);
       window.cancelAnimationFrame(initialFrame);
       window.cancelAnimationFrame(restoreBehaviorFrame);
       cancelFinish();
@@ -542,8 +555,11 @@ export function ScrollMotion({
         "--scroll-progress": 0,
         "--experience-scroll-height-desktop": `${sceneTokens.scrollLengthVh.desktop}svh`,
         "--experience-scroll-height-mobile": `${sceneTokens.scrollLengthVh.mobile}svh`,
+        "--hero-ending-overlap-desktop": `${heroEnding.desktop.overlapVh}svh`,
+        "--hero-ending-overlap-mobile": `${heroEnding.mobile.overlapVh}svh`,
       } as CSSProperties}
     >
+      {runtime !== "fallback" && <div ref={cameraTrack} className={styles.cameraTrack} data-camera-scroll-track aria-hidden="true" />}
       {children}
     </div>
   );

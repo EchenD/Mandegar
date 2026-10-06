@@ -60,7 +60,7 @@ for (const variant of [
         for (const frame of order) {
           element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: frame / 2500, sync: true } }));
           for (let count = 0; count < 3; count += 1) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          results.push({ frame, renderedFrame: Number(element.dataset.cameraFrame), pose: JSON.parse(element.dataset.cameraPose ?? "[]") as number[], phase: element.dataset.storyStage, active: element.dataset.interactionActive ?? null });
+          results.push({ frame, renderedFrame: Number(element.dataset.cameraFrame), pose: JSON.parse(element.dataset.cameraBasePose ?? "[]") as number[], phase: element.dataset.storyStage });
         }
         return results;
       }, [...frames, ...[...frames].reverse()]);
@@ -69,7 +69,6 @@ for (const variant of [
         const expectedPhase = heroTimeline.phases.find((phase) => frame >= phase.startFrame && frame <= phase.endFrame)!;
         expect(record.renderedFrame).toBeCloseTo(frame, 1);
         expect(record.phase).toBe(expectedPhase.id);
-        expect(record.active).toBeNull();
         const actual = record.pose;
         const expected = cameraAt(record.renderedFrame);
         expect(actual).toHaveLength(expected.length);
@@ -89,7 +88,11 @@ for (const variant of [
       }
       await seek(page, 1280);
       await page.screenshot({ path: testInfo.outputPath(`${variant.locale}-authored-lighting.png`) });
-      for (const frame of [750, 1000, 1400, 1700, 1950, 2175, 2325, 2475]) {
+      const gapFrames = heroTimeline.phases.slice(0, -1).flatMap((phase, index) => {
+        const next = heroTimeline.phases[index + 1];
+        return next.startFrame > phase.endFrame ? [(phase.endFrame + next.startFrame) / 2] : [];
+      });
+      for (const frame of gapFrames) {
         await seek(page, frame);
         await expect(root).toHaveAttribute("data-in-viewing-window", "false");
         await expect(director).toHaveAttribute("data-available-station", "none");
@@ -106,12 +109,11 @@ test("participation keeps native scroll, Skip follows the window, and Finish smo
   const root = page.locator("[data-experience-root]");
   const director = page.locator("[data-interaction-director]");
   await seek(page, 825);
-  await page.locator("[data-interaction-hotspot='touch']").click();
   await expect(director).toHaveAttribute("data-active-station", "touch");
-  const pose = await root.getAttribute("data-camera-pose");
+  const pose = await root.getAttribute("data-camera-base-pose");
   await page.locator("[data-installation-button='parts']").click();
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "parts");
-  await expect(root).toHaveAttribute("data-camera-pose", pose!);
+  await expect(root).toHaveAttribute("data-camera-base-pose", pose!);
   await seek(page, 875);
   await expect(page.locator("[data-interaction-escape]")).toHaveAttribute("data-scroll-skip-progress", "0.500");
   const before = await page.evaluate(() => scrollY);
@@ -124,7 +126,7 @@ test("participation keeps native scroll, Skip follows the window, and Finish smo
     const root = document.querySelector<HTMLElement>("[data-experience-root]")!;
     const values: { frame: number; y: number; distance: number }[] = [];
     const record = () => {
-      values.push({ frame: Number(root.dataset.heroFrame), y: scrollY - root.offsetTop, distance: root.offsetHeight - innerHeight });
+      values.push({ frame: Number(root.dataset.heroFrame), y: scrollY - root.offsetTop, distance: Number(root.dataset.cameraScrollDistance) });
       if (Number(root.dataset.heroFrame) >= 949.99) resolve(values);
       else requestAnimationFrame(record);
     };
@@ -141,8 +143,9 @@ test("participation keeps native scroll, Skip follows the window, and Finish smo
   await expect.poll(async () => Number(await root.getAttribute("data-hero-frame"))).toBeCloseTo(950, 1);
   await expect(director).toHaveAttribute("data-active-station", "none");
   await page.screenshot({ path: testInfo.outputPath("finish-authored-window.png") });
+  await seek(page, 790);
   await seek(page, 825);
-  await page.locator("[data-interaction-hotspot='touch']").click();
+  await expect(director).toHaveAttribute("data-active-station", "touch");
   await page.locator("[data-interaction-finish]").evaluate((button: HTMLButtonElement) => {
     button.click();
     setTimeout(() => window.dispatchEvent(new WheelEvent("wheel", { deltaY: -150, bubbles: true, cancelable: true })), 150);

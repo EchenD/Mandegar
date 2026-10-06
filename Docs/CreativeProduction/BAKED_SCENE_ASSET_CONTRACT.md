@@ -114,15 +114,19 @@ to make missing or invalid data fail the check. `--json` provides the frame
 report for development tooling. These paths are examples, not asset locations.
 
 The current handoff is ready and integrated for frames 0–2500 at 30 FPS.
-The camera samples native scroll directly; phase text stays inside each viewing
-window, photo delivery follows its four cues, and lamps fade on over eight source
-frames after their activation cues. Interactions open on deliberate input and
-never lock the page. Finish moves native scroll to the current window's end in
+The camera clip samples native scroll directly, with its original breathing and
+mouse response restored. Phase text stays inside each viewing window, photo
+delivery follows its four cues, and lamps fade on over eight source frames after
+their activation cues. Touch, game and drawing enter automatically on settled
+forward arrival and keep native scroll available. Finish moves native scroll to the current window's end in
 850 ms and new wheel, touch or scroll-key input takes over immediately.
-The next section's overlap and entrance also use the handoff cues, measured
-against the hero's actual scroll distance. The project surface starts rising at
-`heroHandoffStart` and reaches the top at `heroHandoffEnd`, in either direction;
-it does not cover intelligence or invitation before that range.
+The original ending follows the completed camera clip at frame 2500. Its
+desktop/mobile timeline durations remain 3.88/3.47 with the original 90svh per
+timeline unit, 0.55 scrub, project reading time, and four-unit camera descent
+toward the center monitor. That scroll space is additional to the camera track,
+so it does not shorten the authored phase windows. The source handoff cues stay
+in the JSON; they no longer compress the page transition into the last 50 camera
+frames. `components/experience/hero-ending.ts` holds the original ending values.
 
 ### Integration steps
 
@@ -134,11 +138,11 @@ it does not cover intelligence or invitation before that range.
    audience effects, and the page handoff from one playhead. Remove equal-stage
    camera remapping, the narrative velocity warp, automatic scroll locks, and
    the separate virtual camera progression. During the hero sequence, remove
-   camera tilt, handoff descent/look-at, breathing, and pointer offsets so
-   camera position and rotation come directly from the clip. Preserve responsive
-   FOV and the separate pre-hero assembly intro. Actual game and drawing input
-   retain their own state; entering those activities must be deliberate rather
-   than automatically stopping the journey.
+   interaction camera tilt while retaining the original breathing and mouse
+   response over the authored clip. Preserve responsive FOV and the separate
+   pre-hero assembly intro. Actual game and drawing input retain their own state;
+   activities start automatically at a settled forward arrival. The original
+   ending descent and look-at run after the camera's final frame.
    While participating, control gestures belong to the activity; ordinary scroll
    still advances the real playhead through the viewing window. Skip progress is
    the current scroll fraction within that window, with no separate accumulated

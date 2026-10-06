@@ -168,7 +168,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       const now = performance.now();
       const progress = Number(root.dataset.nativeProgress ?? 0);
       if (root.dataset.scrollDirection === "backward" || progress < phase.start) autoStarted.current[expectedStation] = false;
-      const pixels = Math.abs(progress - previousProgress) * Math.max(1, root.offsetHeight - innerHeight);
+      const pixels = Math.abs(progress - previousProgress) * Math.max(1, Number(root.dataset.cameraScrollDistance) || root.offsetHeight - innerHeight);
       const speed = pixels / Math.max(16, now - previousTime);
       previousProgress = progress;
       previousTime = now;

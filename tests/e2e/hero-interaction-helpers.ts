@@ -32,7 +32,7 @@ export async function returnToStationForward(page: Page, station: ReviewStation)
     element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
   }, stationArrival(station) - 0.004);
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
-  const distance = await root.evaluate((element: HTMLElement) => element.offsetHeight - innerHeight);
+  const distance = await root.evaluate((element: HTMLElement) => Number(element.dataset.cameraScrollDistance) || element.offsetHeight - innerHeight);
   await page.mouse.wheel(0, distance * 0.008);
   return waitForStation(page, station);
 }

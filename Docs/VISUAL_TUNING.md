@@ -43,11 +43,13 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Wireframe/reveal | `ExperienceCanvas.tsx` → `revealBindings` / `beaconVisibility` | Per-object bottom-to-top reveal, lift distance, wire opacity and reveal-light visibility |
 | Authored 3D camera | `scene-config.ts` → `sceneTokens.authoredCamera` | Enable/disable the GLB camera, mobile use, node/clip names and depth-of-field focus target |
 | Fallback 3D camera | `scene-config.ts` → `cameraKeyframes` | Used when the authored camera is disabled or unavailable; controls progress, position, target, roll and FOV |
-| Camera sampling | `CameraRig.tsx` and `camera-timeline.ts` | The GLB position and rotation follow native scroll directly; only responsive FOV and the separate assembly intro are added |
+| Camera sampling | `CameraRig.tsx` and `camera-timeline.ts` | The GLB frame follows native scroll with the original camera breathing, mouse response and responsive FOV |
+| Camera breathing | `scene-config.ts` → `cameraMotion.breathing` | Original position/rotation amplitudes, frequencies and mobile scale |
+| Mouse camera response | `scene-config.ts` → `cameraMotion.pointer` | Original spring stiffness, damping, position and rotation response; settles during controls |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
 | Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `3325`/`2981.25`, 25% longer than before; smaller advances faster, larger advances slower |
-| Transition into projects | `camera-timing-handoff.template.json` → `heroHandoffStart` / `heroHandoffEnd` | The next section's layout and entrance follow these source frames, including after viewport resizing |
+| Transition into projects | `hero-ending.ts` and `ConnectedJourney.tsx` | Original ending begins after the final camera frame; retains its waiting, 3.88/3.47 timeline duration, 0.55 scrub and camera descent |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
 | Eleven review points | `camera-timing-handoff.template.json` → `phaseRestFrames` | Null uses the viewing-window start for participation chapters, otherwise the midpoint |
 | Phase boundaries | `camera-timing-handoff.template.json` → `phaseStartFrames` / `phaseEndFrames` | Source viewing windows; gaps remain authored camera travel |
@@ -92,6 +94,7 @@ The panel intentionally does not expose controls that are not yet production-wir
 
 - Change source frames in the handoff JSON and run `npm run camera:check -- --require-ready`. Camera, copy, effects and review markers use this one frame clock.
 - Author relative camera pacing in the GLB. Tune overall playback speed with `scrollLengthVh`; native scroll is not warped.
+- The original ending has additional scroll space after the authored camera track. Its timing stays in `hero-ending.ts`, independent of the source handoff cues.
 - Tune message entrance and exit with `narrativeCopyStageTuning`; camera travel gaps stay clear.
 - Keep the intro end frame equal to `experienceHomeFrame` in `intro-score.ts`; this preserves the seamless handoff into the loop.
 - Both `--scroll-progress` and `--scene-progress` now follow the same physical page position.

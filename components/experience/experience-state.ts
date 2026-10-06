@@ -11,6 +11,7 @@ export const experienceState: {
   sequence: "loading" | "intro" | "loop";
   intro: IntroFrame;
   progress: number;
+  handoffProgress: number;
   narrative: NarrativeFrame;
   stage: StageFrame;
   quality: SceneQuality;
@@ -25,6 +26,7 @@ export const experienceState: {
   sequence: "loading",
   intro: getIntroFrame(0),
   progress: 0,
+  handoffProgress: 0,
   narrative: getNarrativeFrame(0),
   stage: getStageFrame(0),
   quality: "full",

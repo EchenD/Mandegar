@@ -42,7 +42,7 @@ test.describe("authored camera projection", () => {
   });
 });
 
-test("the authored installation camera stays steady before, during and after participation", async ({ page }) => {
+test("the installation camera settles during participation and restores mouse response after exit", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
@@ -76,5 +76,27 @@ test("the authored installation camera stays steady before, during and after par
   const moved = await sampleAnchor();
   const restoredOrigin = restored.at(-1)!;
   const movement = Math.max(...moved.map((point) => Math.hypot(point.x - restoredOrigin.x, point.y - restoredOrigin.y)));
-  expect(movement).toBeLessThan(0.5);
+  expect(movement).toBeGreaterThan(0.5);
+});
+
+test("breathing and the mouse spring move the rendered camera while its authored frame stays still", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.goto("/en?intro=0&phase=proof", { waitUntil: "domcontentloaded" });
+  const root = page.locator("[data-experience-root]");
+  await expect(page.locator("[data-loading-progress]")).toHaveAttribute("data-loading-progress", "100", { timeout: 90_000 });
+  await expect(root).toHaveAttribute("data-story-stage", "proof");
+  await expect(root).toHaveAttribute("data-camera-base-pose", /^\[/);
+  const base = await root.getAttribute("data-camera-base-pose");
+  const pose = await root.getAttribute("data-camera-pose");
+  await expect.poll(() => root.getAttribute("data-camera-pose")).not.toBe(pose);
+  await expect(root).toHaveAttribute("data-camera-base-pose", base!);
+  const viewport = page.viewportSize()!;
+  await page.mouse.move(20, viewport.height / 2);
+  await expect.poll(async () => (JSON.parse(await root.getAttribute("data-camera-pointer") ?? "[0,0]") as number[])[0]).toBeLessThan(-.5);
+  const left = JSON.parse(await root.getAttribute("data-camera-pose") ?? "[]") as number[];
+  await page.mouse.move(viewport.width - 20, viewport.height / 2);
+  await expect.poll(async () => (JSON.parse(await root.getAttribute("data-camera-pointer") ?? "[0,0]") as number[])[0]).toBeGreaterThan(.5);
+  const right = JSON.parse(await root.getAttribute("data-camera-pose") ?? "[]") as number[];
+  expect(Math.hypot(...right.slice(0, 3).map((value, index) => value - left[index]))).toBeGreaterThan(.005);
+  await expect(root).toHaveAttribute("data-camera-base-pose", base!);
 });

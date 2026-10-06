@@ -10,6 +10,8 @@ import { getCameraLoopSampleProgress } from "./camera-timeline";
 import { heroTimeline } from "./hero-timeline-config";
 import { compileHeroTimeline } from "./hero-timeline";
 import handoff from "../../Docs/CreativeProduction/camera-timing-handoff.template.json";
+import { interactionRuntime } from "./interactions/interaction-runtime";
+import { heroEnding } from "./hero-ending";
 
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
@@ -96,11 +98,23 @@ export function CameraRig({ source }: { source: string }) {
     far: camera instanceof THREE.PerspectiveCamera ? camera.far : 60,
   });
   const cameraTarget = useRef(new THREE.Vector3());
+  const cameraPointer = useRef(new THREE.Vector2());
+  const cameraPointerInput = useRef(new THREE.Vector2());
+  const cameraPointerVelocity = useRef(new THREE.Vector2());
   const sampledPosition = useRef(new THREE.Vector3());
   const sampledTarget = useRef(new THREE.Vector3());
   const authoredPosition = useRef(new THREE.Vector3());
   const authoredQuaternion = useRef(new THREE.Quaternion());
   const introCameraOffset = useRef(new THREE.Vector3());
+  const cameraRight = useRef(new THREE.Vector3());
+  const cameraUp = useRef(new THREE.Vector3());
+  const cameraForward = useRef(new THREE.Vector3());
+  const cameraLifeEuler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
+  const cameraLifeQuaternion = useRef(new THREE.Quaternion());
+  const handoffBaseQuaternion = useRef(new THREE.Quaternion());
+  const handoffLookQuaternion = useRef(new THREE.Quaternion());
+  const cameraLifeTime = useRef(0);
+  const cameraLifeBlend = useRef(0);
   const debugRoot = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -148,15 +162,30 @@ export function CameraRig({ source }: { source: string }) {
   }, [authored, gltf.animations]);
 
   /* eslint-disable react-hooks/immutability -- Three.js camera transforms are intentionally updated inside the render loop. */
-  useFrame(() => {
+  useFrame((_, delta) => {
     const progress = experienceState.progress;
     const cameraProgress = getCameraLoopSampleProgress(progress);
     const introActive = experienceState.sequence === "intro";
+    const interactionActive = interactionRuntime.activeStation !== null;
     const perspectiveCamera = camera as THREE.PerspectiveCamera;
     let baseFov = perspectiveCamera.fov;
     let baseNear = fallbackProjection.current.near;
     let baseFar = fallbackProjection.current.far;
     const mobile = size.width <= 760 || size.height > size.width * 1.35;
+    const pointerMotion = sceneTokens.cameraMotion.pointer;
+    const pointerInputScale = mobile ? pointerMotion.mobileScale : 1;
+    cameraPointerInput.current.set(
+      introActive || interactionActive ? 0 : experienceState.pointerX * pointerInputScale,
+      introActive || interactionActive ? 0 : experienceState.pointerY * pointerInputScale,
+    );
+    const springDelta = Math.min(delta, pointerMotion.maximumDelta);
+    const springDamping = Math.exp(-pointerMotion.damping * springDelta);
+    cameraPointerVelocity.current.x += (cameraPointerInput.current.x - cameraPointer.current.x) * pointerMotion.stiffness * springDelta;
+    cameraPointerVelocity.current.y += (cameraPointerInput.current.y - cameraPointer.current.y) * pointerMotion.stiffness * springDelta;
+    cameraPointerVelocity.current.multiplyScalar(springDamping);
+    cameraPointer.current.addScaledVector(cameraPointerVelocity.current, springDelta);
+    cameraPointer.current.x = THREE.MathUtils.clamp(cameraPointer.current.x, -1.05, 1.05);
+    cameraPointer.current.y = THREE.MathUtils.clamp(cameraPointer.current.y, -1.05, 1.05);
 
     if (
       sceneTokens.authoredCamera.enabled
@@ -185,9 +214,22 @@ export function CameraRig({ source }: { source: string }) {
       baseFov = sample.fov;
     }
 
+    if (process.env.NODE_ENV !== "production" && debugRoot.current) {
+      debugRoot.current.dataset.cameraBasePose = JSON.stringify([...camera.position.toArray(), ...camera.quaternion.toArray()]);
+    }
     if (introActive) {
       introCameraOffset.current.fromArray(experienceState.intro.cameraLocalOffset).applyQuaternion(camera.quaternion);
       camera.position.add(introCameraOffset.current);
+    }
+
+    const handoffProgress = introActive ? 0 : experienceState.handoffProgress;
+    camera.position.y -= handoffProgress * heroEnding.cameraDescent;
+    if (handoffProgress > 0) {
+      handoffBaseQuaternion.current.copy(camera.quaternion);
+      cameraTarget.current.fromArray(sceneTokens.authoredCamera.focusTarget);
+      camera.lookAt(cameraTarget.current);
+      handoffLookQuaternion.current.copy(camera.quaternion);
+      camera.quaternion.copy(handoffBaseQuaternion.current).slerp(handoffLookQuaternion.current, handoffProgress);
     }
 
     if (perspectiveCamera.isPerspectiveCamera) {
@@ -198,12 +240,48 @@ export function CameraRig({ source }: { source: string }) {
       });
     }
 
+    const breathing = sceneTokens.cameraMotion.breathing;
+    const stage = experienceState.stage;
+    cameraLifeBlend.current = introActive
+      ? 0
+      : THREE.MathUtils.damp(cameraLifeBlend.current, interactionActive ? 0 : 1, interactionActive ? 8 : 1, springDelta);
+    const lifeBlend = cameraLifeBlend.current;
+    const heroPresence = 1 - handoffProgress;
+    const breathingScale = (mobile ? breathing.mobileScale : 1) * lifeBlend * stage.cameraLife * heroPresence;
+    const pointerScale = lifeBlend * stage.cameraPointer * heroPresence;
+    cameraLifeTime.current += springDelta;
+    const elapsed = cameraLifeTime.current;
+    const turn = Math.PI * 2;
+    const breathX = (Math.sin(elapsed * breathing.frequency[0] * turn)
+      + Math.sin(elapsed * breathing.frequency[2] * turn + 1.7) * .35) * breathing.position[0] * breathingScale;
+    const breathY = (Math.cos(elapsed * breathing.frequency[1] * turn + .8)
+      + Math.sin(elapsed * breathing.frequency[0] * turn * .47 + 2.1) * .25) * breathing.position[1] * breathingScale;
+    const breathZ = Math.sin(elapsed * breathing.frequency[2] * turn + 1.4) * breathing.position[2] * breathingScale;
+    cameraRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    cameraUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    cameraForward.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(cameraRight.current, breathX + cameraPointer.current.x * pointerMotion.position[0] * pointerScale);
+    camera.position.addScaledVector(cameraUp.current, breathY + cameraPointer.current.y * pointerMotion.position[1] * pointerScale);
+    camera.position.addScaledVector(cameraForward.current, breathZ);
+    const breathPitch = Math.sin(elapsed * breathing.frequency[1] * turn + .35) * breathing.rotation[0] * breathingScale;
+    const breathYaw = (Math.sin(elapsed * breathing.frequency[0] * turn + 1.1)
+      + Math.sin(elapsed * breathing.frequency[2] * turn + 2.4) * .28) * breathing.rotation[1] * breathingScale;
+    const breathRoll = Math.cos(elapsed * breathing.frequency[2] * turn + .6) * breathing.rotation[2] * breathingScale;
+    cameraLifeEuler.current.set(
+      breathPitch + cameraPointer.current.y * pointerMotion.rotation[0] * pointerScale,
+      breathYaw - cameraPointer.current.x * pointerMotion.rotation[1] * pointerScale,
+      breathRoll,
+      "YXZ",
+    );
+    cameraLifeQuaternion.current.setFromEuler(cameraLifeEuler.current);
+    camera.quaternion.multiply(cameraLifeQuaternion.current);
     experienceState.focusDistance = camera.position.distanceTo(cameraTarget.current);
     if (process.env.NODE_ENV !== "production") {
       const root = debugRoot.current;
       if (root) {
         root.dataset.cameraFrame = String(heroTimeline.firstFrame + (heroTimeline.lastFrame - heroTimeline.firstFrame) * cameraProgress);
         root.dataset.cameraPose = JSON.stringify([...camera.position.toArray(), ...camera.quaternion.toArray()]);
+        root.dataset.cameraPointer = JSON.stringify(cameraPointer.current.toArray());
       }
     }
   });

@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { MeshSurfaceSampler } from "three/examples/jsm/math/MeshSurfaceSampler.js";
 import { bakedSceneContract, type BakedSectionId } from "./baked-scene-contract";
 import { experienceState } from "./experience-state";
-import { getHeroHandoffProgress, sceneTokens, type SceneQuality } from "./scene-config";
+import { sceneTokens, type SceneQuality } from "./scene-config";
 import { getStageFrame } from "./stage-presets";
 
 type SampleSource = {
@@ -233,7 +233,7 @@ export function TransitionParticleField({
 
   useFrame(({ clock }) => {
     const production = experienceState.stage.production;
-    const handoffProgress = getHeroHandoffProgress(experienceState.progress);
+    const handoffProgress = experienceState.handoffProgress;
     const heroPresence = 1 - handoffProgress;
     const particleExit = THREE.MathUtils.smoothstep(handoffProgress, 0.68, 1);
     const particleProduction = getStageFrame(
