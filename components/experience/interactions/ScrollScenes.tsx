@@ -4,10 +4,8 @@ import { useEffect, useRef } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
-import { getInteractionCopy } from "./interaction-copy";
-import { stageBeamColors } from "./interaction-palette";
 import { interactionRuntime, markInteractionCanvasDirty, markPhotoSurfaceDirty, registerInteractionCanvas, registerPhotoSurface } from "./interaction-runtime";
-import { getScrollScenes, photoScrollTiming, scrollHoldTiming, syncScrollScenes } from "./scroll-scenes";
+import { getScrollScenes, photoScrollTiming, syncScrollScenes } from "./scroll-scenes";
 import { saveLightingLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
@@ -20,7 +18,6 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     const photoContext = photo?.getContext("2d");
     const context = stage?.getContext("2d");
     if (!enabled || !photo || !stage || !photoContext || !context) return;
-    const copy = getInteractionCopy(locale);
     const root = photo.closest<HTMLElement>("[data-experience-root]");
     const image = new Image();
     image.src = sceneTokens.bakedScene.screens.videoWall;
@@ -30,9 +27,6 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     let disposed = false;
     let countdownStartedAt: number | null = null;
     let photoVisit = -1;
-    let stageVisit = -1;
-    let stageStartedAt = 0;
-    let stageStartProgress = 0.2;
     let completedVisit = -1;
     let previousFrameAt = performance.now();
     image.onload = () => { previous = ""; };
@@ -72,15 +66,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
         }
         if (holdingPhoto) interactionRuntime.photoHoldProgress = photoProgress;
         else if (interactionRuntime.photoHoldProgress !== null) photoProgress = Math.max(photoProgress, interactionRuntime.photoHoldProgress);
-        if (holdingStage && stageVisit !== interactionRuntime.scrollSceneVisit) {
-          stageVisit = interactionRuntime.scrollSceneVisit;
-          stageStartedAt = now;
-          stageStartProgress = interactionRuntime.stageHoldProgress ?? nativeSample.stage;
-        }
-        if (holdingStage) {
-          const amount = Math.min(1, (now - stageStartedAt) / scrollHoldTiming.stageMs);
-          interactionRuntime.stageHoldProgress = stageStartProgress + amount * (Math.max(0.8, stageStartProgress) - stageStartProgress);
-        } else if (nativeSample.stage <= 0 || nativeSample.stage >= 1) interactionRuntime.stageHoldProgress = null;
+        if (!holdingStage && (nativeSample.stage <= 0 || nativeSample.stage >= 1)) interactionRuntime.stageHoldProgress = null;
         else if (reverse && interactionRuntime.stageHoldProgress !== null) {
           const carried = interactionRuntime.stageHoldProgress;
           interactionRuntime.stageHoldProgress = Math.abs(carried - nativeSample.stage) < 0.0001
@@ -98,7 +84,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
         interactionRuntime.photoVisibility = photoVisibility;
         const photoDone = holdingPhoto && countdownStartedAt !== null
           && now - countdownStartedAt >= photoScrollTiming.countdownMs + photoScrollTiming.deliveryMs;
-        const stageDone = holdingStage && now - stageStartedAt >= scrollHoldTiming.stageMs;
+        const stageDone = holdingStage && stageProgress >= 0.8 - 0.000001;
         if ((photoDone || stageDone) && completedVisit !== interactionRuntime.scrollSceneVisit) {
           completedVisit = interactionRuntime.scrollSceneVisit;
           window.dispatchEvent(new CustomEvent("mandegar:passive-complete", {
@@ -124,51 +110,32 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           photo.dataset.photoCount = String(sample.photoCount);
           markPhotoSurfaceDirty();
           context.clearRect(0, 0, stage.width, stage.height);
-          if (image.naturalWidth) context.drawImage(image, 0, 0, stage.width, stage.height);
-          else { context.fillStyle = "#f0efea"; context.fillRect(0, 0, stage.width, stage.height); }
           const { width, height } = stage;
-          context.fillStyle = "#edece6";
+          context.fillStyle = "#071525";
           context.fillRect(0, 0, width, height);
-          context.textAlign = "center";
-          context.direction = locale === "en" ? "ltr" : "rtl";
-          context.fillStyle = "#225cff";
-          context.font = '700 13px "Vazirmatn Variable", sans-serif';
-          context.fillText("MANDEGAR", width / 2, height * 0.09);
-          context.fillStyle = "#242320";
-          context.font = '600 32px "Vazirmatn Variable", sans-serif';
-          context.fillText(copy.stations.stage.title, width / 2, height * 0.2);
-          sample.beams.forEach((energy, index) => {
-            const x = width * (0.12 + index * 0.19);
-            const color = stageBeamColors[index];
-            context.save();
-            context.globalAlpha = 0.1 + energy * 0.9;
-            const glow = context.createLinearGradient(x, height * 0.35, x, height * 0.74);
-            glow.addColorStop(0, `${color}88`);
-            glow.addColorStop(1, `${color}00`);
-            context.fillStyle = glow;
-            context.beginPath();
-            context.moveTo(x - 8, height * 0.34);
-            context.lineTo(x - 58, height * 0.73);
-            context.lineTo(x + 58, height * 0.73);
-            context.lineTo(x + 8, height * 0.34);
-            context.fill();
-            context.fillStyle = color;
-            context.beginPath();
-            context.ellipse(x, height * 0.73, 48, 10, 0, 0, Math.PI * 2);
-            context.fill();
-            context.font = '650 19px "Vazirmatn Variable", sans-serif';
-            context.fillText(`${copy.stage.beam} ${index + 1}`, x, height * 0.85);
-            context.restore();
-          });
+          if (image.naturalWidth) {
+            context.drawImage(image, 0, 0, width, height);
+            sample.beams.forEach((energy, index) => {
+              const sliceWidth = width / 5;
+              context.fillStyle = `rgba(7, 21, 37, ${(1 - energy) * 0.85})`;
+              context.fillRect(index * sliceWidth, height * 0.32, sliceWidth, height * 0.68);
+            });
+          } else {
+            context.textAlign = "center";
+            context.fillStyle = "#f7f4eb";
+            context.font = '500 40px "Vazirmatn Variable", sans-serif';
+            context.fillText("MANDEGAR", width / 2, height * 0.26);
+          }
           if (stageVisibility > 0 && interactionRuntime.monitorEntries.videoWall?.canvas !== stage) {
             registerInteractionCanvas("videoWall", stage, stageVisibility);
           }
           const entry = interactionRuntime.monitorEntries.videoWall;
           if (entry?.canvas === stage) entry.blend = stageVisibility;
           stage.dataset.beamIntensities = JSON.stringify(sample.beams);
+          stage.dataset.litLamps = String(sample.beams.filter((beam) => beam > 0.99).length);
           stage.dataset.stageProgress = String(sample.stage);
           markInteractionCanvasDirty("videoWall");
-          if (!savedLighting && sample.stage >= 0.74 && root?.dataset.scrollDirection === "forward") {
+          if (!savedLighting && sample.stage >= 0.8 - 0.000001 && root?.dataset.scrollDirection === "forward") {
             savedLighting = true;
             saveLightingLook([true, true, true, true, true]);
           }

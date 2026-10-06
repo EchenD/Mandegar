@@ -4,7 +4,7 @@ import { warpNarrativeProgress } from "../../components/experience/narrative-pro
 import { createRaceGame, getAutonomousTarget, raceBoard, stepRace, type RaceGame } from "../../components/experience/interactions/race-game";
 import { getScrollScenes } from "../../components/experience/interactions/scroll-scenes";
 import { getIntelligencePersonProfile } from "../../components/experience/intelligence-person-profile";
-import { activateWithKeyboard, driveRaceToCollision, returnToStationForward, waitForStation, swapPuzzleSlots, puzzleTiles } from "./hero-interaction-helpers";
+import { activateWithKeyboard, driveRaceToCollision, returnToStationForward, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
 test.use({ video: "off", trace: "off" });
@@ -38,8 +38,8 @@ test("scroll scenes are reversible samples and person insights stay localized an
   const stage = narrativeScore.find((beat) => beat.id === "reveal")!;
   const earlierProgress = stage.start + (stage.end - stage.start) * 0.65;
   const earlier = getScrollScenes(earlierProgress);
-  const building = getScrollScenes(stage.start + (stage.end - stage.start) * 0.8);
-  const complete = getScrollScenes(stage.start + (stage.end - stage.start) * 0.85);
+  const building = getScrollScenes(stage.start + (stage.end - stage.start) * 0.85);
+  const complete = getScrollScenes(stage.start + (stage.end - stage.start) * 0.88);
   expect(earlier.beams[0]).toBeGreaterThan(0);
   expect(earlier.beams[4]).toBe(0);
   expect(building.beams[4]).toBeGreaterThan(earlier.beams[4]);
@@ -90,7 +90,7 @@ test("photo and beams return to reversible scroll samples after their automatic 
   await waitForStation(page, "stage");
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
-  await seek(page, stage.start + (stage.end - stage.start) * 0.85);
+  await seek(page, stage.start + (stage.end - stage.start) * 0.88);
   const stageCanvas = page.locator("[data-stage-scroll]");
   await expect(root).toHaveAttribute("data-story-stage", "reveal");
   await expect(stageCanvas).toHaveAttribute("data-beam-intensities", "[1,1,1,1,1]");
@@ -185,13 +185,12 @@ test("photo countdown and delivery finish on time while the native scroll sample
   await page.screenshot({ path: testInfo.outputPath("photo-world-mobile.png") });
 });
 
-test("small scrolls fill Skip and automatic forward returns start a fresh puzzle", async ({ page }) => {
+test("small scrolls fill Skip and automatic forward returns start a fresh installation", async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000", { timeout: 20_000 });
-  await swapPuzzleSlots(page, 0, 1);
-  const saved = await puzzleTiles(page);
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
   const before = await page.evaluate(() => window.scrollY);
   const skip = page.locator("[data-interaction-escape]");
   await page.evaluate(() => {
@@ -212,8 +211,7 @@ test("small scrolls fill Skip and automatic forward returns start a fresh puzzle
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
   await returnToStationForward(page, "touch");
-  expect(await puzzleTiles(page)).not.toEqual(saved);
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
 });
 
 test("fast passing a station never pulls the camera back or locks scrolling", async ({ page }) => {
@@ -250,7 +248,7 @@ test("ordinary forward wheel arrivals start each activity with one Skip and no R
   }
 });
 
-test("the normal Persian introduction enters the puzzle, holds arrival motion and fills Skip across nine scrolls", async ({ page }) => {
+test("the normal Persian introduction enters the installation, holds arrival motion and fills Skip across nine scrolls", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/fa", { waitUntil: "domcontentloaded" });
@@ -334,7 +332,7 @@ test("the slow scroll tail keeps fractional scene movement between native pixel 
   expect(records.at(-1)!.sceneY).toBeGreaterThan(records[0].sceneY);
 });
 
-test("three longer mobile swipes fill Skip and the final swipe continues after leaving an untouched puzzle", async ({ browser }) => {
+test("three longer mobile swipes fill Skip and the final swipe continues after leaving an untouched installation", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   await page.goto("/fa?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });

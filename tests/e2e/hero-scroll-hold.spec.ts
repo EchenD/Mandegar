@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { driveRaceToCollision, returnToStationForward, seekStationReview, solvePuzzle, swapPuzzleSlots, waitForStation } from "./hero-interaction-helpers";
+import { driveRaceToCollision, returnToStationForward, seekStationReview, activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(240_000);
 test.use({ video: "off", trace: "off" });
@@ -16,7 +16,7 @@ async function wheelProgress(page: Page, progress: number) {
   await page.mouse.wheel(0, distance * progress);
 }
 
-test("Skip returns on forward puzzle visits after retreating within the chapter and leaving the chapter", async ({ page }) => {
+test("Skip returns on forward installation visits after retreating within the chapter and leaving the chapter", async ({ page }) => {
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   await seekStationReview(page, "touch");
   const director = await waitForStation(page, "touch");
@@ -48,13 +48,13 @@ test("Skip returns on forward puzzle visits after retreating within the chapter 
   await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
 });
 
-test("reverse then forward input during the puzzle departure fade starts a fresh attempt", async ({ page }) => {
+test("reverse then forward input during the installation departure fade starts a fresh attempt", async ({ page }) => {
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   await seekStationReview(page, "touch");
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await swapPuzzleSlots(page, 0, 1);
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "1");
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-installation-view", "parts");
   // Entrance is settled. Send both directions in the browser so runner
   // latency cannot move the forward gesture beyond the 400ms departure.
   const sample = await page.locator("[data-experience-root]").evaluate((root: HTMLElement) => new Promise<{
@@ -67,7 +67,7 @@ test("reverse then forward input during the puzzle departure fade starts a fresh
     let forwardDuringDeparture = false;
     const timer = window.setTimeout(() => {
       observer.disconnect();
-      reject(new Error("The fast reverse/forward gesture did not start a fresh puzzle."));
+      reject(new Error("The fast reverse/forward gesture did not start a fresh installation."));
     }, 10_000);
     const observer = new MutationObserver(() => {
       if (root.dataset.interactionActive !== "touch") released = true;
@@ -90,8 +90,7 @@ test("reverse then forward input during the puzzle departure fade starts a fresh
   expect(sample.forwardDuringDeparture).toBe(true);
   expect(sample.releasedBeforeReturn).toBe(true);
   await expect(director).toHaveAttribute("data-presentation", "active");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "false");
+  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-installation-view", "assembled");
   await expect(page.locator("[data-interaction-escape]")).toHaveAttribute("data-scroll-skip-progress", "0.000");
   await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
 });
@@ -148,11 +147,13 @@ for (const [phase, station, animationSelector] of [
           requestAnimationFrame(() => window.setTimeout(() => {
             heldProgress = Number(element.dataset.nativeProgress);
             heldScroll = scrollY;
-            for (let index = 0; index < 3; index += 1) {
+            for (let index = 0; index < (expectedStation === "stage" ? 5 : 3); index += 1) {
               window.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
             }
             const captureFilled = () => {
-              const progress = Number(document.querySelector<HTMLElement>("[data-interaction-escape]")?.dataset.scrollSkipProgress);
+              const progress = expectedStation === "stage"
+                ? Number(document.querySelector<HTMLElement>("[data-stage-scroll]")?.dataset.litLamps) / 5
+                : Number(document.querySelector<HTMLElement>("[data-interaction-escape]")?.dataset.scrollSkipProgress);
               if (progress !== 1 && element.dataset.interactionActive === expectedStation) {
                 requestAnimationFrame(captureFilled);
                 return;
@@ -183,7 +184,7 @@ for (const [phase, station, animationSelector] of [
     expect(sample.filledNativeProgress).toBeGreaterThanOrEqual(sample.heldProgress);
     expect(sample.filledNativeProgress - sample.heldProgress).toBeLessThanOrEqual(0.013);
     expect(sample.filledScroll).toBeCloseTo(sample.heldScroll, 0);
-    expect(sample.elapsedMs).toBeGreaterThanOrEqual((station === "photo" ? 2600 : 2400) - 100);
+    expect(sample.elapsedMs).toBeGreaterThanOrEqual((station === "photo" ? 2600 : 900) - 100);
     expect(sample.resultMs).toBeGreaterThanOrEqual(800);
     await expect(director).toHaveAttribute("data-presentation", "result", { timeout: 10_000 });
     await expect(director).toHaveAttribute("data-scroll-locked", "false");
@@ -231,16 +232,20 @@ for (const [phase, station] of [["engagement", "touch"], ["experiences", "game"]
     let finalScore = 0;
     if (station === "touch") {
       await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-      await solvePuzzle(page);
+      await activateWithKeyboard(page, "[data-installation-button='image']");
+      await activateWithKeyboard(page, "[data-interaction-escape]");
+      await expect(director).toHaveAttribute("data-active-station", "none");
     } else {
       const controls = page.locator("[data-game-spatial-controls]");
       await expect(controls).toHaveAttribute("data-game-status", "running");
       await expect.poll(async () => Number(await controls.getAttribute("data-game-score"))).toBeGreaterThan(10);
       finalScore = await driveRaceToCollision(page);
     }
-    await expect(director).toHaveAttribute("data-presentation", "result");
-    await expect(director).toHaveAttribute("data-scroll-locked", "false");
-    await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
+    if (station === "game") {
+      await expect(director).toHaveAttribute("data-presentation", "result");
+      await expect(director).toHaveAttribute("data-scroll-locked", "false");
+      await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
+    }
     await returnToStationForward(page, station);
     await expect(page.locator("[data-interaction-escape]")).toBeVisible();
     await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
@@ -248,8 +253,8 @@ for (const [phase, station] of [["engagement", "touch"], ["experiences", "game"]
     await page.waitForTimeout(800);
     await expect(director).toHaveAttribute("data-active-station", station);
     if (station === "touch") {
-      await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-puzzle-solved", "false");
-      await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
+      await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
+      await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-installation-view", "assembled");
     } else {
       await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "running");
       expect(Number(await page.locator("[data-game-spatial-controls]").getAttribute("data-game-best"))).toBeGreaterThanOrEqual(finalScore);

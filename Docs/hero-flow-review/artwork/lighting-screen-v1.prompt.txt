@@ -1,0 +1,15 @@
+Generator: built-in imagegen
+Reference: approved lighting-screen venue concept from this conversation.
+Export: centered crop and proportional resize to 1740 x 450, without stretching.
+
+Exact generation prompt:
+
+Use case: stylized-concept.
+Asset type: final flat LED-screen texture for the Mandegar website, not a screenshot or a room mockup.
+Image 1 is a STYLE AND CONTENT REFERENCE: the approved preview of a curved stage screen displaying dark navy artwork with ivory and blue translucent ribbons and the word MANDEGAR. Use ONLY the artwork visible on the display as the design reference.
+Primary request: Re-create that approved screen artwork as a single flat, straight-on rectangular image, with correct panoramic proportions for the measured display. Desired exact output dimensions: 1740 pixels wide by 450 pixels high. This is a very wide 58:15 composition, approximately 3.8667:1. The image must be wider and shallower than the reference venue screenshot.
+Composition: full-bleed deep charcoal midnight-blue background. One continuous sculptural, satin-like translucent wave of light flowing from left edge to right edge through the middle-to-lower half. Elegant warm ivory and muted electric-blue ribbons, very subtle champagne reflection. The center has an understated architectural M-shaped rhythm. Five restrained points of illumination spread along the flowing wave, positioned at approximately 12%, 31%, 50%, 69%, and 88% across the width, all safely within the shallow composition. The wave forms a single connected elegant image. Keep the complete ribbon formation comfortably inside the shallow strip; leave a slim dark margin at top and bottom.
+Text (verbatim): "MANDEGAR". One centered, precise, legible wordmark in restrained ivory uppercase sans-serif typography in the upper-middle. Maintain natural letter proportions, no horizontally stretched typography.
+Style: premium event identity, cinematic light sculpture, refined and quiet. Match the approved ivory/blue palette and dark screen background.
+Crucial constraints: output ONLY the screen's FLAT image texture. No room, no curved display border or curvature, no stage, no physical spotlight cones, no people or silhouettes, no podium, no overhead lamps or fixtures, no foreground wordmark, no physical venue architecture, no perspective distortion. No labels, slogan, interface, diagram, numbered beams, watermark, montage or comparison panels.
+Production framing: the core wordmark and all five accents must survive a centered shallow panoramic crop if the generator uses a taller backing canvas. Keep the main artwork in a central band with width-to-height ratio 58:15, and use only uninterrupted matching dark background above/below that band. Do not add visible crop marks, framing boxes or borders.

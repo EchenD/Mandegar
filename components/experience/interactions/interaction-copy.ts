@@ -62,7 +62,7 @@ const english: InteractionCopy = {
   stations: {
     photo: { label: "See event photo delivery", title: "Instant photo delivery", instruction: "Watch a moment arrive on your phone." },
     touch: { label: "Explore an event installation", title: "A Mandegar experience", instruction: "Press a button to explore the installation, its parts and details." },
-    stage: { label: "Watch the lighting show", title: "Light brings the space to life", instruction: "Watch light bring the space to life." },
+    stage: { label: "Explore the lighting show", title: "Light brings the space to life", instruction: "Scroll to switch on each light." },
     game: { label: "Play road race", title: "Road race", instruction: "Drag to steer or use ← / →. Avoid traffic." },
     draw: { label: "Open drawing wall", title: "Leave your mark", instruction: "Draw on the wall, then finish to leave your mark." },
   },
@@ -118,7 +118,7 @@ const persian: InteractionCopy = {
   stations: {
     photo: { label: "نمایش تحویل عکس رویداد", title: "تحویل فوری عکس", instruction: "رسیدن یک لحظه به گوشی خود را ببینید." },
     touch: { label: "کشف فضای رویداد", title: "یک تجربهٔ ماندگار", instruction: "با دکمه‌ها، فضا، اجزا و جزئیات رویداد را ببینید." },
-    stage: { label: "تماشای نورپردازی", title: "نور، فضا را زنده می‌کند", instruction: "ببینید نور چگونه فضا را زنده می‌کند." },
+    stage: { label: "کشف نورپردازی", title: "نور، فضا را زنده می‌کند", instruction: "با هر مرحلهٔ اسکرول، یک چراغ را روشن کنید." },
     game: { label: "بازی مسابقه ماشین", title: "مسابقه ماشین", instruction: "برای فرمان دادن بکشید یا از ← و → استفاده کنید. از ماشین‌ها دوری کنید." },
     draw: { label: "باز کردن دیوار طراحی", title: "نشان شما", instruction: "روی دیوار بکشید و با پایان، نشانتان را باقی بگذارید." },
   },
@@ -174,7 +174,7 @@ const arabic: InteractionCopy = {
   stations: {
     photo: { label: "شاهد تسليم صور الفعالية", title: "تسليم الصور فورًا", instruction: "شاهد اللحظة تصل إلى هاتفك." },
     touch: { label: "استكشف مساحة الفعالية", title: "تجربة ماندگار", instruction: "اضغط الأزرار لاستكشاف المساحة وأجزائها وتفاصيلها." },
-    stage: { label: "شاهد عرض الإضاءة", title: "الضوء يمنح المكان حياة", instruction: "شاهد كيف يمنح الضوء المكان حياة." },
+    stage: { label: "استكشف عرض الإضاءة", title: "الضوء يمنح المكان حياة", instruction: "مرّر لتشغيل كل ضوء بالتتابع." },
     game: { label: "العب سباق السيارات", title: "سباق السيارات", instruction: "اسحب للتوجيه أو استخدم ← و →. تجنّب السيارات." },
     draw: { label: "فتح جدار الرسم", title: "اترك بصمتك", instruction: "ارسم على الجدار ثم أنهِ الرسم لتبقى بصمتك." },
   },

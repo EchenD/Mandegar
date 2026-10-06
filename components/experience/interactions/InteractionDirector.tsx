@@ -421,6 +421,12 @@ export const InteractionDirector = memo(function InteractionDirector({
     const passive = state.activeStation === "photo" || state.activeStation === "stage";
     let arrivalWheel = performance.now() - wheelIntent.current.at < 160;
     const leave = (delta = 0, immediate = false) => { if (!released) { released = true; exit(resultAt.current === null, delta, immediate); } };
+    const stepStage = (amount: number, stepSize: number) => {
+      scrollSkipAmount.current = Math.max(0, Math.min(1, scrollSkipAmount.current + amount / (stepSize * 5)));
+      const lamps = Math.floor(scrollSkipAmount.current * 5 + 0.000001);
+      interactionRuntime.stageHoldProgress = 0.2 + lamps * 0.12;
+      setScrollSkipProgress(lamps / 5);
+    };
     const fillSkip = (amount: number, threshold: number, immediate = false) => {
       if (departureTimer.current !== null) return true;
       if (resultAt.current !== null) {
@@ -446,13 +452,18 @@ export const InteractionDirector = memo(function InteractionDirector({
     const wheel = (event: WheelEvent) => {
       if (event.ctrlKey || event.metaKey || event.deltaY === 0) return;
       if (departureTimer.current !== null) return;
-      if (event.deltaY < 0) { leave(event.deltaY); if (event.cancelable) event.preventDefault(); return; }
+      if (event.deltaY < 0 && !(state.activeStation === "stage" && resultAt.current === null && scrollSkipAmount.current > 0)) { leave(event.deltaY); if (event.cancelable) event.preventDefault(); return; }
       if (arrivalWheel && performance.now() - enteredAt.current < 160 && wheelIntent.current.gap < 160) {
         if (event.cancelable) event.preventDefault();
         return;
       }
       arrivalWheel = false;
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      if (state.activeStation === "stage" && resultAt.current === null) {
+        stepStage(Math.max(-120, Math.min(120, event.deltaY * unit)), scrollHoldTiming.stageWheelStep);
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
       // A large mouse notch gets the same grace as a normal notch. Small
       // trackpad packets accumulate continuously instead of counting events.
       const threshold = passive ? scrollHoldTiming.wheelThreshold : scrollHoldTiming.interactionWheelThreshold;
@@ -474,6 +485,11 @@ export const InteractionDirector = memo(function InteractionDirector({
       const delta = touchY - y;
       touchY = y;
       if (delta === 0) return;
+      if (state.activeStation === "stage" && resultAt.current === null && (delta > 0 || scrollSkipAmount.current > 0)) {
+        stepStage(delta, scrollHoldTiming.stageTouchStep);
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
       const threshold = passive ? scrollHoldTiming.touchThreshold : scrollHoldTiming.interactionTouchThreshold;
       if (delta > 0) {
         fillSkip(delta, threshold, true);
@@ -492,6 +508,12 @@ export const InteractionDirector = memo(function InteractionDirector({
       if (event.key === "Escape") { event.preventDefault(); leave(); return; }
       if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
+      if (state.activeStation === "stage" && resultAt.current === null && ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " "].includes(event.key)
+        && !target?.closest("input, textarea") && !(event.key === " " && target?.closest("button"))) {
+        event.preventDefault();
+        stepStage(["ArrowUp", "PageUp"].includes(event.key) ? -120 : 120, scrollHoldTiming.stageWheelStep);
+        return;
+      }
       const ownsInput = target?.closest("[data-installation-controls], [data-game-spatial-controls], [data-mobile-game-dock], [data-drawing-spatial-controls], input, textarea, button");
       if (!ownsInput && ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) leave();
       else if (["PageUp", "PageDown"].includes(event.key)) leave();

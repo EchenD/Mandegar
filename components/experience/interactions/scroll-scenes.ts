@@ -15,7 +15,8 @@ export const photoScrollTiming = {
 
 export const scrollHoldTiming = {
   photoMs: photoScrollTiming.countdownMs + photoScrollTiming.deliveryMs + 550,
-  stageMs: 2400,
+  stageWheelStep: 120,
+  stageTouchStep: 72,
   wheelThreshold: 360,
   touchThreshold: 180,
   interactionWheelThreshold: 1080,
@@ -35,7 +36,7 @@ export function getScrollScenes(progress: number, overrides?: { photo?: number; 
     photoCount: Math.max(1, 3 - Math.floor(rangeProgress(photo, [photoScrollTiming.countdownStart, photoScrollTiming.capture]) * 3)),
     stage,
     stageVisibility: smoothRange(stage, [0.08, 0.2]) * (1 - smoothRange(stage, [0.88, 1])),
-    beams: Array.from({ length: 5 }, (_, index) => smoothRange(stage, [0.2 + index * 0.1, 0.34 + index * 0.1])),
+    beams: Array.from({ length: 5 }, (_, index) => Math.max(0, Math.min(1, (stage - 0.2) / 0.12 - index))),
   };
 }
 
@@ -52,5 +53,5 @@ export function syncScrollScenes(progress: number) {
   interactionRuntime.stageVisibility = frame.stageVisibility;
   interactionRuntime.beamIntensities = frame.beams;
   interactionRuntime.activeBeams = frame.beams.map((value) => value > 0.01);
-  interactionRuntime.stageComplete = frame.stage >= 0.74 && frame.stage < 1;
+  interactionRuntime.stageComplete = frame.stage >= 0.8 - 0.000001 && frame.stage < 1;
 }
