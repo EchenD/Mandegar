@@ -3,11 +3,15 @@ import { activateWithKeyboard, continueFromResult, waitForStation } from "./hero
 
 test.setTimeout(120_000);
 
-async function openDrawing(page: Page) {
+async function openDrawing(page: Page, clockControlled = false) {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=connection", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "draw");
   const controls = page.locator("[data-drawing-spatial-controls]");
+  if (clockControlled) {
+    await expect(page.locator("[data-drawing-canvas]")).toHaveAttribute("data-transition-progress", /^\d\.\d{3}$/, { timeout: 20_000 });
+    await page.clock.runFor(750);
+  }
   await expect(page.locator("[data-drawing-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   return { director, controls };
 }
@@ -47,7 +51,8 @@ test("drawing wall undo and clear remove local strokes", async ({ page }) => {
 });
 
 test("drawing wall can create and finish a mark entirely with the keyboard", async ({ page }) => {
-  const { director, controls } = await openDrawing(page);
+  await page.clock.install();
+  const { director, controls } = await openDrawing(page, true);
   const canvas = page.locator("[data-drawing-canvas]");
   await expect(canvas).toHaveAttribute("tabindex", "0");
   await expect(canvas).toHaveAccessibleName(/Space.*arrow keys/i);
@@ -62,7 +67,10 @@ test("drawing wall can create and finish a mark entirely with the keyboard", asy
   await page.keyboard.press("Space");
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+  // Keep the result's reading interval open while runner roundtrips inspect it.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await activateWithKeyboard(page, "[data-drawing-finish]");
+  await page.clock.runFor(64);
   await expect(director).toHaveAttribute("data-presentation", "result");
   await expect(controls).toHaveAttribute("data-drawing-finished", "true");
   await expect(controls).toHaveAttribute("data-stroke-count", "1");

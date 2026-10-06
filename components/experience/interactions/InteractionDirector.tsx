@@ -60,6 +60,9 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   const [departing, setDeparting] = useState(false);
   const previousFocus = useRef<HTMLElement | null>(null);
   const departureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completionFrame = useRef<number | null>(null);
+  const completionReported = useRef(false);
   const autoStarted = useRef<Partial<Record<InteractionStation, boolean>>>({});
   const previousExpectedStation = useRef<InteractionStation | null>(null);
   const panelRoot = useRef<HTMLDivElement>(null);
@@ -161,7 +164,20 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     dispatch({ type: "AVAILABILITY", station: expectedStation });
   }, [expectedStation, state.activeStation]);
 
+  const cancelResultAdvance = useCallback(() => {
+    if (completionTimer.current !== null) clearTimeout(completionTimer.current);
+    if (completionFrame.current !== null) cancelAnimationFrame(completionFrame.current);
+    completionTimer.current = null;
+    completionFrame.current = null;
+  }, []);
+
+  const cancelPhaseAdvance = useCallback(() => {
+    cancelResultAdvance();
+    document.querySelector<HTMLElement>("[data-experience-root]")?.dispatchEvent(new Event("mandegar:cancel-finish-phase"));
+  }, [cancelResultAdvance]);
+
   const finishExit = useCallback((cancelled: boolean) => {
+    cancelPhaseAdvance();
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     root?.removeAttribute("data-interaction-active");
     root?.removeAttribute("data-interaction-result");
@@ -174,10 +190,11 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     interactionRuntime.gestureStation = null;
     dispatch({ type: "EXIT", cancelled });
     setDeparting(false);
-  }, []);
+  }, [cancelPhaseAdvance]);
 
   const exit = useCallback((cancelled: boolean) => {
     if (departureTimer.current !== null) return;
+    cancelPhaseAdvance();
     const station = interactionRuntime.activeStation;
     if (!station) { finishExit(cancelled); return; }
     document.querySelector<HTMLElement>("[data-experience-root]")?.setAttribute("data-interaction-departing", station);
@@ -187,7 +204,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       departureTimer.current = null;
       finishExit(cancelled);
     }, reducedMotion ? 0 : 400);
-  }, [finishExit, reducedMotion]);
+  }, [cancelPhaseAdvance, finishExit, reducedMotion]);
 
   const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
     if (interactionRuntime.availableStation !== station || state.availableStation !== station
@@ -195,6 +212,8 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     const sample = sampleHeroTimeline(heroTimeline, experienceState.progress);
     if (sample.phase.id !== interactionRegistry[station].phase
       || !sample.inViewingWindow || sample.progress >= sample.phase.end) return;
+    cancelPhaseAdvance();
+    completionReported.current = false;
     autoStarted.current[station] = true;
     if (station === "touch") resetInstallation();
     if (station === "game") resetRace();
@@ -205,7 +224,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     setInteractionRun((run) => run + 1);
     dispatch({ type: "RESTART", station });
     dispatch({ type: "ENTER", station, input });
-  }, [state.activeStation, state.availableStation]);
+  }, [cancelPhaseAdvance, state.activeStation, state.availableStation]);
 
   useEffect(() => {
     if (!expectedStation || state.activeStation || state.availableStation !== expectedStation) return;
@@ -247,21 +266,71 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   }, [enter, expectedStation, state.activeStation, state.availableStation]);
 
   const continuePhase = useCallback((station: InteractionStation) => {
+    cancelResultAdvance();
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     root?.dispatchEvent(new CustomEvent("mandegar:finish-phase", { detail: { phase: interactionRegistry[station].phase } }));
-  }, []);
+  }, [cancelResultAdvance]);
 
   const complete = useCallback((station: InteractionStation) => {
-    if (interactionRuntime.activeStation !== station || departureTimer.current !== null) return;
+    if (interactionRuntime.activeStation !== station || departureTimer.current !== null || completionReported.current) return;
+    completionReported.current = true;
     dispatch({ type: "COMPLETE", station });
     document.querySelector<HTMLElement>("[data-experience-root]")?.setAttribute("data-interaction-result", station);
-    continuePhase(station);
-  }, [continuePhase]);
+  }, []);
+
+  useEffect(() => {
+    const station = state.activeStation;
+    if (!station || state.lifecycle !== "complete") return;
+    // Start reading protection after React commits the result and the browser
+    // has had a frame to paint it. The page remains scrollable throughout.
+    completionFrame.current = requestAnimationFrame(() => {
+      completionFrame.current = requestAnimationFrame(() => {
+        completionFrame.current = null;
+        completionTimer.current = setTimeout(() => {
+          completionTimer.current = null;
+          if (interactionRuntime.activeStation === station && departureTimer.current === null) continuePhase(station);
+        }, 900);
+      });
+    });
+    const key = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")
+        || (event.key === " " && target?.closest("button"))) return;
+      if (event.key === "Escape" || pageScrollKeys.has(event.key)) cancelResultAdvance();
+    };
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    window.addEventListener("wheel", cancelResultAdvance, { passive: true });
+    window.addEventListener("touchstart", cancelResultAdvance, { passive: true });
+    window.addEventListener("scroll", cancelResultAdvance, { passive: true });
+    window.addEventListener("keydown", key);
+    root?.addEventListener("mandegar:seek", cancelResultAdvance);
+    return () => {
+      cancelResultAdvance();
+      window.removeEventListener("wheel", cancelResultAdvance);
+      window.removeEventListener("touchstart", cancelResultAdvance);
+      window.removeEventListener("scroll", cancelResultAdvance);
+      window.removeEventListener("keydown", key);
+      root?.removeEventListener("mandegar:seek", cancelResultAdvance);
+    };
+  }, [cancelResultAdvance, continuePhase, state.activeStation, state.lifecycle]);
 
   const restart = useCallback((station: InteractionStation) => {
-    document.querySelector<HTMLElement>("[data-experience-root]")?.removeAttribute("data-interaction-result");
+    if (interactionRuntime.activeStation !== station || interactionRuntime.availableStation !== station) return;
+    cancelPhaseAdvance();
+    if (departureTimer.current !== null) clearTimeout(departureTimer.current);
+    departureTimer.current = null;
+    completionReported.current = false;
+    setDeparting(false);
+    const root = document.querySelector<HTMLElement>("[data-experience-root]");
+    root?.removeAttribute("data-interaction-result");
+    root?.removeAttribute("data-interaction-departing");
+    if (station === "touch") resetInstallation();
+    if (station === "game") resetRace();
+    if (station === "draw") { clearDrawing(); clearDrawingDraft(); }
+    setInteractionRun((run) => run + 1);
     dispatch({ type: "RESTART", station });
-  }, []);
+  }, [cancelPhaseAdvance]);
 
   useEffect(() => {
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
@@ -336,9 +405,10 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   }, [exit, state.activeStation]);
 
   useEffect(() => () => {
+    cancelPhaseAdvance();
     if (departureTimer.current !== null) clearTimeout(departureTimer.current);
     resetInteractionRuntime();
-  }, []);
+  }, [cancelPhaseAdvance]);
 
   const station = state.activeStation;
   const isResult = state.lifecycle === "complete";

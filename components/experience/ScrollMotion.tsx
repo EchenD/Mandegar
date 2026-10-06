@@ -330,6 +330,7 @@ export function ScrollMotion({
       if (!phase) return;
       const target = getInteractionDepartureTarget(heroTimeline, phase, getNativeProgress());
       if (target === null) return;
+      if (finishMotion?.target === target) return;
       finishMotion = { from: getNativeProgress(), target, startedAt: performance.now() };
       root.dataset.finishScrolling = "true";
     };
@@ -338,6 +339,7 @@ export function ScrollMotion({
       root.removeAttribute("data-finish-scrolling");
     };
     root.addEventListener("mandegar:finish-phase", finishPhase);
+    root.addEventListener("mandegar:cancel-finish-phase", cancelFinish);
     lenisTick = () => {
       // GSAP's lag smoothing adjusts ticker time after slow frames. Lenis
       // needs real elapsed time so a wheel tail cannot stretch under load.
@@ -512,6 +514,7 @@ export function ScrollMotion({
       window.cancelAnimationFrame(restoreBehaviorFrame);
       cancelFinish();
       root.removeEventListener("mandegar:finish-phase", finishPhase);
+      root.removeEventListener("mandegar:cancel-finish-phase", cancelFinish);
       // The explicit release runs before the leaving wheel event reaches Lenis.
       if (lenisScroll) smooth?.off("scroll", lenisScroll);
       if (lenisTick) gsap.ticker.remove(lenisTick);
