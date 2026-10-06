@@ -169,7 +169,7 @@ test("a race result protects its reading moment then forwards a mobile swipe bef
   await context.close();
 });
 
-test("fresh puzzle visits restore stable navigation focus after their tile controls unmount", async ({ page }) => {
+test("fresh installation visits restore navigation focus after their buttons unmount", async ({ page }) => {
   await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
   const previous = page.getByLabel("Primary navigation").getByRole("link", { name: "Projects", exact: true });
@@ -183,16 +183,16 @@ test("fresh puzzle visits restore stable navigation focus after their tile contr
     }
     await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000", { timeout: 20_000 });
     await expect(page.locator("[data-interaction-escape]")).toBeFocused();
-    await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
-    await page.locator("[data-puzzle-slot='0']").focus();
+    await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
+    await page.locator("[data-installation-button='details']").focus();
     await page.keyboard.press("Enter");
-    await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-selected", "0");
+    await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "details");
     if (exitKey === "Enter") await page.locator("[data-interaction-escape]").focus();
     const before = await page.evaluate(() => scrollY);
     await page.keyboard.press(exitKey);
     await expect(director).toHaveAttribute("data-active-station", "none");
     await expect(previous).toBeFocused();
-    await expect(page.locator("[data-puzzle-slot], [data-interaction-replay]")).toHaveCount(0);
+    await expect(page.locator("[data-installation-button], [data-interaction-replay]")).toHaveCount(0);
     expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
   }
 });

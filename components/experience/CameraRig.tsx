@@ -226,7 +226,7 @@ export function CameraRig({ source }: { source: string }) {
       );
     }
     // Keep the tabletop above the shared controls while retaining the authored
-    // shot. Mobile uses its accessible puzzle grid and keeps the original view.
+    // shot. Mobile uses accessible buttons and keeps the original view.
     const framing = touchFraming.current;
     const framingTarget = !mobile && !introActive && interactionRuntime.activeStation === "touch" ? 1 : 0;
     if (framing.target !== framingTarget) {

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
-import { activateWithKeyboard, continueFromResult, driveRaceToCollision, returnToStationForward, seekStationReview, solvePuzzle, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, continueFromResult, driveRaceToCollision, returnToStationForward, seekStationReview, waitForStation } from "./hero-interaction-helpers";
 import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures, type MonitorTextureSample } from "./monitor-texture-observer";
 
 test.setTimeout(240_000);
@@ -59,26 +59,24 @@ test("the rendered game keeps painted ownership through a collision, autoplay an
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("puzzle releases its monitor after the readable result and drawing keeps a painted forward handoff", async ({ page }) => {
+test("installation releases its monitor on exit and drawing keeps a painted forward handoff", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await solvePuzzle(page);
+  await activateWithKeyboard(page, "[data-installation-button='details']");
   await clearMonitorTextureSamples(page);
-  await expect(director).toHaveAttribute("data-presentation", "result");
-  await expect(page.locator("p[data-interaction-result='touch']")).toBeVisible();
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "details");
   await assertPaintedOwnership(page, "interactive", "interactive");
-  await continueFromResult(page, "touch");
+  await activateWithKeyboard(page, "[data-interaction-escape]");
   await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
   await seek(page, "activation");
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
   await returnToStationForward(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-solved", "false");
-  await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-moves", "0");
+  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
   await clearMonitorTextureSamples(page);
   await assertPaintedOwnership(page, "interactive", "interactive");
   await activateWithKeyboard(page, "[data-interaction-escape]");

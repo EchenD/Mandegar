@@ -17,12 +17,12 @@ import type {
   InteractionInput,
   InteractionStation,
 } from "./interaction-types";
-import { resetPuzzle, getPuzzleState } from "./puzzle-store";
 import { clearDrawing, clearDrawingDraft } from "./visitor-creation";
 import { resetRace } from "./race-game";
 import { ScrollScenes } from "./ScrollScenes";
 import { photoScrollTiming, scrollHoldTiming } from "./scroll-scenes";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
+import { resetInstallation, installationCopy } from "./installation-demo";
 import styles from "./HeroInteractions.module.css";
 
 const interactionStationNames: readonly InteractionStation[] = [
@@ -176,7 +176,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     setDeparting(false);
     // A new forward visit always offers a fresh interaction. Saved creations
     // remain elsewhere in the journey until this station is visited again.
-    if (station === "touch") resetPuzzle();
+    if (station === "touch") resetInstallation();
     if (station === "game") resetRace();
     if (station === "draw") { clearDrawing(); clearDrawingDraft(); }
     dispatch({ type: "RESTART", station });
@@ -461,13 +461,13 @@ export const InteractionDirector = memo(function InteractionDirector({
     const touchStart = (event: TouchEvent) => {
       touchY = event.touches[0]?.clientY ?? null;
       const target = event.target as HTMLElement | null;
-      touchOwnsControl = Boolean(target?.closest("[data-puzzle-grid], [data-mobile-game-dock], [data-mobile-drawing-dock], button"));
+      touchOwnsControl = Boolean(target?.closest("[data-installation-controls], [data-mobile-game-dock], [data-mobile-drawing-dock], button"));
     };
     const touchMove = (event: TouchEvent) => {
       if (continuingTouch.current !== null) return;
       const y = event.touches[0]?.clientY;
       if (y === undefined || touchY === null) return;
-      if (touchOwnsControl || getPuzzleState().dragging || interactionRuntime.gestureStation) {
+      if (touchOwnsControl || interactionRuntime.gestureStation) {
         if (event.cancelable) event.preventDefault();
         return;
       }
@@ -492,7 +492,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       if (event.key === "Escape") { event.preventDefault(); leave(); return; }
       if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
-      const ownsInput = target?.closest("[data-puzzle-grid], [data-game-spatial-controls], [data-mobile-game-dock], [data-drawing-spatial-controls], input, textarea, button");
+      const ownsInput = target?.closest("[data-installation-controls], [data-game-spatial-controls], [data-mobile-game-dock], [data-drawing-spatial-controls], input, textarea, button");
       if (!ownsInput && ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) leave();
       else if (["PageUp", "PageDown"].includes(event.key)) leave();
     };
@@ -554,11 +554,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       {station === "touch" && (
         <TouchComposerInteraction
           key={interactionRun}
-          copy={copy}
-          onClose={() => exit(true)}
-          onComplete={() => complete("touch")}
-          onReset={() => restart("touch")}
-          onContinue={() => exit(false)}
+          locale={locale}
         />
       )}
 
@@ -588,7 +584,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       {station && (
         <div className={styles.journeyControl} data-journey-control data-phase={activePhase}>
           <p className={styles.journeyMessage} data-interaction-result={isResult ? station : undefined} role={isResult ? "status" : undefined} tabIndex={isResult ? -1 : undefined}>
-            {isResult ? station === "touch" ? copy.touch.complete : station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : copy.stations[station].instruction}
+            {isResult ? station === "touch" ? copy.touch.complete : station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : station === "touch" ? installationCopy[locale].instruction : copy.stations[station].instruction}
           </p>
           {!isResult &&
           <button type="button" className={styles.journeyButton} data-interaction-escape data-mobile-interaction-skip

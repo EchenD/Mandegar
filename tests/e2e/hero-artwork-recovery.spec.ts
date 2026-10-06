@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { activateWithKeyboard, continueFromResult, puzzleTiles, solvePuzzle, swapPuzzleSlots, waitForStation } from "./hero-interaction-helpers";
+import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(180_000);
 test.use({ video: "off", trace: "off" });
@@ -34,8 +34,8 @@ for (const station of [
         await expect(controls).toHaveAttribute("data-game-status", "paused");
       } else if (station.name === "touch") {
         controls = page.locator("[data-touch-spatial-controls]");
-        retainedAttribute = "data-puzzle-moves";
-        await swapPuzzleSlots(page, 0, 1);
+        retainedAttribute = "data-installation-view";
+        await activateWithKeyboard(page, "[data-installation-button='parts']");
       } else {
         controls = page.locator("[data-drawing-spatial-controls]");
         retainedAttribute = "data-stroke-count";
@@ -70,10 +70,10 @@ for (const station of [
   });
 }
 
-test("late puzzle artwork paints the current arrangement without replaying its entrance", async ({ page }) => {
+test("late final installation artwork preserves the selected view and entrance", async ({ page }) => {
   let releaseArtwork!: () => void;
   const gate = new Promise<void>((resolve) => { releaseArtwork = resolve; });
-  await page.route("**/connected-experience.webp", async (route) => {
+  await page.route("**/media/services/events.webp", async (route) => {
     await gate;
     await route.continue().catch(() => {});
   });
@@ -81,43 +81,14 @@ test("late puzzle artwork paints the current arrangement without replaying its e
     await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
     await waitForStation(page, "touch");
     const canvas = page.locator("[data-composer-canvas]");
-    const controls = page.locator("[data-touch-spatial-controls]");
     await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
-    await swapPuzzleSlots(page, 0, 1);
-    const arrangement = await puzzleTiles(page);
-    await canvas.evaluate((element) => {
-      document.documentElement.dataset.puzzleEntranceRestarted = "false";
-      new MutationObserver(() => {
-        if (Number((element as HTMLElement).dataset.transitionProgress) < 1) {
-          document.documentElement.dataset.puzzleEntranceRestarted = "true";
-        }
-      }).observe(element, { attributes: true, attributeFilter: ["data-transition-progress"] });
-    });
+    await activateWithKeyboard(page, "[data-installation-button='image']");
+    await expect(canvas).toHaveAttribute("data-artwork-status", "loading");
     releaseArtwork();
-    await expect(controls).toHaveAttribute("data-puzzle-artwork", "ready", { timeout: 15_000 });
-    await expect(canvas).toHaveAttribute("data-puzzle-preview-tiles", JSON.stringify(arrangement));
-    expect(await puzzleTiles(page)).toEqual(arrangement);
-    await expect(controls).toHaveAttribute("data-puzzle-moves", "1");
-    await expect(page.locator("html")).toHaveAttribute("data-puzzle-entrance-restarted", "false");
+    await expect(canvas).toHaveAttribute("data-artwork-status", "ready", { timeout: 15_000 });
+    await expect(canvas).toHaveAttribute("data-installation-view", "image");
+    await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
   } finally {
     releaseArtwork();
   }
-});
-
-test("missing puzzle artwork keeps a usable nine-piece fallback and exact completion", async ({ page }, testInfo) => {
-  await page.route(/\/(connected-experience|mandegar-puzzle)\.webp$/, (route) => route.abort());
-  await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
-  const director = await waitForStation(page, "touch");
-  const controls = page.locator("[data-touch-spatial-controls]");
-  await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-  await expect(controls).toHaveAttribute("data-puzzle-artwork", "missing");
-  await expect(page.locator("[data-puzzle-slot]")).toHaveCount(9);
-  await solvePuzzle(page);
-  await expect(director).toHaveAttribute("data-completed-touch", "true");
-  await expect(director).toHaveAttribute("data-presentation", "result");
-  await expect(controls).toHaveAttribute("data-puzzle-solved", "true");
-  await expect(page.locator("p[data-interaction-result='touch']")).toBeVisible();
-  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("puzzle-missing-artwork-fallback.png") });
-  await continueFromResult(page, "touch");
 });

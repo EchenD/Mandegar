@@ -6,17 +6,17 @@ test.use({ video: "off", trace: "off" });
 
 for (const locale of ["fa", "ar"]) {
   for (const height of [600, 844]) {
-    test(`${locale} puzzle controls and central Skip fit a ${height}px mobile viewport`, async ({ browser }) => {
+    test(`${locale} installation controls and central Skip fit a ${height}px mobile viewport`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width: 390, height }, hasTouch: true, isMobile: true });
       const page = await context.newPage();
       await page.goto(`/${locale}?intro=0&phase=engagement`, { waitUntil: "domcontentloaded" });
       await waitForStation(page, "touch");
       await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
-      const boxes = await page.locator("[data-puzzle-slot]").evaluateAll((elements) => elements.map((element) => {
+      const boxes = await page.locator("[data-installation-button]").evaluateAll((elements) => elements.map((element) => {
         const rect = element.getBoundingClientRect();
         return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
       }));
-      expect(boxes).toHaveLength(9);
+      expect(boxes).toHaveLength(4);
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
@@ -27,8 +27,8 @@ for (const locale of ["fa", "ar"]) {
       const skip = await page.locator("[data-interaction-escape]").boundingBox();
       const lastRow = boxes.at(-1)!;
       expect(lastRow.y + lastRow.height).toBeLessThan(skip!.y);
-      await page.locator("[data-puzzle-slot='0']").tap();
-      await expect(page.locator("[data-touch-spatial-controls]")).toHaveAttribute("data-puzzle-selected", "0");
+      await page.locator("[data-installation-button='parts']").tap();
+      await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "parts");
       await page.locator("[data-interaction-escape]").tap();
       await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
       await context.close();
