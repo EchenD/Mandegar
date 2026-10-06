@@ -13,8 +13,7 @@ async function expectReadableWork(page: Page) {
   await expect(firstProject.locator("[data-project-title]")).toHaveText(
     await projectLink.getAttribute("aria-label") ?? "",
   );
-  await expect(firstProject.locator("[data-project-category]")).toBeVisible();
-  await expect(firstProject.locator("[data-project-category]")).not.toHaveText("");
+  await expect(firstProject.locator("[data-project-category]")).toHaveCount(0);
   await expect(projectLink.locator("[data-project-action]")).toBeVisible();
   await expect(projectLink.locator("[data-project-action]")).toBeInViewport();
   const director = page.locator("[data-interaction-director]");
