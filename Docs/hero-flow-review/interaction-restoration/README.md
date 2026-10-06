@@ -26,6 +26,11 @@ stay within the viewport, and leave their boundary gaps clear. No copy timing
 values were changed. Samples are recorded in [text-review.json](text-review.json).
 These captures use Persian; the game is paused to keep its capture stable.
 
+The subsequent [follow-up review](follow-up-review.md) records two completion
+timing gaps, their fixes, and the disposition of every item in the earlier
+removal audit. New scroll input takes priority even before the result effect
+is installed; motion from an earlier wheel gesture no longer cancels completion.
+
 - [Desktop intelligence, frame 2250](desktop-intelligence.png)
 - [Desktop invitation, frame 2420](desktop-invitation.png)
 - [Mobile intelligence, frame 2250](mobile-intelligence.png)
