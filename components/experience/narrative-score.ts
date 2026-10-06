@@ -1,15 +1,6 @@
-export type ScenePhaseId =
-  | "arrival"
-  | "discovery"
-  | "activation"
-  | "engagement"
-  | "reveal"
-  | "experiences"
-  | "connection"
-  | "proof"
-  | "intelligence"
-  | "invitation"
-  | "loop";
+import type { ScenePhaseId } from "./hero-timeline";
+
+export type { ScenePhaseId } from "./hero-timeline";
 
 export type NarrativeAttention =
   | "space"

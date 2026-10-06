@@ -34,6 +34,19 @@
     "invitation": null,
     "loop": null
   },
+  "phaseEndFrames": {
+    "arrival": null,
+    "discovery": null,
+    "activation": null,
+    "engagement": null,
+    "reveal": null,
+    "experiences": null,
+    "connection": null,
+    "proof": null,
+    "intelligence": null,
+    "invitation": null,
+    "loop": null
+  },
   "phaseRestFrames": {
     "arrival": null,
     "discovery": null,

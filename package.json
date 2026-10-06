@@ -13,7 +13,8 @@
     "assets:textures": "node scripts/build-baked-textures.mjs",
     "build:pages": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-static.ps1 -BuildOnly",
     "deploy:pages": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-static.ps1",
-    "creative:animatic": "node scripts/build-creative-animatic.mjs"
+    "creative:animatic": "node scripts/build-creative-animatic.mjs",
+    "camera:check": "node scripts/check-camera-timing.mjs"
   },
   "dependencies": {
     "@fontsource-variable/vazirmatn": "^5.3.0",

@@ -40,7 +40,8 @@ camera and content timing will be integrated together across all chapters.
 Send a review export of `mandegar_environment.glb` with the same camera and clip
 names, together with a filled copy of
 [camera-timing-handoff.template.json](camera-timing-handoff.template.json).
-The template is an authoring handoff; the application does not load it yet.
+The template is an authoring handoff; the application does not load it yet. A
+preflight checker validates the completed handoff against the actual GLB.
 
 - `fps`: the source animation frame rate, including its fractional part if used.
 - `firstFrame` and `lastFrame`: the source frames corresponding to the exported
@@ -48,9 +49,15 @@ The template is an authoring handoff; the application does not load it yet.
 - `phaseStartFrames`: the beginning of each chapter and its text entrance.
   Arrival begins at `firstFrame`; each chapter ends at the next chapter's start,
   and loop ends at `lastFrame`.
+- `phaseEndFrames`: optional explicit end boundaries. Leave them null to derive
+  them from the next chapter's start. Boundaries are shared: if one phase ends at
+  frame 200, the next starts at frame 200. The final phase ends at `lastFrame`.
 - `phaseRestFrames`: the intended main composition of each chapter, within that
   chapter's frame range. These are review checkpoints, not camera pauses. A
-  moving shot can pass through its main composition without stopping.
+  moving shot can pass through its main composition without stopping. Supply
+  these for installation buttons (engagement), race (experiences), and drawing
+  (connection), with room for both approach and departure. Other chapters may
+  leave them null; their midpoint serves only as a review checkpoint.
 - `photoTextReady`: the first frame when the section text and Ready cue should
   start appearing. Match `phaseStartFrames.activation` so both start together.
   Ready remains until capture.
@@ -65,9 +72,9 @@ The template is an authoring handoff; the application does not load it yet.
 Chapter starts and main compositions must follow the narrative order; the four
 photo cues and five lamp cues must be ordered within their respective chapters.
 All frames must be within the exported range. Leave unknown values null while
-drafting; they must not be treated as frame zero. Complete both chapter frame
-maps and the effect cues before integration. The chapter IDs follow the existing
-narrative order: arrival, discovery, photo booth (activation),
+drafting; they must not be treated as frame zero. Complete chapter starts, the
+three participation views, and the effect cues before integration. The chapter
+IDs follow the existing narrative order: arrival, discovery, photo booth (activation),
 installation buttons (engagement), lighting (reveal), race (experiences), drawing
 (connection), proof, intelligence, invitation, and loop.
 
@@ -83,6 +90,25 @@ will sample the clip directly and drive every chapter and effect. Relative
 camera pacing comes from the authored animation; overall scroll distance and
 shared input smoothing remain code settings. Increasing the total clip duration
 alone does not slow a scroll-driven experience.
+
+For example, source frames 1 through 2500 at 30 FPS span `(2500 - 1) / 30`, or
+83.3 seconds between the first and last keys. Source frame zero is valid too.
+Camera time uses the actual exported clip duration so its first and last poses
+are sampled exactly. The preflight allows up to half a frame of rounding in exported key times and
+rejects incorrect FPS, missing camera animation, overlapping chapter boundaries,
+misordered effects, and incomplete source timing.
+
+Run `npm run camera:check` to inspect the current draft. It reports pending data
+without installing anything. To check a review export, use:
+
+```powershell
+npm run camera:check -- --asset "D:\path\to\mandegar_environment.glb"
+```
+
+Use `--handoff "D:\path\to\camera-timing.json"` for a separate filled cue file.
+Set its status to `ready` when authoring is complete, then add `--require-ready`
+to make missing or invalid data fail the check. `--json` provides the frame
+report for development tooling. These paths are examples, not asset locations.
 
 Step 1 extracts the existing camera mapping to
 `components/experience/camera-timeline.ts` without changing its samples. The
@@ -104,6 +130,11 @@ place until the revised full clip and its cues are ready.
    FOV and the separate pre-hero assembly intro. Actual game and drawing input
    retain their own state; entering those activities must be deliberate rather
    than automatically stopping the journey.
+   Camera time pauses at its current authored frame only during deliberate
+   participation. Finish or scroll-to-leave advances the real scroll position
+   through the authored departure to the phase end, with no accumulated Skip
+   threshold or separate virtual camera. Backward departure follows the authored
+   approach in reverse. Photo and lighting stay entirely scroll-controlled.
 3. **Calibrate with a development timeline preview.** Display the animation frame,
    chapter, and active cues while scrubbing forward or backward. Tune overall
    desktop/mobile scroll distance and shared smoothing while preserving the
