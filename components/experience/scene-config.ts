@@ -204,9 +204,6 @@ export const sceneTokens = {
     },
     screens: {
       videoWall: publicAssetPath("/media/hero/lighting-screen-v1.webp"),
-      interactive: publicAssetPath("/media/hero/connected-experience.webp"),
-      game: publicAssetPath("/media/hero/race-idle.webp"),
-      main: publicAssetPath("/media/mandegar/screens/screen-main-4x3.webp"),
     },
   },
   authoredCamera: {

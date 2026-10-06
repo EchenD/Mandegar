@@ -95,7 +95,9 @@ const screenPhases = {
 } as const;
 
 function canIntroduce(runtime: ScreenRuntime) {
-  const phase = heroTimeline.phases.find((item) => item.id === screenPhases[runtime.id])!;
+  const phaseId = runtime.id === "videoWall" && experienceState.narrative.phase === "intelligence"
+    ? "intelligence" : screenPhases[runtime.id];
+  const phase = heroTimeline.phases.find((item) => item.id === phaseId)!;
   return experienceState.progress >= phase.start && experienceState.progress <= phase.end;
 }
 
