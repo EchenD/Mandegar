@@ -11,7 +11,7 @@
   --experience-control: rgba(247, 247, 244, .34);
   position: relative;
   z-index: 0;
-  height: var(--experience-scroll-height-desktop, 2660svh);
+  height: var(--experience-scroll-height-desktop, 3325svh);
   color: var(--experience-ink);
   background: #e8ebea;
   isolation: isolate;
@@ -705,7 +705,7 @@
 }
 
 @media (max-width: 760px) {
-  .root { height: var(--experience-scroll-height-mobile, 2385svh); }
+  .root { height: var(--experience-scroll-height-mobile, 2981.25svh); }
   .loaderMark { width: 2.4rem; }
   .fallbackStage { width: 86vw; height: 27vw; inset-block-end: 27%; }
   .fallbackScreen { width: 70vw; inset-block-start: 39%; }

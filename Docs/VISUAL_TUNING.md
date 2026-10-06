@@ -48,7 +48,7 @@ Use the **search term** column in the named file. These are the shortest paths t
 | Final camera hold | `stage-presets.ts` → `getCameraLoopSampleProgress` | Holds the authored Loop composition while the sticky scene releases into the page |
 | Spatial labels | `scene-config.ts` → `spatialLabels` | Per-story moment ranges, GLB node names, appearance colors and desktop/compact safe areas |
 | Spatial label styling | `SpatialLabels.module.css` → `.label`, `.leader`, `.dimension` | Label widths/type, leader lines, measurement line and compact-mode density |
-| Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `2660`/`2385`; smaller advances faster, larger advances slower |
+| Total scroll speed | `scene-config.ts` → `scrollLengthVh` | Current desktop/mobile values are `3325`/`2981.25`, 25% longer than before; smaller advances faster, larger advances slower |
 | Smooth-scroll response | `ScrollMotion.tsx` → `new Lenis` | Larger `lerp` reacts faster; smaller feels heavier. Current value is `0.05` |
 | Eleven review points | `narrative-score.ts` → `narrativeScore` → `preview` | Equally spaced camera stage, timeline marker and interpolation anchor for every stage |
 | Phase boundaries | `narrative-score.ts` → `narrativeScore` → `start` / `end` | Which stage owns each part of narrative progress |
