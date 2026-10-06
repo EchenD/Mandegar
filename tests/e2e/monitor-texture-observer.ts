@@ -6,13 +6,14 @@ export type MonitorTextureSample = {
   base: string;
   blend: number;
   transition: number | null;
+  opacity: number;
 };
 
 /** Observe rendered sampler ownership rather than adding hooks to the scene. */
 export async function observeMonitorTextures(page: Page) {
   await page.addInitScript(() => {
     type Source = { label: string; screen: "game" | "main" | "interactive" | "videoWall" | null; canvas?: HTMLCanvasElement };
-    type Program = { media?: number; base?: number; blend?: number };
+    type Program = { media?: number; base?: number; blend?: number; opacity?: number };
     type Context = {
       program: WebGLProgram | null;
       unit: number;
@@ -40,13 +41,20 @@ export async function observeMonitorTextures(page: Page) {
               : source.src.includes("screen-center-") ? "videoWall" : null;
         return { label: "image", screen };
       }
-      const screen = source.hasAttribute("data-game-canvas") || source.hasAttribute("data-game-ambient") ? "game"
+      const canvasScreen = source.hasAttribute("data-game-canvas") || source.hasAttribute("data-game-ambient") ? "game"
         : source.hasAttribute("data-drawing-canvas") ? "main"
           : source.hasAttribute("data-composer-canvas") ? "interactive"
             : source.hasAttribute("data-stage-scroll") || source.hasAttribute("data-stage-canvas") || source.hasAttribute("data-intelligence-monitor-canvas") ? "videoWall" : null;
+      // Retained walls and handoff snapshots are detached canvases. They keep
+      // the physical monitor's exact canvas size, without the producer's DOM
+      // attributes; no poster sampler remains to supply their screen identity.
+      const screen = canvasScreen ?? (source.width === 960 && source.height === 718 ? "main"
+        : source.width === 501 && source.height === 720 ? "game"
+          : source.width === 1031 && source.height === 540 ? "interactive"
+            : source.width === 1740 && source.height === 450 ? "videoWall" : null);
       const label = source.hasAttribute("data-game-ambient") ? "ambient"
         : source.hasAttribute("data-intelligence-monitor-canvas") ? "intelligence"
-          : screen === "videoWall" ? "stage" : screen ? "interactive" : "retained";
+          : canvasScreen === "videoWall" ? "stage" : canvasScreen ? "interactive" : "retained";
       return { label, screen, canvas: source };
     };
     const record = (gl: WebGLRenderingContext) => {
@@ -65,6 +73,7 @@ export async function observeMonitorTextures(page: Page) {
         base: base?.label ?? "unknown",
         blend: program.blend,
         transition: media?.canvas?.dataset.transitionProgress ? Number(media.canvas.dataset.transitionProgress) : null,
+        opacity: program.opacity ?? 1,
       });
       if (observer.__monitorTextureSamples.length > 2_000) observer.__monitorTextureSamples.shift();
     };
@@ -104,7 +113,7 @@ export async function observeMonitorTextures(page: Page) {
       const locate = prototype.getUniformLocation;
       prototype.getUniformLocation = function (program, name) {
         const location = locate.call(this, program, name);
-        if (location && ["uMedia", "uBaseMedia", "uMediaBlend"].includes(name)) {
+        if (location && ["uMedia", "uBaseMedia", "uMediaBlend", "uContentOpacity"].includes(name)) {
           const state = stateFor(this);
           let uniforms = state.programs.get(program);
           if (!uniforms) {
@@ -126,6 +135,7 @@ export async function observeMonitorTextures(page: Page) {
       prototype.uniform1f = function (location, value) {
         const uniform = location ? stateFor(this).locations.get(location) : undefined;
         if (uniform?.name === "uMediaBlend") uniform.program.blend = value;
+        else if (uniform?.name === "uContentOpacity") uniform.program.opacity = value;
         scalar.call(this, location, value);
       };
       const indexed = prototype.drawElements;

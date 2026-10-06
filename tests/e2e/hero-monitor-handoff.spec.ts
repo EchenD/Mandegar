@@ -13,8 +13,8 @@ async function assertPaintedOwnership(page: Page, screen: MonitorTextureSample["
   }, { timeout: 15_000 }).toBe(true);
   const samples = await getMonitorTextureSamples(page, screen);
   expect(samples.filter((sample) => sample.media === "image" || sample.media === "unknown"), JSON.stringify(samples)).toEqual([]);
-  // Interactive entrance uses the outgoing painted canvas. A retained
-  // drawing fades over its authored idle image during the reverse retreat.
+  // Interactive entrance uses the outgoing painted canvas. Authored idle
+  // materials remain underneath; replacement posters are never sampled.
   expect(samples.filter((sample) => sample.media === "interactive" && sample.blend < 0.999 && sample.base === "image"), JSON.stringify(samples)).toEqual([]);
 }
 
@@ -59,7 +59,7 @@ test("the rendered game keeps painted ownership through a collision, autoplay an
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("installation releases its monitor on exit and drawing keeps a painted forward handoff", async ({ page }) => {
+test("installation retains its monitor on exit and drawing keeps a painted forward handoff", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
@@ -69,7 +69,7 @@ test("installation releases its monitor on exit and drawing keeps a painted forw
   await clearMonitorTextureSamples(page);
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "details");
   await assertPaintedOwnership(page, "interactive", "interactive");
-  await activateWithKeyboard(page, "[data-interaction-escape]");
+  await page.keyboard.press("Escape");
   await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
   await seek(page, "activation");
   await expect(director).toHaveAttribute("data-active-station", "none");
@@ -79,7 +79,7 @@ test("installation releases its monitor on exit and drawing keeps a painted forw
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
   await clearMonitorTextureSamples(page);
   await assertPaintedOwnership(page, "interactive", "interactive");
-  await activateWithKeyboard(page, "[data-interaction-escape]");
+  await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 
   await seekStationReview(page, "draw");

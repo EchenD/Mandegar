@@ -21,7 +21,7 @@ async function waitForMonitor(page: Page) {
   return surface;
 }
 
-test("the wide Intelligence monitor animates, follows the latest person and fades back to authored media", async ({ page }, testInfo) => {
+test("the wide Intelligence monitor animates, follows the latest person and retains its painted content", async ({ page }, testInfo) => {
   await observeMonitorTextures(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -54,7 +54,7 @@ test("the wide Intelligence monitor animates, follows the latest person and fade
   await seek(page, "proof");
   await expect(surface).toHaveAttribute("data-monitor-state", "hidden");
   await expect(surface).toHaveAttribute("data-monitor-blend", "0.000");
-  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("image");
+  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("intelligence");
   await seek(page, "intelligence");
   await waitForMonitor(page);
   await expect(surface).toHaveAttribute("data-monitor-person", "none");
@@ -62,11 +62,14 @@ test("the wide Intelligence monitor animates, follows the latest person and fade
 });
 
 test("reverse travel hands the wide monitor from Intelligence back to scroll lighting", async ({ page }) => {
+  await observeMonitorTextures(page);
   await page.goto("/en?intro=0&phase=intelligence", { waitUntil: "domcontentloaded" });
   const surface = await waitForMonitor(page);
   await seek(page, "reveal");
   await expect(surface).toHaveAttribute("data-monitor-state", "hidden");
-  await expect.poll(async () => Number(await page.locator("[data-stage-scroll]").getAttribute("data-stage-progress"))).toBeCloseTo(0, 3);
+  // The authored reveal preview is halfway through the scroll lighting window.
+  await expect.poll(async () => Number(await page.locator("[data-stage-scroll]").getAttribute("data-stage-progress"))).toBeCloseTo(0.5, 3);
+  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("stage");
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
   await seek(page, "intelligence");
   await waitForMonitor(page);

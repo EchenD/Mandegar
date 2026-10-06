@@ -43,3 +43,21 @@ and restores keyboard focus. There is no Touch Finish or Skip control.
 
 Preview captures: `assembled.png`, `parts.png`, `details.png`, `image.png`,
 `before-touch.png`, `touch-fa-mobile.png`, and `touch-ar-mobile.png`.
+
+Validation completed:
+
+- TypeScript typecheck and ESLint for the changed source/test files passed.
+- Five Touch checks passed: phase gating and retained rendered content; all
+  four views and interrupted blends; low-frame-rate press/return; keyboard
+  arrival/focus/Escape and reduced-motion fallback; missing final artwork;
+  Persian/Arabic mobile taps, target alignment and overflow.
+- Game collision → autoplay → fresh forward return passed.
+- Touch exit/return → drawing completion → retained wall → fresh drawing passed.
+- Direct Intelligence entry, live person selection, retained content, and
+  reverse handoff to scroll lighting passed.
+
+The nine browser scenarios above were run in focused groups. The broad
+full-site run remains for the agreed final validation round. Legacy journey
+fixtures that expect Touch Finish/Skip or idle posters need alignment there.
+Authored camera assets, camera rig, scroll motion, timing handoff, photo booth
+and lighting cue code were not modified.
