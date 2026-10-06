@@ -19,88 +19,6 @@ function intersects(first: Rect, second: Rect) {
     && first.y < second.y + second.height && first.y + first.height > second.y;
 }
 
-test("continuous scrolling shows the booth capture and its result before moving to the installation", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
-  const root = page.locator("[data-experience-root]");
-  const director = page.locator("[data-interaction-director]");
-  await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
-  await expect(director).toHaveAttribute("data-runtime", /^(full|adaptive)$/, { timeout: 80_000 });
-  const capture = root.evaluate((element: HTMLElement, arrival) => new Promise<{
-    heldProgress: number;
-    heldScroll: number;
-    earlyDeparture: boolean;
-    earlyPuzzle: boolean;
-    resultMs: number;
-    captured: boolean;
-    cameraAdvance: number;
-    earlyChapter: boolean;
-  }>((resolve, reject) => {
-    const started = performance.now();
-    let enteredAt: number | null = null;
-    let resultAt: number | null = null;
-    let heldProgress = 0;
-    let heldScroll = 0;
-    let earlyDeparture = false;
-    let earlyPuzzle = false;
-    let earlyChapter = false;
-    let cameraAdvance = 0;
-    let lastWheel = 0;
-    const tick = (now: number) => {
-      if (now - (enteredAt ?? started) > (enteredAt === null ? 80_000 : 15_000)) { reject(new Error("The booth did not present a protected capture result.")); return; }
-      if (element.dataset.interactionActive === "photo" && enteredAt === null) {
-        enteredAt = now;
-        heldProgress = Number(element.dataset.nativeProgress);
-        heldScroll = scrollY;
-      }
-      if (enteredAt !== null) {
-        earlyPuzzle ||= element.dataset.storyStage === "activation" && document.querySelector("[data-composer-canvas]") !== null;
-        earlyDeparture ||= resultAt === null && Math.abs(scrollY - heldScroll) > 2;
-        earlyChapter ||= resultAt === null && element.dataset.storyStage !== "activation";
-        cameraAdvance = Math.max(cameraAdvance, Number(element.dataset.nativeProgress) - heldProgress);
-        const photo = document.querySelector<HTMLElement>("[data-photo-scroll]");
-        const result = document.querySelector<HTMLElement>("p[data-interaction-result]");
-        const captured = photo?.dataset.photoState === "captured";
-        if (captured && result && getComputedStyle(result).visibility !== "hidden" && result.getBoundingClientRect().height > 0) {
-          resultAt ??= now;
-          if (now - resultAt >= 600) {
-            resolve({ heldProgress, heldScroll, earlyDeparture, earlyPuzzle, resultMs: now - resultAt, captured, cameraAdvance, earlyChapter });
-            return;
-          }
-        }
-        // A sustained trackpad-like stream should not immediately erase the
-        // outcome. Stop when the readable result appears; the next deliberate
-        // visitor wheel below then continues the journey.
-        if (resultAt === null && now - enteredAt >= 180 && now - lastWheel >= 80) {
-          window.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
-          lastWheel = now;
-        }
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: arrival, sync: true } }));
-  }), narrativeScore.find((beat) => beat.id === "activation")!.preview);
-  const sample = await capture;
-  expect(sample.captured).toBe(true);
-  expect(sample.earlyPuzzle).toBe(false);
-  expect(sample.earlyDeparture).toBe(false);
-  expect(sample.earlyChapter).toBe(false);
-  expect(sample.cameraAdvance).toBeGreaterThan(0.002);
-  expect(sample.cameraAdvance).toBeLessThanOrEqual(0.013);
-  expect(sample.resultMs).toBeGreaterThanOrEqual(600);
-  await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
-  await expect(page.locator("p[data-interaction-result]")).toBeVisible();
-  await expect(page.locator("[data-interaction-escape]")).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("booth-readable-result.png") });
-  await page.mouse.wheel(0, 120);
-  await expect.poll(async () => Number(await root.getAttribute("data-native-progress"))).toBeGreaterThan(sample.heldProgress);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(sample.heldScroll);
-  await seek(page, "engagement", 0.020);
-  await waitForStation(page, "touch");
-  await expect(root).toHaveAttribute("data-story-stage", "engagement");
-});
-
 test("the installation explains Mandegar's parts and starts fresh on forward return", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1680, height: 900 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
@@ -115,7 +33,7 @@ test("the installation explains Mandegar's parts and starts fresh on forward ret
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
 });
 
-for (const station of ["photo", "stage"] as const) {
+for (const station of ["stage"] as const) {
   test(`${station} keeps the progress rail clear through active, held result, unlocked result and departure`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
@@ -153,7 +71,7 @@ for (const station of ["photo", "stage"] as const) {
       };
       requestAnimationFrame(tick);
       element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: arrival, sync: true } }));
-    }), { expected: station, arrival: narrativeScore.find((beat) => beat.id === (station === "photo" ? "activation" : "reveal"))!.preview });
+    }), { expected: station, arrival: narrativeScore.find((beat) => beat.id === "reveal")!.preview });
     const sample = await capture;
     expect(sample.active).toBe(true);
     expect(sample.heldResult).toBe(true);

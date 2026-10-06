@@ -96,11 +96,10 @@ test("reverse then forward input during the installation departure fade starts a
 });
 
 for (const [phase, station, animationSelector] of [
-  ["activation", "photo", "[data-photo-scroll]"],
   ["reveal", "stage", "[data-stage-scroll]"],
 ] as const) {
   test(`${station} advances its camera while Skip fills, protects its result and starts fresh on a forward visit`, async ({ page }) => {
-    const previousPhase = station === "photo" ? "discovery" : "engagement";
+    const previousPhase = "engagement";
     await page.goto(`/en?intro=0&phase=${previousPhase}`, { waitUntil: "domcontentloaded" });
     const director = page.locator("[data-interaction-director]");
     const root = page.locator("[data-experience-root]");
@@ -184,7 +183,7 @@ for (const [phase, station, animationSelector] of [
     expect(sample.filledNativeProgress).toBeGreaterThanOrEqual(sample.heldProgress);
     expect(sample.filledNativeProgress - sample.heldProgress).toBeLessThanOrEqual(0.013);
     expect(sample.filledScroll).toBeCloseTo(sample.heldScroll, 0);
-    expect(sample.elapsedMs).toBeGreaterThanOrEqual((station === "photo" ? 2600 : 900) - 100);
+    expect(sample.elapsedMs).toBeGreaterThanOrEqual(800);
     expect(sample.resultMs).toBeGreaterThanOrEqual(800);
     await expect(director).toHaveAttribute("data-presentation", "result", { timeout: 10_000 });
     await expect(director).toHaveAttribute("data-scroll-locked", "false");
@@ -198,17 +197,9 @@ for (const [phase, station, animationSelector] of [
     await expect(director).toHaveAttribute("data-active-station", "none");
     await expect.poll(async () => Number(await root.getAttribute("data-native-progress"))).toBeGreaterThan(sample.heldProgress);
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(sample.heldScroll + 50);
-    if (station === "photo") {
-      await expect(animation).toHaveAttribute("data-photo-state", "captured");
-      expect(Number(await animation.getAttribute("data-photo-animation-progress"))).toBeGreaterThanOrEqual(0.38);
-      await page.mouse.wheel(0, 20);
-      await expect(animation).toHaveAttribute("data-photo-state", "captured");
-      expect(Number(await animation.getAttribute("data-photo-animation-progress"))).toBeGreaterThanOrEqual(0.38);
-    } else {
-      await expect(animation).toHaveAttribute("data-beam-intensities", "[1,1,1,1,1]");
-      await page.mouse.wheel(0, 20);
-      await expect(animation).toHaveAttribute("data-beam-intensities", "[1,1,1,1,1]");
-    }
+    await expect(animation).toHaveAttribute("data-beam-intensities", "[1,1,1,1,1]");
+    await page.mouse.wheel(0, 20);
+    await expect(animation).toHaveAttribute("data-beam-intensities", "[1,1,1,1,1]");
     await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
 
     await seek(page, narrativeScore.find((item) => item.id === phase)!.preview - 0.004);
@@ -261,76 +252,6 @@ for (const [phase, station] of [["engagement", "touch"], ["experiences", "game"]
     }
   });
 }
-
-test("a held mobile photo swipe continues with the same finger after the protected animation finishes", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  const page = await context.newPage();
-  await page.goto("/fa?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
-  const root = page.locator("[data-experience-root]");
-  const director = page.locator("[data-interaction-director]");
-  await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
-  await expect(director).toHaveAttribute("data-runtime", /^(full|adaptive)$/, { timeout: 80_000 });
-  const session = await context.newCDPSession(page);
-  const capture = root.evaluate((element: HTMLElement, targetProgress) => new Promise<{
-    heldScroll: number;
-    filledScroll: number;
-    filledStation: string | null;
-    filledElapsedMs: number;
-  }>((resolve, reject) => {
-    let startedAt: number | null = null;
-    let heldScroll = 0;
-    let filled: { filledScroll: number; filledStation: string | null; filledElapsedMs: number } | null = null;
-    const timer = window.setTimeout(() => {
-      observer.disconnect();
-      reject(new Error("The mobile protected photo swipe did not release."));
-    }, 15_000);
-    const observer = new MutationObserver(() => {
-      if (element.dataset.interactionActive === "photo" && startedAt === null) {
-        startedAt = performance.now();
-        heldScroll = scrollY;
-      }
-      const skip = element.querySelector<HTMLElement>("[data-interaction-escape]");
-      if (startedAt !== null && !filled && skip?.dataset.scrollSkipProgress === "1.000") {
-        filled = {
-          filledScroll: scrollY,
-          filledStation: element.dataset.interactionActive ?? null,
-          filledElapsedMs: performance.now() - startedAt,
-        };
-      }
-      if (startedAt !== null && element.dataset.interactionActive !== "photo") {
-        clearTimeout(timer);
-        observer.disconnect();
-        if (!filled) { reject(new Error("The mobile photo hold released before its filled state could be observed.")); return; }
-        resolve({ heldScroll, ...filled });
-      }
-    });
-    observer.observe(element, { attributes: true, subtree: true, attributeFilter: ["data-interaction-active", "data-scroll-skip-progress"] });
-    element.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: targetProgress, sync: true } }));
-  }), narrativeScore.find((item) => item.id === "activation")!.preview);
-  await expect(root).toHaveAttribute("data-interaction-active", "photo");
-  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 20, y: 650 }] });
-  await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 20, y: 470 }] });
-  const sample = await capture;
-  expect(sample.filledStation).toBe("photo");
-  expect(sample.filledScroll).toBeCloseTo(sample.heldScroll, 0);
-  expect(sample.filledElapsedMs).toBeLessThan(2500);
-
-  // Keep the finger down while the timer releases the protected camera hold.
-  // That touch began with touch-action:none, so native scrolling alone cannot
-  // continue it after release; the remainder must be forwarded explicitly.
-  await expect(director).toHaveAttribute("data-presentation", "result", { timeout: 10_000 });
-  await expect(director).toHaveAttribute("data-scroll-locked", "false");
-  const releasedScroll = await page.evaluate(() => scrollY);
-  for (const y of [410, 350, 290]) {
-    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 20, y }] });
-    await page.waitForTimeout(40);
-  }
-  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(releasedScroll + 100);
-  await expect(director).toHaveAttribute("data-scroll-locked", "false");
-  await expect(page.locator("[data-interaction-replay]")).toHaveCount(0);
-  await context.close();
-});
 
 test("a completed drawing presents its result and a forward return starts a blank drawing", async ({ page }) => {
   await page.goto("/en?intro=0&phase=connection", { waitUntil: "domcontentloaded" });

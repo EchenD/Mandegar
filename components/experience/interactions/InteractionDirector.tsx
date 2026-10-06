@@ -20,7 +20,7 @@ import type {
 import { clearDrawing, clearDrawingDraft } from "./visitor-creation";
 import { resetRace } from "./race-game";
 import { ScrollScenes } from "./ScrollScenes";
-import { photoScrollTiming, scrollHoldTiming } from "./scroll-scenes";
+import { scrollHoldTiming } from "./scroll-scenes";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
 import { resetInstallation, installationCopy } from "./installation-demo";
 import styles from "./HeroInteractions.module.css";
@@ -91,7 +91,9 @@ export const InteractionDirector = memo(function InteractionDirector({
   const panelRoot = useRef<HTMLDivElement>(null);
   const anchors = useRef(initialAnchors);
   const debugAnchorElements = useRef<Partial<Record<InteractionStation, HTMLElement>>>({});
-  const expectedStation = getStationForPhase(activePhase);
+  const phaseStation = getStationForPhase(activePhase);
+  // The photo booth follows the story scroll and never acquires a camera hold.
+  const expectedStation = phaseStation === "photo" ? null : phaseStation;
 
   const applyAnchorFrame = useCallback((frame: InteractionAnchorFrame) => {
     interactionStationNames.forEach((name) => {
@@ -183,10 +185,9 @@ export const InteractionDirector = memo(function InteractionDirector({
     setInteractionRun((previous) => previous + 1);
     scrollSkipAmount.current = 0;
     setScrollSkipProgress(0);
-    if (station === "photo" || station === "stage") {
+    if (station === "stage") {
       interactionRuntime.scrollSceneVisit += 1;
-      if (station === "photo") interactionRuntime.photoHoldProgress = photoScrollTiming.countdownStart;
-      else interactionRuntime.stageHoldProgress = 0.2;
+      interactionRuntime.stageHoldProgress = 0.2;
     }
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     savedScroll.current = window.scrollY;
@@ -428,7 +429,7 @@ export const InteractionDirector = memo(function InteractionDirector({
     let released = false;
     let touchY: number | null = null;
     let touchOwnsControl = false;
-    const passive = state.activeStation === "photo" || state.activeStation === "stage";
+    const passive = state.activeStation === "stage";
     let arrivalWheel = performance.now() - wheelIntent.current.at < 160;
     const leave = (delta = 0, immediate = false) => { if (!released) { released = true; exit(resultAt.current === null, delta, immediate); } };
     const stepStage = (amount: number, stepSize: number) => {
@@ -454,7 +455,7 @@ export const InteractionDirector = memo(function InteractionDirector({
       }));
       if (scrollSkipAmount.current >= 1 - 0.000001) {
         // Passive sequences reach their result first. Further scroll then
-        // continues; no old scroll packet can eject a freshly captured photo.
+        // continues; no old scroll packet can dismiss the lighting result.
         if (!passive) leave(amount, immediate);
       }
       return false;

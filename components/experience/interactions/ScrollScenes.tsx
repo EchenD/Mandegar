@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import { interactionRuntime, markInteractionCanvasDirty, markPhotoSurfaceDirty, registerInteractionCanvas, registerPhotoSurface } from "./interaction-runtime";
-import { getScrollScenes, photoScrollTiming, syncScrollScenes } from "./scroll-scenes";
+import { getPhotoScrollProgress, getScrollScenes, syncScrollScenes } from "./scroll-scenes";
 import { saveLightingLook } from "./visitor-creation";
 import styles from "./HeroInteractions.module.css";
 
@@ -25,8 +25,6 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     let savedLighting = false;
     let frame: number;
     let disposed = false;
-    let countdownStartedAt: number | null = null;
-    let photoVisit = -1;
     let completedVisit = -1;
     let previousFrameAt = performance.now();
     image.onload = () => { previous = ""; };
@@ -38,34 +36,12 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
         const now = performance.now();
         const reverseBlend = 1 - Math.exp(-Math.min(0.1, (now - previousFrameAt) / 1000) / 0.045);
         previousFrameAt = now;
-        const nativeSample = getScrollScenes(experienceState.progress);
-        const holdingPhoto = interactionRuntime.activeStation === "photo";
+        const nativeSample = getScrollScenes(experienceState.progress, {
+          photo: getPhotoScrollProgress(Number(root?.dataset.nativeProgress ?? experienceState.progress)),
+        });
         const holdingStage = interactionRuntime.activeStation === "stage";
         const reverse = root?.dataset.scrollDirection === "backward";
-        if (holdingPhoto && photoVisit !== interactionRuntime.scrollSceneVisit) {
-          photoVisit = interactionRuntime.scrollSceneVisit;
-          countdownStartedAt = now;
-        }
-        if (!holdingPhoto && (nativeSample.photo < photoScrollTiming.countdownStart || nativeSample.photo >= photoScrollTiming.fadeEnd)) {
-          countdownStartedAt = null;
-          interactionRuntime.photoHoldProgress = null;
-        } else if (!holdingPhoto && reverse) {
-          countdownStartedAt = null;
-          const carried = interactionRuntime.photoHoldProgress;
-          if (carried !== null) interactionRuntime.photoHoldProgress = Math.abs(carried - nativeSample.photo) < 0.0001
-            ? null : carried + (nativeSample.photo - carried) * reverseBlend;
-        }
-        let photoProgress = holdingPhoto ? interactionRuntime.photoHoldProgress ?? photoScrollTiming.countdownStart : nativeSample.photo;
-        if (holdingPhoto && countdownStartedAt !== null) {
-          const elapsed = now - countdownStartedAt;
-          // During the hold the camera stays in its authored position while
-          // the remaining countdown and phone delivery play without rewinding.
-          photoProgress = Math.max(photoProgress, photoScrollTiming.countdownStart
-            + Math.min(1, elapsed / photoScrollTiming.countdownMs) * (photoScrollTiming.capture - photoScrollTiming.countdownStart)
-            + Math.max(0, Math.min(1, (elapsed - photoScrollTiming.countdownMs) / photoScrollTiming.deliveryMs)) * (photoScrollTiming.deliveryEnd - photoScrollTiming.capture));
-        }
-        if (holdingPhoto) interactionRuntime.photoHoldProgress = photoProgress;
-        else if (interactionRuntime.photoHoldProgress !== null) photoProgress = Math.max(photoProgress, interactionRuntime.photoHoldProgress);
+        const photoProgress = nativeSample.photo;
         if (!holdingStage && (nativeSample.stage <= 0 || nativeSample.stage >= 1)) interactionRuntime.stageHoldProgress = null;
         else if (reverse && interactionRuntime.stageHoldProgress !== null) {
           const carried = interactionRuntime.stageHoldProgress;
@@ -76,19 +52,17 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           : Math.max(nativeSample.stage, interactionRuntime.stageHoldProgress ?? 0);
         const sample = getScrollScenes(experienceState.progress, { photo: photoProgress, stage: stageProgress });
         syncScrollScenes(experienceState.progress);
-        const photoVisibility = holdingPhoto ? sample.photoVisibility : nativeSample.photoVisibility;
+        const photoVisibility = sample.photoVisibility;
         const stageVisibility = holdingStage ? sample.stageVisibility : nativeSample.stageVisibility;
         interactionRuntime.photoProgress = photoProgress;
         interactionRuntime.photoStep = sample.photoStep;
         interactionRuntime.photoCount = sample.photoCount;
         interactionRuntime.photoVisibility = photoVisibility;
-        const photoDone = holdingPhoto && countdownStartedAt !== null
-          && now - countdownStartedAt >= photoScrollTiming.countdownMs + photoScrollTiming.deliveryMs;
         const stageDone = holdingStage && stageProgress >= 0.8 - 0.000001;
-        if ((photoDone || stageDone) && completedVisit !== interactionRuntime.scrollSceneVisit) {
+        if (stageDone && completedVisit !== interactionRuntime.scrollSceneVisit) {
           completedVisit = interactionRuntime.scrollSceneVisit;
           window.dispatchEvent(new CustomEvent("mandegar:passive-complete", {
-            detail: { station: photoDone ? "photo" : "stage" },
+            detail: { station: "stage" },
           }));
         }
         const key = `${photoProgress.toFixed(5)}:${photoVisibility.toFixed(5)}:${sample.stage.toFixed(5)}:${stageVisibility.toFixed(5)}:${interactionRuntime.stageHoldProgress === null}`;

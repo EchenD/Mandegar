@@ -24,7 +24,6 @@ export const interactionRuntime: {
   activeStation: InteractionStation | null;
   gestureStation: InteractionStation | null;
   scrollSceneVisit: number;
-  photoHoldProgress: number | null;
   stageHoldProgress: number | null;
   activeBeams: boolean[];
   stageComplete: boolean;
@@ -50,7 +49,6 @@ export const interactionRuntime: {
   activeStation: null,
   gestureStation: null,
   scrollSceneVisit: 0,
-  photoHoldProgress: null,
   stageHoldProgress: null,
   activeBeams: [false, false, false, false, false],
   stageComplete: false,
@@ -137,7 +135,6 @@ export function resetInteractionRuntime() {
   interactionRuntime.activeStation = null;
   interactionRuntime.gestureStation = null;
   interactionRuntime.scrollSceneVisit = 0;
-  interactionRuntime.photoHoldProgress = null;
   interactionRuntime.stageHoldProgress = null;
   interactionRuntime.activeBeams = [false, false, false, false, false];
   interactionRuntime.stageComplete = false;

@@ -48,9 +48,9 @@ test("scroll scenes are reversible samples and person insights stay localized an
   expect(complete.stageVisibility).toBe(1);
   // Pure sampling retraces the build when the story moves backward.
   expect(getScrollScenes(earlierProgress)).toEqual(earlier);
-  // The midpoint starts capture; a completed photo belongs later in the
-  // authored scroll sample, unless the automatic presentation overrides it.
-  expect(getScrollScenes(photo.preview).photoStep).toBe("idle");
+  // The countdown is already visible at the camera midpoint and capture
+  // still belongs later in the authored booth beat.
+  expect(getScrollScenes(photo.preview).photoStep).toBe("countdown");
   expect(getScrollScenes(photo.start + (photo.end - photo.start) * 0.55).photoStep).toBe("countdown");
   expect(getScrollScenes(photo.start + (photo.end - photo.start) * 0.65).photoStep).toBe("captured");
   expect(getScrollScenes(photo.start + (photo.end - photo.start) * 0.85).photoStep).toBe("idle");
@@ -64,20 +64,17 @@ test("scroll scenes are reversible samples and person insights stay localized an
   }
 });
 
-test("photo and beams return to reversible scroll samples after their automatic holds are skipped", async ({ page }, testInfo) => {
+test("photo and beams follow reversible scroll samples", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
   const root = page.locator("[data-experience-root]");
   const director = page.locator("[data-interaction-director]");
   await expect(root).toHaveAttribute("data-story-stage", "activation", { timeout: 80_000 });
-  await waitForStation(page, "photo");
-  await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
   const photoCanvas = page.locator("[data-photo-scroll]");
   const photoBeat = narrativeScore.find((beat) => beat.id === "activation")!;
-  await expect(photoCanvas).toHaveAttribute("data-photo-state", "idle");
-  await expect.poll(async () => Number(await photoCanvas.getAttribute("data-photo-progress"))).toBeCloseTo(0, 5);
+  await expect(photoCanvas).toHaveAttribute("data-photo-state", "countdown");
   await seek(page, photoBeat.start + (photoBeat.end - photoBeat.start) * 0.65);
   await expect(photoCanvas).toHaveAttribute("data-photo-state", "captured");
   await expect(page.locator("[data-photo-capture], [data-stage-beam]")).toHaveCount(0);
@@ -107,82 +104,6 @@ test("photo and beams return to reversible scroll samples after their automatic 
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
   await page.screenshot({ path: testInfo.outputPath("beams-scroll.png") });
   expect(errors).toEqual([]);
-});
-
-test("photo countdown and delivery finish on time while the native scroll sample stays at the booth", async ({ page }, testInfo) => {
-  await page.goto("/en?intro=0&phase=discovery", { waitUntil: "domcontentloaded" });
-  const root = page.locator("[data-experience-root]");
-  const photo = page.locator("[data-photo-scroll]");
-  await expect(root).toHaveAttribute("data-story-stage", "discovery", { timeout: 80_000 });
-  await expect(photo).toHaveAttribute("data-photo-state", "idle");
-  const beat = narrativeScore.find((item) => item.id === "activation")!;
-  const capture = photo.evaluate((element: HTMLCanvasElement, targetProgress) => new Promise<{
-    elapsedMs: number;
-    countdownMs: number;
-    deliveryMs: number;
-    firstProgress: number;
-    finalProgress: number;
-    firstNativeProgress: number;
-    finalNativeProgress: number;
-    animationProgress: number;
-    firstAnimationProgress: number;
-  }>((resolve, reject) => {
-    const experience = document.querySelector<HTMLElement>("[data-experience-root]")!;
-    let startedAt: number | null = null;
-    let capturedAt: number | null = null;
-    let firstProgress = 0;
-    let firstNativeProgress = 0;
-    let firstAnimationProgress = 0;
-    const timer = window.setTimeout(() => {
-      observer.disconnect();
-      reject(new Error("The held photo countdown did not finish."));
-    }, 8_000);
-    const observer = new MutationObserver(() => {
-      if (element.dataset.photoState === "countdown" && startedAt === null) {
-        startedAt = performance.now();
-        firstProgress = Number(element.dataset.photoProgress);
-        firstNativeProgress = Number(experience.dataset.nativeProgress);
-        firstAnimationProgress = Number(element.dataset.photoAnimationProgress);
-      }
-      if (element.dataset.photoState === "captured" && startedAt !== null) {
-        if (capturedAt === null) capturedAt = performance.now();
-        if (Number(element.dataset.photoAnimationProgress) < 0.38) return;
-        observer.disconnect();
-        clearTimeout(timer);
-        resolve({
-          elapsedMs: performance.now() - startedAt,
-          countdownMs: capturedAt - startedAt,
-          deliveryMs: performance.now() - capturedAt,
-          firstProgress,
-          finalProgress: Number(element.dataset.photoProgress),
-          firstNativeProgress,
-          finalNativeProgress: Number(experience.dataset.nativeProgress),
-          animationProgress: Number(element.dataset.photoAnimationProgress),
-          firstAnimationProgress,
-        });
-      }
-    });
-    observer.observe(element, { attributes: true, attributeFilter: ["data-photo-state", "data-photo-animation-progress"] });
-    experience.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: targetProgress, sync: true } }));
-  }), beat.preview);
-  const result = await capture;
-  expect(result.countdownMs).toBeGreaterThanOrEqual(1_400);
-  expect(result.countdownMs).toBeLessThanOrEqual(2_200);
-  expect(result.deliveryMs).toBeGreaterThanOrEqual(450);
-  expect(result.elapsedMs).toBeLessThanOrEqual(2_600);
-  expect(result.firstProgress).toBeCloseTo(0, 5);
-  expect(result.finalProgress).toBeCloseTo(result.firstProgress, 5);
-  expect(result.finalNativeProgress).toBeCloseTo(result.firstNativeProgress, 5);
-  expect(result.firstAnimationProgress).toBeCloseTo(0.08, 2);
-  expect(result.animationProgress).toBeGreaterThanOrEqual(0.38);
-  await expect(photo).toHaveAttribute("data-photo-state", "captured");
-  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-presentation", "result");
-  await expect(root).not.toHaveAttribute("data-interaction-active", "photo");
-  await expect.poll(async () => Number(await photo.getAttribute("data-photo-animation-progress"))).toBeGreaterThanOrEqual(0.38);
-  await page.screenshot({ path: testInfo.outputPath("photo-world-desktop.png") });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.waitForTimeout(750);
-  await page.screenshot({ path: testInfo.outputPath("photo-world-mobile.png") });
 });
 
 test("small scrolls fill Skip and automatic forward returns start a fresh installation", async ({ page }) => {

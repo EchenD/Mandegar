@@ -1,20 +1,18 @@
 import { narrativeScore, rangeProgress, smoothRange } from "../narrative-score";
+import { getNarrativeCopyTiming } from "../narrative-copy-timing";
 import { interactionRuntime } from "./interaction-runtime";
 
 const photoBeat = narrativeScore.find((beat) => beat.id === "activation")!;
 const stageBeat = narrativeScore.find((beat) => beat.id === "reveal")!;
 export const photoScrollTiming = {
-  countdownStart: 0.08,
+  countdownStart: 0,
   capture: 0.28,
   deliveryEnd: 0.38,
   fadeStart: 0.56,
   fadeEnd: 0.72,
-  countdownMs: 1500,
-  deliveryMs: 550,
 } as const;
 
 export const scrollHoldTiming = {
-  photoMs: photoScrollTiming.countdownMs + photoScrollTiming.deliveryMs + 550,
   stageWheelStep: 120,
   stageTouchStep: 72,
   wheelThreshold: 360,
@@ -23,16 +21,30 @@ export const scrollHoldTiming = {
   interactionTouchThreshold: 540,
 } as const;
 
+const photoDuration = photoBeat.end - photoBeat.start;
+const photoRange = [photoBeat.start + photoDuration * 0.5, photoBeat.end - photoDuration * 0.08] as const;
+const photoCaptureProgress = photoRange[0] + (photoRange[1] - photoRange[0]) * photoScrollTiming.capture;
+const photoCopyTiming = getNarrativeCopyTiming("activation");
+
+export function getPhotoScrollProgress(progress: number) {
+  if (progress <= photoCopyTiming.enterStart) return 0;
+  // Begin the countdown with the copy while retaining the existing capture,
+  // flight and exit points along the authored camera animation.
+  if (progress < photoCaptureProgress) {
+    return rangeProgress(progress, [photoCopyTiming.enterStart, photoCaptureProgress]) * photoScrollTiming.capture;
+  }
+  return rangeProgress(progress, photoRange);
+}
+
 /** Pure scroll samples make forward, reverse, seeks, and fast passes identical. */
 export function getScrollScenes(progress: number, overrides?: { photo?: number; stage?: number }) {
-  const duration = photoBeat.end - photoBeat.start;
-  const photo = overrides?.photo ?? rangeProgress(progress, [photoBeat.start + duration * 0.5, photoBeat.end - duration * 0.08]);
+  const photo = overrides?.photo ?? getPhotoScrollProgress(progress);
   const stageDuration = stageBeat.end - stageBeat.start;
   const stage = overrides?.stage ?? rangeProgress(progress, [stageBeat.start + stageDuration * 0.5, stageBeat.end - stageDuration * 0.05]);
   return {
     photo,
-    photoVisibility: smoothRange(photo, [0.03, photoScrollTiming.countdownStart]) * (1 - smoothRange(photo, [photoScrollTiming.fadeStart, photoScrollTiming.fadeEnd])),
-    photoStep: photo < photoScrollTiming.countdownStart || photo >= photoScrollTiming.fadeEnd ? "idle" as const : photo < photoScrollTiming.capture ? "countdown" as const : "captured" as const,
+    photoVisibility: smoothRange(photo, [0, 0.08]) * (1 - smoothRange(photo, [photoScrollTiming.fadeStart, photoScrollTiming.fadeEnd])),
+    photoStep: photo <= photoScrollTiming.countdownStart || photo >= photoScrollTiming.fadeEnd ? "idle" as const : photo < photoScrollTiming.capture ? "countdown" as const : "captured" as const,
     photoCount: Math.max(1, 3 - Math.floor(rangeProgress(photo, [photoScrollTiming.countdownStart, photoScrollTiming.capture]) * 3)),
     stage,
     stageVisibility: smoothRange(stage, [0.08, 0.2]) * (1 - smoothRange(stage, [0.88, 1])),

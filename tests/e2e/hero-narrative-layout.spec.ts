@@ -11,7 +11,6 @@ const viewports = [
 ] as const;
 
 const stations: Record<string, string> = {
-  activation: "photo",
   engagement: "touch",
   reveal: "stage",
   experiences: "game",
@@ -19,7 +18,6 @@ const stations: Record<string, string> = {
 };
 
 const stationCanvases: Record<string, string> = {
-  photo: "[data-photo-spatial-controls] canvas",
   touch: "[data-composer-canvas]",
   stage: "[data-stage-canvas]",
   game: "[data-game-canvas]",
