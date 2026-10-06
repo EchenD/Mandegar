@@ -67,11 +67,6 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           context.fillRect(0, 0, width, height);
           if (image.naturalWidth) {
             context.drawImage(image, 0, 0, width, height);
-            sample.beams.forEach((energy, index) => {
-              const sliceWidth = width / 5;
-              context.fillStyle = `rgba(7, 21, 37, ${(1 - energy) * 0.85})`;
-              context.fillRect(index * sliceWidth, height * 0.32, sliceWidth, height * 0.68);
-            });
           } else {
             context.textAlign = "center";
             context.fillStyle = "#f7f4eb";
