@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "draft",
+  "scope": "full-hero",
   "asset": "mandegar_environment.glb",
   "cameraNode": "camera_mandegar_master",
   "clipName": "camera_master_loop",
@@ -11,7 +12,27 @@
     "photoTextReady": null,
     "photoCapture": null,
     "photoDelivered": null,
-    "photoExit": null
+    "photoExit": null,
+    "lightingBeam1": null,
+    "lightingBeam2": null,
+    "lightingBeam3": null,
+    "lightingBeam4": null,
+    "lightingBeam5": null,
+    "heroHandoffStart": null,
+    "heroHandoffEnd": null
+  },
+  "phaseStartFrames": {
+    "arrival": null,
+    "discovery": null,
+    "activation": null,
+    "engagement": null,
+    "reveal": null,
+    "experiences": null,
+    "connection": null,
+    "proof": null,
+    "intelligence": null,
+    "invitation": null,
+    "loop": null
   },
   "phaseRestFrames": {
     "arrival": null,

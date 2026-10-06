@@ -32,10 +32,10 @@ The camera animation clip must be named `camera_master_loop`.
 
 ### Camera pacing handoff
 
-For the first pacing revision, refine the photo booth segment inside the full
-master clip. Author its approach, movement through capture and delivery, and
-departure. Keep the existing opening pose and final pose for this pass so the
-intro and page handoffs retain their compositions.
+Revise the complete master clip for all eleven hero chapters. Author every
+approach, main composition, transition, and the final camera framing for the
+page handoff. Keep the existing opening pose to preserve the intro seam. The
+camera and content timing will be integrated together across all chapters.
 
 Send a review export of `mandegar_environment.glb` with the same camera and clip
 names, together with a filled copy of
@@ -45,18 +45,29 @@ The template is an authoring handoff; the application does not load it yet.
 - `fps`: the source animation frame rate, including its fractional part if used.
 - `firstFrame` and `lastFrame`: the source frames corresponding to the exported
   clip's start and end. Cue values use this same absolute source frame numbering.
+- `phaseStartFrames`: the beginning of each chapter and its text entrance.
+  Arrival begins at `firstFrame`; each chapter ends at the next chapter's start,
+  and loop ends at `lastFrame`.
+- `phaseRestFrames`: the intended main composition of each chapter, within that
+  chapter's frame range. These are review checkpoints, not camera pauses. A
+  moving shot can pass through its main composition without stopping.
 - `photoTextReady`: the first frame when the section text and Ready cue should
-  start appearing. Ready remains until capture.
+  start appearing. Match `phaseStartFrames.activation` so both start together.
+  Ready remains until capture.
 - `photoCapture`: the capture moment and beginning of photo delivery.
 - `photoDelivered`: the moment the photo reaches the phone.
 - `photoExit`: the moment the photo and delivery result have disappeared.
-- `phaseRestFrames`: the intended main composition of each chapter. Leave these
-  null during the first photo-only pass unless their timing has also changed.
+- `lightingBeam1` through `lightingBeam5`: the five lamp activation moments.
+- `heroHandoffStart` and `heroHandoffEnd`: the interval when the hero UI fades
+  and releases into the following page content. Author any camera movement
+  needed during that interval in the clip itself.
 
-The four photo cues must be ordered within the exported frame range. Leave
-unknown values null; they must not be treated as frame zero. For broader camera
-revisions, record the chapter compositions too. The chapter IDs follow the
-existing narrative order: arrival, discovery, photo booth (activation),
+Chapter starts and main compositions must follow the narrative order; the four
+photo cues and five lamp cues must be ordered within their respective chapters.
+All frames must be within the exported range. Leave unknown values null while
+drafting; they must not be treated as frame zero. Complete both chapter frame
+maps and the effect cues before integration. The chapter IDs follow the existing
+narrative order: arrival, discovery, photo booth (activation),
 installation buttons (engagement), lighting (reveal), race (experiences), drawing
 (connection), proof, intelligence, invitation, and loop.
 
@@ -67,14 +78,41 @@ not replace the GLB or cue frame numbers.
 
 Code will normalize source cue frames as
 `(frame - firstFrame) / (lastFrame - firstFrame)` and verify that the exported
-clip duration agrees with `(lastFrame - firstFrame) / fps`. Allocating more
-scroll distance to a segment is a separate code setting; increasing the total
-clip duration alone does not slow a scroll-driven experience.
+clip duration agrees with `(lastFrame - firstFrame) / fps`. One scroll playhead
+will sample the clip directly and drive every chapter and effect. Relative
+camera pacing comes from the authored animation; overall scroll distance and
+shared input smoothing remain code settings. Increasing the total clip duration
+alone does not slow a scroll-driven experience.
 
 Step 1 extracts the existing camera mapping to
 `components/experience/camera-timeline.ts` without changing its samples. The
 current narrative easing, interaction holds, text, and effect timings remain in
-place until the revised clip and its cues are integrated in subsequent steps.
+place until the revised full clip and its cues are ready.
+
+### Integration steps
+
+1. **Prepare the full camera and cue handoff.** Author all chapters in one clip
+   and fill the frame template. The code preparation isolates the existing
+   camera mapping without changing runtime behavior.
+2. **Integrate camera and timing together for every chapter.** Import the revised
+   clip and derive chapter boundaries, text, screens, lamps, photo delivery,
+   audience effects, and the page handoff from one playhead. Remove equal-stage
+   camera remapping, the narrative velocity warp, automatic scroll locks, and
+   the separate virtual camera progression. During the hero sequence, remove
+   camera tilt, handoff descent/look-at, breathing, and pointer offsets so
+   camera position and rotation come directly from the clip. Preserve responsive
+   FOV and the separate pre-hero assembly intro. Actual game and drawing input
+   retain their own state; entering those activities must be deliberate rather
+   than automatically stopping the journey.
+3. **Calibrate with a development timeline preview.** Display the animation frame,
+   chapter, and active cues while scrubbing forward or backward. Tune overall
+   desktop/mobile scroll distance and shared smoothing while preserving the
+   authored relative camera pacing.
+4. **Validate the complete hero sequence.** Check uninterrupted forward/reverse
+   motion, cue alignment, fast scrolling, explicit interactions, keyboard access,
+   Persian/Arabic layouts, mobile framing, reduced motion, and the intro/page
+   seams. Each implementation step receives focused checks and its own commit.
+   The broader site review follows the remaining visual polish.
 
 ## 2. Exhibition
 
