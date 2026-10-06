@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "asset": "mandegar_environment.glb",
+  "cameraNode": "camera_mandegar_master",
+  "clipName": "camera_master_loop",
+  "fps": null,
+  "firstFrame": null,
+  "lastFrame": null,
+  "cues": {
+    "photoTextReady": null,
+    "photoCapture": null,
+    "photoDelivered": null,
+    "photoExit": null
+  },
+  "phaseRestFrames": {
+    "arrival": null,
+    "discovery": null,
+    "activation": null,
+    "engagement": null,
+    "reveal": null,
+    "experiences": null,
+    "connection": null,
+    "proof": null,
+    "intelligence": null,
+    "invitation": null,
+    "loop": null
+  }
+}

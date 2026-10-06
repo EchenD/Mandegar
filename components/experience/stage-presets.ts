@@ -529,47 +529,6 @@ function getProductionTransitionMix(
   );
 }
 
-const cameraTimelineAnchors = [
-  0,
-  ...narrativeScore.map((stage) => stage.preview),
-  1,
-];
-
-const authoredCameraSampleAnchors = [
-  0,
-  0.05,
-  0.175,
-  0.31,
-  0.37,
-  0.455,
-  0.58,
-  0.625,
-  0.7,
-  0.8,
-  0.885,
-  0.965,
-  1,
-];
-
-/** Keeps the original camera compositions attached to the equally timed stages. */
-export function getCameraLoopSampleProgress(progress: number) {
-  const safeProgress = Math.min(1, Math.max(0, progress));
-  const nextIndex = cameraTimelineAnchors.findIndex((anchor) => anchor >= safeProgress);
-  if (nextIndex <= 0) return authoredCameraSampleAnchors[0];
-  if (nextIndex < 0) return authoredCameraSampleAnchors.at(-1)!;
-  const fromIndex = nextIndex - 1;
-  const timelineSpan = Math.max(
-    0.0001,
-    cameraTimelineAnchors[nextIndex] - cameraTimelineAnchors[fromIndex],
-  );
-  const mix = (safeProgress - cameraTimelineAnchors[fromIndex]) / timelineSpan;
-  return mixValue(
-    authoredCameraSampleAnchors[fromIndex],
-    authoredCameraSampleAnchors[nextIndex],
-    mix,
-  );
-}
-
 /** Interpolates renderer controls between the eleven authored preview anchors. */
 export function getStageFrame(progress: number): StageFrame {
   const safeProgress = Math.min(1, Math.max(0, progress));

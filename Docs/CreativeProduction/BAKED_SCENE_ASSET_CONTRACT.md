@@ -30,6 +30,52 @@ The camera animation clip must be named `camera_master_loop`.
 `env_shell` contains only floor, walls and ceiling. Assign the source material
 `MAT_ENV_BAKED`; code replaces it with the runtime unlit material.
 
+### Camera pacing handoff
+
+For the first pacing revision, refine the photo booth segment inside the full
+master clip. Author its approach, movement through capture and delivery, and
+departure. Keep the existing opening pose and final pose for this pass so the
+intro and page handoffs retain their compositions.
+
+Send a review export of `mandegar_environment.glb` with the same camera and clip
+names, together with a filled copy of
+[camera-timing-handoff.template.json](camera-timing-handoff.template.json).
+The template is an authoring handoff; the application does not load it yet.
+
+- `fps`: the source animation frame rate, including its fractional part if used.
+- `firstFrame` and `lastFrame`: the source frames corresponding to the exported
+  clip's start and end. Cue values use this same absolute source frame numbering.
+- `photoTextReady`: the first frame when the section text and Ready cue should
+  start appearing. Ready remains until capture.
+- `photoCapture`: the capture moment and beginning of photo delivery.
+- `photoDelivered`: the moment the photo reaches the phone.
+- `photoExit`: the moment the photo and delivery result have disappeared.
+- `phaseRestFrames`: the intended main composition of each chapter. Leave these
+  null during the first photo-only pass unless their timing has also changed.
+
+The four photo cues must be ordered within the exported frame range. Leave
+unknown values null; they must not be treated as frame zero. For broader camera
+revisions, record the chapter compositions too. The chapter IDs follow the
+existing narrative order: arrival, discovery, photo booth (activation),
+installation buttons (engagement), lighting (reveal), race (experiences), drawing
+(connection), proof, intelligence, invitation, and loop.
+
+Export the camera's animated transforms, including any authored targeting or
+constraints needed to reproduce its view. Check framing at both landscape and
+portrait aspect ratios. A preview recording helps review the movement but does
+not replace the GLB or cue frame numbers.
+
+Code will normalize source cue frames as
+`(frame - firstFrame) / (lastFrame - firstFrame)` and verify that the exported
+clip duration agrees with `(lastFrame - firstFrame) / fps`. Allocating more
+scroll distance to a segment is a separate code setting; increasing the total
+clip duration alone does not slow a scroll-driven experience.
+
+Step 1 extracts the existing camera mapping to
+`components/experience/camera-timeline.ts` without changing its samples. The
+current narrative easing, interaction holds, text, and effect timings remain in
+place until the revised clip and its cues are integrated in subsequent steps.
+
 ## 2. Exhibition
 
 File: `public/models/mandegar/mandegar_exhibition.glb`

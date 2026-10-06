@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
+import { getCameraLoopSampleProgress } from "../../components/experience/camera-timeline";
 import { bakedSceneContract } from "../../components/experience/baked-scene-contract";
 import { sceneTokens } from "../../components/experience/scene-config";
 import { interactionRegistry } from "../../components/experience/interactions/interaction-registry";
 import {
   applyCreativeStagePresetSnapshot,
-  getCameraLoopSampleProgress,
   getCreativeStagePresetSnapshot,
   getStageFrame,
   getStagePreset,

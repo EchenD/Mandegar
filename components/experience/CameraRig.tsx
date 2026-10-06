@@ -7,7 +7,7 @@ import { heroModelLoader } from "./hero-loading";
 import { experienceState } from "./experience-state";
 import { interactionRuntime } from "./interactions/interaction-runtime";
 import { cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
-import { getCameraLoopSampleProgress } from "./stage-presets";
+import { getCameraLoopSampleProgress } from "./camera-timeline";
 
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
