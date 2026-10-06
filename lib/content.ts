@@ -425,6 +425,56 @@ export const services: Service[] = [
     media: media.intelligence,
     status: "emerging",
   },
+  {
+    slug: "websites-and-applications",
+    number: "06",
+    title: { fa: "وب‌سایت و اپلیکیشن", en: "Websites and applications", ar: "المواقع والتطبيقات" },
+    summary: {
+      fa: "طراحی و توسعهٔ وب‌سایت و اپلیکیشن با توجه به تجربهٔ کاربران.",
+      en: "Design and development of websites and applications around their users.",
+      ar: "تصميم المواقع والتطبيقات وتطويرها حول تجربة مستخدميها.",
+    },
+    detail: {
+      fa: "طراحی رابط و تجربهٔ کاربری، توسعهٔ وب و اپلیکیشن و اتصال تجربه‌های دیجیتال به فضای رویداد.",
+      en: "Interface and experience design, web and application development, and connections between digital experiences and event spaces.",
+      ar: "تصميم الواجهات وتجربة المستخدم، وتطوير المواقع والتطبيقات، وربط التجارب الرقمية بمساحات الفعاليات.",
+    },
+    capabilities: [
+      { fa: "طراحی تجربهٔ کاربری", en: "User experience design", ar: "تصميم تجربة المستخدم" },
+      { fa: "توسعهٔ وب و اپلیکیشن", en: "Web and application development", ar: "تطوير المواقع والتطبيقات" },
+      { fa: "تجربه‌های متصل", en: "Connected experiences", ar: "التجارب المتصلة" },
+    ],
+    media: {
+      ...media.interactive,
+      src: publicAssetPath("/media/services/web-apps.webp"),
+      alt: { fa: "طرح مفهومی وب‌سایت و اپلیکیشن", en: "Website and application concept", ar: "تصور للمواقع والتطبيقات" },
+    },
+  },
+  {
+    slug: "advertising-structures",
+    number: "07",
+    title: { fa: "سازه‌های تبلیغاتی", en: "Advertising structures", ar: "الهياكل الإعلانية" },
+    summary: {
+      fa: "طراحی و ساخت نمایشگرها، تابلوها و سازه‌های تبلیغاتی برای حضور برند در فضا.",
+      en: "Design and fabrication of advertising displays, signs and structures in physical spaces.",
+      ar: "تصميم وتصنيع وحدات العرض واللوحات والهياكل الإعلانية في المساحات الفعلية.",
+    },
+    detail: {
+      fa: "طراحی سازه، انتخاب متریال، تولید و نصب تابلوها و نمایشگرهای تبلیغاتی متناسب با محیط و هویت برند.",
+      en: "Structural design, material selection, production and installation of displays and signs suited to the environment and brand identity.",
+      ar: "التصميم الهيكلي واختيار المواد وإنتاج وتركيب وحدات العرض واللوحات الملائمة للمكان وهوية العلامة التجارية.",
+    },
+    capabilities: [
+      { fa: "طراحی سازه", en: "Structural design", ar: "التصميم الهيكلي" },
+      { fa: "ساخت و تولید", en: "Fabrication and production", ar: "التصنيع والإنتاج" },
+      { fa: "نصب و اجرا", en: "Installation and delivery", ar: "التركيب والتنفيذ" },
+    ],
+    media: {
+      ...media.exhibition,
+      src: publicAssetPath("/media/services/advertising.webp"),
+      alt: { fa: "طرح مفهومی سازه‌های تبلیغاتی", en: "Advertising structure concept", ar: "تصور للهياكل الإعلانية" },
+    },
+  },
 ];
 
 function resolve<T>(value: Record<Locale, T>, locale: Locale): T {

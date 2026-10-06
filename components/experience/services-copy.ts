@@ -2,14 +2,15 @@ import type { Locale } from "@/lib/i18n";
 import { publicAssetPath } from "@/lib/public-asset-path";
 
 export const servicesCopy = {
-  en: { kicker: "Our services", scroll: "Scroll to explore" },
-  fa: { kicker: "خدمات ما", scroll: "برای کشف خدمات اسکرول کنید" },
-  ar: { kicker: "خدماتنا", scroll: "مرّر لاستكشاف الخدمات" },
-} satisfies Record<Locale, { kicker: string; scroll: string }>;
+  en: { kicker: "Our services", scroll: "Scroll to explore", details: "Explore this service" },
+  fa: { kicker: "خدمات ما", scroll: "برای کشف خدمات اسکرول کنید", details: "جزئیات این خدمت" },
+  ar: { kicker: "خدماتنا", scroll: "مرّر لاستكشاف الخدمات", details: "تفاصيل هذه الخدمة" },
+} satisfies Record<Locale, { kicker: string; scroll: string; details: string }>;
 
 export const serviceChapters = [
   {
     id: "events",
+    slug: "event-production",
     image: publicAssetPath("/media/services/events.webp"),
     title: { en: "Events", fa: "رویداد", ar: "الفعاليات" },
     description: {
@@ -20,6 +21,7 @@ export const serviceChapters = [
   },
   {
     id: "exhibitions",
+    slug: "exhibitions-and-space",
     image: publicAssetPath("/media/services/exhibitions.webp"),
     title: { en: "Exhibitions", fa: "نمایشگاه", ar: "المعارض" },
     description: {
@@ -30,6 +32,7 @@ export const serviceChapters = [
   },
   {
     id: "web-apps",
+    slug: "websites-and-applications",
     image: publicAssetPath("/media/services/web-apps.webp"),
     title: { en: "Websites & applications", fa: "وب‌سایت و اپلیکیشن", ar: "المواقع والتطبيقات" },
     description: {
@@ -40,6 +43,7 @@ export const serviceChapters = [
   },
   {
     id: "content",
+    slug: "content-and-media",
     image: publicAssetPath("/media/services/content.webp"),
     title: { en: "Content creation", fa: "تولید محتوا", ar: "إنتاج المحتوى" },
     description: {
@@ -50,6 +54,7 @@ export const serviceChapters = [
   },
   {
     id: "advertising",
+    slug: "advertising-structures",
     image: publicAssetPath("/media/services/advertising.webp"),
     title: { en: "Advertising structures", fa: "سازه‌های تبلیغاتی", ar: "الهياكل الإعلانية" },
     description: {

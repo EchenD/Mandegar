@@ -105,7 +105,8 @@ export async function getProject(locale: Locale, slug: string): Promise<Project 
 export async function getServices(locale: Locale): Promise<Service[]> {
   const result = await sanityFetch<any[]>(servicesQuery, { locale });
   if (!result?.length) return fallbackServices;
-  return result.map((item, index) => mapService(item, fallbackServices[index % fallbackServices.length]));
+  const services = result.map((item, index) => mapService(item, getFallbackService(item.slug) || fallbackServices[index % fallbackServices.length]));
+  return [...services, ...fallbackServices.filter((fallback) => !services.some((service) => service.slug === fallback.slug))];
 }
 
 export async function getService(locale: Locale, slug: string): Promise<Service | undefined> {

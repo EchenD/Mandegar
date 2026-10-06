@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type { Locale } from "@/lib/i18n";
+import Link from "next/link";
+import { localizedPath, type Locale } from "@/lib/i18n";
 import { serviceChapters, servicesCopy } from "./services-copy";
 import styles from "./ServicesShowcase.module.css";
 
@@ -40,6 +41,7 @@ export function ServicesShowcase({
                 <span className={styles.number} data-service-number dir="ltr" aria-hidden="true">{String(index + 1).padStart(2, "0")} / 05</span>
                 <h3>{service.title[locale]}</h3>
                 <p>{service.description[locale]}</p>
+                <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} data-service-button>{ui.details}<span aria-hidden="true">↗</span></Link>
               </div>
             </article>
           ))}
@@ -91,6 +93,7 @@ export function ServicesShowcase({
                 <span data-service-description-text aria-hidden="true">{service.description[locale]}</span>
                 <span className={styles.descriptionCaret} aria-hidden="true" />
               </p>
+              <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} data-service-button>{ui.details}<span aria-hidden="true">↗</span></Link>
             </article>
           ))}
         </div>

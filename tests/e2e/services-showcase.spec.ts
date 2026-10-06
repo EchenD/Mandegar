@@ -42,6 +42,8 @@ test.afterEach(async ({ page }, testInfo) => {
 
 async function openWork(page: Page, locale: typeof locales[number] = "en") {
   await page.goto(`/${locale}?intro=0`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("[data-loading-progress]")).toHaveAttribute("data-loading-progress", "100", { timeout: 90_000 });
+  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intro-active", "true");
   const journey = page.locator("[data-connected-journey]");
   await expect(journey).toBeAttached({ timeout: 45_000 });
   if (await journey.getAttribute("data-motion") === "reduced") {
@@ -132,7 +134,8 @@ async function expectReadableService(page: Page, index: number, locale = "en") {
     await expect.poll(async () => Number(await scene.getAttribute("data-services-color-reveal")))
       .toBeCloseTo(1, 4);
   }
-  await expect(showcase.locator("[data-service-button]")).toHaveCount(0);
+  await expect(copy.locator("[data-service-button]")).toBeVisible();
+  await expect(copy.locator("[data-service-button]")).toBeInViewport();
   const headingBounds = await heading.boundingBox();
   expect(headingBounds).not.toBeNull();
   expect(Math.abs((headingBounds?.x ?? 0) + (headingBounds?.width ?? 0) / 2 - (page.viewportSize()?.width ?? 0) / 2))

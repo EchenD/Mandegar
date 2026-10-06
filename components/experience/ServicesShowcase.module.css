@@ -35,6 +35,9 @@
 
 .panel { position: absolute; inset: 0; opacity: 0; }
 .panel[data-active="true"] { opacity: 1; }
+.serviceLink { display: inline-flex; align-items: center; gap: .75rem; min-height: 2.75rem; margin-block-start: .85rem; padding: .55rem 1.1rem; border: 1px solid rgba(34,92,255,.4); border-radius: 2rem; color: #225cff; background: #f7f7f4; font-size: .8rem; text-decoration: none; pointer-events: auto; }
+.serviceLink:hover { background: #e7ecff; }
+.serviceLink:focus-visible { outline: 2px solid #225cff; outline-offset: 3px; }
 .number { display: block; color: rgba(22, 25, 29, .44); font-size: .63rem; letter-spacing: .1em; line-height: 1.6; }
 
 .panel h3, .staticCard h3 {
@@ -119,14 +122,14 @@
 .staticHeading { margin-block-end: 3rem; text-align: center; }
 .staticGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 4rem); }
 .staticCard { min-width: 0; border-block-end: 1px solid rgba(22, 25, 29, .12); padding-block-end: 2rem; text-align: center; }
-.staticImage { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain; }
+.staticImage { display: block; width: 100%; height: min(36svh, 24rem); object-fit: contain; }
 .staticCardCopy { padding-inline: .5rem; }
 .staticCard h3 { font-size: clamp(1.35rem, 2vw, 2rem); }
 
 @media (max-width: 760px) {
   .heading { inset-block-start: max(5.5rem, 12svh); }
   .kicker { font-size: .62rem; }
-  .panels { inset-block-start: 65%; min-height: 10rem; }
+  .panels { inset-block-start: 61%; min-height: 12rem; }
   .panel h3 { margin: .45rem 0 .6rem; font-size: clamp(1.35rem, 6.2vw, 1.85rem); }
   .panel p { max-width: 33rem; font-size: .8rem; line-height: 1.85; }
   .number { font-size: .58rem; }
@@ -151,4 +154,6 @@
 
 @media (max-height: 500px) {
   .scrollHint { display: none; }
+  .panels { inset-block-start: 55%; }
+  .serviceLink { margin-block-start: .3rem; }
 }
