@@ -22,34 +22,18 @@ export function resetInstallation() {
 
 export const installationCopy = {
   en: {
-    title: "Every part, one experience",
-    concept: "Concept event installation",
-    instruction: "Press the table buttons to explore a Mandegar installation.",
-    views: { assembled: "Installation", parts: "Components", details: "How it works", image: "Final visual" },
-    parts: ["Stage and space", "Content screens", "Lighting", "Visitor interaction"],
-    descriptions: ["The setting brings people together.", "Content gives the idea a voice.", "Light shapes the atmosphere.", "Participation connects visitors to the experience."],
+    instruction: "Explore the Mandegar stage using the four table buttons.",
+    views: { assembled: "Mandegar stage", parts: "Stage components", details: "Screen and lighting", image: "The complete experience" },
   },
   fa: {
-    title: "همهٔ بخش‌ها، یک تجربه",
-    concept: "نمونهٔ مفهومی یک فضای رویداد",
-    instruction: "با دکمه‌های روی میز، بخش‌های یک فضای رویداد ماندگار را کشف کنید.",
-    views: { assembled: "فضای رویداد", parts: "اجزای تشکیل‌دهنده", details: "شرح بخش‌ها", image: "تصویر نهایی" },
-    parts: ["صحنه و فضا", "نمایشگر و محتوا", "نورپردازی", "تعامل مخاطب"],
-    descriptions: ["فضا، افراد را کنار هم جمع می‌کند.", "محتوا به ایده بیان می‌دهد.", "نور، حال‌وهوای فضا را می‌سازد.", "مشارکت، مخاطب را به تجربه پیوند می‌دهد."],
+    instruction: "با چهار دکمهٔ روی میز، صحنهٔ ماندگار را کشف کنید.",
+    views: { assembled: "صحنهٔ ماندگار", parts: "اجزای صحنه", details: "نمایشگر و نورپردازی", image: "تجربهٔ کامل" },
   },
   ar: {
-    title: "كل الأجزاء، تجربة واحدة",
-    concept: "نموذج مفاهيمي لمساحة فعالية",
-    instruction: "اضغط أزرار الطاولة لاستكشاف أجزاء فعالية ماندگار.",
-    views: { assembled: "الفعالية", parts: "المكونات", details: "شرح الأجزاء", image: "الصورة النهائية" },
-    parts: ["المسرح والمساحة", "الشاشات والمحتوى", "الإضاءة", "تفاعل الزوار"],
-    descriptions: ["المكان يجمع الناس معاً.", "المحتوى يمنح الفكرة صوتاً.", "الضوء يرسم أجواء المكان.", "المشاركة تربط الزوار بالتجربة."],
+    instruction: "استكشف مسرح ماندگار باستخدام أزرار الطاولة الأربعة.",
+    views: { assembled: "مسرح ماندگار", parts: "مكونات المسرح", details: "الشاشة والإضاءة", image: "التجربة الكاملة" },
   },
 } satisfies Record<Locale, {
-  title: string;
-  concept: string;
   instruction: string;
   views: Record<InstallationView, string>;
-  parts: string[];
-  descriptions: string[];
 }>;

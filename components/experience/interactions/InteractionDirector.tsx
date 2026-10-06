@@ -17,7 +17,7 @@ import { clearDrawing, clearDrawingDraft } from "./visitor-creation";
 import { resetRace } from "./race-game";
 import { ScrollScenes } from "./ScrollScenes";
 import { TouchComposerInteraction } from "./TouchComposerInteraction";
-import { resetInstallation, installationCopy } from "./installation-demo";
+import { resetInstallation } from "./installation-demo";
 import styles from "./HeroInteractions.module.css";
 
 const interactionStationNames: readonly InteractionStation[] = ["photo", "touch", "stage", "game", "draw"];
@@ -383,9 +383,18 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
 
   useEffect(() => {
     if (!state.activeStation || state.input !== "keyboard") return;
-    const frame = requestAnimationFrame(() => {
-      panelRoot.current?.querySelector<HTMLElement>("[data-interaction-escape]")?.focus({ preventScroll: true });
-    });
+    let frame: number;
+    const focusControl = () => {
+      const selector = state.activeStation === "touch" ? "[data-installation-button]" : "[data-interaction-escape]";
+      const control = panelRoot.current?.querySelector<HTMLElement>(selector);
+      if (!control || control instanceof HTMLButtonElement && control.disabled
+        || state.activeStation === "touch" && control.dataset.physicalEnabled !== "true") {
+        frame = requestAnimationFrame(focusControl);
+        return;
+      }
+      control.focus({ preventScroll: true });
+    };
+    frame = requestAnimationFrame(focusControl);
     return () => cancelAnimationFrame(frame);
   }, [state.activeStation, state.input]);
 
@@ -467,13 +476,11 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       )}
 
       <ScrollScenes locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
-      {station && (
+      {station && station !== "touch" && (
         <div className={styles.journeyControl} data-journey-control data-phase={activePhase}>
           <p className={styles.journeyMessage} data-interaction-result={isResult ? station : undefined} role={isResult ? "status" : undefined} tabIndex={isResult ? -1 : undefined}>
-            {isResult ? station === "touch" ? copy.touch.complete : station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : station === "touch" ? installationCopy[locale].instruction : copy.stations[station].instruction}
+            {isResult ? station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : copy.stations[station].instruction}
           </p>
-          {station === "touch" && !isResult && <button type="button" className={styles.journeyButton} data-interaction-finish
-            onClick={() => complete("touch")}>{copy.finish}</button>}
           {!isResult &&
           <button type="button" className={styles.journeyButton} data-interaction-escape data-mobile-interaction-skip
             data-scroll-skip-progress={scrollSkipProgress.toFixed(3)}

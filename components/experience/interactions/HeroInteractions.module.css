@@ -165,13 +165,11 @@
 .gameResult button { min-height: 2.75rem; padding: .45rem 1.25rem; border: 1px solid rgba(247,247,244,.3); border-radius: 999px; color: #fff; background: transparent; font: inherit; font-size: .75rem; cursor: pointer; pointer-events: auto; }
 .gameResult button:focus-visible { outline: 2px solid #75d8ff; outline-offset: 3px; }
 .mobileStageDock { display: none; }
-.installationControls { position: absolute; left: 50%; bottom: 9.5rem; z-index: 4; width: min(40rem, calc(100% - 2rem)); transform: translateX(-50%); pointer-events: auto; }
-.installationButtons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
-.installationButtons button { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.75rem; padding: .6rem; border: 1px solid rgba(203,187,163,.5); border-radius: .65rem; color: #f7f4eb; background: rgba(16,28,40,.92); font: inherit; font-size: .75rem; cursor: pointer; touch-action: manipulation; }
-.installationButtons button span { color: #cbbba3; font-size: .65rem; }
-.installationButtons button[aria-pressed="true"] { border-color: #75d8ff; background: #193752; }
-.installationButtons button:focus-visible { outline: 2px solid #75d8ff; outline-offset: 3px; }
-@media (max-width: 760px) { .installationControls { bottom: max(10rem, calc(env(safe-area-inset-bottom) + 8.5rem)); width: min(24rem, calc(100% - 2rem)); } .installationButtons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.installationControls { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.installationButtons { position: absolute; inset: 0; pointer-events: none; }
+.installationPhysicalControl { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; border-radius: 50%; background: transparent; color: transparent; visibility: hidden; pointer-events: none; cursor: pointer; touch-action: manipulation; }
+.installationPhysicalControl[data-physical-enabled="true"] { visibility: visible; pointer-events: auto; }
+.installationPhysicalControl:focus-visible { outline: none; }
 .mobileDrawingDock { display: none; }
 .mobileGameDock { display: none; }
 

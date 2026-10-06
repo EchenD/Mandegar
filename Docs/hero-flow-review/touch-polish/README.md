@@ -25,3 +25,21 @@ monitors, as explicitly requested.
 
 Generated image prompts and their provenance are in `references/prompts.json`.
 These are views of Mandegar's own fictional hero installation, not client work.
+
+The editable model is `touch-button.blend`; its build source is
+`scripts/build-touch-button.py`. The GLB contains four named meshes and the
+`touch_button_press` clip. The master is 160 mm across, 23 mm high, with 5 mm
+cap travel. The web version widens its footprint to 220 mm while preserving
+height and travel, and fits the bases 1.5 mm above the measured table plane.
+Vertex colors supply the finish without adding lights to the hero.
+
+The monitor canvas is 1031 × 540. Production WebP views preserve that aspect.
+View changes blend over 750 ms, including rapid changes from the current
+painted frame. The physical controls enter with a slight stagger and retreat
+over the existing 400 ms departure. Their transparent semantic targets follow
+the projected circles; the visible focus treatment is on the 3D ring.
+Scrolling continues the camera through the authored phase. Escape still exits
+and restores keyboard focus. There is no Touch Finish or Skip control.
+
+Preview captures: `assembled.png`, `parts.png`, `details.png`, `image.png`,
+`before-touch.png`, `touch-fa-mobile.png`, and `touch-ar-mobile.png`.
