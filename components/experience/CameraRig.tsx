@@ -3,7 +3,7 @@
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { heroModelLoader } from "./hero-loading";
 import { experienceState } from "./experience-state";
 import { interactionRuntime } from "./interactions/interaction-runtime";
 import { cameraKeyframes, getHeroHandoffProgress, sceneTokens } from "./scene-config";
@@ -87,7 +87,7 @@ export function getResponsiveCameraFov(fov: number, width: number, height: numbe
 }
 
 export function CameraRig({ source }: { source: string }) {
-  const gltf = useLoader(GLTFLoader, source);
+  const gltf = useLoader(heroModelLoader, source);
   const { camera, size } = useThree();
   const fallbackProjection = useRef({
     near: camera instanceof THREE.PerspectiveCamera ? camera.near : 0.1,

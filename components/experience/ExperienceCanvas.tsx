@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useEffect,
   useCallback,
+  useRef,
   useState,
 } from "react";
 import * as THREE from "three";
@@ -18,6 +19,7 @@ import { CameraRig } from "./CameraRig";
 import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
+import { whenHeroAssetsReady } from "./hero-loading";
 
 type RuntimeState = "pending" | "fallback" | SceneQuality;
 type ExperienceCanvasProps = {
@@ -81,6 +83,12 @@ export function ExperienceCanvas({
   const [runtime, setRuntime] = useState<RuntimeState>("pending");
   const [pageVisible, setPageVisible] = useState(true);
   const [sceneVisible, setSceneVisible] = useState(true);
+  const cancelAssetReady = useRef<(() => void) | null>(null);
+  const handleSceneReady = useCallback(() => {
+    cancelAssetReady.current?.();
+    cancelAssetReady.current = whenHeroAssetsReady(() => onFirstFrame?.());
+  }, [onFirstFrame]);
+  useEffect(() => () => cancelAssetReady.current?.(), []);
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -189,7 +197,7 @@ export function ExperienceCanvas({
           gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
       >
-        <ExhibitionWorld locale={locale} quality={runtime} projects={projects} onFirstFrame={onFirstFrame} />
+        <ExhibitionWorld locale={locale} quality={runtime} projects={projects} onFirstFrame={handleSceneReady} />
       </Canvas>
     </CanvasErrorBoundary>
   );

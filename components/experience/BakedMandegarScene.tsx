@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { heroModelLoader, heroTextureLoader } from "./hero-loading";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { publicAssetPath } from "@/lib/public-asset-path";
 import type { Locale } from "@/lib/i18n";
@@ -740,7 +740,7 @@ function InteractionGameEffects({
 
 function InteractionPhotoEffects({ anchors }: { anchors: InteractionAnchorRuntime }) {
   const portraitSource = useLoader(
-    THREE.TextureLoader,
+    heroTextureLoader,
     publicAssetPath("/media/placeholders/photo-experience.webp"),
   );
   const group = useMemo(() => {
@@ -1149,10 +1149,10 @@ export function BakedMandegarScene({
   onFirstFrame?: () => void;
 }) {
   const { camera, gl, scene, size } = useThree();
-  const environmentGltf = useLoader(GLTFLoader, assetSlots.environment);
-  const exhibitionGltf = useLoader(GLTFLoader, assetSlots.exhibition);
+  const environmentGltf = useLoader(heroModelLoader, assetSlots.environment);
+  const exhibitionGltf = useLoader(heroModelLoader, assetSlots.exhibition);
   const textureAssets = assetSlots.bakedTextures[quality];
-  const loadedTextures = useLoader(THREE.TextureLoader, [
+  const loadedTextures = useLoader(heroTextureLoader, [
     textureAssets.environmentQuiet,
     textureAssets.environmentPeak,
     textureAssets.exhibitionQuiet,

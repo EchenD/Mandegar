@@ -15,6 +15,7 @@ import { getInteractionCopy } from "./interactions/interaction-copy";
 import { AmbientGame } from "./interactions/AmbientGame";
 import { IntelligenceInspector } from "./IntelligenceInspector";
 import { IntelligenceMonitor } from "./IntelligenceMonitor";
+import { subscribeHeroLoading } from "./hero-loading";
 import styles from "./MandegarExperience.module.css";
 
 const ExperienceCanvas = dynamic(
@@ -170,7 +171,7 @@ export function MandegarExperience({
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const interactionCopy = useMemo(() => getInteractionCopy(locale), [locale]);
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
-  const [loadProgress, setLoadProgress] = useState(12);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [interactionReady, setInteractionReady] = useState(false);
   const [introComplete, setIntroComplete] = useState(false);
   const [workReady, setWorkReady] = useState(false);
@@ -232,8 +233,11 @@ export function MandegarExperience({
   }, []);
 
   useEffect(() => {
+    return subscribeHeroLoading((progress) => setLoadProgress((current) => Math.max(current, progress)));
+  }, []);
+
+  useEffect(() => {
     const hydrationFrame = window.requestAnimationFrame(() => {
-      setLoadProgress(38);
       const requestedPhase = new URLSearchParams(window.location.search).get("phase");
       const directPhase = narrativeScore.find((phase) => phase.id === requestedPhase)?.id;
       if (directPhase) setActivePhase(directPhase);
@@ -315,7 +319,6 @@ export function MandegarExperience({
       detail: { runtime: nextRuntime },
     }));
     setRuntime(nextRuntime);
-    setLoadProgress((current) => current === 100 ? current : 72);
   }, []);
 
   const handleFirstFrame = useCallback(() => setLoadProgress(100), []);
@@ -397,13 +400,20 @@ export function MandegarExperience({
         className={styles.loader}
         data-complete={loadProgress === 100 ? "true" : "false"}
         data-particle-loader="center-spark"
-        role="status"
-        aria-live="polite"
-        aria-label={`${copy.loading} ${loadProgress}%`}
+        data-loading-progress={loadProgress}
+        role="progressbar"
+        aria-label={copy.loading}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={loadProgress}
       >
         <div className={styles.loaderMark} style={{ "--load-progress": `${loadProgress * 3.6}deg` } as CSSProperties} aria-hidden="true">
           <span />
           {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
+        </div>
+        <div className={styles.loaderCopy}>
+          <strong data-loading-percentage>{new Intl.NumberFormat(locale, { style: "percent" }).format(loadProgress / 100)}</strong>
+          <span>{copy.loading}</span>
         </div>
       </div>
 

@@ -168,6 +168,9 @@
   transition: left .16s cubic-bezier(.2,.7,.2,1), top .16s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.65,0,.35,1);
   will-change: left, top, transform;
 }
+.loaderCopy { position: absolute; top: calc(50% + 3rem); inset-inline: 1rem; display: grid; gap: .6rem; text-align: center; }
+.loaderCopy strong { color: #16191d; font-size: 1.3rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.loaderCopy span { color: rgba(22,25,29,.65); font-size: .75rem; }
 
 .loader[data-complete="true"] .loaderMark { left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.56); }
 
