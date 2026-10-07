@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
+import { getNarrativeCopyTiming } from "../../components/experience/narrative-copy-timing";
 import { activateWithKeyboard, continueFromResult, driveRaceToCollision, returnToStationForward, seekStationReview, waitForStation } from "./hero-interaction-helpers";
 import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures, type MonitorTextureSample } from "./monitor-texture-observer";
 
@@ -22,7 +23,7 @@ async function assertDefaultMonitor(page: Page, screen: MonitorTextureSample["sc
   await expect.poll(async () => {
     const sample = (await getMonitorTextureSamples(page, screen)).at(-1);
     return sample?.media === "neutral" && sample.activation === 0;
-  }).toBe(true);
+  }, { timeout: 15_000 }).toBe(true);
 }
 
 test("the original center artwork loads while all three interactive monitors start without posters", async ({ page }, testInfo) => {
@@ -52,6 +53,124 @@ async function seek(page: Page, id: string, progress?: number) {
     root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress: target, sync: true } }));
   }, progress ?? beat.preview);
 }
+
+async function suspendAndResumeTab(page: Page) {
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    window.dispatchEvent(new Event("blur"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  // Let React switch R3F to its suspended frame loop before resuming it.
+  await page.waitForTimeout(100);
+  await clearMonitorTextureSamples(page);
+  await page.evaluate(() => {
+    Reflect.deleteProperty(document, "visibilityState");
+    Reflect.deleteProperty(document, "hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("focus"));
+  });
+}
+
+test("returning backward to Touch restores its buttons and selected chapter until the phase fades out", async ({ page }) => {
+  await observeMonitorTextures(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
+  const director = await waitForStation(page, "touch");
+  const touchCanvas = page.locator("[data-composer-canvas]");
+  const physicalCanvas = page.locator("[data-experience-canvas='true'] canvas");
+  const phase = narrativeScore.find((item) => item.id === "engagement")!;
+  const timing = getNarrativeCopyTiming("engagement");
+  await expect(touchCanvas).toHaveAttribute("data-transition-progress", "1.000");
+  await activateWithKeyboard(page, "[data-installation-button='details']");
+  await expect(touchCanvas).toHaveAttribute("data-installation-view", "details");
+  await expect(touchCanvas).toHaveAttribute("data-transition-progress", "1.000");
+
+  await seek(page, "engagement", phase.end + 0.008);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(touchCanvas).toHaveCount(0);
+  await seek(page, "engagement", timing.enterEnd + 0.012);
+  await waitForStation(page, "touch");
+  await expect(touchCanvas).toHaveAttribute("data-installation-view", "details");
+  await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "1.000");
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
+  await expect(touchCanvas).toHaveAttribute("data-installation-view", "parts");
+  await expect(touchCanvas).toHaveAttribute("data-transition-progress", "1.000");
+
+  // Escape within the backward visit stays dismissed until another phase visit.
+  await page.keyboard.press("Escape");
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await page.waitForTimeout(600);
+  await expect(touchCanvas).toHaveCount(0);
+  await clearMonitorTextureSamples(page);
+  await seek(page, "engagement", phase.start - 0.004);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await assertDefaultMonitor(page, "interactive");
+  await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "0.000");
+
+  await returnToStationForward(page, "touch");
+  await expect(touchCanvas).toHaveAttribute("data-installation-view", "assembled");
+  await activateWithKeyboard(page, "[data-installation-button='image']");
+  await expect(touchCanvas).toHaveAttribute("data-installation-view", "image");
+});
+
+test("all three interactive monitors fade on reverse, replay and keep paint across tab suspension", async ({ page }) => {
+  await observeMonitorTextures(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
+  const physicalCanvas = page.locator("[data-experience-canvas='true'] canvas");
+  const screens = [
+    { screen: "interactive", station: "touch", phase: "engagement" },
+    { screen: "game", station: "game", phase: "experiences" },
+    { screen: "main", station: "draw", phase: "connection" },
+  ] as const;
+
+  for (const { screen, station, phase } of screens) {
+    await seekStationReview(page, station);
+    await waitForStation(page, station);
+    const timing = getNarrativeCopyTiming(phase);
+    await seek(page, phase, timing.enterEnd + 0.004);
+    await expect.poll(async () => (await getMonitorTextureSamples(page, screen)).at(-1)?.activation).toBeGreaterThan(0.99);
+    if (screen === "interactive") await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "1.000");
+
+    await suspendAndResumeTab(page);
+    await expect.poll(async () => (await getMonitorTextureSamples(page, screen)).length).toBeGreaterThan(1);
+    const resumed = await getMonitorTextureSamples(page, screen);
+    expect(resumed.every((sample) => sample.activation > 0.99 && sample.media !== "neutral"), JSON.stringify(resumed)).toBe(true);
+    if (screen === "interactive") await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "1.000");
+
+    await clearMonitorTextureSamples(page);
+    await seek(page, phase, (timing.enterStart + timing.enterEnd) / 2);
+    await expect.poll(async () => {
+      const sample = (await getMonitorTextureSamples(page, screen)).at(-1);
+      return Boolean(sample && sample.activation > 0.3 && sample.activation < 0.7 && sample.media !== "neutral");
+    }).toBe(true);
+    if (screen === "interactive") {
+      await expect.poll(async () => {
+        const opacity = Number(await physicalCanvas.getAttribute("data-installation-buttons-opacity"));
+        return opacity > 0.3 && opacity < 0.9;
+      }).toBe(true);
+    }
+
+    // A large reverse jump must still draw a partially faded painted texture
+    // before releasing it and returning to the unpainted monitor.
+    await clearMonitorTextureSamples(page);
+    await seek(page, phase, timing.enterStart - 0.004);
+    await expect.poll(async () => (await getMonitorTextureSamples(page, screen)).some(
+      (sample) => sample.activation > 0.02 && sample.activation < 0.48 && sample.media !== "neutral",
+    )).toBe(true);
+    await assertDefaultMonitor(page, screen);
+    const reversed = await getMonitorTextureSamples(page, screen);
+    expect(reversed.some((sample) => sample.activation > 0 && sample.media === "neutral"), JSON.stringify(reversed)).toBe(false);
+    if (screen === "interactive") await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "0.000");
+
+    await returnToStationForward(page, station);
+    await expect.poll(async () => (await getMonitorTextureSamples(page, screen)).at(-1)?.activation).toBeGreaterThan(0.99);
+    if (screen === "interactive") await expect(physicalCanvas).toHaveAttribute("data-installation-buttons-opacity", "1.000");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
+  }
+});
 
 test("the rendered game keeps painted ownership through a collision, autoplay and a fresh forward return", async ({ page }) => {
   await observeMonitorTextures(page);

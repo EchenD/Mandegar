@@ -1,5 +1,5 @@
 export const raceBoard = { width: 501, height: 720, left: 66, right: 435, top: 0, bottom: 720, playerY: 552, carWidth: 34, carHeight: 64 } as const;
-const racePace = { opening: 205, maximum: 365, rampSeconds: 40, steering: 235 } as const;
+const racePace = { opening: 205, maximum: 820, rampSeconds: 60, steering: 235 } as const;
 export type RaceCar = { id: number; x: number; y: number; color: string };
 export type RaceGame = {
   status: "ready" | "running" | "paused" | "complete";
@@ -33,6 +33,16 @@ export function toggleRace(game: RaceGame): RaceGame {
   return { ...game, status: game.status === "running" ? "paused" : "running" };
 }
 
+export function getRaceSpeedMultiplier(game: Pick<RaceGame, "speed">) {
+  return game.speed / racePace.opening;
+}
+
+function getSteeringSpeed(game: RaceGame) {
+  // Double steering authority at four times the road speed, keeping late
+  // traffic avoidable without making the opening controls overly sensitive.
+  return racePace.steering * Math.sqrt(getRaceSpeedMultiplier(game));
+}
+
 /** Small simulation steps prevent cars tunnelling through each other on slow frames. */
 export function stepRace(game: RaceGame, delta: number, direction = 0, targetX?: number): RaceGame {
   if (game.status !== "running" || !Number.isFinite(delta) || delta <= 0) return game;
@@ -41,15 +51,18 @@ export function stepRace(game: RaceGame, delta: number, direction = 0, targetX?:
   while (remaining > 0.00001 && next.status === "running") {
     const dt = Math.min(remaining, 1 / 120);
     remaining -= dt;
+    const previousSpeed = next.speed;
     next.elapsed += dt;
     // Active time gives a gentle opening and a smooth arrival at full pace.
     const progress = Math.min(1, next.elapsed / racePace.rampSeconds);
     next.speed = racePace.opening + (racePace.maximum - racePace.opening) * progress * progress * (3 - 2 * progress);
-    next = steerRace(next, targetX === undefined ? next.x + direction * racePace.steering * dt
-      : next.x + Math.max(-racePace.steering * dt, Math.min(racePace.steering * dt, targetX - next.x)));
-    next.distance += next.speed * dt * 0.17;
+    const steering = getSteeringSpeed(next);
+    next = steerRace(next, targetX === undefined ? next.x + direction * steering * dt
+      : next.x + Math.max(-steering * dt, Math.min(steering * dt, targetX - next.x)));
+    const travel = (previousSpeed + next.speed) * 0.5 * dt;
+    next.distance += travel * 0.17;
     next.score = Math.floor(next.distance);
-    next.roadOffset = (next.roadOffset + next.speed * dt) % 72;
+    next.roadOffset = (next.roadOffset + travel) % 72;
     next.spawnIn -= dt;
     if (next.spawnIn <= 0) {
       next.seed = (Math.imul(next.seed, 1664525) + 1013904223) >>> 0;
@@ -58,7 +71,7 @@ export function stepRace(game: RaceGame, delta: number, direction = 0, targetX?:
       next.spawnIn += Math.max(0.95, 1.65 - next.elapsed * 0.003);
     }
     for (const car of next.traffic) {
-      car.y += next.speed * 0.78 * dt;
+      car.y += travel * 0.78;
       if (Math.abs(car.x - next.x) < raceBoard.carWidth - 5
         && Math.abs(car.y - raceBoard.playerY) < raceBoard.carHeight - 9) {
         next.status = "complete";
@@ -74,7 +87,7 @@ export function stepRace(game: RaceGame, delta: number, direction = 0, targetX?:
 export function getAutonomousTarget(game: RaceGame) {
   const lanes = [127.5, 250.5, 373.5];
   const costs = lanes.map((x) => game.traffic.reduce((cost, car) => {
-    const arrivalY = car.y + game.speed * 0.78 * Math.abs(game.x - car.x) / racePace.steering;
+    const arrivalY = car.y + game.speed * 0.78 * Math.abs(game.x - car.x) / getSteeringSpeed(game);
     const crossesLane = car.x >= Math.min(game.x, x) - 28 && car.x <= Math.max(game.x, x) + 28
       && Math.abs(car.x - game.x) > 35 && Math.abs(arrivalY - raceBoard.playerY) < 120;
     return cost + (crossesLane ? 200 : 0)

@@ -312,16 +312,13 @@
 }
 
 .copyLayer { position: absolute; inset: 0; z-index: 5; pointer-events: none; perspective: 1000px; transition: opacity .25s ease; }
-.root[data-interaction-active] .copyLayer,
-.root[data-interaction-result] .copyLayer,
-.root[data-interaction-departing] .copyLayer { opacity: 0 !important; pointer-events: none; }
-.root[data-interaction-active] .phaseRail,
+.root[data-interaction-active]:not([data-interaction-active="touch"]) .copyLayer,
+.root[data-interaction-result]:not([data-interaction-active="touch"]) .copyLayer,
+.root[data-interaction-departing]:not([data-interaction-active="touch"]) .copyLayer { opacity: 0 !important; pointer-events: none; }
 .root[data-interaction-active] .scrollCue,
 .root[data-interaction-active] .soundControl,
-.root[data-interaction-result] .phaseRail,
 .root[data-interaction-result] .scrollCue,
 .root[data-interaction-result] .soundControl,
-.root[data-interaction-departing] .phaseRail,
 .root[data-interaction-departing] .scrollCue,
 .root[data-interaction-departing] .soundControl {
   opacity: 0 !important;
@@ -386,6 +383,15 @@
 .sceneCopy[data-scene-copy="invitation"] { --copy-y: 67%; --copy-y-mobile: 67%; }
 .sceneCopy[data-interaction-cue] { --copy-x: 50%; --copy-y: 91%; --copy-y-mobile: 87%; --copy-width: min(34rem, 80vw); }
 .sceneCopy[data-interaction-cue] p { font-size: .875rem; }
+
+.root[data-story-stage="engagement"][data-interaction-active="touch"] .sceneCopy[data-scene-copy="engagement"],
+.root[data-story-stage="engagement"][data-interaction-active="touch"] .sceneCopy[data-scene-copy="engagement"] [data-copy-line] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.root[data-story-stage="engagement"][data-interaction-active="touch"] .sceneCopy[data-scene-copy="engagement"] [data-copy-line] {
+  transform: none !important;
+}
 
 .sceneCopy > span {
   display: inline-flex;

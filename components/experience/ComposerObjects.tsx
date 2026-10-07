@@ -19,30 +19,11 @@ function iconTexture(index: number) {
   canvas.width = 256;
   canvas.height = 256;
   const ctx = canvas.getContext("2d")!;
-  ctx.strokeStyle = "#efe4d1";
-  ctx.lineWidth = 9;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  const path = (points: number[][]) => {
-    ctx.beginPath();
-    points.forEach(([x, y], at) => { if (at) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
-    ctx.stroke();
-  };
-  if (index === 0) {
-    ctx.beginPath(); ctx.moveTo(40, 65); ctx.quadraticCurveTo(128, 98, 216, 65);
-    ctx.lineTo(216, 185); ctx.quadraticCurveTo(128, 218, 40, 185); ctx.closePath(); ctx.stroke();
-    path([[54, 85], [54, 170]]); path([[202, 85], [202, 170]]);
-  } else if (index === 1) {
-    for (const y of [65, 117, 169]) path([[45, y + 16], [128, y - 18], [211, y + 16], [128, y + 48], [45, y + 16]]);
-  } else if (index === 2) {
-    path([[65, 65], [213, 65], [213, 188], [65, 188], [65, 65]]);
-    path([[35, 68], [35, 188], [50, 188]]); path([[27, 62], [43, 62]]);
-    path([[82, 204], [202, 204]]);
-  } else {
-    path([[43, 48], [214, 48], [214, 205], [43, 205], [43, 48]]);
-    path([[62, 178], [109, 132], [136, 152], [162, 116], [201, 177]]);
-    ctx.beginPath(); ctx.arc(89, 94, 12, 0, Math.PI * 2); ctx.stroke();
-  }
+  ctx.fillStyle = "#efe4d1";
+  ctx.font = "700 104px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(index + 1).padStart(2, "0"), 128, 128);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -52,7 +33,9 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
   const { camera, gl } = useThree();
   const [model, setModel] = useState<THREE.Group | null>(null);
   const revealedVisibility = useRef(0);
-  const revealedAt = useRef<number | null>(null);
+  const revealAge = useRef<number | null>(null);
+  const reversing = useRef(false);
+  const previousProgress = useRef(experienceState.progress);
   useEffect(() => {
     let mounted = true;
     let owned: THREE.Group | null = null;
@@ -124,23 +107,40 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
     document.body.style.cursor = "";
   }, [rig]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_state, delta) => {
     const visibility = interactionRuntime.touchVisibility;
     const timing = getNarrativeCopyTiming("engagement");
     const progress = experienceState.progress;
-    // Reveal alongside the phase caption and retain the buttons while continuing
-    // forward; scrolling back before this phase allows the entrance to replay.
-    if (progress < timing.enterStart) {
-      revealedVisibility.current = 0;
-      revealedAt.current = null;
-    } else {
-      revealedAt.current ??= clock.elapsedTime;
-      const phaseEntrance = THREE.MathUtils.clamp(
-        (progress - timing.enterStart) / Math.max(0.0001, timing.enterEnd - timing.enterStart),
-        0,
-        1,
-      );
-      const timedEntrance = THREE.MathUtils.clamp((clock.elapsedTime - revealedAt.current) / 0.8, 0, 1);
+    const direction = document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollDirection;
+    const backward = direction === "backward" && progress < previousProgress.current;
+    const forward = direction === "forward" && progress > previousProgress.current;
+    previousProgress.current = progress;
+    const revealDelta = Math.min(delta, 0.16);
+    const phaseEntrance = THREE.MathUtils.clamp(
+      (progress - timing.enterStart) / Math.max(0.0001, timing.enterEnd - timing.enterStart),
+      0,
+      1,
+    );
+    if (revealAge.current !== null
+      && (progress < timing.enterStart || backward && progress < timing.enterEnd)) reversing.current = true;
+    if (forward && progress >= timing.enterStart && reversing.current) {
+      reversing.current = false;
+      revealAge.current = revealedVisibility.current * 0.8;
+    }
+    // Reverse fades remain visible while catching up with a rapid wheel jump.
+    // Frame deltas also preserve the reveal when tab suspension resets the clock.
+    if (reversing.current) {
+      revealedVisibility.current = Math.min(revealedVisibility.current, Math.max(
+        phaseEntrance,
+        revealedVisibility.current - revealDelta / 0.8,
+      ));
+      if (revealedVisibility.current <= 0.001 && progress <= timing.enterStart) {
+        revealedVisibility.current = 0;
+        revealAge.current = null;
+      }
+    } else if (progress >= timing.enterStart) {
+      revealAge.current = revealAge.current === null ? 0 : revealAge.current + revealDelta;
+      const timedEntrance = THREE.MathUtils.clamp(revealAge.current / 0.8, 0, 1);
       revealedVisibility.current = Math.max(revealedVisibility.current, phaseEntrance, timedEntrance);
     }
     const departing = document.querySelector("[data-experience-root]")?.hasAttribute("data-interaction-departing");
@@ -195,6 +195,7 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
       control.dataset.projectedX = String(x);
       control.dataset.projectedY = String(y);
     });
+    gl.domElement.dataset.installationButtonsOpacity = (visible ? rig.buttons[0]?.materials[0]?.opacity ?? 0 : 0).toFixed(3);
     if (!enabled && document.body.style.cursor === "pointer") document.body.style.cursor = "";
   });
 

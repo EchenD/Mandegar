@@ -42,25 +42,28 @@ for (const station of [
   });
 }
 
-test("late final installation artwork preserves the selected view and entrance", async ({ page }) => {
-  let releaseArtwork!: () => void;
-  const gate = new Promise<void>((resolve) => { releaseArtwork = resolve; });
-  await page.route("**/media/hero/touch/image.webp", async (route) => {
-    await gate;
-    await route.continue().catch(() => {});
+test("the memory chapter plays with no dependency on former static artwork", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.route("**/media/hero/touch/*.webp", (route) => route.abort());
+  await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
+  await waitForStation(page, "touch");
+  const canvas = page.locator("[data-composer-canvas]");
+  await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  await activateWithKeyboard(page, "[data-installation-button='image']");
+  await expect(canvas).toHaveAttribute("data-artwork-status", "generated");
+  await expect(canvas).toHaveAttribute("data-story-chapter", "4");
+  await expect(canvas).toHaveAttribute("data-installation-view", "image");
+  await expect(canvas).toHaveAttribute("data-view-transition-progress", "1.000", { timeout: 15_000 });
+  const picture = await canvas.evaluate((element: HTMLCanvasElement) => {
+    const pixels = element.getContext("2d")!.getImageData(0, 0, element.width, element.height).data;
+    const colors = new Set<number>();
+    for (let index = 0; index < pixels.length; index += 388) colors.add(pixels[index] * 65536 + pixels[index + 1] * 256 + pixels[index + 2]);
+    return colors.size;
   });
-  try {
-    await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
-    await waitForStation(page, "touch");
-    const canvas = page.locator("[data-composer-canvas]");
-    await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
-    await activateWithKeyboard(page, "[data-installation-button='image']");
-    await expect(canvas).toHaveAttribute("data-artwork-status", "loading");
-    releaseArtwork();
-    await expect(canvas).toHaveAttribute("data-artwork-status", "ready", { timeout: 15_000 });
-    await expect(canvas).toHaveAttribute("data-installation-view", "image");
-    await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
-  } finally {
-    releaseArtwork();
-  }
+  expect(picture).toBeGreaterThan(30);
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
+  await expect(canvas).toHaveAttribute("data-story-chapter", "2");
+  await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  expect(requests.filter((url) => /media\/hero\/touch\/|connected-experience/.test(url))).toEqual([]);
 });

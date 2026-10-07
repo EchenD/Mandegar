@@ -21,6 +21,7 @@ import type { SceneProject } from "./experience-types";
 import { sceneTokens } from "./scene-config";
 import { interactionRuntime } from "./interactions/interaction-runtime";
 import { heroTimeline } from "./hero-timeline-config";
+import { getNarrativeCopyTiming } from "./narrative-copy-timing";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -114,7 +115,9 @@ type ScreenRuntime = {
   liveBlend: number;
   handoffTexture: THREE.CanvasTexture | null;
   handoffBlend: number;
-  introducedAt: number | null;
+  introduced: boolean;
+  introductionProgress: number;
+  reversing: boolean;
 };
 
 function hasActiveSurface(id: BakedScreenId) {
@@ -169,6 +172,7 @@ export function BakedScreenController({
 }) {
   const runtimesRef = useRef<Record<BakedScreenId, ScreenRuntime> | null>(null);
   const reducedRef = useRef(false);
+  const previousProgress = useRef(experienceState.progress);
 
   useEffect(() => {
     let active = true;
@@ -229,7 +233,9 @@ export function BakedScreenController({
         liveBlend: 1,
         handoffTexture: null,
         handoffBlend: 1,
-        introducedAt: null,
+        introduced: false,
+        introductionProgress: 0,
+        reversing: false,
       };
     });
     runtimesRef.current = result;
@@ -306,12 +312,18 @@ export function BakedScreenController({
     };
   }, [projects, root]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const runtimes = runtimesRef.current;
     if (!runtimes) {
       return;
     }
 
+    const progress = experienceState.progress;
+    const direction = document.querySelector<HTMLElement>("[data-experience-root]")?.dataset.scrollDirection;
+    const backward = direction === "backward" && progress < previousProgress.current;
+    const forward = direction === "forward" && progress > previousProgress.current;
+    previousProgress.current = progress;
+    const reverseStep = Math.min(delta, 0.16) / 0.7;
     (Object.values(runtimes) as ScreenRuntime[]).forEach((runtime) => {
       const activation = getActivation(runtime.id);
       const production = experienceState.stage.production;
@@ -325,17 +337,41 @@ export function BakedScreenController({
       const nextEntry = interactionRuntime.monitorEntries[runtime.id] ?? ambientGame ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
       const interactive = runtime.id !== "videoWall";
       const phase = interactive ? getIntroductionPhase(runtime.id) : null;
-      // Keep the three interactive screens painted going forward; returning
-      // before their phase restores the original idle material without a poster.
-      if (phase && experienceState.progress < phase.start) runtime.introducedAt = null;
-      const ready = !phase || runtime.introducedAt !== null
-        || (experienceState.progress >= phase.start && experienceState.progress <= phase.end);
-      const liveEntry = ready ? nextEntry ?? ((interactive || hasActiveSurface(runtime.id)) && runtime.liveCanvas
+      const timing = phase ? getNarrativeCopyTiming(phase.id) : null;
+      if (timing && runtime.introduced
+        && (progress < timing.enterStart || backward && progress < timing.enterEnd)) {
+        runtime.reversing = true;
+      }
+      if (timing && forward && progress >= timing.enterStart) runtime.reversing = false;
+      if (runtime.reversing && timing) {
+        const target = THREE.MathUtils.clamp(
+          (progress - timing.enterStart) / Math.max(0.0001, timing.enterEnd - timing.enterStart),
+          0,
+          1,
+        );
+        // Limit reverse travel per frame so a large wheel jump still fades the
+        // painted surface before its texture is released.
+        runtime.introductionProgress = reducedRef.current ? target
+          : Math.min(runtime.introductionProgress, Math.max(target, runtime.introductionProgress - reverseStep));
+        if (runtime.introductionProgress <= 0.001 && progress <= timing.enterStart) {
+          runtime.introductionProgress = 0;
+          runtime.introduced = false;
+        }
+      }
+      const ready = !phase || runtime.introduced
+        || (!runtime.reversing && progress >= phase.start && progress <= phase.end);
+      const retainedEntry = (interactive || hasActiveSurface(runtime.id)) && runtime.liveCanvas
         ? { canvas: runtime.liveCanvas, revision: runtime.liveRevision, blend: runtime.liveBlend }
-        : null) : null;
-      if (interactive && liveEntry && runtime.introducedAt === null) runtime.introducedAt = clock.elapsedTime;
-      const entrance = runtime.introducedAt === null ? 0
-        : reducedRef.current ? 1 : Math.max(0, Math.min(1, (clock.elapsedTime - runtime.introducedAt) / 0.7));
+        : null;
+      const liveEntry = ready ? runtime.reversing ? retainedEntry : nextEntry ?? retainedEntry : null;
+      if (interactive && liveEntry && !runtime.reversing) {
+        if (!runtime.introduced) runtime.introduced = true;
+        else runtime.introductionProgress = Math.min(1, runtime.introductionProgress + reverseStep);
+        if (reducedRef.current) runtime.introductionProgress = 1;
+      }
+      // Frame-loop suspension restarts Three's clock. Retained, delta-driven
+      // progress keeps the screens painted when the tab becomes visible again.
+      const entrance = runtime.introductionProgress;
       runtime.material.uniforms.uActivation.value = interactive
         ? entrance * entrance * (3 - 2 * entrance) : activation;
       if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
@@ -366,7 +402,7 @@ export function BakedScreenController({
         runtime.liveTexture.needsUpdate = true;
       }
       const entering = Number(liveEntry?.canvas.dataset.transitionProgress ?? 1);
-      if (runtime.handoffTexture && (!hasActiveSurface(runtime.id) || entering >= 1)) {
+      if (runtime.handoffTexture && !runtime.reversing && (!hasActiveSurface(runtime.id) || entering >= 1)) {
         runtime.handoffTexture.dispose();
         runtime.handoffTexture = null;
       }

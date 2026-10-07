@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
-import { publicAssetPath } from "@/lib/public-asset-path";
 import type { ScenePhaseId } from "../narrative-score";
 import { heroTimeline } from "../hero-timeline-config";
 import { sampleHeroTimeline } from "../hero-timeline";
@@ -96,16 +95,6 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       && new URLSearchParams(window.location.search).get("anchors") === "1"));
     return () => cancelAnimationFrame(frame);
   }, []);
-
-  useEffect(() => {
-    if (runtime !== "full" && runtime !== "adaptive") return;
-    // Prepare the first Touch view before its caption and screen reveal together.
-    const image = new Image();
-    image.decoding = "async";
-    image.fetchPriority = "low";
-    image.src = publicAssetPath("/media/hero/touch/assembled.webp");
-    void image.decode().catch(() => undefined);
-  }, [runtime]);
 
   useEffect(() => {
     const input = arrivalInput.current;
@@ -225,7 +214,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     }, reducedMotion ? 0 : 400);
   }, [cancelPhaseAdvance, finishExit, reducedMotion]);
 
-  const enter = useCallback((station: InteractionStation, input: InteractionInput) => {
+  const enter = useCallback((station: InteractionStation, input: InteractionInput, resumeTouch = false) => {
     if (interactionRuntime.availableStation !== station || state.availableStation !== station
       || state.activeStation || interactionRuntime.activeStation) return;
     const sample = sampleHeroTimeline(heroTimeline, experienceState.progress);
@@ -234,7 +223,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     cancelPhaseAdvance();
     completionReported.current = false;
     autoStarted.current[station] = true;
-    if (station === "touch") resetInstallation();
+    if (station === "touch" && !resumeTouch) resetInstallation();
     if (station === "game") resetRace();
     if (station === "draw") { clearDrawing(); clearDrawingDraft(); }
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -253,15 +242,17 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     let frame: number;
     const checkArrival = () => {
       const progress = Number(root.dataset.nativeProgress ?? 0);
-      if (root.dataset.scrollDirection === "backward" || progress < phase.start) autoStarted.current[expectedStation] = false;
+      if (progress < phase.start) autoStarted.current[expectedStation] = false;
       const input = arrivalInput.current;
+      const resumeTouch = expectedStation === "touch" && root.dataset.scrollDirection === "backward";
       // Screen content starts with the chapter text, including during an active
-      // wheel gesture or swipe. Participation keeps native scrolling available.
-      if (root.dataset.scrollDirection === "forward"
+      // wheel gesture or swipe. A backward Touch visit resumes its selected
+      // chapter and restores its controls without restarting the story.
+      if ((root.dataset.scrollDirection === "forward" || resumeTouch)
         && root.dataset.storyStage === phase.id && root.dataset.reducedMotion !== "true"
         && !autoStarted.current[expectedStation] && !interactionRuntime.activeStation
         && progress >= phase.start && progress < phase.end) {
-        enter(expectedStation, input.keyboard ? "keyboard" : "automatic");
+        enter(expectedStation, input.keyboard ? "keyboard" : "automatic", resumeTouch);
         return;
       }
       frame = requestAnimationFrame(checkArrival);
@@ -409,7 +400,10 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     if (!state.activeStation) return;
     const root = document.querySelector<HTMLElement>("[data-experience-root]");
     const copyLayer = root?.querySelector<HTMLElement>("[data-copy-layer]");
-    if (copyLayer) { copyLayer.inert = true; copyLayer.setAttribute("aria-hidden", "true"); }
+    if (copyLayer && state.activeStation !== "touch") {
+      copyLayer.inert = true;
+      copyLayer.setAttribute("aria-hidden", "true");
+    }
     // Game and drawing own their control gestures. Wheel and page keys still
     // move native scroll; a swipe outside a control remains a normal swipe.
     const key = (event: KeyboardEvent) => { if (event.key === "Escape") exit(true); };

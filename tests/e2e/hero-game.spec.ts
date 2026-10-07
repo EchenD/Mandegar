@@ -36,7 +36,7 @@ test("drag steers the car outside the screen, stays on the road and releases cle
   await expect.poll(async () => Number(await canvas.getAttribute("data-car-x")))
     .toBeLessThan(Number(releasedPaddle));
   await page.keyboard.up("ArrowLeft");
-  await page.locator("[data-interaction-escape]").click();
+  await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });
 

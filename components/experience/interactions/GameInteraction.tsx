@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { InteractionCopy } from "./interaction-copy";
 import { interactionRuntime, markInteractionCanvasDirty, registerInteractionCanvas, registerSceneInteraction } from "./interaction-runtime";
 import { completeGameResult, getVisitorCreation } from "./visitor-creation";
-import { getSavedRace, raceBoard, saveRace, steerRace, stepRace, toggleRace, type RaceGame } from "./race-game";
+import { getRaceSpeedMultiplier, getSavedRace, raceBoard, saveRace, steerRace, stepRace, toggleRace, type RaceGame } from "./race-game";
 import { paintRaceScreen, raceControlAtPoint, type RaceControl } from "./race-screen";
 import { loadRaceArtwork } from "./race-artwork";
 import { reportInteractionParticipation } from "./interaction-participation";
@@ -64,6 +64,8 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
     if (!canvas || !context) return;
     canvas.dataset.transitionProgress = transition.current.toFixed(3);
     canvas.dataset.carX = String(game.current.x);
+    canvas.dataset.gameSpeed = game.current.speed.toFixed(3);
+    canvas.dataset.speedMultiplier = getRaceSpeedMultiplier(game.current).toFixed(3);
     canvas.dataset.dragging = String(pointer.current !== null);
     const time = performance.now();
     if (time - diagnosticsAt.current >= 200 || game.current.status === "complete") {

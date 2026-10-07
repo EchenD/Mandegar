@@ -27,31 +27,34 @@ function emptyRoad(): RaceGame {
 
 test.afterEach(() => resetRace());
 
-test("active driving starts gently, noticeably accelerates, and smoothly reaches a bounded maximum", () => {
+test("active driving starts gently and smoothly reaches four times its opening speed after a minute", () => {
   const opening = emptyRoad();
   const fiveSeconds = advance(opening, 5);
   const tenSeconds = advance(fiveSeconds, 5);
   const twentySeconds = advance(tenSeconds, 10);
   const thirtySeconds = advance(twentySeconds, 10);
-  const maximum = advance(thirtySeconds, 10);
+  const fortyFiveSeconds = advance(thirtySeconds, 15);
+  const maximum = advance(fortyFiveSeconds, 15);
   expect(opening.speed).toBe(205);
   expect(fiveSeconds.speed).toBeGreaterThan(205);
-  expect(fiveSeconds.speed).toBeLessThan(215);
-  expect(tenSeconds.speed).toBeGreaterThanOrEqual(229);
-  expect(twentySeconds.speed).toBeGreaterThanOrEqual(284);
-  expect(thirtySeconds.speed).toBeGreaterThanOrEqual(339);
-  expect(maximum.speed).toBeCloseTo(365);
-  expect(advance(maximum, 60).speed).toBe(365);
+  expect(fiveSeconds.speed).toBeLessThan(225);
+  expect(tenSeconds.speed).toBeGreaterThanOrEqual(250);
+  expect(twentySeconds.speed).toBeGreaterThanOrEqual(364);
+  expect(thirtySeconds.speed).toBeCloseTo(opening.speed * 2.5);
+  expect(fortyFiveSeconds.speed).toBeGreaterThan(opening.speed * 3);
+  expect(fortyFiveSeconds.speed).toBeLessThan(opening.speed * 4);
+  expect(maximum.speed).toBeCloseTo(opening.speed * 4);
+  expect(advance(maximum, 60).speed).toBe(820);
   expect(maximum.score).toBeGreaterThan(thirtySeconds.score);
 
   let game = opening;
   let previousIncrease = 0;
-  for (let frame = 0; frame < 45 * 4; frame += 1) {
+  for (let frame = 0; frame < 65 * 4; frame += 1) {
     const next = stepRace(game, 0.25);
     const increase = next.speed - game.speed;
     expect(increase).toBeGreaterThanOrEqual(0);
-    expect(increase).toBeLessThanOrEqual(1.5);
-    expect(Math.abs(increase - previousIncrease)).toBeLessThan(0.05);
+    expect(increase).toBeLessThanOrEqual(4);
+    expect(Math.abs(increase - previousIncrease)).toBeLessThan(0.07);
     previousIncrease = increase;
     game = next;
   }
@@ -67,7 +70,7 @@ test("pause freezes difficulty, traffic, and distance while resume continues the
   expect(resumed.status).toBe("running");
   expect(resumed.elapsed).toBeCloseTo(running.elapsed + 1);
   expect(resumed.speed).toBeGreaterThan(running.speed);
-  expect(resumed.speed).toBeLessThan(running.speed + 7);
+  expect(resumed.speed).toBeLessThan(running.speed + 16);
   expect(running.elapsed).toBeCloseTo(20);
 });
 
@@ -90,7 +93,7 @@ test("the same active time and traffic produce the same difficulty across low an
   for (const framesPerSecond of [5, 30, 60, 144]) {
     const game = advance(initial, 50, framesPerSecond);
     expect(game.status).toBe("running");
-    expect(game.speed).toBe(smooth.speed);
+    expect(game.speed).toBeCloseTo(smooth.speed, 6);
     expect(game.elapsed).toBeCloseTo(smooth.elapsed, 6);
     expect(game.distance).toBeCloseTo(smooth.distance, 1);
     expect(game.score).toBe(smooth.score);
@@ -99,7 +102,7 @@ test("the same active time and traffic produce the same difficulty across low an
     expect(game.traffic.map((car) => [car.id, car.x])).toEqual(smooth.traffic.map((car) => [car.id, car.x]));
     for (let index = 0; index < game.traffic.length; index += 1) {
       // Non-divisor frame rates may place a spawn within one bounded physics step.
-      expect(Math.abs(game.traffic[index].y - smooth.traffic[index].y)).toBeLessThan(3);
+      expect(Math.abs(game.traffic[index].y - smooth.traffic[index].y)).toBeLessThan(6);
     }
   }
   expect(JSON.stringify(initial)).toBe(original);
@@ -107,12 +110,12 @@ test("the same active time and traffic produce the same difficulty across low an
 
 test("maximum-speed collisions are detected between slow frames and completion remains final", () => {
   const game: RaceGame = {
-    ...emptyRoad(), elapsed: 40, speed: 365, x: 221.25,
+    ...emptyRoad(), elapsed: 60, speed: 820, x: 221.25,
     traffic: [{ id: 0, x: 250.5, y: raceBoard.playerY, color: "#c5cbc5" }],
   };
   // Both ends of an unchecked quarter-second movement clear the car; its path crosses it.
   expect(Math.abs(game.x - game.traffic[0].x)).toBeGreaterThan(raceBoard.carWidth - 5);
-  expect(Math.abs(game.x + 235 * 0.25 - game.traffic[0].x)).toBeGreaterThan(raceBoard.carWidth - 5);
+  expect(Math.abs(game.x + 470 * 0.25 - game.traffic[0].x)).toBeGreaterThan(raceBoard.carWidth - 5);
   const slow = stepRace(game, 0.25, 1);
   const fast = stepRace(game, 1 / 120, 1);
   expect(slow).toMatchObject({ status: "complete", outcome: "crashed" });
@@ -126,10 +129,10 @@ test("maximum-speed collisions are detected between slow frames and completion r
 
 test("keyboard steering still clears approaching traffic at maximum speed and clamps at the shoulders", () => {
   let game: RaceGame = {
-    ...emptyRoad(), elapsed: 40, speed: 365,
+    ...emptyRoad(), elapsed: 60, speed: 820,
     traffic: [{ id: 0, x: 250.5, y: 450, color: "#c5cbc5" }],
   };
-  for (let frame = 0; frame < 34; frame += 1) game = stepRace(game, 1 / 60, 1);
+  for (let frame = 0; frame < 20; frame += 1) game = stepRace(game, 1 / 60, 1);
   expect(game.status).toBe("running");
   expect(game.x).toBeGreaterThanOrEqual(373.5);
   expect(game.traffic[0].y).toBeGreaterThan(raceBoard.playerY + raceBoard.carHeight - 9);
@@ -142,9 +145,9 @@ test("autonomous driving navigates the full ramp and the densest capped-speed tr
   for (const framesPerSecond of [5, 30]) {
     for (const seed of [1, 73, 319, 65535]) {
       const initial: RaceGame = { ...createRaceGame(seed), status: "running" };
-      const ramp = advance(initial, 50, framesPerSecond, true);
+      const ramp = advance(initial, 60, framesPerSecond, true);
       expect(ramp.status, `seed ${seed} at ${framesPerSecond} fps during ramp`).toBe("running");
-      expect(ramp.speed).toBe(365);
+      expect(ramp.speed).toBe(820);
       expect(ramp.x).toBeGreaterThanOrEqual(raceBoard.left + 25);
       expect(ramp.x).toBeLessThanOrEqual(raceBoard.right - 25);
       const dense = advance({ ...ramp, elapsed: 240 }, 60, framesPerSecond, true);

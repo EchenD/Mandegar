@@ -3,7 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
-import { createRaceGame, getAutonomousTarget, raceBoard, stepRace } from "./race-game";
+import { createRaceGame, getAutonomousTarget, getRaceSpeedMultiplier, raceBoard, stepRace } from "./race-game";
 import { getAmbientGameVisibility } from "./ambient-game-visibility";
 import { paintRaceScreen } from "./race-screen";
 import { loadRaceArtwork } from "./race-artwork";
@@ -105,6 +105,8 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
           if (blend >= 1) handoff = null;
           canvas.dataset.ambientRound = String(round);
           canvas.dataset.ambientScore = String(state.score);
+          canvas.dataset.ambientSpeed = state.speed.toFixed(3);
+          canvas.dataset.speedMultiplier = getRaceSpeedMultiplier(state).toFixed(3);
           canvas.dataset.ambientCar = String(state.x);
           const surface = interactionRuntime.ambientGameSurface;
           if (surface?.canvas === canvas) surface.revision += 1;

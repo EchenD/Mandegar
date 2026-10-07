@@ -1,10 +1,26 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 import { narrativeScore } from "../../components/experience/narrative-score";
+import { installationCopy } from "../../components/experience/interactions/installation-demo";
 import { activateWithKeyboard, returnToStationForward, seekStationReview, waitForStation } from "./hero-interaction-helpers";
 import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures } from "./monitor-texture-observer";
 
 test.setTimeout(150_000);
 test.use({ video: "off", trace: "off" });
+
+async function storyFrame(canvas: Locator) {
+  return canvas.evaluate((element: HTMLCanvasElement) => {
+    const pixels = element.getContext("2d")!.getImageData(0, 0, element.width, element.height).data;
+    const colors = new Set<number>();
+    let signature = 2166136261;
+    for (let index = 0; index < pixels.length; index += 388) {
+      const color = pixels[index] * 65536 + pixels[index + 1] * 256 + pixels[index + 2];
+      colors.add(color);
+      signature = Math.imul(signature ^ color, 16777619) >>> 0;
+    }
+    return { signature, colors: colors.size };
+  });
+}
 
 test("the touch monitor fades in, retains its forward view and resets on native backward scrolling", async ({ page }, testInfo) => {
   test.setTimeout(240_000);
@@ -24,6 +40,9 @@ test("the touch monitor fades in, retains its forward view and resets on native 
   const director = await waitForStation(page, "touch");
   const canvas = page.locator("[data-composer-canvas]");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  await expect(canvas).toHaveAttribute("data-artwork-status", "generated");
+  await expect.poll(async () => (await getMonitorTextureSamples(page, "interactive")).at(-1)?.activation,
+    { timeout: 20_000 }).toBeGreaterThan(0.99);
   await expect(page.locator("[data-installation-button]")).toHaveCount(4);
   await expect(page.locator("[data-journey-control], [data-interaction-finish], [data-interaction-escape]")).toHaveCount(0);
   const entrance = await getMonitorTextureSamples(page, "interactive");
@@ -32,6 +51,7 @@ test("the touch monitor fades in, retains its forward view and resets on native 
   await page.screenshot({ path: testInfo.outputPath("assembled.png") });
   for (const view of ["parts", "details", "image", "assembled"] as const) {
     const button = page.locator(`[data-installation-button='${view}']`);
+    await expect(button).toHaveAccessibleName(installationCopy.en.views[view]);
     await expect(button).toHaveAttribute("data-table-fit", "true");
     await button.evaluate((element: HTMLElement) => {
       element.dataset.pressObserved = "false";
@@ -81,10 +101,12 @@ test("the touch monitor fades in, retains its forward view and resets on native 
   await returnToStationForward(page, "touch");
   await expect(canvas).toHaveAttribute("data-installation-view", "assembled");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  await expect.poll(async () => (await getMonitorTextureSamples(page, "interactive")).at(-1)?.activation,
+    { timeout: 20_000 }).toBeGreaterThan(0.99);
   const returnEntrance = await getMonitorTextureSamples(page, "interactive");
   expect(returnEntrance.some((sample) => sample.media === "interactive" && sample.activation > 0 && sample.activation < 0.95)).toBe(true);
   expect(returnEntrance.at(-1)?.activation).toBeGreaterThan(0.99);
-  expect(requests.some((url) => /connected-experience|race-idle|screen-main-4x3|media\/services\/events/.test(url))).toBe(false);
+  expect(requests.some((url) => /connected-experience|race-idle|screen-main-4x3|media\/services\/events|media\/hero\/touch\//.test(url))).toBe(false);
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });
@@ -117,24 +139,74 @@ test("keyboard arrival focuses a physical control, press returns and Escape rest
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("missing final artwork retains a matching hero-stage view and usable physical controls", async ({ page }) => {
-  await page.route("**/media/hero/touch/image.webp", (route) => route.abort());
+test("four live story chapters animate distinct pictures, preserve interrupted frames and replay with the keyboard", async ({ page }, testInfo) => {
+  test.setTimeout(180_000);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.route("**/media/hero/touch/*.webp", (route) => route.abort());
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
   const director = await waitForStation(page, "touch");
+  await page.locator("[data-experience-root]").evaluate((root, progress) => {
+    root.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { progress, sync: true } }));
+  }, narrativeScore.find((phase) => phase.id === "engagement")!.start + 0.02);
   const canvas = page.locator("[data-composer-canvas]");
-  await activateWithKeyboard(page, "[data-installation-button='image']");
-  await expect(canvas).toHaveAttribute("data-artwork-status", "missing");
-  await expect(canvas).toHaveAttribute("data-installation-view", "image");
-  await expect(canvas).toHaveAttribute("data-view-transition-progress", "1.000");
-  const colors = await canvas.evaluate((element: HTMLCanvasElement) => {
-    const pixels = element.getContext("2d")!.getImageData(0, 0, element.width, element.height).data;
-    const distinct = new Set<number>();
-    for (let index = 0; index < pixels.length; index += 64) distinct.add(pixels[index] * 65536 + pixels[index + 1] * 256 + pixels[index + 2]);
-    return distinct.size;
-  });
-  expect(colors).toBeGreaterThan(100);
+  await expect(canvas).toHaveAttribute("data-transition-progress", "1.000", { timeout: 20_000 });
+  const pictures: number[] = [];
+  const chapters = ["assembled", "parts", "details", "image"] as const;
+  for (const [index, view] of chapters.entries()) {
+    await expect(page.locator(`[data-installation-button='${view}']`)).toHaveAccessibleName(installationCopy.en.views[view]);
+    await activateWithKeyboard(page, `[data-installation-button='${view}']`);
+    await expect(canvas).toHaveAttribute("data-installation-view", view);
+    await expect(canvas).toHaveAttribute("data-story-chapter", String(index + 1));
+    await expect(canvas).toHaveAttribute("data-artwork-status", "generated");
+    await expect(canvas).toHaveAttribute("data-view-transition-progress", "1.000", { timeout: 15_000 });
+    const first = await storyFrame(canvas);
+    expect(first.colors).toBeGreaterThan(30);
+    pictures.push(first.signature);
+    await expect.poll(async () => (await storyFrame(canvas)).signature, { timeout: 10_000 }).not.toBe(first.signature);
+    const picture = await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL("image/png"));
+    await writeFile(testInfo.outputPath(`touch-story-chapter-${index + 1}.png`), Buffer.from(picture.split(",")[1], "base64"));
+  }
+  expect(new Set(pictures).size).toBe(4);
+  await page.screenshot({ path: testInfo.outputPath("touch-motion-story-in-scene.png") });
+
+  // Use real time for startup and ordinary playback. Install virtual time only
+  // for exact interrupted-frame checks so slow WebGL frames do not stall entry.
+  const nativeTime = await page.evaluate(() => performance.now());
+  await page.clock.install();
+  await page.clock.fastForward(Math.ceil(nativeTime));
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.clock.runFor(32);
+  const beforeExit = await storyFrame(canvas);
   await activateWithKeyboard(page, "[data-installation-button='details']");
-  await expect(canvas).toHaveAttribute("data-artwork-status", "ready");
+  await page.clock.runFor(160);
+  const blend = Number(await canvas.getAttribute("data-view-transition-progress"));
+  expect(blend).toBeGreaterThan(0);
+  expect(blend).toBeLessThan(1);
+  expect(Number(await canvas.getAttribute("data-element-exit-progress"))).toBeGreaterThan(0);
+  const morph = Number(await canvas.getAttribute("data-signal-morph-progress"));
+  expect(morph).toBeGreaterThan(0);
+  expect(morph).toBeLessThan(1);
+  const interrupted = await storyFrame(canvas);
+  expect(interrupted.signature).not.toBe(beforeExit.signature);
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
+  await page.clock.runFor(16);
+  await expect(canvas).toHaveAttribute("data-installation-view", "parts");
+  expect((await storyFrame(canvas)).signature).toBe(interrupted.signature);
+  await page.clock.fastForward(2_000);
+  await expect(canvas).toHaveAttribute("data-view-transition-progress", "1.000");
+  const replayRevision = Number(await canvas.getAttribute("data-story-revision"));
+  const beforeReplay = await storyFrame(canvas);
+  await activateWithKeyboard(page, "[data-installation-button='parts']");
+  await page.clock.runFor(16);
+  await expect(canvas).toHaveAttribute("data-story-revision", String(replayRevision + 1));
+  expect(Number(await canvas.getAttribute("data-story-time"))).toBeLessThan(0.1);
+  await page.clock.fastForward(400);
+  expect((await storyFrame(canvas)).signature).not.toBe(beforeReplay.signature);
+  expect(requests.filter((url) => /media\/hero\/touch\/|connected-experience/.test(url))).toEqual([]);
+  await page.clock.resume();
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });
@@ -148,6 +220,10 @@ for (const locale of ["fa", "ar"] as const) {
       await waitForStation(page, "touch");
       await expect(page.locator("[data-installation-button='parts']")).toBeEnabled();
       await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      for (const view of ["assembled", "parts", "details", "image"] as const) {
+        await expect(page.locator(`[data-installation-button='${view}']`)).toHaveAccessibleName(installationCopy[locale].views[view]);
+      }
       const bounds = await page.locator("[data-installation-button]").evaluateAll((elements) => elements.map((element) => {
         const rect = element.getBoundingClientRect();
         return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom,
@@ -164,6 +240,9 @@ for (const locale of ["fa", "ar"] as const) {
       for (let i = 1; i < bounds.length; i += 1) expect(bounds[i].x).toBeGreaterThan(bounds[i - 1].right);
       await page.locator("[data-installation-button='parts']").tap();
       await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "parts");
+      await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-story-chapter", "2");
+      await expect(page.locator("[data-installation-button='parts']")).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-artwork-status", "generated");
       await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-view-transition-progress", "1.000");
       await page.screenshot({ path: testInfo.outputPath(`touch-${locale}-mobile.png`) });
       await expect(page.locator("[data-journey-control], [data-interaction-escape]")).toHaveCount(0);
