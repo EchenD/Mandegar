@@ -14,8 +14,15 @@ export const sanityClient = projectId
     })
   : null;
 
-export async function sanityFetch<T>(query: string, params: Record<string, unknown> = {}) {
+export type SanityFetchOptions = { publishedOnly?: boolean };
+
+export async function sanityFetch<T>(query: string, params: Record<string, unknown> = {}, options: SanityFetchOptions = {}) {
   if (!sanityClient) return null;
+  // Build-time URL enumeration runs without a request or draft mode.
+  // Refresh slugs from the source on every build, bypassing persistent and CDN caches.
+  if (options.publishedOnly) {
+    return sanityClient.withConfig({ useCdn: false }).fetch<T>(query, params, { cache: "no-store" });
+  }
   if (process.env.MANDEGAR_STATIC_EXPORT === "1") {
     return sanityClient.fetch<T>(query, params, { cache: "force-cache" });
   }

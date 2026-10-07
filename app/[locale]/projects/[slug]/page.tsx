@@ -3,13 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MediaPlaceholder } from "@/components/media/MediaPlaceholder";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { getText, projects } from "@/lib/content";
-import { getProject } from "@/lib/content-source";
-import { getUi, localizedPath, type Locale } from "@/lib/i18n";
+import { getText } from "@/lib/content";
+import { getProject, getProjects } from "@/lib/content-source";
+import { getUi, locales, localizedPath, type Locale } from "@/lib/i18n";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
-export function generateStaticParams() {
-  return projects.flatMap((project) => ["fa", "en", "ar"].map((locale) => ({ locale, slug: project.slug })));
+export async function generateStaticParams() {
+  const params = await Promise.all(locales.map(async (locale) => {
+    const projects = await getProjects(locale, { publishedOnly: true });
+    return projects.map((project) => ({ locale, slug: project.slug }));
+  }));
+  return params.flat();
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: Locale; slug: string }> }): Promise<Metadata> {

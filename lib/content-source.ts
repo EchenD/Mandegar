@@ -2,7 +2,7 @@ import imageUrlBuilder from "@sanity/image-url";
 import { getProject as getFallbackProject, getService as getFallbackService, homeCopy, media as fallbackMedia, projects as fallbackProjects, services as fallbackServices, type Localized, type MediaAsset, type Project, type Service } from "@/lib/content";
 import { getText } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
-import { sanityFetch } from "@/lib/sanity/client";
+import { sanityFetch, type SanityFetchOptions } from "@/lib/sanity/client";
 import { contactChannelsQuery, editorialPageQuery, homepageQuery, legalPageQuery, projectQuery, projectsQuery, servicesQuery, siteSettingsQuery, teamPartnersQuery, trustContentQuery } from "@/lib/sanity/queries";
 
 type LocalizedInput = string | Partial<Localized> | null | undefined;
@@ -89,8 +89,8 @@ function mapService(source: any, fallback: Service): Service {
   };
 }
 
-export async function getProjects(locale: Locale): Promise<Project[]> {
-  const result = await sanityFetch<any[]>(projectsQuery, { locale });
+export async function getProjects(locale: Locale, options?: SanityFetchOptions): Promise<Project[]> {
+  const result = await sanityFetch<any[]>(projectsQuery, { locale }, options);
   if (!result?.length) return fallbackProjects;
   return result.map((item, index) => mapProject(item, getFallbackProject(item.slug) || fallbackProjects[index % fallbackProjects.length]));
 }
@@ -102,8 +102,8 @@ export async function getProject(locale: Locale, slug: string): Promise<Project 
   return fallback;
 }
 
-export async function getServices(locale: Locale): Promise<Service[]> {
-  const result = await sanityFetch<any[]>(servicesQuery, { locale });
+export async function getServices(locale: Locale, options?: SanityFetchOptions): Promise<Service[]> {
+  const result = await sanityFetch<any[]>(servicesQuery, { locale }, options);
   if (!result?.length) return fallbackServices;
   const services = result.map((item, index) => mapService(item, getFallbackService(item.slug) || fallbackServices[index % fallbackServices.length]));
   return [...services, ...fallbackServices.filter((fallback) => !services.some((service) => service.slug === fallback.slug))];

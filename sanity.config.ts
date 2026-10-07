@@ -10,7 +10,11 @@ export default defineConfig({
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   plugins: [
     structureTool(),
-    documentInternationalization({ supportedLanguages: [{ id: "fa", title: "Persian" }, { id: "en", title: "English" }, { id: "ar", title: "Arabic" }], schemaTypes: ["homepage", "editorialPage", "project", "projectCategory", "service", "testimonial", "client", "metric", "contactChannel", "teamPartner", "legalPage"] }),
+    documentInternationalization({
+      supportedLanguages: [{ id: "fa", title: "Persian" }, { id: "en", title: "English" }, { id: "ar", title: "Arabic" }],
+      languageField: "locale",
+      schemaTypes: ["homepage", "editorialPage", "project", "projectCategory", "service", "testimonial", "legalPage"],
+    }),
   ],
   schema: { types: schemaTypes },
 });
