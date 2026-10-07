@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { AnalyticsBridge } from "@/components/analytics/AnalyticsBridge";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { getSiteSettings } from "@/lib/content-source";
+import { getPageCopy, getSiteSettings } from "@/lib/content-source";
 import { ensureLocale, localeConfig, locales, type Locale } from "@/lib/i18n";
 import { absoluteUrl, buildMetadata, pageSeo } from "@/lib/seo";
 
@@ -51,11 +51,11 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
       <body>
         <div className="siteShell" lang={locale} dir={config.dir} data-locale={locale}>
           <JsonLd data={[
-            { "@context": "https://schema.org", "@type": "Organization", name: "Mandegar", url: absoluteUrl(`/${locale}`), areaServed: "Iran" },
-            { "@context": "https://schema.org", "@type": "WebSite", name: "Mandegar", url: absoluteUrl(`/${locale}`), inLanguage: locale },
+            { "@context": "https://schema.org", "@type": "Organization", name: settings.title, url: absoluteUrl(`/${locale}`), ...(settings.brandMark ? { logo: absoluteUrl(settings.brandMark) } : {}) },
+            { "@context": "https://schema.org", "@type": "WebSite", name: settings.title, url: absoluteUrl(`/${locale}`), inLanguage: locale },
           ]} />
           <AnalyticsBridge locale={locale} />
-          <a className="skipLink" href="#main-content">{locale === "fa" ? "رفتن به محتوای اصلی" : locale === "ar" ? "انتقل إلى المحتوى الرئيسي" : "Skip to main content"}</a>
+          <a className="skipLink" href="#main-content">{getPageCopy(locale).skipToContent}</a>
           <Header locale={locale} settings={settings} />
           <main id="main-content">{children}</main>
           <Footer locale={locale} settings={settings} />

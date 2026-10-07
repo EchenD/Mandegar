@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { PageCta } from "@/components/editorial/PageCta";
+import { PageIntro } from "@/components/editorial/PageIntro";
 import { ProjectFilters } from "@/components/projects/ProjectFilters";
+import styles from "@/components/projects/Portfolio.module.css";
 import { getText } from "@/lib/content";
-import { getEditorialPage, getProjects } from "@/lib/content-source";
+import { getEditorialPage, getPageCopy, getProjects } from "@/lib/content-source";
 import type { Locale } from "@/lib/i18n";
 import { buildMetadata, pageSeo } from "@/lib/seo";
 
@@ -28,5 +31,15 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
     text.body = getText(editorial.intro, locale) || text.body;
   }
 
-  return <div className="projectsPage"><section className="pageHero"><div className="pageWidth" data-reveal><div className="sectionKicker">01 / {text.kicker}</div><h1>{text.title}</h1><p>{text.body}</p></div></section><section className="sectionPad"><div className="pageWidth"><ProjectFilters projects={projects} locale={locale} /></div></section></div>;
+  const copy = getPageCopy(locale);
+
+  return (
+    <div className={`projectsPage ${styles.portfolioPage}`}>
+      <PageIntro locale={locale} number="01" eyebrow={text.kicker} title={text.title} intro={text.body} aside={<div className={styles.introAside}><span className={styles.asideMark} aria-hidden="true" /><h2>{copy.projectArchiveAsideTitle}</h2><p>{copy.projectArchiveAsideBody}</p></div>} />
+      <section className={styles.archiveSection} aria-label={text.kicker}>
+        <div className="pageWidth"><ProjectFilters projects={projects} locale={locale} copy={copy} /></div>
+      </section>
+      <PageCta locale={locale} title={copy.projectCtaTitle} body={copy.projectCtaBody} primaryLabel={copy.startProject} secondaryLabel={copy.exploreServices} secondaryHref={`/${locale}/services`} />
+    </div>
+  );
 }

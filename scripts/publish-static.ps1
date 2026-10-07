@@ -15,16 +15,12 @@ $temporaryClone = Join-Path ([System.IO.Path]::GetTempPath()) ("mandegar-pages-"
 $previousStaticExport = $env:MANDEGAR_STATIC_EXPORT
 $previousBasePath = $env:NEXT_PUBLIC_BASE_PATH
 $previousSiteUrl = $env:NEXT_PUBLIC_SITE_URL
-$routeHoldingDirectory = Join-Path $projectRoot ".static-export-routes"
 
 try {
   if (-not $SkipBuild) {
     $env:MANDEGAR_STATIC_EXPORT = "1"
     $env:NEXT_PUBLIC_BASE_PATH = $BasePath
     $env:NEXT_PUBLIC_SITE_URL = $SiteUrl.TrimEnd("/")
-    if (Test-Path -LiteralPath $routeHoldingDirectory) {
-      throw "Temporary route folder already exists: $routeHoldingDirectory"
-    }
     if (Test-Path -LiteralPath $generatedExportDirectory) {
       $resolvedGeneratedExport = (Resolve-Path $generatedExportDirectory).Path
       $expectedGeneratedExport = Join-Path $projectRoot ".next-static"
@@ -33,41 +29,12 @@ try {
       }
       Remove-Item -LiteralPath $resolvedGeneratedExport -Recurse -Force
     }
-    New-Item -ItemType Directory -Path $routeHoldingDirectory | Out-Null
+    Push-Location $projectRoot
     try {
-      foreach ($routeName in @("api", "studio")) {
-        $routePath = Join-Path (Join-Path $projectRoot "app") $routeName
-        if (Test-Path -LiteralPath $routePath) {
-          Move-Item -LiteralPath $routePath -Destination (Join-Path $routeHoldingDirectory $routeName)
-        }
-      }
-      Push-Location $projectRoot
-      try {
-        & npm.cmd run build
-        if ($LASTEXITCODE -ne 0) { throw "Static export failed." }
-      } finally {
-        Pop-Location
-      }
+      & npm.cmd run build
+      if ($LASTEXITCODE -ne 0) { throw "Static export failed." }
     } finally {
-      foreach ($routeName in @("api", "studio")) {
-        $heldRoute = Join-Path $routeHoldingDirectory $routeName
-        $routePath = Join-Path (Join-Path $projectRoot "app") $routeName
-        if (Test-Path -LiteralPath $heldRoute) {
-          Move-Item -LiteralPath $heldRoute -Destination $routePath
-        }
-      }
-      if (Test-Path -LiteralPath $routeHoldingDirectory) {
-        Remove-Item -LiteralPath $routeHoldingDirectory -Force
-      }
-      Push-Location $projectRoot
-      try {
-        & npx.cmd next typegen
-        if ($LASTEXITCODE -ne 0) {
-          Write-Warning "The application routes were restored, but Next.js route type regeneration failed."
-        }
-      } finally {
-        Pop-Location
-      }
+      Pop-Location
     }
 
     if (-not (Test-Path -LiteralPath (Join-Path $generatedExportDirectory "fa\index.html") -PathType Leaf)) {
@@ -97,7 +64,7 @@ try {
   }
 
   if ($BuildOnly) {
-    Write-Host "Static GitHub Pages export is ready at $exportDirectory."
+    Write-Host "Static website export is ready at $exportDirectory."
     return
   }
 

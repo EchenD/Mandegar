@@ -1,0 +1,182 @@
+{
+  "projects": {
+    "heroKicker": {
+      "fa": "پروژه‌ها و ایده‌ها",
+      "en": "Projects & concepts",
+      "ar": "مشاريع وأفكار"
+    },
+    "title": {
+      "fa": "ایده‌ها در قاب.",
+      "en": "Ideas made visible.",
+      "ar": "أفكار ترى النور."
+    },
+    "intro": {
+      "fa": "مطالعه‌هایی از فضا، لحظه‌های زنده و مشارکت مخاطب را ببینید. تا آماده‌شدن مطالعات موردی تأییدشده، نمونه‌های مفهومی با برچسب روشن نمایش داده می‌شوند.",
+      "en": "Explore studies of spaces, live moments and audience participation. Concept examples are clearly labelled while approved case studies are prepared.",
+      "ar": "استكشف دراسات للمساحات واللحظات الحية ومشاركة الجمهور. النماذج المفاهيمية واضحة الوسم إلى حين إعداد دراسات معتمدة."
+    },
+    "sections": [],
+    "seo": {
+      "title": {
+        "fa": "پروژه‌ها",
+        "en": "Projects",
+        "ar": "المشاريع"
+      },
+      "description": {
+        "fa": "مطالعه‌هایی از فضا، لحظه‌های زنده و مشارکت مخاطب را ببینید. تا آماده‌شدن مطالعات موردی تأییدشده، نمونه‌های مفهومی با برچسب روشن نمایش داده می‌شوند.",
+        "en": "Explore studies of spaces, live moments and audience participation. Concept examples are clearly labelled while approved case studies are prepared.",
+        "ar": "استكشف دراسات للمساحات واللحظات الحية ومشاركة الجمهور. النماذج المفاهيمية واضحة الوسم إلى حين إعداد دراسات معتمدة."
+      }
+    }
+  },
+  "services": {
+    "heroKicker": {
+      "fa": "خدمات ما",
+      "en": "Our services",
+      "ar": "خدماتنا"
+    },
+    "title": {
+      "fa": "یک مسیر پیوسته برای ساخت تجربه.",
+      "en": "A connected approach to experience.",
+      "ar": "نهج مترابط لصناعة التجربة."
+    },
+    "intro": {
+      "fa": "با بخش‌هایی آشنا شوید که یک ایده را از جهت‌گیری اولیه تا جزئیات اجرا به واقعیت می‌رسانند. دامنه هر همکاری بر اساس نیاز پروژه شکل می‌گیرد.",
+      "en": "Discover the disciplines that can bring an idea into the world, from its first direction to the details of delivery. Each scope is shaped around the brief.",
+      "ar": "اكتشف التخصصات التي تنقل الفكرة إلى الواقع، من التوجه الأول إلى تفاصيل التنفيذ. يتحدد نطاق كل تعاون وفقاً للمشروع."
+    },
+    "sections": [],
+    "seo": {
+      "title": {
+        "fa": "خدمات",
+        "en": "Services",
+        "ar": "الخدمات"
+      },
+      "description": {
+        "fa": "با بخش‌هایی آشنا شوید که یک ایده را از جهت‌گیری اولیه تا جزئیات اجرا به واقعیت می‌رسانند. دامنه هر همکاری بر اساس نیاز پروژه شکل می‌گیرد.",
+        "en": "Discover the disciplines that can bring an idea into the world, from its first direction to the details of delivery. Each scope is shaped around the brief.",
+        "ar": "اكتشف التخصصات التي تنقل الفكرة إلى الواقع، من التوجه الأول إلى تفاصيل التنفيذ. يتحدد نطاق كل تعاون وفقاً للمشروع."
+      }
+    }
+  },
+  "about": {
+    "heroKicker": {
+      "fa": "درباره مندگار",
+      "en": "About Mandegar",
+      "ar": "عن مندگار"
+    },
+    "title": {
+      "fa": "تجربه خوب از یک ایده روشن شروع می‌شود.",
+      "en": "Good experiences start with a clear idea.",
+      "ar": "التجارب الجيدة تبدأ بفكرة واضحة."
+    },
+    "intro": {
+      "fa": "مندگار ایده، فضا، محتوا و فناوری را در یک گفتگوی مشترک قرار می‌دهد. از آنچه مخاطب باید بفهمد، احساس کند و به خاطر بسپارد شروع می‌کنیم و مسیر ساخت آن را بررسی می‌کنیم.",
+      "en": "Mandegar brings ideas, spaces, content and technology into one conversation. We look at what an audience should understand, feel and remember, then explore how to make it happen.",
+      "ar": "تجمع مندگار الفكرة والمساحة والمحتوى والتقنية في حوار واحد. نبدأ بما ينبغي للجمهور فهمه والشعور به وتذكره، ثم نستكشف طريقة تحقيقه."
+    },
+    "sections": [
+      {
+        "key": "approach",
+        "kicker": {
+          "fa": "چطور فکر می‌کنیم",
+          "en": "How we think",
+          "ar": "كيف نفكر"
+        },
+        "title": {
+          "fa": "هر جزئیات، دلیلی دارد.",
+          "en": "Every detail needs a reason.",
+          "ar": "لكل تفصيل سبب."
+        },
+        "body": {
+          "fa": "یک داستان روشن، مسیر طراحی را مشخص می‌کند. سفر مخاطب، شرایط واقعی فضا و نقش هر عنصر را بررسی می‌کنیم تا تصمیم‌های خلاقانه کنار هم عمل کنند.",
+          "en": "A clear story guides the design. We consider the audience journey, the practical setting and the role of each element, so creative decisions work together.",
+          "ar": "تقود قصة واضحة التصميم. ننظر إلى رحلة الجمهور وظروف المكان ودور كل عنصر لتعمل القرارات الإبداعية معاً."
+        },
+        "items": [
+          {
+            "fa": "شروع از مخاطب",
+            "en": "Start with the audience",
+            "ar": "البداية من الجمهور"
+          },
+          {
+            "fa": "طراحی با هدف",
+            "en": "Design with intention",
+            "ar": "تصميم مقصود"
+          },
+          {
+            "fa": "فضا برای مشارکت",
+            "en": "Make room for participation",
+            "ar": "مساحة للمشاركة"
+          },
+          {
+            "fa": "برنامه‌ریزی برای شرایط واقعی",
+            "en": "Plan for the real setting",
+            "ar": "تخطيط للظروف الواقعية"
+          }
+        ]
+      },
+      {
+        "key": "geography",
+        "kicker": {
+          "fa": "مدل همکاری",
+          "en": "Working together",
+          "ar": "العمل معاً"
+        },
+        "title": {
+          "fa": "همکاری متناسب با نیاز پروژه.",
+          "en": "A collaboration shaped around the brief.",
+          "ar": "تعاون يتشكل وفقاً للمشروع."
+        },
+        "body": {
+          "fa": "موقعیت، زبان، شرایط محل و الزامات محلی بر اجرا تأثیر می‌گذارند. مدل همکاری و حضور همکاران برای هر پروژه، پیش از توافق بر مسئولیت‌ها بررسی می‌شود.",
+          "en": "Location, language, venue conditions and local requirements all influence delivery. The working model and any partner involvement are discussed for each project before responsibilities are agreed.",
+          "ar": "يؤثر الموقع واللغة وظروف المكان والمتطلبات المحلية في التنفيذ. يُناقش نموذج العمل ومشاركة الشركاء لكل مشروع قبل الاتفاق على المسؤوليات."
+        },
+        "items": []
+      }
+    ],
+    "seo": {
+      "title": {
+        "fa": "درباره مندگار",
+        "en": "About Mandegar",
+        "ar": "عن مندگار"
+      },
+      "description": {
+        "fa": "مندگار ایده، فضا، محتوا و فناوری را در یک گفتگوی مشترک قرار می‌دهد. از آنچه مخاطب باید بفهمد، احساس کند و به خاطر بسپارد شروع می‌کنیم و مسیر ساخت آن را بررسی می‌کنیم.",
+        "en": "Mandegar brings ideas, spaces, content and technology into one conversation. We look at what an audience should understand, feel and remember, then explore how to make it happen.",
+        "ar": "تجمع مندگار الفكرة والمساحة والمحتوى والتقنية في حوار واحد. نبدأ بما ينبغي للجمهور فهمه والشعور به وتذكره، ثم نستكشف طريقة تحقيقه."
+      }
+    }
+  },
+  "contact": {
+    "heroKicker": {
+      "fa": "شروع گفتگو",
+      "en": "Start a conversation",
+      "ar": "ابدأ الحوار"
+    },
+    "title": {
+      "fa": "ایده بعدی شما از گفتگو شروع می‌شود.",
+      "en": "Your next idea starts with a conversation.",
+      "ar": "فكرتك القادمة تبدأ بحوار."
+    },
+    "intro": {
+      "fa": "یک فکر اولیه یا شرح کامل پروژه را با ما در میان بگذارید. شناخت مخاطب، فضا و زمان کمک می‌کند گفتگوی اول روشن‌تر باشد.",
+      "en": "Bring an early thought or a detailed brief. Your audience, setting and timing help shape a useful first conversation.",
+      "ar": "شارك فكرة أولية أو وصفاً مفصلاً للمشروع. يساعد تحديد الجمهور والمكان والموعد على حوار أول واضح."
+    },
+    "sections": [],
+    "seo": {
+      "title": {
+        "fa": "تماس",
+        "en": "Contact",
+        "ar": "تواصل"
+      },
+      "description": {
+        "fa": "یک فکر اولیه یا شرح کامل پروژه را با ما در میان بگذارید. شناخت مخاطب، فضا و زمان کمک می‌کند گفتگوی اول روشن‌تر باشد.",
+        "en": "Bring an early thought or a detailed brief. Your audience, setting and timing help shape a useful first conversation.",
+        "ar": "شارك فكرة أولية أو وصفاً مفصلاً للمشروع. يساعد تحديد الجمهور والمكان والموعد على حوار أول واضح."
+      }
+    }
+  }
+}

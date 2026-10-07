@@ -1,0 +1,64 @@
+{
+  "title": "MANDEGAR",
+  "copyrightHolder": "Mandegar",
+  "navigation": [
+    {
+      "label": {
+        "fa": "پروژه‌ها",
+        "en": "Projects",
+        "ar": "المشاريع"
+      },
+      "path": "projects",
+      "order": 0
+    },
+    {
+      "label": {
+        "fa": "خدمات",
+        "en": "Services",
+        "ar": "الخدمات"
+      },
+      "path": "services",
+      "order": 1
+    },
+    {
+      "label": {
+        "fa": "درباره ما",
+        "en": "About",
+        "ar": "من نحن"
+      },
+      "path": "about",
+      "order": 2
+    },
+    {
+      "label": {
+        "fa": "تماس",
+        "en": "Contact",
+        "ar": "تواصل"
+      },
+      "path": "contact",
+      "order": 3
+    }
+  ],
+  "socialLinks": [],
+  "address": {
+    "fa": "",
+    "en": "",
+    "ar": ""
+  },
+  "footerLine": {
+    "fa": "از اولین ایده تا آخرین اثر.",
+    "en": "From the first idea to the lasting impact.",
+    "ar": "من الفكرة الأولى إلى الأثر الباقي."
+  },
+  "globalLine": {
+    "fa": "پیوند ایده، فضا و تجربه.",
+    "en": "Ideas, spaces and experiences, connected.",
+    "ar": "أفكار ومساحات وتجارب مترابطة."
+  },
+  "featureFlags": {
+    "callbackForm": false,
+    "immersiveCanvas": true,
+    "lenis": true
+  },
+  "socialImage": "/images/mandegar-social.png"
+}

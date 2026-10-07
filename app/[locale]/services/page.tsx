@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { PageCta } from "@/components/editorial/PageCta";
+import { PageIntro } from "@/components/editorial/PageIntro";
 import { ServiceCard } from "@/components/projects/ServiceCard";
+import styles from "@/components/projects/Portfolio.module.css";
 import { getText } from "@/lib/content";
-import { getEditorialPage, getServices } from "@/lib/content-source";
+import { getEditorialPage, getPageCopy, getServices } from "@/lib/content-source";
 import type { Locale } from "@/lib/i18n";
 import { buildMetadata, pageSeo } from "@/lib/seo";
 
@@ -27,5 +30,15 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
     text.title = getText(editorial.title, locale) || text.title;
     text.body = getText(editorial.intro, locale) || text.body;
   }
-  return <div className="servicesPage"><section className="pageHero"><div className="pageWidth"><div className="sectionKicker">01 / {text.kicker}</div><h1>{text.title}</h1><p>{text.body}</p></div></section><section className="sectionPad"><div className="pageWidth serviceList">{services.map((service) => <ServiceCard key={service.slug} service={service} locale={locale} />)}</div></section></div>;
+  const copy = getPageCopy(locale);
+
+  return (
+    <div className={`servicesPage ${styles.portfolioPage}`}>
+      <PageIntro locale={locale} number="02" eyebrow={text.kicker} title={text.title} intro={text.body} aside={<div className={styles.introAside}><span className={styles.asideMark} aria-hidden="true" /><h2>{copy.serviceArchiveAsideTitle}</h2><p>{copy.serviceArchiveAsideBody}</p></div>} />
+      <section className={styles.archiveSection} aria-label={text.kicker}>
+        <div className={`pageWidth serviceList ${styles.serviceGrid}`}>{services.map((service, index) => <ServiceCard key={service.slug} service={service} locale={locale} variant="archive" priority={index === 0} viewLabel={copy.viewService} emergingLabel={copy.emergingLabel} />)}</div>
+      </section>
+      <PageCta locale={locale} title={copy.serviceCtaTitle} body={copy.serviceCtaBody} primaryLabel={copy.startProject} secondaryLabel={copy.viewProjects} secondaryHref={`/${locale}/projects`} />
+    </div>
+  );
 }

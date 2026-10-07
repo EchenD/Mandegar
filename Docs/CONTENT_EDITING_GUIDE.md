@@ -1,188 +1,151 @@
-# Mandegar page review and content editing guide
+# Updating Mandegar website content
 
-Reviewed on 7 October 2026. This describes the current implementation, including the CMS detail-route and Studio locale fixes made during this review. It does not certify content approval or change the deployed website.
+The website now reads local JSON files from `content/`. Sanity, Studio, tokens, webhooks and runtime content requests have been removed. Text is included in the built website, so visitors only need access to your hosting and any media CDN you choose.
 
-## Are the other pages finalized?
+## Page completion
 
-The page templates exist in Persian, English and Arabic. The fallback site has six concept projects, seven services, and five other pages per language: 54 non-home URLs altogether. Content approval and some CMS connections remain unfinished.
+The non-home templates are complete in Persian, English and Arabic: project and service archives, dedicated detail pages, About, Contact, legal, and shared navigation/footer. They include responsive typography, breadcrumbs and relevant next steps. Projects include case-study navigation, galleries, related work and previous/next links. Services include deliverables, process, FAQs and related work. Contact includes a copyable project brief rather than a form without a receiving backend.
 
-| Page | What already works | What is needed before calling it final |
-| --- | --- | --- |
-| `/fa/projects` | Project archive, category filters, links to individual projects | Approved projects, categories and archive introduction |
-| `/fa/projects/{slug}` | Hero media, challenge, approach, scope, services, outcome, credits, gallery and optional related work | Real project facts, approved photography/video, final case-study copy and translations; all six fallback projects are concept examples |
-| `/fa/services` | Seven service cards link to their own pages | Confirm the service catalog and final descriptions |
-| `/fa/services/{slug}` | Hero, summary, detail and capabilities | Approved scope, deliverables and media; useful next additions are related projects and a contact CTA |
-| `/fa/about` | Company introduction, approach, principles, geographic statement and optional team/partners | Approved company story, positioning, geographic claims and any people/partner information |
-| `/fa/contact` | Telephone, email and WhatsApp links when supplied | Verified destinations; currently the fallback displays unavailable contact information. There is no enquiry form or form backend |
-| `/fa/legal` | Editable legal sections and an explicit draft notice | Approved text reflecting actual company details, hosting and tracking setup |
-| Shared footer | Main navigation, social links, tagline, geographic statement, copyright and legal link | Final brand treatment, verified contact/social destinations and approved legal content |
+Content approval is separate. The six sample projects remain labelled concept examples. Generated media remains labelled. Contact destinations and social accounts are intentionally empty until verified. Legal is an explicit draft and is excluded from indexing until approved. No clients, performance figures, awards, addresses or team members have been invented.
 
-Replace `/fa` with `/en` or `/ar` for the other languages. New projects and services use the existing detail templates; creating an entirely new informational page also needs a route and template in code.
+## Where to edit
 
-The homepage's five service links already go to dedicated pages in the current language:
+Open these files in a text editor or through your repository's browser interface. Routine changes only need the relevant JSON file and, for local media, an asset in `public/`.
 
-| Homepage service | Detail URL suffix |
+| Content | File |
 | --- | --- |
-| Events | `services/event-production` |
-| Exhibitions | `services/exhibitions-and-space` |
-| Websites & applications | `services/websites-and-applications` |
-| Content creation | `services/content-and-media` |
-| Advertising structures | `services/advertising-structures` |
+| Projects, case-study text, categories and relationships | `content/projects.json` |
+| Services, capabilities, deliverables, process and FAQs | `content/services.json` |
+| Media paths, alt text, captions, placeholders and rights | `content/media.json` |
+| Archive introductions and About/Contact copy | `content/pages.json` |
+| Shared labels, CTAs, notices, About workflow and brief fields | `content/page-copy.json` |
+| Navigation, brand, footer, social links, address and social image | `content/site.json` |
+| Email, phone and WhatsApp channels | `content/contacts.json` |
+| Legal text, approval status and review date | `content/legal.json` |
+| Approved people and partners | `content/people.json` |
+| Approved clients/testimonials; reserved metric records | `content/trust.json` |
+| Homepage project/About/collaboration/finale labels and sample disciplines | `content/journey.json` |
+| Default page titles and search descriptions | `content/seo.json` |
+| Shared interface labels | `content/ui.json` |
+| Legacy homepage narrative and optional overrides | `content/homepage.json` |
 
-The full service catalog also has `interactive-experiences` and `event-intelligence`. Event intelligence is marked as emerging. The five homepage chapters and seven catalog entries are currently separate content sources.
+Localized fields share this structure:
 
-## Where to update content
+```json
+{
+  "fa": "متن فارسی",
+  "en": "English text",
+  "ar": "النص العربي"
+}
+```
 
-Sanity Studio is the intended editing interface. Once it is configured, use these document types rather than changing page components for routine content edits.
+Fill all three languages. JSON requires double quotes, no comments and no trailing comma after the last item. `npm run content:check` reports the file and field to correct.
 
-| Content | Studio document | Fields currently used by the website |
-| --- | --- | --- |
-| Project cards and case studies | **Project** | Title, slug, summary, year, sector/location, category/service references, challenge, concept, scope, outcomes, hero media, media gallery, credits, related projects |
-| Categories | **Project category** | Label referenced by projects; filters derive from the projects being displayed |
-| Service list/detail pages | **Service** | Title, slug, summary, detail, capabilities, media, order and status |
-| Projects/services page introductions | **Editorial page** | `pageKey=projects` or `services`, hero kicker, title, introduction, SEO title/description |
-| About introduction/body | **Editorial page** | `pageKey=about`, hero fields, sections with exact keys `approach` and `geography`; `approach.items` supplies the principles |
-| People and partners | **Team / partner** | Name, localized role/biography, location, partner type, order, visibility |
-| Contact introduction | **Editorial page** | `pageKey=contact`, hero fields and SEO title/description |
-| Contact destinations | **Contact channel** | Purpose, localized label, phone, WhatsApp, email and availability |
-| Privacy and terms | **Legal page** | Title, introduction, sections and approval status |
-| Header/footer page links | **Site settings** | Navigation labels, internal paths and order; this is one shared navigation list |
-| Footer tagline/geographic line/social links | **Site settings** | Footer line, geographic statement, social label and URL |
-| Client logos | **Client** | Name/logo when visibility is `visible` |
-| Testimonials | **Testimonial** | Quote, person, role and organization for the selected locale when approved |
-| Some homepage narrative and selected projects | **Homepage** | Limited section title/body mappings, proof project references and conversion CTA URL, detailed below |
+## Update or add a project
 
-### First-time setup
+1. Edit a record in `projects.json`, or copy a complete record to add one.
+2. Give it a unique lowercase URL slug, such as `project-name`. The same record supplies all three language versions, so switching language preserves the URL.
+3. Replace title, summary, category, challenge, approach, scope and outcome. Use approved client, year, location and credit information. Leave optional client/credits absent until supplied.
+4. Set `media` and `gallery` to keys in `media.json`. Set `serviceSlugs` and `relatedProjectSlugs` to existing record slugs. The template can also suggest other published projects.
+5. Use `publicationState: "draft"` while preparing a record, `"published"` when it should appear, or `"archived"` to hide it. Drafts and archived records are excluded from lists, detail routes and generated public links.
+6. Keep `isPlaceholder: true` for concept examples. Change it only after real case-study content and media are approved.
+7. Validate, preview and rebuild. New published records automatically receive dedicated pages in all three languages.
 
-1. Create or select the actual Sanity project and dataset, and invite the people who will edit the site.
-2. Set `NEXT_PUBLIC_SANITY_PROJECT_ID` and `NEXT_PUBLIC_SANITY_DATASET` in `.env.local` for development and in the deployment's environment settings. Use `.env.example` as the reference; keep tokens out of version control.
-3. Run `npm run dev` and open `http://localhost:3300/studio`. A production Next.js server exposes this route only when `ENABLE_EMBEDDED_STUDIO=true` is set. A static GitHub Pages export does not include Studio; use local Studio or a separately hosted Studio.
-4. In the Sanity project's API settings, add the Studio origins (including `http://localhost:3300` and the production Studio origin) to CORS Origins with Allow credentials enabled for those Studio origins. See [Sanity's Studio setup instructions](https://www.sanity.io/docs/studio/installation).
-5. Configure the production site's actual URL with `NEXT_PUBLIC_SITE_URL` and publish the first approved documents.
-6. Verify a complete project, service, contact channel, legal page and translated editorial page on the actual deployment before handing editing over.
+Do not rename existing published slugs casually: saved links use them. The homepage's five service links also depend on stable service slugs.
 
-Studio's translation plugin now writes the `locale` field used by the website. It applies to document types with a locale field; Site settings, clients, metrics, contact channels and team/partner records are shared documents. Check that existing localized records have the correct locale; this configuration change does not migrate old records or create translations.
+## Update or add a service
 
-### Adding or updating a project
+Edit `services.json`. Records have a slug, localized title/summary/detail, capabilities, media key, deliverables, process steps and FAQs. `status: "emerging"` visibly marks an offering in development. `publicationState` controls public visibility. Service archive numbering follows published record order.
 
-1. Create a **Project** or open the existing record. Select its locale (`fa`, `en` or `ar`) and fill the relevant language fields.
-2. Supply a stable URL slug, title, summary, year, location and category/service references.
-3. Complete **Challenge**, **Concept** (displayed as Approach), **Scope** and **Outcomes**. Add credits and related projects where useful.
-4. Upload approved hero/gallery media, write descriptive alt text, and record usage rights. For video, explicitly set Kind to `video`, use the image field for its poster, and supply video/caption URLs; a video URL alone does not switch the media kind.
-5. Keep the project/media placeholder flags on while they describe concept examples. Turn them off only after the content and assets are approved.
-6. Set **publicationState** to `published`, then use Sanity's **Publish** action. These are separate steps: publishing a Sanity document alone does not put a project in the archive.
-7. Open `/{locale}/projects/{slug}` and the project archive. Select the project in the Homepage `proof` section's project references if you want it included in the selected homepage sequence.
-8. Create/publish the other-language counterparts using the same slug. Language switching currently replaces only the locale prefix; it does not resolve different translated slugs.
+The homepage links use `event-production`, `exhibitions-and-space`, `websites-and-applications`, `content-and-media` and `advertising-structures`. Preserve these slugs. The catalog also includes `interactive-experiences` and `event-intelligence`. Adding a service creates its catalog/detail entry; it does not add an animated homepage chapter.
 
-Do not publish partially filled project records expecting all empty values to disappear. The adapter can inherit concept example text/media for missing fields. The project client's field is stored but is not currently displayed as a dedicated detail-page field.
+## Replace media
 
-### Adding or updating a service
+Place approved files in `public/media/` and reference root-relative paths in `media.json`, for example `/media/projects/project-name/hero.webp`. Do not include `/public`, a locale or the hosting base path; the application adds that path automatically.
 
-Edit a **Service**, fill its locale, title, slug, summary, detail, capabilities and media, then set its status and order and Publish. Existing homepage service URLs depend on the slugs listed above; preserve them unless the homepage links are updated too.
+Media keys are shared references: changing one updates every record using it. Duplicate a media record with a new key when an asset belongs to only one project.
 
-The service detail and catalog will use the CMS content. The animated homepage service title, description and poster remain in `components/experience/services-copy.ts`; those still need a code update. Adding a CMS service creates its catalog/detail entry after the appropriate refresh or rebuild, but does not add another animated chapter.
+Media records include `src`, `kind`, localized `alt`, optional `caption`, `isPlaceholder`, `rightsStatus` and `sourceNote`. Keep descriptive alt text in each language, and record source/permissions. Approved media uses `isPlaceholder: false` and `rightsStatus: "approved"`.
 
-Service numbering still comes from fallback data, so new services can display repeated or unrelated numbers. Archiving a service with a known fallback slug can restore the local fallback entry rather than hide it. These are development finish items.
+For `kind: "video"`, provide a real video `src`, an image `poster`, and captions when speech needs them. `mobileSrc` can supply a smaller version. Cards display the poster; playback controls belong on detail pages. A `video-placeholder` uses an image until real footage is supplied.
 
-### Updating About, Contact and page introductions
+An HTTPS media CDN is optional. Set `MEDIA_CDN_ORIGIN=https://media.your-domain.com` in `.env.local` or the build environment and use full URLs from that origin. Text still comes from JSON. Changing a filename/URL requires a rebuild; replacing an existing CDN file also requires handling its cache.
 
-Create one **Editorial page** for each page key and locale, and fill hero kicker, title, introduction and SEO title/description. Keep only one active document per page key/locale; the query selects the first match.
+## About, Contact, legal and footer
 
-About accepts sections with the exact keys `approach` and `geography`. For `approach`, set kicker/title/body and the items array for the principles. For `geography`, set kicker/title/body. Other arbitrary section keys are not rendered by these templates.
+`pages.json` holds introductions and About sections. Keep About section keys `approach` and `geography`; they map to the template. Principles use `approach.items`, and workflow steps live in `page-copy.json`. `people.json` is empty until approved people/partners are available. Until then, About displays illustrated collaboration roles from `page-copy.json`: edit `aboutTeamRoles` (title, body and a media key), `aboutTeamBody` and `aboutTeamPlaceholderNote` in all three languages. These concept cards are automatically replaced when approved profiles are published.
 
-Add **Team / partner** records only for approved people or organizations. The current layout displays text; its image field is not yet connected.
+To add a person, insert a record like this into the `people.json` array. Replace every bracketed field with approved text in all languages. Keep the record as a draft while preparing it; only published records with `isPlaceholder: false` appear on the website.
 
-For contact details, create **Contact channel** records with purposes `sales`, `general` and/or `international`. Put the phone, email and WhatsApp number/link in those records. Only the first record per purpose is shown. A standalone `whatsapp` purpose currently does not render, and department/country fields are not displayed. Missing contact destinations remain visibly unavailable.
+```json
+{
+  "name": "[Approved name]",
+  "role": { "fa": "[نقش تأییدشده]", "en": "[Approved role]", "ar": "[الدور المعتمد]" },
+  "biography": { "fa": "[معرفی تأییدشده]", "en": "[Approved biography]", "ar": "[نبذة معتمدة]" },
+  "publicationState": "draft",
+  "isPlaceholder": true
+}
+```
 
-### Updating legal content and the footer
+`location` and `partnerType` are optional plain text fields. Add them only when confirmed; never invent names or a team history to fill the layout.
 
-Edit a **Legal page** for each locale. Fill title, introduction and sections, then set status to `approved` and Publish only when the wording is actually approved. This removes the draft notice. The updated-at field is not currently displayed.
+`trust.json` has `clients`, `metrics` and `testimonials` arrays, all initially empty. Every new record needs `publicationState`, `isPlaceholder` and a non-empty `approvalNote` recording who approved the claim or publication permission. Draft, archived and placeholder records stay hidden. The other fields are:
 
-Use one **Site settings** document for the shared navigation, footer line, geographic statement and social links. Navigation paths should be internal paths such as `projects`, `services`, `about` and `contact`; the renderer adds the current locale. Social links use full verified URLs. Social link labels are currently shared strings rather than localized fields.
+- Client: `name`, optional root-relative/CDN `logo`, verified HTTPS `url`, and `sector`.
+- Metric: localized `label` and `context`, a plain text `value`, optional `unit`, and a non-empty `sourceNote` explaining its evidence and scope.
+- Testimonial: localized `quote`, `person`, `role` and `organization`.
 
-## Homepage editing limits
+Begin with `publicationState: "draft"` and `isPlaceholder: true`. After checking the evidence and permission, set `publicationState: "published"` and `isPlaceholder: false`. Keep approval notes in the content record for later review.
 
-The current **Homepage** document supports these visible changes:
+The current homepage collaboration section displays ten generic disciplines with locally drawn sample marks until approved client records are supplied. Edit its headings, discipline names and sample notice in `journey.json`; published client records in `trust.json` replace these examples automatically. This file also holds homepage project, About, typing and finale labels. Testimonial records are validated and reserved for future use; the current homepage composition does not display them.
 
-| Section key | Applied content |
-| --- | --- |
-| `space` | Discovery title/body |
-| `capability` | Activation title/body |
-| `experience` | Both reveal and game/experience title/body |
-| `proof` | Proof title/body and selected project references |
-| `intelligence` | Intelligence title/body |
-| `conversion` | Final invitation title/body and internal CTA URL |
+`contacts.json` supports `sales`, `general`, `international` and `whatsapp`. Add verified `email`, `phone` and/or `whatsapp` fields and set `isPlaceholder: false`. Phones use E.164 format: `+`, the international country code and digits, without spaces or separators. WhatsApp accepts an international number or an HTTPS `wa.me` URL. Multiple channels per purpose are supported. The footer uses the same configured destinations. Missing destinations stay labelled instead of becoming fake links.
 
-Section visibility/order/media controls, hero fields/CTA, and `idea`, `trust` and `memory` copy are modeled but are not applied by the current homepage. The Homepage field labelled SEO title also does not currently control homepage metadata. Main homepage About headings, testimonial headings, five service chapters, interaction/demo text and interface labels remain in code.
+`site.json` controls footer text, navigation, `copyrightHolder`, optional localized `address`, `socialLinks`, optional approved `brandMark`, and `socialImage`. Social links use verified HTTPS URLs. Navigation paths are internal suffixes such as `projects` and `contact`; locales are added automatically. The original social card is `public/images/mandegar-social.png`, with editable SVG source beside it.
 
-For updates outside the connected CMS fields:
+Edit legal text in `legal.json`. Keep `status: "draft"` until it reflects your actual company, hosting, tracking and media setup and is approved. Set a valid `updatedAt` review date such as `2026-10-07`. `status: "approved"` removes the draft notice and permits indexing/sitemap inclusion. The validator does not certify legal correctness.
 
-| Content | Source |
-| --- | --- |
-| Local project/service defaults and concept assets | `lib/content.ts` |
-| Fallback homepage narrative | `app/[locale]/page.tsx` |
-| Homepage service chapters, titles/descriptions/posters and detail slugs | `components/experience/services-copy.ts` |
-| Homepage service button/section labels | `components/experience/services-copy.ts` |
-| Homepage About, testimonial and partner copy | `components/experience/MandegarExperience.tsx` and the relevant experience components |
-| Games, photo booth, installation and touch-demo text | `components/experience/interactions/interaction-copy.ts` and the relevant interaction components |
-| Shared UI labels | `lib/i18n.ts` |
-| Default SEO and social metadata | `lib/seo.ts` |
-| About/contact/legal and archive fallback introductions | Their `app/[locale]/.../page.tsx` files |
-| Footer brand, copyright holder, privacy-link label and concept-media note | `components/layout/Footer.tsx` |
-| Media files referenced by local content | `public/media/` and `public/images/` |
+## Preview and publish
 
-Changing these source files requires a build and deployment. Images/models baked into the 3D homepage need the asset workflow in `Docs/3D_ASSET_WORKFLOW.md`, not just a Studio upload. Text/content changes do not automatically change the layout, animation sequence or 3D artwork.
+```bash
+npm run content:check
+npm run dev
+```
 
-## When published changes become visible
+Review affected pages at `http://localhost:3300/fa`, `/en` and `/ar`, including a mobile width. Check wording, media crops, contact links and placeholder flags.
 
-| Hosting mode | Publishing workflow |
-| --- | --- |
-| Running Next.js server | Publish in Studio. Published fetches have a 60-second cache interval; refresh timing also depends on Sanity's CDN and the site's cache. Configure the existing `POST /api/revalidate` endpoint with the `x-sanity-revalidate-secret` header for explicit invalidation |
-| Static GitHub Pages | Publish in Studio, then rebuild and redeploy. The exported HTML captures CMS content at build time; publishing alone cannot change it |
-| Local fallback without Sanity configured | Edit the source content files, review locally, then build/deploy |
+Prepare a static export without publishing:
 
-For webhook invalidation on a Next.js server, set `SANITY_REVALIDATE_SECRET` on the server and use the same value in the webhook's `x-sanity-revalidate-secret` header. The protected preview enable URL uses that value in its `secret` query parameter.
+```bash
+npm run build:pages
+```
 
-The existing Pages commands are `npm run build:pages` to prepare/review an export and `npm run deploy:pages` to publish it. The deployment script contains a repository, branch, base path and site URL; verify those destinations before publishing. This review does not deploy anything.
+The complete uploadable website is written to `out/`. Content validation runs automatically. For a later public launch, `npm run content:check -- --strict` also requires replacing labelled placeholders and approving draft legal content; it intentionally fails while this preview uses examples. For the root of your own domain:
 
-Dedicated project/service static paths now come from the published CMS catalogs per locale, with local fallback preserved when CMS content is absent. This fixes the previous missing-page problem for new CMS slugs. A newly added slug still needs another static build; the live site's existing export cannot gain it automatically.
+```powershell
+npm run build:pages -- -BasePath / -SiteUrl https://your-domain.com
+```
 
-Static export excludes `/studio`, `/api/revalidate` and draft-preview endpoints. Server preview additionally requires `SANITY_API_READ_TOKEN` and the protected `/api/draft-mode/enable` route. Neither the Studio nor webhook/draft routes should be promised on GitHub Pages.
+Upload the contents of `out/` to your hosting/CDN as a complete release. Configure `NEXT_PUBLIC_SITE_URL` for normal Next.js builds too. There is no CMS to keep online.
 
-## Footer finish proposal
+For the existing GitHub Pages publishing workflow:
 
-Use the existing responsive footer as the foundation:
+```bash
+npm run content:publish
+```
 
-1. **Brand:** approved logo/name and one short company line.
-2. **Navigation:** Projects, Services, About and Contact, with a clear Start a project destination.
-3. **Contact:** verified email, telephone/WhatsApp and social links; an address only if supplied and approved. Read contact destinations from the existing Contact channel records so they have one editing location.
-4. **Bottom row:** copyright and privacy/terms. Keep the concept-media notice while concept assets remain; review its removal when those assets are replaced. Language selection is optional because it already exists in the header.
+This validates, builds, commits the static output and pushes it. Defaults: `git@github-echend:EchenD/Mandegar.git`, branch `main`, base path `/Mandegar`, site URL `https://echend.github.io/Mandegar`. Choose a different destination explicitly:
 
-Navigation/social/tagline/geographic copy is already editable. Contact links in the footer, an uploaded logo, and consistent editable branding/copyright need implementation. The footer currently hardcodes `MANDEGAR` even though the header uses the Site settings title. No final contact details or brand assets were invented during this review.
+```powershell
+npm run content:publish -- -Repository git@github.com:your-account/your-site.git -Branch main -BasePath / -SiteUrl https://your-domain.com
+```
 
-## Remaining development work before content handover
+The publishing machine needs Node.js, PowerShell and Git access to that deployment repository. Keep credentials outside content files. Uploading JSON alone does not change the website: text changes become visible after a build and deployment. `npm run deploy:pages` remains an alias for the same publishing workflow.
 
-- Connect homepage service content to its service records, while preserving the five authored scene chapters and stable detail links.
-- Expose the remaining meaningful homepage text/settings in Studio or remove unsupported controls from the editor interface.
-- Make project publication state consistent across detail, featured and related-project queries; archiving is not yet a reliable public-removal mechanism.
-- Distinguish intentionally archived services from absent CMS records when applying local fallbacks; fix service numbering for new entries.
-- Add useful required-field validation so incomplete records do not inherit unrelated concept examples. Rights status is currently recorded but does not itself prevent media rendering.
-- Finish the footer contact/brand connections and the optional service related-project/contact CTA sections.
-- Decide whether contact needs an enquiry form; no form/backend exists today.
-- Add `aria-pressed` to project filter buttons so selection is announced to assistive technology.
-- Review unsupported fields: global SEO/social images, analytics settings, callback-form flag, redirects, team images and metrics are modeled but not fully connected. Image focal-point handling also needs review.
-- Add an explicit CMS-request failure policy. Fallback currently handles unconfigured/empty content, not a network error from an already configured CMS.
+Metric records are validated and reserved for future use; the current website does not display metrics.
 
-## Content needed from Mandegar
+## Homepage boundaries
 
-Approved company description and positioning; confirmed service scope; project titles, facts, case studies and rights-cleared media; actual email/telephone/WhatsApp/social destinations; final logo/brand assets; approved legal wording; Persian/English/Arabic translations; and any verified people, partner, client or testimonial records.
+The homepage design and interaction work are preserved. `homepage.json` contains legacy narrative and optional overrides; `useContentOverrides` remains `false` to preserve the composition. Routine non-home edits do not require enabling it.
 
-Once those are supplied and the development gaps above are resolved, the routine workflow can be: **open Studio → edit content → preview → Publish → refresh or rebuild for the hosting mode**.
-
-## Verification during this review
-
-- All 57 current localized URLs (54 non-home pages plus three homepages) returned HTTP 200 with a localized H1 and a non-empty page title. Service/project indexes contain all 39 expected detail links.
-- 35 existing page/footer browser checks passed, including desktop/tablet/mobile layouts, locale direction, navigation, metadata, automated accessibility checks and footer keyboard/tap access.
-- All seven new service-link checks passed after synchronizing keyboard activation with homepage readiness: six desktop/mobile reduced-motion cases across the three languages plus animated homepage navigation.
-- Repository lint and TypeScript checks passed. `npm run build:pages` completed successfully and prepared a static production export without publishing it.
-- Configured-client verification covered new CMS-only project/service slugs in all locales, build-time published reads, normal draft-preview behavior and absent/empty-CMS fallbacks. Actual publishing to a live Sanity dataset was not exercised; validate that workflow during setup.
+Animated service chapters remain in `components/experience/services-copy.ts`. Game/demo text remains in `components/experience/interactions/interaction-copy.ts` and related components. Some homepage text remains in `app/[locale]/page.tsx` and experience components. Changing the 3D scene, animation or baked artwork is a development/asset task; see `Docs/3D_ASSET_WORKFLOW.md`.

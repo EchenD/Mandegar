@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { getText } from "@/lib/content";
+import { getText } from "@/lib/localized-text";
 import type { SiteSettings } from "@/lib/content-source";
 import { navigateHomeSection, type HomeSection } from "@/lib/home-navigation";
 import { getUi, locales, localizedPath, type Locale } from "@/lib/i18n";
@@ -70,12 +71,12 @@ export function Header({ locale, settings }: HeaderProps) {
     { href: localizedPath(locale, "about"), label: copy.navigation.about },
     { href: localizedPath(locale, "contact"), label: copy.navigation.contact },
   ];
-  const links = settings?.navigation.length ? settings.navigation.map((item) => ({ href: cmsPath(locale, item.path), label: getText(item.label, locale) })).filter((item) => item.label) : defaultLinks;
+  const links = settings?.navigation.length ? settings.navigation.map((item) => ({ href: navigationPath(locale, item.path), label: getText(item.label, locale) })).filter((item) => item.label) : defaultLinks;
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-home={home}>
       <Link prefetch={false} className={styles.logo} href={localizedPath(locale)} aria-label={locale === "fa" ? "خانه مندگار" : locale === "ar" ? "الصفحة الرئيسية لمندگار" : "Mandegar home"} onClick={() => setOpen(false)}>
-        <span className={styles.logoMark} aria-hidden="true"><span /></span>
+        {settings?.brandMark ? <Image className={styles.logoImage} src={settings.brandMark} alt="" width={32} height={32} /> : <span className={styles.logoMark} aria-hidden="true"><span /></span>}
         <span className={styles.logoText}>{settings?.title || "MANDEGAR"}</span>
       </Link>
 
@@ -92,7 +93,7 @@ export function Header({ locale, settings }: HeaderProps) {
           const section: HomeSection | null = home
             ? slug === "projects" ? "showcase" : slug === "services" ? "services" : slug === "about" ? "about" : slug === "contact" ? "contact" : null
             : null;
-          return <Link prefetch={false} key={link.href} href={section ? `#${section}` : link.href} onClick={(event) => {
+          return <Link prefetch={false} key={link.href} href={section ? `#${section}` : link.href} aria-current={!home && (pathname === link.href || pathname.startsWith(`${link.href}/`)) ? "page" : undefined} onClick={(event) => {
             setOpen(false);
             if (section && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.button === 0) {
               event.preventDefault();
@@ -123,7 +124,7 @@ export function Header({ locale, settings }: HeaderProps) {
   );
 }
 
-function cmsPath(locale: Locale, path: string) {
+function navigationPath(locale: Locale, path: string) {
   const cleanPath = path.replace(/^\/+/, "").replace(/^(fa|en|ar)(\/|$)/, "");
   return localizedPath(locale, cleanPath);
 }

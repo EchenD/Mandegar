@@ -1,0 +1,1037 @@
+[
+  {
+    "slug": "event-production",
+    "number": "01",
+    "title": {
+      "fa": "تولید کامل رویداد",
+      "en": "Complete event production",
+      "ar": "الإنتاج الكامل للفعاليات"
+    },
+    "summary": {
+      "fa": "از اولین ایده تا اجرای نهایی، همه قطعات یک رویداد را کنار هم می‌گذاریم.",
+      "en": "From the first idea to final delivery, we connect every part of an event.",
+      "ar": "من الفكرة الأولى إلى التنفيذ النهائي، نربط كل أجزاء الفعالية."
+    },
+    "detail": {
+      "fa": "استراتژی، سناریو، طراحی تجربه، مدیریت تولید، لجستیک، نیروی انسانی و پشتیبانی در محل.",
+      "en": "Strategy, scenario, experience design, production management, logistics, staffing and on-site support.",
+      "ar": "الاستراتيجية والسيناريو وتصميم التجربة وإدارة الإنتاج واللوجستيات والطاقم والدعم الميداني."
+    },
+    "capabilities": [
+      {
+        "fa": "استراتژی و سناریو",
+        "en": "Strategy and scenario",
+        "ar": "الاستراتيجية والسيناريو"
+      },
+      {
+        "fa": "مدیریت تولید",
+        "en": "Production management",
+        "ar": "إدارة الإنتاج"
+      },
+      {
+        "fa": "لجستیک و اجرا",
+        "en": "Logistics and delivery",
+        "ar": "اللوجستيات والتنفيذ"
+      }
+    ],
+    "media": "stage",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "جهت‌گیری تجربه و طرح رویداد",
+        "en": "Experience direction and an event outline",
+        "ar": "توجه التجربة ومخطط الفعالية"
+      },
+      {
+        "fa": "برنامه تولید همراه با نقش‌ها و وابستگی‌ها",
+        "en": "A production plan with roles and dependencies",
+        "ar": "خطة إنتاج بالأدوار والمتطلبات"
+      },
+      {
+        "fa": "ترتیب اجرای هماهنگ و شرح اجرایی",
+        "en": "A coordinated running order and delivery brief",
+        "ar": "برنامج تشغيل منسق ووصف للتنفيذ"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-exhibition-01",
+      "placeholder-live-03",
+      "placeholder-arrival-06"
+    ]
+  },
+  {
+    "slug": "exhibitions-and-space",
+    "number": "02",
+    "title": {
+      "fa": "نمایشگاه و فضا",
+      "en": "Exhibitions and space",
+      "ar": "المعارض والمساحات"
+    },
+    "summary": {
+      "fa": "فضا را به بخشی از روایت تبدیل می‌کنیم؛ قابل لمس، واضح و به‌یادماندنی.",
+      "en": "We make the space part of the story: tangible, clear and memorable.",
+      "ar": "نجعل المساحة جزءاً من القصة؛ ملموسة وواضحة ولا تُنسى."
+    },
+    "detail": {
+      "fa": "طراحی فضایی، غرفه، مسیر حرکت، نور، نمایشگر، نقاط تعامل و تولید فنی نمایشگاه.",
+      "en": "Spatial design, booth systems, visitor flow, lighting, displays, interaction points and technical production.",
+      "ar": "التصميم المكاني وأنظمة الأجنحة ومسار الزوار والإضاءة والشاشات ونقاط التفاعل والإنتاج التقني."
+    },
+    "capabilities": [
+      {
+        "fa": "طراحی فضایی",
+        "en": "Spatial design",
+        "ar": "التصميم المكاني"
+      },
+      {
+        "fa": "مسیر تجربه",
+        "en": "Experience flow",
+        "ar": "مسار التجربة"
+      },
+      {
+        "fa": "ساخت و اجرا",
+        "en": "Build and delivery",
+        "ar": "البناء والتنفيذ"
+      }
+    ],
+    "media": "exhibition",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "کانسپت فضا و مسیر بازدیدکننده",
+        "en": "Spatial concept and visitor journey",
+        "ar": "مفهوم مكاني ورحلة الزائر"
+      },
+      {
+        "fa": "چیدمان، مطالعات بصری و جهت‌گیری متریال",
+        "en": "Layouts, visual studies and material direction",
+        "ar": "مخططات ودراسات بصرية وتوجه المواد"
+      },
+      {
+        "fa": "مستندات ساخت و نصب",
+        "en": "Fabrication and installation documentation",
+        "ar": "وثائق التصنيع والتركيب"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-exhibition-01",
+      "placeholder-arrival-06"
+    ]
+  },
+  {
+    "slug": "interactive-experiences",
+    "number": "03",
+    "title": {
+      "fa": "تجربه‌های تعاملی",
+      "en": "Interactive experiences",
+      "ar": "التجارب التفاعلية"
+    },
+    "summary": {
+      "fa": "بازی، لمس، حرکت و مشارکت را به یک تجربه معنادار تبدیل می‌کنیم.",
+      "en": "We turn play, touch, motion and participation into meaningful experience.",
+      "ar": "نحوّل اللعب واللمس والحركة والمشاركة إلى تجربة ذات معنى."
+    },
+    "detail": {
+      "fa": "بازی‌های سفارشی، دیوارهای تعاملی، نصب‌های دیجیتال، محصولات نرم‌افزاری و تجربه‌های مشارکتی.",
+      "en": "Custom games, interactive walls, digital installations, software products and participatory experiences.",
+      "ar": "ألعاب مخصصة وجدران تفاعلية وتركيبات رقمية ومنتجات برمجية وتجارب تشاركية."
+    },
+    "capabilities": [
+      {
+        "fa": "طراحی تعامل",
+        "en": "Interaction design",
+        "ar": "تصميم التفاعل"
+      },
+      {
+        "fa": "بازی و مشارکت",
+        "en": "Games and participation",
+        "ar": "الألعاب والمشاركة"
+      },
+      {
+        "fa": "نرم‌افزار و سیستم",
+        "en": "Software and systems",
+        "ar": "البرمجيات والأنظمة"
+      }
+    ],
+    "media": "interactive",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "کانسپت تعامل و مسیر مشارکت",
+        "en": "Interaction concept and participation flow",
+        "ar": "مفهوم تفاعلي ومسار المشاركة"
+      },
+      {
+        "fa": "نمونه اولیه برای آزمودن تجربه",
+        "en": "A prototype for testing the experience",
+        "ar": "نموذج أولي لاختبار التجربة"
+      },
+      {
+        "fa": "محتوا، نرم‌افزار و راهنمای بهره‌برداری",
+        "en": "Content, software and operation guidance",
+        "ar": "محتوى وبرمجيات وإرشادات تشغيل"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-interactive-02",
+      "placeholder-photo-04",
+      "placeholder-intelligence-05"
+    ]
+  },
+  {
+    "slug": "content-and-media",
+    "number": "04",
+    "title": {
+      "fa": "محتوا و رسانه",
+      "en": "Content and media",
+      "ar": "المحتوى والوسائط"
+    },
+    "summary": {
+      "fa": "محتوا فقط روی صفحه نیست؛ بخشی از ریتم، فضا و خاطره است.",
+      "en": "Content is not only on a screen; it is part of the rhythm, space and memory.",
+      "ar": "المحتوى ليس على الشاشة فقط؛ بل هو جزء من الإيقاع والمساحة والذاكرة."
+    },
+    "detail": {
+      "fa": "ایده‌پردازی، طراحی بصری، موشن، ویدیو، محتوای نمایشگر، عکاسی و مستندسازی رویداد.",
+      "en": "Ideation, visual direction, motion, video, screen content, photography and event documentation.",
+      "ar": "توليد الأفكار والإخراج البصري والموشن والفيديو ومحتوى الشاشات والتصوير والتوثيق."
+    },
+    "capabilities": [
+      {
+        "fa": "جهت‌دهی بصری",
+        "en": "Visual direction",
+        "ar": "الإخراج البصري"
+      },
+      {
+        "fa": "موشن و ویدیو",
+        "en": "Motion and video",
+        "ar": "الموشن والفيديو"
+      },
+      {
+        "fa": "عکس و مستندات",
+        "en": "Photography and documentation",
+        "ar": "التصوير والتوثيق"
+      }
+    ],
+    "media": "photo",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "جهت‌گیری خلاقانه و طرح محتوا",
+        "en": "Creative direction and a content outline",
+        "ar": "توجه إبداعي ومخطط محتوى"
+      },
+      {
+        "fa": "استوری‌بورد، عناصر بصری یا محتوای نمایشگر",
+        "en": "Storyboards, visual assets or screen content",
+        "ar": "لوحات قصصية وأصول بصرية أو محتوى شاشات"
+      },
+      {
+        "fa": "فرمت‌های تحویل و مستندات توافق‌شده در پروژه",
+        "en": "Delivery formats and documentation agreed in the brief",
+        "ar": "صيغ تسليم ووثائق متفق عليها في المشروع"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-exhibition-01",
+      "placeholder-interactive-02",
+      "placeholder-live-03"
+    ]
+  },
+  {
+    "slug": "event-intelligence",
+    "number": "05",
+    "title": {
+      "fa": "هوشمندی رویداد",
+      "en": "Event intelligence",
+      "ar": "ذكاء الفعاليات"
+    },
+    "summary": {
+      "fa": "در حال توسعه: داده‌های رویداد را به بینش قابل استفاده تبدیل می‌کنیم.",
+      "en": "In development: turning event data into useful insight.",
+      "ar": "قيد التطوير: تحويل بيانات الفعاليات إلى رؤى قابلة للاستخدام."
+    },
+    "detail": {
+      "fa": "این قابلیت در حال توسعه است و می‌تواند داده‌های ثبت‌نام، حضور، نظرسنجی، بازی و تعامل را به خلاصه، الگو و پیشنهاد تبدیل کند.",
+      "en": "This capability is in development and may turn registration, attendance, survey, game and interaction data into summaries, patterns and recommendations.",
+      "ar": "هذه القدرة قيد التطوير وقد تحول بيانات التسجيل والحضور والاستبيانات والألعاب والتفاعل إلى ملخصات وأنماط وتوصيات."
+    },
+    "capabilities": [
+      {
+        "fa": "خلاصه پس از رویداد",
+        "en": "Post-event summaries",
+        "ar": "ملخصات ما بعد الفعالية"
+      },
+      {
+        "fa": "الگوهای مشارکت",
+        "en": "Participation patterns",
+        "ar": "أنماط المشاركة"
+      },
+      {
+        "fa": "پیشنهادهای آینده",
+        "en": "Future recommendations",
+        "ar": "توصيات مستقبلية"
+      }
+    ],
+    "media": "intelligence",
+    "status": "emerging",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "رویکرد پیشنهادی برای ارزیابی",
+        "en": "A proposed measurement approach",
+        "ar": "نهج قياس مقترح"
+      },
+      {
+        "fa": "نیازمندی‌های منبع داده و مجوزها",
+        "en": "Data source and permission requirements",
+        "ar": "متطلبات مصادر البيانات والأذونات"
+      },
+      {
+        "fa": "نمونه قالب گزارش برای بررسی",
+        "en": "Example reporting formats for discussion",
+        "ar": "نماذج تقارير للمناقشة"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "آیا این قابلیت آماده اجراست؟",
+          "en": "Is this capability available for delivery?",
+          "ar": "هل هذه القدرة متاحة للتنفيذ؟"
+        },
+        "answer": {
+          "fa": "هوشمندی رویداد در حال توسعه است. در گفتگو می‌توان اهداف، نیازمندی‌های داده و امکان اجرای آزمایشی را بررسی کرد؛ در این صفحه سرویس آماده اجرا وعده داده نمی‌شود.",
+          "en": "Event intelligence is being developed. A conversation can explore goals, data requirements and a possible pilot; a production-ready service is not promised here.",
+          "ar": "ذكاء الفعاليات قيد التطوير. يمكن مناقشة الأهداف ومتطلبات البيانات وتجربة أولية محتملة؛ ولا يُقدم هنا وعد بخدمة جاهزة للتنفيذ."
+        }
+      },
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-intelligence-05"
+    ]
+  },
+  {
+    "slug": "websites-and-applications",
+    "number": "06",
+    "title": {
+      "fa": "وب‌سایت و اپلیکیشن",
+      "en": "Websites and applications",
+      "ar": "المواقع والتطبيقات"
+    },
+    "summary": {
+      "fa": "طراحی و توسعهٔ وب‌سایت و اپلیکیشن با توجه به تجربهٔ کاربران.",
+      "en": "Design and development of websites and applications around their users.",
+      "ar": "تصميم المواقع والتطبيقات وتطويرها حول تجربة مستخدميها."
+    },
+    "detail": {
+      "fa": "طراحی رابط و تجربهٔ کاربری، توسعهٔ وب و اپلیکیشن و اتصال تجربه‌های دیجیتال به فضای رویداد.",
+      "en": "Interface and experience design, web and application development, and connections between digital experiences and event spaces.",
+      "ar": "تصميم الواجهات وتجربة المستخدم، وتطوير المواقع والتطبيقات، وربط التجارب الرقمية بمساحات الفعاليات."
+    },
+    "capabilities": [
+      {
+        "fa": "طراحی تجربهٔ کاربری",
+        "en": "User experience design",
+        "ar": "تصميم تجربة المستخدم"
+      },
+      {
+        "fa": "توسعهٔ وب و اپلیکیشن",
+        "en": "Web and application development",
+        "ar": "تطوير المواقع والتطبيقات"
+      },
+      {
+        "fa": "تجربه‌های متصل",
+        "en": "Connected experiences",
+        "ar": "التجارب المتصلة"
+      }
+    ],
+    "media": "webApps",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "مسیرهای کاربر و جهت‌گیری رابط",
+        "en": "User journeys and interface direction",
+        "ar": "رحلات المستخدم وتوجه الواجهة"
+      },
+      {
+        "fa": "صفحه‌های واکنش‌گرا و نمونه اولیه قابل استفاده",
+        "en": "Responsive screens and a working prototype",
+        "ar": "شاشات متجاوبة ونموذج أولي عملي"
+      },
+      {
+        "fa": "پیاده‌سازی، تنظیم محتوا و راهنمای تحویل",
+        "en": "Implementation, content setup and handover guidance",
+        "ar": "تنفيذ وإعداد المحتوى وإرشادات التسليم"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-interactive-02"
+    ]
+  },
+  {
+    "slug": "advertising-structures",
+    "number": "07",
+    "title": {
+      "fa": "سازه‌های تبلیغاتی",
+      "en": "Advertising structures",
+      "ar": "الهياكل الإعلانية"
+    },
+    "summary": {
+      "fa": "طراحی و ساخت نمایشگرها، تابلوها و سازه‌های تبلیغاتی برای حضور برند در فضا.",
+      "en": "Design and fabrication of advertising displays, signs and structures in physical spaces.",
+      "ar": "تصميم وتصنيع وحدات العرض واللوحات والهياكل الإعلانية في المساحات الفعلية."
+    },
+    "detail": {
+      "fa": "طراحی سازه، انتخاب متریال، تولید و نصب تابلوها و نمایشگرهای تبلیغاتی متناسب با محیط و هویت برند.",
+      "en": "Structural design, material selection, production and installation of displays and signs suited to the environment and brand identity.",
+      "ar": "التصميم الهيكلي واختيار المواد وإنتاج وتركيب وحدات العرض واللوحات الملائمة للمكان وهوية العلامة التجارية."
+    },
+    "capabilities": [
+      {
+        "fa": "طراحی سازه",
+        "en": "Structural design",
+        "ar": "التصميم الهيكلي"
+      },
+      {
+        "fa": "ساخت و تولید",
+        "en": "Fabrication and production",
+        "ar": "التصنيع والإنتاج"
+      },
+      {
+        "fa": "نصب و اجرا",
+        "en": "Installation and delivery",
+        "ar": "التركيب والتنفيذ"
+      }
+    ],
+    "media": "advertising",
+    "publicationState": "published",
+    "isPlaceholder": true,
+    "deliverables": [
+      {
+        "fa": "کانسپت سازه متناسب با محیط",
+        "en": "A structure concept suited to the setting",
+        "ar": "مفهوم هيكل مناسب للمكان"
+      },
+      {
+        "fa": "مشخصات متریال، پرداخت و ساخت",
+        "en": "Material, finish and fabrication specifications",
+        "ar": "مواصفات المواد والتشطيب والتصنيع"
+      },
+      {
+        "fa": "برنامه نصب و ملاحظات بهره‌برداری",
+        "en": "Installation planning and operation considerations",
+        "ar": "تخطيط التركيب واعتبارات التشغيل"
+      }
+    ],
+    "process": [
+      {
+        "title": {
+          "fa": "شناخت پروژه",
+          "en": "Understand the brief",
+          "ar": "فهم المشروع"
+        },
+        "body": {
+          "fa": "پیش از انتخاب مسیر، مخاطب، هدف، فضا و محدودیت‌ها را روشن می‌کنیم.",
+          "en": "Clarify the audience, ambition, setting and constraints before choosing a direction.",
+          "ar": "نوضح الجمهور والطموح والمكان والقيود قبل اختيار التوجه."
+        }
+      },
+      {
+        "title": {
+          "fa": "شکل‌دادن مسیر",
+          "en": "Shape the direction",
+          "ar": "تشكيل التوجه"
+        },
+        "body": {
+          "fa": "ایده را بررسی و دامنه کار، مسئولیت‌ها و مراحل بازبینی را با هم مشخص می‌کنیم.",
+          "en": "Explore an idea and define the scope, responsibilities and review points together.",
+          "ar": "نستكشف الفكرة ونحدد النطاق والمسؤوليات ونقاط المراجعة معاً."
+        }
+      },
+      {
+        "title": {
+          "fa": "توسعه و آزمون",
+          "en": "Develop and test",
+          "ar": "التطوير والاختبار"
+        },
+        "body": {
+          "fa": "بخش‌های توافق‌شده را می‌سازیم و عملکرد آن‌ها را در شرایط مورد نظر بررسی می‌کنیم.",
+          "en": "Build the agreed elements and check how they work in the intended setting.",
+          "ar": "نطور العناصر المتفق عليها ونختبر عملها في الظروف المقصودة."
+        }
+      },
+      {
+        "title": {
+          "fa": "آماده‌سازی اجرا",
+          "en": "Prepare for delivery",
+          "ar": "التحضير للتنفيذ"
+        },
+        "body": {
+          "fa": "اجزای نهایی، راهنمای بهره‌برداری و تحویل را با برنامه توافق‌شده هماهنگ می‌کنیم.",
+          "en": "Align final materials, operation guidance and handover with the agreed plan.",
+          "ar": "ننسق المواد النهائية وإرشادات التشغيل والتسليم وفقاً للخطة المتفق عليها."
+        }
+      }
+    ],
+    "faq": [
+      {
+        "question": {
+          "fa": "شرح اولیه پروژه شامل چه چیزهایی باشد؟",
+          "en": "What should an initial brief include?",
+          "ar": "ماذا يتضمن الوصف الأولي للمشروع؟"
+        },
+        "answer": {
+          "fa": "شرح کوتاهی از ایده، مخاطب، محل، زمان و نیازمندی‌های مشخص برای شروع کافی است. می‌توانیم شرح اولیه را با هم تکمیل کنیم.",
+          "en": "A short description of the idea, audience, location, timing and known requirements is a useful start. An early brief can be developed together.",
+          "ar": "وصف موجز للفكرة والجمهور والمكان والموعد والمتطلبات المعروفة بداية مفيدة. يمكن تطوير الوصف الأولي معاً."
+        }
+      },
+      {
+        "question": {
+          "fa": "آیا یک خدمت می‌تواند بخشی از پروژه بزرگ‌تر باشد؟",
+          "en": "Can one discipline be part of a wider project?",
+          "ar": "هل يمكن أن تكون خدمة واحدة جزءاً من مشروع أوسع؟"
+        },
+        "answer": {
+          "fa": "پروژه می‌تواند روی یک حوزه تمرکز کند یا چند حوزه را به هم وصل کند. شیوه همکاری و مسئولیت هر بخش پیش از توافق بر دامنه کار بررسی می‌شود.",
+          "en": "A brief may focus on one discipline or connect several. The working arrangement and responsibility for each part are discussed before scope is agreed.",
+          "ar": "قد يركز المشروع على تخصص واحد أو يربط عدة تخصصات. تُناقش طريقة العمل ومسؤولية كل جزء قبل الاتفاق على النطاق."
+        }
+      },
+      {
+        "question": {
+          "fa": "زمان‌بندی و خروجی‌ها چطور مشخص می‌شوند؟",
+          "en": "How are timing and deliverables confirmed?",
+          "ar": "كيف تُحدد المواعيد والمخرجات؟"
+        },
+        "answer": {
+          "fa": "این موارد به شرح پروژه، محل، نیازهای محتوا و الزامات فنی بستگی دارند. پس از بررسی، دامنه و زمان‌بندی توافق‌شده در پیشنهاد ثبت می‌شود.",
+          "en": "They depend on the brief, venue, content needs and technical requirements. The proposal records the agreed scope and schedule after these have been reviewed.",
+          "ar": "تعتمد على وصف المشروع والمكان واحتياجات المحتوى والمتطلبات التقنية. يُسجل النطاق والجدول المتفق عليهما في المقترح بعد مراجعتها."
+        }
+      }
+    ],
+    "relatedProjectSlugs": []
+  }
+]

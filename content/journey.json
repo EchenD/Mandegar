@@ -1,0 +1,66 @@
+{
+  "copy": {
+    "en": {
+      "work": "Selected experiences",
+      "entry": "From space. Into experience.",
+      "aboutLabel": "The approach",
+      "about": ["Ideas become spaces.", "Spaces bring people", "together."],
+      "aboutBody": "We connect idea, space, technology and delivery into one experience.",
+      "more": "Inside Mandegar",
+      "partners": "Made together.",
+      "partnersLabel": "Our collaborators",
+      "placeholder": "Illustrative mark",
+      "genericPartnersLabel": "Creative disciplines",
+      "genericPartnersNote": "Illustrative marks · sample content",
+      "disciplines": ["Creative direction", "Space design", "Technical production", "Content", "Digital experiences", "Interactive systems", "Operations", "Guest journey", "Media production", "Project coordination"],
+      "finale": "Make something that stays.",
+      "contact": "Start a conversation",
+      "demo": "Concept study",
+      "scroll": "Scroll to explore",
+      "detail": "Explore image detail"
+    },
+    "fa": {
+      "work": "تجربه‌های منتخب",
+      "entry": "از فضا، به تجربه.",
+      "aboutLabel": "رویکرد ما",
+      "about": ["ایده‌ها فضا می‌شوند.", "فضاها آدم‌ها را", "به هم می‌رسانند."],
+      "aboutBody": "ایده، فضا، فناوری و اجرا را به یک تجربه پیوسته تبدیل می‌کنیم.",
+      "more": "درباره ماندگار",
+      "partners": "با هم می‌سازیم.",
+      "partnersLabel": "همراهان ما",
+      "placeholder": "نشان مفهومی",
+      "genericPartnersLabel": "حوزه‌های خلاق",
+      "genericPartnersNote": "نشان‌های مفهومی · محتوای نمونه",
+      "disciplines": ["جهت‌دهی خلاق", "طراحی فضا", "تولید فنی", "محتوا", "تجربه‌های دیجیتال", "سیستم‌های تعاملی", "عملیات", "سفر مخاطب", "تولید رسانه", "هماهنگی پروژه"],
+      "finale": "چیزی بسازیم که ماندگار شود.",
+      "contact": "شروع گفتگو",
+      "demo": "نمونه مفهومی",
+      "scroll": "برای کشف ادامه دهید",
+      "detail": "نمایش جزئیات تصویر"
+    },
+    "ar": {
+      "work": "تجارب مختارة",
+      "entry": "من المكان إلى التجربة.",
+      "aboutLabel": "نهجنا",
+      "about": ["تصبح الأفكار أماكن.", "وتجمع الأماكن", "الناس معاً."],
+      "aboutBody": "نربط الفكرة والمكان والتقنية والتنفيذ في تجربة واحدة.",
+      "more": "عن ماندگار",
+      "partners": "نصنع معاً.",
+      "partnersLabel": "شركاؤنا",
+      "placeholder": "علامة مفاهيمية",
+      "genericPartnersLabel": "مجالات إبداعية",
+      "genericPartnersNote": "علامات توضيحية · محتوى نموذجي",
+      "disciplines": ["التوجيه الإبداعي", "تصميم المساحات", "الإنتاج التقني", "المحتوى", "التجارب الرقمية", "الأنظمة التفاعلية", "العمليات", "رحلة الجمهور", "الإنتاج الإعلامي", "تنسيق المشروع"],
+      "finale": "لنصنع شيئاً يبقى.",
+      "contact": "ابدأ الحوار",
+      "demo": "نموذج مفاهيمي",
+      "scroll": "تابع للاستكشاف",
+      "detail": "استكشف تفاصيل الصورة"
+    }
+  },
+  "aboutTyping": {
+    "en": { "base": "We are best at", "words": ["design.", "planning.", "making.", "delivery."] },
+    "fa": { "base": "تخصص ما:", "words": ["طراحی.", "برنامه‌ریزی.", "ساخت.", "اجرا."] },
+    "ar": { "base": "نحن نتقن", "words": ["التصميم.", "التخطيط.", "الصناعة.", "التنفيذ."] }
+  }
+}

@@ -15,11 +15,7 @@
     "components/**/*.tsx",
     "lib/**/*.ts",
     "lib/**/*.tsx",
-    "sanity/**/*.ts",
-    "sanity/**/*.tsx",
     "next.config.ts",
-    "sanity.config.ts",
-    "sanity.cli.ts",
     ".next-static/types/**/*.ts"
   ],
   "exclude": [

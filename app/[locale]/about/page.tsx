@@ -1,26 +1,14 @@
 import type { Metadata } from "next";
-import { getText } from "@/lib/content";
-import { getEditorialPage, getTeamPartners } from "@/lib/content-source";
-import type { Locale } from "@/lib/i18n";
+import Link from "next/link";
+import { Breadcrumbs } from "@/components/editorial/Breadcrumbs";
+import { PageCta } from "@/components/editorial/PageCta";
+import { PageIntro } from "@/components/editorial/PageIntro";
+import { MediaPlaceholder } from "@/components/media/MediaPlaceholder";
+import styles from "@/components/editorial/CompanyPages.module.css";
+import { getText, media } from "@/lib/content";
+import { getEditorialPage, getPageCopy, getTeamPartners } from "@/lib/content-source";
+import { localizedPath, type Locale } from "@/lib/i18n";
 import { buildMetadata, pageSeo } from "@/lib/seo";
-
-const fallback = {
-  fa: {
-    kicker: "درباره مندگار", title: "تجربه را از صفر می‌سازیم.", intro: "مندگار یک شرکت تجربه‌محور برای رویدادها و نمایشگاه‌هاست؛ جایی که ایده، فضا، فناوری و اجرا در یک مسیر واحد قرار می‌گیرند.",
-    approachKicker: "چطور فکر می‌کنیم", approachTitle: "چطور فکر می‌کنیم", approachBody: "ما به جای اضافه کردن افکت، ابتدا دلیل حضور هر عنصر را پیدا می‌کنیم. تجربه باید روشن، انسانی، قابل اجرا و در نهایت به‌یادماندنی باشد.", principles: ["ایده قبل از ابزار", "جزئیات با دلیل", "اثبات با کار واقعی", "آماده برای همکاری"],
-    geographyKicker: "مدل جغرافیایی", geographyTitle: "ساخت محلی. آماده برای همکاری جهانی.", geographyBody: "مندگار در ایران ریشه دارد و در بازارهای دیگر بر اساس نیاز پروژه، امکان همکاری مستقیم یا مشارکت با تیم‌های محلی مورد اعتماد را بررسی می‌کند.",
-  },
-  en: {
-    kicker: "About Mandegar", title: "We build the experience from zero.", intro: "Mandegar is an experience company for events and exhibitions, connecting idea, space, technology and delivery into one journey.",
-    approachKicker: "How we think", approachTitle: "How we think", approachBody: "Instead of adding effects, we first find the reason for every element. An experience should be clear, human, deliverable and ultimately memorable.", principles: ["Idea before tool", "Detail with purpose", "Proof through real work", "Ready to collaborate"],
-    geographyKicker: "Geographic model", geographyTitle: "Built locally. Ready to collaborate globally.", geographyBody: "Mandegar is rooted in Iran. In other markets, we consider direct work or trusted local partnerships according to each project’s needs.",
-  },
-  ar: {
-    kicker: "عن مندگار", title: "نبني التجربة من الصفر.", intro: "مندگار شركة تجارب للفعاليات والمعارض، تربط الفكرة والمساحة والتقنية والتنفيذ في رحلة واحدة.",
-    approachKicker: "كيف نفكر", approachTitle: "كيف نفكر", approachBody: "بدلاً من إضافة المؤثرات، نبحث أولاً عن سبب كل عنصر. يجب أن تكون التجربة واضحة وإنسانية وقابلة للتنفيذ ولا تُنسى.", principles: ["الفكرة قبل الأداة", "تفصيل له هدف", "الإثبات بالعمل الحقيقي", "جاهزون للتعاون"],
-    geographyKicker: "النموذج الجغرافي", geographyTitle: "بُني محلياً. جاهزون للتعاون عالمياً.", geographyBody: "مندگار متجذر في إيران، وفي الأسواق الأخرى يدرس العمل المباشر أو الشراكة مع فرق محلية موثوقة حسب متطلبات المشروع.",
-  },
-} satisfies Record<Locale, Record<string, string | string[]>>;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -34,32 +22,147 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: L
 export default async function AboutPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const [editorial, people] = await Promise.all([getEditorialPage(locale, "about"), getTeamPartners()]);
-  const text = { ...fallback[locale], principles: [...fallback[locale].principles] };
+  const copy = getPageCopy(locale);
+  const [fallbackTitle, fallbackIntro] = pageSeo[locale].about;
   const approach = editorial?.sections.find((section) => section.key === "approach");
   const geography = editorial?.sections.find((section) => section.key === "geography");
-  if (editorial) {
-    text.kicker = getText(editorial.heroKicker, locale) || text.kicker;
-    text.title = getText(editorial.title, locale) || text.title;
-    text.intro = getText(editorial.intro, locale) || text.intro;
-  }
-  if (approach) {
-    text.approachKicker = approach.kicker ? getText(approach.kicker, locale) || text.approachKicker : text.approachKicker;
-    text.approachTitle = approach.title ? getText(approach.title, locale) || text.approachTitle : text.approachTitle;
-    text.approachBody = approach.body ? getText(approach.body, locale) || text.approachBody : text.approachBody;
-    if (approach.items.length) text.principles = approach.items.map((item) => getText(item, locale)).filter(Boolean);
-  }
-  if (geography) {
-    text.geographyKicker = geography.kicker ? getText(geography.kicker, locale) || text.geographyKicker : text.geographyKicker;
-    text.geographyTitle = geography.title ? getText(geography.title, locale) || text.geographyTitle : text.geographyTitle;
-    text.geographyBody = geography.body ? getText(geography.body, locale) || text.geographyBody : text.geographyBody;
-  }
+  const principles = approach?.items.map((item) => getText(item, locale)).filter(Boolean) || [];
+  const heroTitle = editorial ? getText(editorial.title, locale) : fallbackTitle;
 
   return (
-    <div className="aboutPage">
-      <section className="pageHero"><div className="pageWidth"><div className="sectionKicker">01 / {text.kicker}</div><h1>{text.title}</h1><p>{text.intro}</p></div></section>
-      <section className="sectionPad"><div className="pageWidth aboutGrid"><div><div className="sectionKicker">02 / {text.approachKicker}</div><h2 className="aboutStatement">{text.approachTitle}</h2></div><div><p className="sectionLeadText">{text.approachBody}</p><div className="principles">{text.principles.map((principle, index) => <div className="principle" key={principle}><strong>0{index + 1}</strong><p>{principle}</p></div>)}</div></div></div></section>
-      <section className="sectionPad trustSection"><div className="pageWidth splitIntro"><div className="sectionKicker">03 / {text.geographyKicker}</div><div><h2>{text.geographyTitle}</h2><p>{text.geographyBody}</p></div></div></section>
-      {people.length ? <section className="sectionPad"><div className="pageWidth"><div className="sectionKicker">04 / {locale === "fa" ? "تیم و همکاران" : locale === "ar" ? "الفريق والشركاء" : "Team and partners"}</div><div className="teamGrid">{people.map((person) => <article className="teamCard" key={`${person.name}-${person.partnerType}`}><span>{person.partnerType}</span><h2>{person.name}</h2><strong>{getText(person.role, locale)}</strong><p>{getText(person.biography, locale)}</p><small>{person.location}</small></article>)}</div></div></section> : null}
+    <div className={`aboutPage ${styles.page}`}>
+      <PageIntro
+        locale={locale}
+        eyebrow={editorial ? getText(editorial.heroKicker, locale) : heroTitle}
+        title={heroTitle}
+        intro={editorial ? getText(editorial.intro, locale) : fallbackIntro}
+        aside={(
+          <div className={styles.identityPanel}>
+            <div className={styles.identityDiagram} aria-hidden="true">
+              <span className={styles.diagramOrbit} />
+              <span className={styles.diagramOrbit} />
+              <span className={styles.diagramOrbit} />
+              <span className={styles.diagramCenter} />
+              <span className={styles.diagramNode} />
+              <span className={styles.diagramNode} />
+              <span className={styles.diagramNode} />
+              <span className={styles.diagramNode} />
+            </div>
+            <p>{approach?.title ? getText(approach.title, locale) : copy.aboutWorkflowTitle}</p>
+            {principles.length > 0 ? <span>{principles[0]}</span> : null}
+          </div>
+        )}
+      >
+        <Breadcrumbs locale={locale} items={[{ label: editorial ? getText(editorial.heroKicker, locale) : heroTitle }]} />
+        <div className={styles.heroLinks}>
+          <Link prefetch={false} className={styles.primaryLink} href={localizedPath(locale, "services")}>{copy.viewServices}<span aria-hidden="true">↗</span></Link>
+          <Link prefetch={false} className={styles.secondaryLink} href={localizedPath(locale, "projects")}>{copy.viewProjects}<span aria-hidden="true">↗</span></Link>
+        </div>
+      </PageIntro>
+
+      {approach ? (
+        <section className={`sectionPad ${styles.section}`} aria-labelledby="approach-title">
+          <div className={`pageWidth aboutGrid ${styles.split}`}>
+            <div className={styles.sectionHeader}>
+              <div className="sectionKicker">02 / {approach.kicker ? getText(approach.kicker, locale) : null}</div>
+              <h2 id="approach-title">{approach.title ? getText(approach.title, locale) : null}</h2>
+            </div>
+            <div>
+              {approach.body ? <p className={styles.lead}>{getText(approach.body, locale)}</p> : null}
+              <ol className={`principles ${styles.principles}`}>
+                {principles.map((principle, index) => (
+                  <li className={`principle ${styles.principle}`} key={principle}>
+                    <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                    <h3>{principle}</h3>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={`sectionPad ${styles.workflowSection}`} aria-labelledby="workflow-title">
+        <div className="pageWidth">
+          <div className={styles.wideHeader}>
+            <div className={styles.sectionHeader}>
+              <div className="sectionKicker">03 / {copy.aboutWorkflowKicker}</div>
+              <h2 id="workflow-title">{copy.aboutWorkflowTitle}</h2>
+            </div>
+            <p className={styles.lead}>{copy.aboutWorkflowBody}</p>
+          </div>
+          <ol className={styles.workflow}>
+            {copy.aboutWorkflowSteps.map((step, index) => (
+              <li key={step.title}>
+                <span className={styles.stepIndex} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {geography ? (
+        <section className={`sectionPad ${styles.section}`} aria-labelledby="geography-title">
+          <div className={`pageWidth ${styles.split}`}>
+            <div className={styles.sectionHeader}>
+              <div className="sectionKicker">04 / {geography.kicker ? getText(geography.kicker, locale) : null}</div>
+              <h2 id="geography-title">{geography.title ? getText(geography.title, locale) : null}</h2>
+            </div>
+            <div className={styles.collaborationPanel}>
+              {geography.body ? <p className={styles.lead}>{getText(geography.body, locale)}</p> : null}
+              <div className={styles.collaborationLine} aria-hidden="true"><span /><span /><span /><span /></div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={`sectionPad ${styles.teamSection}`} aria-labelledby="team-title">
+        <div className="pageWidth">
+          <div className={styles.wideHeader}>
+            <div className={styles.sectionHeader}>
+              <div className="sectionKicker">05 / {copy.aboutTeamKicker}</div>
+              <h2 id="team-title">{copy.aboutTeamTitle}</h2>
+            </div>
+            <p className={styles.lead}>{copy.aboutTeamBody}</p>
+          </div>
+          {people.length > 0 ? (
+            <div className={`teamGrid ${styles.teamGrid}`}>
+              {people.map((person) => (
+                <article className={`teamCard ${styles.teamCard}`} key={`${person.name}-${person.partnerType}`}>
+                  <h3>{person.name}</h3>
+                  <strong>{getText(person.role, locale)}</strong>
+                  <p>{getText(person.biography, locale)}</p>
+                  {person.location ? <small>{person.location}</small> : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className={styles.disciplineGrid}>
+                {copy.aboutTeamRoles.map((role) => (
+                  <article className={styles.disciplineCard} key={role.title}>
+                    <MediaPlaceholder
+                      media={media[role.media as keyof typeof media]}
+                      locale={locale}
+                      className={styles.disciplineMedia}
+                      sizes="(max-width: 760px) 100vw, 33vw"
+                    />
+                    <div className={styles.disciplineCopy}>
+                      <h3>{role.title}</h3>
+                      <p>{role.body}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <p className={styles.disciplineNote}>{copy.aboutTeamPlaceholderNote}</p>
+            </>
+          )}
+        </div>
+      </section>
+
+      <PageCta locale={locale} title={copy.aboutCtaTitle} body={copy.aboutCtaBody} secondaryLabel={copy.viewServices} secondaryHref={localizedPath(locale, "services")} />
     </div>
   );
 }

@@ -1,0 +1,61 @@
+.feedback {
+  width: min(calc(100% - 3rem), 54rem);
+  margin-inline: auto;
+  padding-block: clamp(10rem, 17vw, 15rem) 8rem;
+  min-height: 70svh;
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
+  min-width: 3rem;
+  padding-inline: 0.8rem;
+  margin-block-end: 2rem;
+  border: 1px solid #bbc9e7;
+  border-radius: 50%;
+  color: #244fa5;
+  font-size: 0.82rem;
+}
+
+.feedback h1 {
+  margin: 0;
+  color: #1a1e24;
+  font-size: clamp(2.5rem, 5vw, 4.75rem);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.feedback[dir="rtl"] h1 {
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.feedback p {
+  max-width: 42rem;
+  margin-block: 1.5rem 2.5rem;
+  color: #58616d;
+  font-size: 1.1rem;
+  line-height: 1.9;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 44px;
+  padding: 0.6rem 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .feedback { width: calc(100% - 2rem); padding-block: 8rem 5rem; }
+}

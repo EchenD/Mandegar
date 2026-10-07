@@ -37,6 +37,8 @@
   ],
   "exclude": [
     "node_modules",
-    "node_modules.preseed"
+    "node_modules.preseed",
+    "out",
+    ".next-static"
   ]
 }

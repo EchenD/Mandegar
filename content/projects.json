@@ -1,0 +1,496 @@
+[
+  {
+    "slug": "placeholder-exhibition-01",
+    "title": {
+      "fa": "فضای گردهمایی",
+      "en": "The Gathering Space",
+      "ar": "مساحة اللقاء"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / نمایشگاه",
+      "en": "Concept demo / Exhibition",
+      "ar": "عرض مفاهيمي / معرض"
+    },
+    "summary": {
+      "fa": "مطالعه‌ای مفهومی درباره اینکه چگونه فضا، نور و تعامل می‌توانند آدم‌ها را به گردهمایی دعوت کنند.",
+      "en": "A concept study of how space, light and interaction can invite people to gather.",
+      "ar": "دراسة مفاهيمية لكيفية دعوة الناس إلى اللقاء من خلال المساحة والضوء والتفاعل."
+    },
+    "category": {
+      "fa": "نمایشگاه",
+      "en": "Exhibition",
+      "ar": "معرض"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "exhibition",
+    "gallery": [
+      "exhibition",
+      "interactive",
+      "stage"
+    ],
+    "services": [
+      {
+        "fa": "طراحی تجربه",
+        "en": "Experience design",
+        "ar": "تصميم التجربة"
+      },
+      {
+        "fa": "طراحی فضایی",
+        "en": "Spatial design",
+        "ar": "التصميم المكاني"
+      },
+      {
+        "fa": "تولید و اجرا",
+        "en": "Production and delivery",
+        "ar": "الإنتاج والتنفيذ"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور یک سالن خالی می‌تواند به فضایی تبدیل شود که آدم‌ها را به دیدار و مشارکت دعوت می‌کند؟",
+      "en": "How can an empty hall become a space that invites people to meet and participate?",
+      "ar": "كيف تتحول قاعة فارغة إلى مساحة تدعو الناس إلى اللقاء والمشاركة؟"
+    },
+    "approach": {
+      "fa": "ما ایده، فضا، محتوا و تعامل را در یک مسیر منسجم کنار هم قرار می‌دهیم.",
+      "en": "We connect idea, space, content and interaction into one coherent journey.",
+      "ar": "نربط الفكرة والمساحة والمحتوى والتفاعل في رحلة واحدة متماسكة."
+    },
+    "scope": {
+      "fa": "استراتژی، طراحی تجربه، طراحی فضایی، محتوا، فناوری، تولید فنی و اجرای میدانی.",
+      "en": "Strategy, experience design, spatial design, content, technology, technical production and on-site delivery.",
+      "ar": "الاستراتيجية وتصميم التجربة والتصميم المكاني والمحتوى والتقنية والإنتاج والتنفيذ الميداني."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "exhibitions-and-space",
+      "event-production",
+      "content-and-media"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-interactive-02",
+      "placeholder-live-03"
+    ]
+  },
+  {
+    "slug": "placeholder-interactive-02",
+    "title": {
+      "fa": "دیوار زنده",
+      "en": "The Living Wall",
+      "ar": "الجدار الحي"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / تعامل",
+      "en": "Concept demo / Interaction",
+      "ar": "عرض مفاهيمي / تفاعل"
+    },
+    "summary": {
+      "fa": "مخاطب فقط تماشا نمی‌کند؛ با فضا وارد گفت‌وگو می‌شود.",
+      "en": "The audience does not only watch; it enters into a conversation with the space.",
+      "ar": "الجمهور لا يكتفي بالمشاهدة؛ بل يدخل في حوار مع المساحة."
+    },
+    "category": {
+      "fa": "تجربه تعاملی",
+      "en": "Interactive experience",
+      "ar": "تجربة تفاعلية"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "interactive",
+    "gallery": [
+      "interactive",
+      "photo",
+      "exhibition"
+    ],
+    "services": [
+      {
+        "fa": "طراحی تعامل",
+        "en": "Interaction design",
+        "ar": "تصميم التفاعل"
+      },
+      {
+        "fa": "تولید محتوا",
+        "en": "Content production",
+        "ar": "إنتاج المحتوى"
+      },
+      {
+        "fa": "نرم‌افزار و فناوری",
+        "en": "Software and technology",
+        "ar": "البرمجيات والتقنية"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور یک دیوار دیجیتال می‌تواند تماشاگر را به مشارکت در داستان دعوت کند؟",
+      "en": "How can a digital wall invite visitors to take part in the story?",
+      "ar": "كيف يدعو جدار رقمي الزوار إلى المشاركة في القصة؟"
+    },
+    "approach": {
+      "fa": "تعامل را از یک قابلیت تزئینی به بخشی از داستان برند تبدیل می‌کنیم.",
+      "en": "We turn interaction from a decorative feature into part of the brand story.",
+      "ar": "نحوّل التفاعل من ميزة زخرفية إلى جزء من قصة العلامة."
+    },
+    "scope": {
+      "fa": "ایده‌پردازی، طراحی بازی و تعامل، محتوا، نرم‌افزار، AV و پشتیبانی اجرا.",
+      "en": "Ideation, game and interaction design, content, software, AV and production support.",
+      "ar": "توليد الأفكار وتصميم الألعاب والتفاعل والمحتوى والبرمجيات والصوتيات والدعم الإنتاجي."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "interactive-experiences",
+      "content-and-media",
+      "websites-and-applications"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-live-03",
+      "placeholder-photo-04"
+    ]
+  },
+  {
+    "slug": "placeholder-live-03",
+    "title": {
+      "fa": "یک لحظه مشترک",
+      "en": "One Shared Moment",
+      "ar": "لحظة مشتركة"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / رویداد زنده",
+      "en": "Concept demo / Live event",
+      "ar": "عرض مفاهيمي / فعالية مباشرة"
+    },
+    "summary": {
+      "fa": "وقتی صحنه، محتوا، نور و آدم‌ها در یک لحظه ماندگار به هم می‌رسند.",
+      "en": "When stage, content, light and people meet in one lasting moment.",
+      "ar": "عندما تلتقي المنصة والمحتوى والضوء والناس في لحظة باقية."
+    },
+    "category": {
+      "fa": "رویداد سازمانی",
+      "en": "Corporate event",
+      "ar": "فعالية مؤسسية"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "videoPlaceholder",
+    "gallery": [
+      "videoPlaceholder",
+      "exhibition",
+      "photo"
+    ],
+    "services": [
+      {
+        "fa": "تولید رویداد",
+        "en": "Event production",
+        "ar": "إنتاج الفعاليات"
+      },
+      {
+        "fa": "محتوا و نمایشگر",
+        "en": "Content and screens",
+        "ar": "المحتوى والشاشات"
+      },
+      {
+        "fa": "تکنیکال و اجرا",
+        "en": "Technical and live delivery",
+        "ar": "التقنية والتنفيذ المباشر"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور صحنه، نور و محتوا می‌توانند مخاطب را در یک لحظه مشترک به هم برسانند؟",
+      "en": "How can stage, light and content bring an audience into one shared moment?",
+      "ar": "كيف تجمع المنصة والضوء والمحتوى الجمهور في لحظة مشتركة؟"
+    },
+    "approach": {
+      "fa": "تمام نقاط تماس مخاطب را از ورود تا آخرین تصویر هماهنگ می‌کنیم.",
+      "en": "We coordinate every audience touchpoint from arrival to the final image.",
+      "ar": "ننسّق كل نقطة تواصل مع الجمهور من الوصول حتى الصورة الأخيرة."
+    },
+    "scope": {
+      "fa": "سناریو، صحنه، AV، نور، محتوا، لجستیک، نیروی انسانی و پشتیبانی.",
+      "en": "Scenario, stage, AV, lighting, content, logistics, staffing and support.",
+      "ar": "السيناريو والمنصة والصوتيات والإضاءة والمحتوى واللوجستيات والطاقم والدعم."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "event-production",
+      "content-and-media"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-exhibition-01",
+      "placeholder-interactive-02"
+    ]
+  },
+  {
+    "slug": "placeholder-photo-04",
+    "title": {
+      "fa": "پرتره‌های در حرکت",
+      "en": "Portraits in Motion",
+      "ar": "صور في حركة"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / تجربه تصویری",
+      "en": "Concept demo / Photo experience",
+      "ar": "عرض مفاهيمي / تجربة تصويرية"
+    },
+    "summary": {
+      "fa": "ایده‌ای برای تبدیل حضور مخاطب به یک یادگار تصویری شخصی.",
+      "en": "A concept for turning participation into a personal visual keepsake.",
+      "ar": "فكرة لتحويل مشاركة الزائر إلى تذكار بصري شخصي."
+    },
+    "category": {
+      "fa": "تجربه تصویری",
+      "en": "Photo experience",
+      "ar": "تجربة تصويرية"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "projectPhoto",
+    "gallery": [
+      "projectPhoto",
+      "spark",
+      "interactive"
+    ],
+    "services": [
+      {
+        "fa": "طراحی تجربه",
+        "en": "Experience design",
+        "ar": "تصميم التجربة"
+      },
+      {
+        "fa": "طراحی فضایی",
+        "en": "Spatial design",
+        "ar": "التصميم المكاني"
+      },
+      {
+        "fa": "تولید و اجرا",
+        "en": "Production and delivery",
+        "ar": "الإنتاج والتنفيذ"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور یک لحظه مشارکت می‌تواند به تصویری تبدیل شود که مخاطب با خود نگه می‌دارد؟",
+      "en": "How can a moment of participation become an image visitors keep?",
+      "ar": "كيف تصبح لحظة المشاركة صورة يحتفظ بها الزائر؟"
+    },
+    "approach": {
+      "fa": "ما ایده، فضا، محتوا و تعامل را در یک مسیر منسجم کنار هم قرار می‌دهیم.",
+      "en": "We connect idea, space, content and interaction into one coherent journey.",
+      "ar": "نربط الفكرة والمساحة والمحتوى والتفاعل في رحلة واحدة متماسكة."
+    },
+    "scope": {
+      "fa": "استراتژی، طراحی تجربه، طراحی فضایی، محتوا، فناوری، تولید فنی و اجرای میدانی.",
+      "en": "Strategy, experience design, spatial design, content, technology, technical production and on-site delivery.",
+      "ar": "الاستراتيجية وتصميم التجربة والتصميم المكاني والمحتوى والتقنية والإنتاج والتنفيذ الميداني."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "interactive-experiences",
+      "content-and-media"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-interactive-02",
+      "placeholder-live-03"
+    ]
+  },
+  {
+    "slug": "placeholder-intelligence-05",
+    "title": {
+      "fa": "نبض مخاطب",
+      "en": "The Audience Pulse",
+      "ar": "نبض الجمهور"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / هوشمندی رویداد",
+      "en": "Concept demo / Event intelligence",
+      "ar": "عرض مفاهيمي / ذكاء الفعاليات"
+    },
+    "summary": {
+      "fa": "نمایشی مفهومی از اینکه چگونه حرکت‌های جمعی می‌توانند بدون ادعای داده واقعی، به یک لایه بصری زنده تبدیل شوند.",
+      "en": "A concept preview of how collective movement could become a living visual layer, without claiming real audience data.",
+      "ar": "تصور مفاهيمي لكيفية تحوّل الحركة الجماعية إلى طبقة بصرية حية، من دون ادعاء بيانات حقيقية."
+    },
+    "category": {
+      "fa": "هوشمندی رویداد",
+      "en": "Event intelligence",
+      "ar": "ذكاء الفعاليات"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "intelligence",
+    "gallery": [
+      "intelligence",
+      "interactive",
+      "exhibition"
+    ],
+    "services": [
+      {
+        "fa": "طراحی تعامل",
+        "en": "Interaction design",
+        "ar": "تصميم التفاعل"
+      },
+      {
+        "fa": "تولید محتوا",
+        "en": "Content production",
+        "ar": "إنتاج المحتوى"
+      },
+      {
+        "fa": "نرم‌افزار و فناوری",
+        "en": "Software and technology",
+        "ar": "البرمجيات والتقنية"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور می‌توان الگوهای مشارکت را در یک فضای بصری زنده و قابل فهم تصور کرد؟",
+      "en": "How could patterns of participation become a clear, living visual layer?",
+      "ar": "كيف يمكن تصور أنماط المشاركة في طبقة بصرية حية وواضحة؟"
+    },
+    "approach": {
+      "fa": "تعامل را از یک قابلیت تزئینی به بخشی از داستان برند تبدیل می‌کنیم.",
+      "en": "We turn interaction from a decorative feature into part of the brand story.",
+      "ar": "نحوّل التفاعل من ميزة زخرفية إلى جزء من قصة العلامة."
+    },
+    "scope": {
+      "fa": "ایده‌پردازی، طراحی بازی و تعامل، محتوا، نرم‌افزار، AV و پشتیبانی اجرا.",
+      "en": "Ideation, game and interaction design, content, software, AV and production support.",
+      "ar": "توليد الأفكار وتصميم الألعاب والتفاعل والمحتوى والبرمجيات والصوتيات والدعم الإنتاجي."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "event-intelligence",
+      "interactive-experiences"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-exhibition-01",
+      "placeholder-interactive-02"
+    ]
+  },
+  {
+    "slug": "placeholder-arrival-06",
+    "title": {
+      "fa": "ورود در نور",
+      "en": "Arrival in Light",
+      "ar": "الوصول في الضوء"
+    },
+    "eyebrow": {
+      "fa": "دموی مفهومی / لحظه ورود",
+      "en": "Concept demo / Arrival moment",
+      "ar": "عرض مفاهيمي / لحظة الوصول"
+    },
+    "summary": {
+      "fa": "مطالعه‌ای مفهومی برای ورودی‌ای که داستان رویداد را پیش از رسیدن به فضای اصلی آغاز می‌کند.",
+      "en": "A concept study for an entrance that begins the event story before guests reach the main space.",
+      "ar": "دراسة مفاهيمية لمدخل يبدأ قصة الفعالية قبل وصول الضيوف إلى المساحة الرئيسية."
+    },
+    "category": {
+      "fa": "هویت فضایی",
+      "en": "Spatial identity",
+      "ar": "هوية مكانية"
+    },
+    "year": "Demo",
+    "location": {
+      "fa": "نمونه مفهومی",
+      "en": "Concept study",
+      "ar": "دراسة مفاهيمية"
+    },
+    "media": "spark",
+    "gallery": [
+      "spark",
+      "exhibition",
+      "stage"
+    ],
+    "services": [
+      {
+        "fa": "تولید رویداد",
+        "en": "Event production",
+        "ar": "إنتاج الفعاليات"
+      },
+      {
+        "fa": "محتوا و نمایشگر",
+        "en": "Content and screens",
+        "ar": "المحتوى والشاشات"
+      },
+      {
+        "fa": "تکنیکال و اجرا",
+        "en": "Technical and live delivery",
+        "ar": "التقنية والتنفيذ المباشر"
+      }
+    ],
+    "challenge": {
+      "fa": "چطور می‌توان از اولین قدم، حس و داستان رویداد را به مخاطب منتقل کرد؟",
+      "en": "How can the first step into a space introduce the event’s mood and story?",
+      "ar": "كيف تقدّم الخطوة الأولى أجواء الفعالية وقصتها؟"
+    },
+    "approach": {
+      "fa": "تمام نقاط تماس مخاطب را از ورود تا آخرین تصویر هماهنگ می‌کنیم.",
+      "en": "We coordinate every audience touchpoint from arrival to the final image.",
+      "ar": "ننسّق كل نقطة تواصل مع الجمهور من الوصول حتى الصورة الأخيرة."
+    },
+    "scope": {
+      "fa": "سناریو، صحنه، AV، نور، محتوا، لجستیک، نیروی انسانی و پشتیبانی.",
+      "en": "Scenario, stage, AV, lighting, content, logistics, staffing and support.",
+      "ar": "السيناريو والمنصة والصوتيات والإضاءة والمحتوى واللوجستيات والطاقم والدعم."
+    },
+    "outcome": {
+      "fa": "این یک مطالعه مفهومی است؛ نتیجه‌ای از اجرای یک پروژه واقعی گزارش نمی‌شود.",
+      "en": "This is a concept study; no live project outcomes are reported.",
+      "ar": "هذه دراسة مفاهيمية؛ لا تُعرض نتائج مشروع منفّذ."
+    },
+    "isPlaceholder": true,
+    "publicationState": "published",
+    "serviceSlugs": [
+      "exhibitions-and-space",
+      "event-production"
+    ],
+    "relatedProjectSlugs": [
+      "placeholder-interactive-02",
+      "placeholder-live-03"
+    ]
+  }
+]

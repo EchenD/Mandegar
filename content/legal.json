@@ -1,0 +1,75 @@
+{
+  "title": {
+    "fa": "حریم خصوصی، کوکی‌ها و شرایط استفاده",
+    "en": "Privacy, cookies and terms of use",
+    "ar": "الخصوصية وملفات الارتباط وشروط الاستخدام"
+  },
+  "intro": {
+    "fa": "این پیش‌نویس چارچوب اطلاعاتی را توضیح می‌دهد که برای انتشار عمومی وب‌سایت تأیید خواهد شد. اطلاعات نهایی شرکت، شرایط میزبانی و الزامات مرتبط هنوز به تأیید نیاز دارند.",
+    "en": "This draft outlines the information that will be confirmed for the website’s public release. Final company details, hosting arrangements and applicable requirements still need approval.",
+    "ar": "توضح هذه المسودة المعلومات التي ستُؤكد عند إطلاق الموقع. لا تزال بيانات الشركة النهائية وترتيبات الاستضافة والمتطلبات ذات الصلة تحتاج إلى اعتماد."
+  },
+  "status": "draft",
+  "sections": [
+    {
+      "heading": {
+        "fa": "اطلاعاتی که با ما در میان می‌گذارید",
+        "en": "Information you share",
+        "ar": "المعلومات التي تشاركها"
+      },
+      "body": {
+        "fa": "وقتی از یک مسیر تماس منتشرشده استفاده می‌کنید، اطلاعاتی که به انتخاب خود ارسال می‌کنید برای بررسی درخواست شما استفاده می‌شود. متن نهایی، شرکت مسئول، مسیر تماس و شرایط پردازش مرتبط را مشخص خواهد کرد.",
+        "en": "When you contact us using a published contact channel, the information you choose to share is used to discuss your enquiry. The final policy will identify the responsible company, contact point and applicable handling arrangements.",
+        "ar": "عند التواصل عبر قناة منشورة، تُستخدم المعلومات التي تختار مشاركتها لمناقشة استفسارك. ستحدد السياسة النهائية الشركة المسؤولة ونقطة التواصل وترتيبات معالجة المعلومات."
+      }
+    },
+    {
+      "heading": {
+        "fa": "میزبانی و اطلاعات فنی",
+        "en": "Hosting and technical information",
+        "ar": "الاستضافة والمعلومات التقنية"
+      },
+      "body": {
+        "fa": "میزبان ممکن است اطلاعات فنی درخواست‌ها را برای ارائه و محافظت از وب‌سایت پردازش کند. نام ارائه‌دهندگان، محل نگهداری و مدت حفظ داده‌ها پس از نهایی‌شدن میزبانی اضافه خواهد شد.",
+        "en": "The hosting provider may process technical request information as part of delivering and protecting the website. Provider names, storage locations and retention details will be added after hosting is finalized.",
+        "ar": "قد يعالج مزود الاستضافة معلومات تقنية عن الطلبات لتقديم الموقع وحمايته. ستُضاف أسماء المزودين ومواقع التخزين وفترات الاحتفاظ بعد اعتماد الاستضافة."
+      }
+    },
+    {
+      "heading": {
+        "fa": "کوکی‌ها و ابزارهای اختیاری",
+        "en": "Cookies and optional tools",
+        "ar": "ملفات الارتباط والأدوات الاختيارية"
+      },
+      "body": {
+        "fa": "هر ابزار تحلیل، سرویس جاسازی‌شده یا ابزار بازاریابی که بعداً اضافه شود، باید همراه با هدف و سازوکار رضایت لازم در این صفحه معرفی شود. متن منتشرشده بر اساس ابزارهای واقعاً فعال هنگام راه‌اندازی تکمیل خواهد شد.",
+        "en": "Any analytics, embedded services or marketing tools introduced later should be described here with their purpose and any required consent controls. The published policy will reflect the tools actually enabled at launch.",
+        "ar": "ينبغي وصف أي أدوات تحليل أو خدمات مدمجة أو أدوات تسويق تُضاف لاحقاً، مع غرضها وضوابط الموافقة المطلوبة. ستعكس السياسة المنشورة الأدوات المفعلة فعلياً عند الإطلاق."
+      }
+    },
+    {
+      "heading": {
+        "fa": "مطالعات مفهومی و رسانه",
+        "en": "Concept studies and media",
+        "ar": "الدراسات المفاهيمية والوسائط"
+      },
+      "body": {
+        "fa": "نمونه‌هایی که با برچسب مفهومی نمایش داده می‌شوند، یک جهت پیشنهادی را توضیح می‌دهند و ادعای پروژه اجراشده برای مشتری نیستند. مطالعات موردی، نشان‌ها، تصاویر و نقل‌قول‌های واقعی پس از تأیید صحت، مجوز و حقوق انتشار اضافه خواهند شد.",
+        "en": "Clearly labelled concept studies illustrate a proposed direction; they are not claims of completed client work. Real case studies, logos, images and quotations will be added after their accuracy, permission and publication rights are confirmed.",
+        "ar": "توضح الدراسات الموسومة كمفاهيم توجهاً مقترحاً ولا تمثل ادعاءً بتنفيذ أعمال لعملاء. تُضاف الدراسات والشعارات والصور والاقتباسات الحقيقية بعد تأكيد صحتها وأذونات وحقوق نشرها."
+      }
+    },
+    {
+      "heading": {
+        "fa": "دامنه پروژه و توافق‌ها",
+        "en": "Project scope and agreements",
+        "ar": "نطاق المشاريع والاتفاقات"
+      },
+      "body": {
+        "fa": "شرح خدمات حوزه‌های ممکن همکاری را معرفی می‌کند. دسترسی، خروجی‌ها، زمان‌بندی، مسئولیت‌ها و شرایط تجاری برای هر پروژه بررسی و در مستندات توافق‌شده ثبت می‌شود.",
+        "en": "Service descriptions explain possible areas of work. Availability, deliverables, schedules, responsibilities and commercial terms are discussed for each brief and recorded in the agreed project documentation.",
+        "ar": "توضح أوصاف الخدمات مجالات العمل الممكنة. تُناقش الإتاحة والمخرجات والجداول والمسؤوليات والشروط التجارية لكل مشروع وتُسجل في وثائقه المتفق عليها."
+      }
+    }
+  ]
+}

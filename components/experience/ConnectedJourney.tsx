@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import * as THREE from "three";
+import journeyContent from "@/content/journey.json";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { publicAssetPath } from "@/lib/public-asset-path";
 import { hasWebGLSupport } from "@/lib/webgl-support";
@@ -45,21 +46,8 @@ export type JourneyClient = { name: string; logo?: string };
 type JourneyCopy = { projectKicker: string; projectTitle: string; projectBody: string; viewProject: string; projectsEmpty: string };
 type Props = { locale: Locale; projects: JourneyProject[]; voices?: JourneyVoice[]; clients?: JourneyClient[]; copy: JourneyCopy; aboutHref?: string; onWorkReady?: (jump: (() => void) | null) => void };
 const emptyClients: JourneyClient[] = [];
-const prototypeLogoSources = [
-  "https://upload.wikimedia.org/wikipedia/commons/8/83/Logoipsum-logo-39.svg",
-  "https://upload.wikimedia.org/wikipedia/commons/d/dd/Logoipsum-logo-6.svg",
-];
-const words = {
-  en: { work: "Selected experiences", entry: "From space. Into experience.", aboutLabel: "The approach", about: ["Ideas become spaces.", "Spaces bring people", "together."], aboutBody: "We connect idea, space, technology and delivery into one experience.", more: "Inside Mandegar", partners: "Made together.", partnersLabel: "Our collaborators", placeholder: "Approved logo position", finale: "Make something that stays.", contact: "Start a conversation", demo: "Concept study", scroll: "Scroll to explore", detail: "Explore image detail" },
-  fa: { work: "تجربه‌های منتخب", entry: "از فضا، به تجربه.", aboutLabel: "رویکرد ما", about: ["ایده‌ها فضا می‌شوند.", "فضاها آدم‌ها را", "به هم می‌رسانند."], aboutBody: "ایده، فضا، فناوری و اجرا را به یک تجربه پیوسته تبدیل می‌کنیم.", more: "درباره ماندگار", partners: "با هم می‌سازیم.", partnersLabel: "همراهان ما", placeholder: "جایگاه لوگوی تأییدشده", finale: "چیزی بسازیم که ماندگار شود.", contact: "شروع گفتگو", demo: "نمونه مفهومی", scroll: "برای کشف ادامه دهید", detail: "نمایش جزئیات تصویر" },
-  ar: { work: "تجارب مختارة", entry: "من المكان إلى التجربة.", aboutLabel: "نهجنا", about: ["تصبح الأفكار أماكن.", "وتجمع الأماكن", "الناس معاً."], aboutBody: "نربط الفكرة والمكان والتقنية والتنفيذ في تجربة واحدة.", more: "عن ماندگار", partners: "نصنع معاً.", partnersLabel: "شركاؤنا", placeholder: "موضع شعار معتمد", finale: "لنصنع شيئاً يبقى.", contact: "ابدأ الحوار", demo: "نموذج مفاهيمي", scroll: "تابع للاستكشاف", detail: "استكشف تفاصيل الصورة" },
-};
-
-const aboutTyping: Record<Locale, { base: string; words: string[] }> = {
-  en: { base: "We are best at", words: ["design.", "planning.", "making.", "delivery."] },
-  fa: { base: "تخصص ما:", words: ["طراحی.", "برنامه‌ریزی.", "ساخت.", "اجرا."] },
-  ar: { base: "نحن نتقن", words: ["التصميم.", "التخطيط.", "الصناعة.", "التنفيذ."] },
-};
+const words = journeyContent.copy;
+const aboutTyping = journeyContent.aboutTyping;
 
 function MaskedWords({ text, marker }: { text: string; marker: string }) {
   return <>{text.split(/\s+/).map((word, index) => <span className={styles.wordMask} key={index} aria-hidden="true"><span data-motion-word={marker}>{word}</span></span>)}</>;
@@ -130,10 +118,11 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
   const sphereProjects = useMemo(() => selected.length
     ? Array.from({ length: 8 }, (_, index) => selected[index % selected.length])
     : [], [selected]);
-  const ui = words[locale];
+  const configuredCopy = words[locale];
+  const ui = { ...configuredCopy, partnersLabel: clients.length ? configuredCopy.partnersLabel : configuredCopy.genericPartnersLabel };
   const partnerItems = useMemo<JourneyClient[]>(() => clients.length
     ? clients
-    : Array.from({ length: 10 }, (_, index) => ({ name: `${ui.placeholder} ${String(index + 1).padStart(2, "0")}` })), [clients, ui.placeholder]);
+    : ui.disciplines.map((name) => ({ name })), [clients, ui.disciplines]);
   const partnerFinaleMedia = useMemo<PartnerFinaleMedia[]>(() => {
     const seen = new Set<string>();
     const media = selected.flatMap((project) => [
@@ -1115,14 +1104,12 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
               <div className={styles.partnerLogo}>
                 {client.logo
                   ? <Image src={client.logo} alt={client.name} width={360} height={160} sizes="(max-width: 760px) 54vw, 24vw" />
-                  : index < prototypeLogoSources.length
-                    ? <span className={styles.webPrototypeLogo} style={{ backgroundImage: `url("${prototypeLogoSources[index]}")` }} aria-hidden="true" />
-                    : <PrototypeLogo index={index} />}
+                  : <PrototypeLogo index={index} />}
               </div>
-              <small>{clients.length ? client.name : `PROTOTYPE / ${String(index + 1).padStart(2, "0")}`}</small>
+              <small>{client.name}</small>
             </article>)}
           </div>
-          <h2 className={styles.partnerCenter} data-partner-center><span data-partner-center-text>{ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
+          <h2 className={styles.partnerCenter} data-partner-center><span data-partner-center-text>{ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" />{clients.length === 0 ? <span className={styles.partnerConceptNote}>{ui.genericPartnersNote}</span> : null}</h2>
         </div>
         <small className={`${styles.kicker} ${styles.finaleKicker}`} data-finale-kicker><span data-finale-kicker-text>05 / MANDEGAR</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
         {(!spatialEnabled || staticJourney) ? <div className={styles.logo} data-logo-fallback role="img" aria-label="Mandegar">

@@ -12,6 +12,10 @@
   pointer-events: none;
 }
 .root :is(h2, p) { margin: 0; }
+.partnerCenter:has(.partnerConceptNote) { display: block; white-space: normal; }
+.partnerConceptNote { display: block; margin-block-start: .8rem; color: #535d69; font-size: .68rem; font-weight: 400; line-height: 1.8; letter-spacing: .03em; white-space: normal; }
+:global([dir="rtl"]) .partnerConceptNote { letter-spacing: 0; }
+.root[data-motion="reduced"] .partnerConceptNote { color: #535d69; }
 .root a { color: inherit; text-decoration: none; }
 .stage { position: sticky; top: 0; height: 100svh; width: 100%; overflow: hidden; pointer-events: none; will-change: transform; }
 .stage [data-layer], .seam { visibility: hidden; }
@@ -41,7 +45,7 @@
 .copyMask small { display: block; }
 .projectDetail small { font-size: .61rem; line-height: 1.7; letter-spacing: .08em; text-transform: uppercase; color: #56616a; }
 .projectDetail p { margin-block-start: 1rem; font-size: .86rem; line-height: 1.75; color: #4d565e; }
-.projectDetail a, .aboutLink, .finaleDetail a { display: inline-flex; gap: 2rem; align-items: center; border-bottom: 1px solid currentColor; padding-block: .6rem; margin-top: 1rem; font-size: .78rem; pointer-events: auto; transition: color .2s; }
+.projectDetail a, .aboutLink, .finaleDetail a { display: inline-flex; gap: 2rem; align-items: center; min-height: 44px; border-bottom: 1px solid currentColor; padding-block: .6rem; margin-top: 1rem; font-size: .78rem; pointer-events: auto; transition: color .2s; }
 .projectDetail a > span:last-child, .finaleDetail a > span:last-child { color: var(--blue); }
 .root a:hover { color: var(--blue); }
 .root :is(a, button):focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
@@ -83,7 +87,7 @@
 .webPrototypeLogo { display: block; width: min(76%, 16rem); height: 7svh; background: center / contain no-repeat; filter: grayscale(1) contrast(1.35); }
 .prototypeLogo { display: grid; place-items: center; width: min(70%, 10rem); color: #13181d; }
 .prototypeLogo svg { display: block; width: 100%; height: auto; fill: currentColor; overflow: visible; }
-.partnerCard small { display: block; padding-top: .8rem; border-top: 1px solid #16191d17; color: #5e6870; font-size: .58rem; font-weight: 650; letter-spacing: .14em; text-align: center; opacity: var(--card-content-opacity, 1); }
+.partnerCard small { display: block; padding-top: .8rem; border-top: 1px solid #16191d17; color: #5e6870; font-size: .7rem; font-weight: 650; line-height: 1.6; letter-spacing: .04em; text-align: center; overflow-wrap: anywhere; opacity: var(--card-content-opacity, 1); }
 .partnerCenter { position: absolute; left: 50%; top: 50%; z-index: 120; display: flex; align-items: center; justify-content: center; width: max-content; max-width: 50vw; margin: 0; padding: 0; background: transparent; color: #15191d; font-size: clamp(1.45rem, 3.1vw, 3.5rem); font-weight: 620; line-height: 1.2; letter-spacing: -.04em; text-align: center; white-space: nowrap; transform: translate(-50%, -50%); transform-origin: center; }
 :global([dir="rtl"]) .partnerCenter { letter-spacing: 0; }
 .finaleKicker { position: absolute; top: 13svh; inset-inline-start: 7vw; z-index: 300; color: var(--accent-deep); }
@@ -114,7 +118,7 @@
   .partnerScene { perspective: 900px; }
   .partnerCard { width: 29vw; height: 22svh; border-radius: 1.1rem; padding: .75rem; }
   .partnerLogo img { max-height: 6svh; }
-  .partnerCard small { font-size: .48rem; letter-spacing: .09em; }
+  .partnerCard small { font-size: .68rem; letter-spacing: .02em; }
   .partnerCenter { width: max-content; max-width: 70vw; font-size: clamp(1.25rem, 7vw, 2.4rem); }
   .logo { width: 42vw; }
   .finaleDetail { bottom: 17svh; }
@@ -128,21 +132,27 @@
 .root[data-motion="reduced"] .servicesScene { display: none; }
 .root[data-motion="reduced"] .staticPhoto { display: block; width: 100%; height: 50svh; object-fit: cover; margin-bottom: 2rem; }
 .root[data-motion="reduced"] :is(.titlePosition, .projectDetail, .logo, .finaleDetail) { position: relative; inset: auto; width: auto; visibility: visible; }
-.root[data-motion="reduced"] .titlePosition h2 { font-size: clamp(2rem, 6vw, 5rem); }
+.root[data-motion="reduced"] .titlePosition h2 { overflow: visible; font-size: clamp(2rem, 6vw, 5rem); line-height: 1.4; white-space: normal; text-wrap: balance; }
 .root[data-motion="reduced"] .titlePosition { height: auto; overflow: visible; padding-top: 0; margin-bottom: 1.5rem; text-align: start; color: var(--ink); }
 .root[data-motion="reduced"] .projectAction { justify-content: flex-start; color: var(--blue); }
 .root[data-motion="reduced"] .projectNumber { display: none; }
 .root[data-motion="reduced"] .about { background: var(--bg); }
 .root[data-motion="reduced"] .aboutBackdrop { display: none; }
 .root[data-motion="reduced"] .aboutTyping { position: relative; inset: auto; min-height: 70svh; padding: 8rem 0; }
+.root[data-motion="reduced"] .typingLine { max-width: 100%; line-height: 1.45; white-space: normal; }
+.root[data-motion="reduced"] .typingCopy { flex-wrap: wrap; justify-content: center; text-align: center; }
+.root[data-motion="reduced"] .typingWord { overflow-wrap: anywhere; }
 .root[data-motion="reduced"] .typingCursor { display: none; }
 .root[data-motion="reduced"] .aboutLink { position: relative; inset: auto; visibility: visible; opacity: 1; }
 .root[data-motion="reduced"] .partnerScene { position: relative; inset: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; perspective: none; }
 .root[data-motion="reduced"] .partnerWheel { position: static; display: contents; }
 .root[data-motion="reduced"] .partnerCard { position: relative; left: auto; top: auto; width: auto; height: 16rem; opacity: 1 !important; transform: none !important; filter: none !important; }
 .root[data-motion="reduced"] .partnerCenter { position: relative; left: auto; top: auto; grid-column: 1 / -1; grid-row: 1; width: min(18rem, 70vw); justify-self: center; opacity: 1 !important; transform: none !important; }
+.root[data-motion="reduced"] .partners > .kicker { position: static; inset: auto; margin-block-end: 2rem; }
+.root[data-motion="reduced"] .partners > .finaleKicker { margin-block: 4rem 2rem; }
 .root[data-motion="reduced"] :is(.partnerFallback, .partnerFinaleCanvas) { display: none; }
 .root[data-motion="reduced"] .logo { left: auto; top: auto; width: min(42rem, 80vw); height: auto; margin: 0 auto 2rem; transform: none; }
+.root[data-motion="reduced"] .finaleDetail h2 { line-height: 1.45; overflow-wrap: anywhere; text-wrap: balance; }
 
 @media (max-height: 500px) and (min-width: 761px) {
   .orbitCard { top: 58%; height: 38svh; }

@@ -1,0 +1,959 @@
+.portfolioPage {
+  background: var(--paper);
+  overflow-wrap: anywhere;
+}
+
+.introAside h2,
+.serviceBrief h2 {
+  margin-block: .7rem .65rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.5;
+}
+
+.introAside p,
+.serviceBrief p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: .9rem;
+  line-height: 1.9;
+}
+
+.asideMark {
+  display: block;
+  width: 1.7rem;
+  height: .2rem;
+  background: var(--accent);
+}
+
+.archiveSection {
+  padding-block: 1.25rem clamp(4rem, 7vw, 7rem);
+}
+
+.filterHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: .5rem 2.25rem;
+}
+
+.filterHeading .filterBar {
+  gap: .5rem;
+  margin: 0;
+}
+
+.filterBar .filterButton {
+  min-height: 44px;
+  padding: .65rem 1rem;
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: .8rem;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.filterBar .filterButton:hover,
+.filterBar .filterActive {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.resultsCount {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolioPage .archiveGrid,
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3rem 1.5rem;
+  padding-block-end: 0;
+}
+
+.projectCard {
+  min-width: 0;
+}
+
+.projectLink {
+  display: block;
+  border-radius: .85rem;
+}
+
+.cardMedia {
+  position: relative;
+  aspect-ratio: 1.6;
+  overflow: hidden;
+  border-radius: .85rem;
+  background: #e8e7e1;
+}
+
+.projectCard .cardMedia :global(.projectMedia) {
+  height: 100%;
+  min-height: 0;
+  border-radius: inherit;
+}
+
+.cardMedia :global(.mediaNotice) {
+  display: none;
+}
+
+.conceptBadge {
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-start: 1rem;
+  padding: .4rem .7rem;
+  border: 1px solid rgba(255, 255, 255, .5);
+  border-radius: .35rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: .7rem;
+  font-weight: 650;
+}
+
+.projectCard .cardBody {
+  padding-block: 1.15rem .3rem;
+}
+
+.projectCard .cardMeta {
+  flex-wrap: wrap;
+  gap: .35rem 1rem;
+  justify-content: space-between;
+  color: var(--muted-strong);
+  font-size: .73rem;
+  letter-spacing: .015em;
+  text-transform: none;
+}
+
+.projectCard .cardBody h2,
+.projectCard .cardBody h3 {
+  margin-block: .65rem .6rem;
+  font-size: clamp(1.45rem, 2.15vw, 2.1rem);
+  line-height: 1.4;
+  letter-spacing: -.035em;
+}
+
+.projectCard .cardBody p {
+  max-width: 44rem;
+  margin-block: 0 .8rem;
+  color: var(--muted-strong);
+  font-size: .9rem;
+  line-height: 1.9;
+}
+
+.cardBody :global(.textLink) {
+  min-height: 44px;
+  font-size: .8rem;
+}
+
+.portfolioPage .serviceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  border: 0;
+}
+
+.serviceTile {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: .85rem;
+  background: var(--paper);
+}
+
+.serviceTile .serviceLink,
+.serviceTile .serviceLink:hover {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+}
+
+.serviceTile .serviceLink:focus-visible {
+  outline-offset: -4px;
+}
+
+.serviceTileMedia {
+  position: relative;
+  flex-shrink: 0;
+  aspect-ratio: 1.95;
+  overflow: hidden;
+  border-block-end: 1px solid var(--line);
+}
+
+.serviceTile .serviceTileMedia :global(.mediaFrame) {
+  min-height: 0;
+  border-radius: 0;
+}
+
+.serviceTileMedia :global(.mediaNotice) {
+  font-size: .65rem;
+}
+
+.serviceCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 1.5rem;
+}
+
+.serviceTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+
+.serviceTopline :global(.serviceNumber) {
+  color: var(--accent);
+  font-size: .85rem;
+}
+
+.serviceCopy h2 {
+  margin-block: 0 .65rem;
+  font-size: clamp(1.5rem, 2.2vw, 2.15rem);
+  line-height: 1.45;
+  letter-spacing: -.035em;
+}
+
+.serviceTile .serviceCopy p {
+  margin-block: 0 1rem;
+  color: var(--muted-strong);
+  font-size: .9rem;
+  line-height: 1.9;
+}
+
+.cardAction {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-start: auto;
+  border-block-start: 1px solid var(--line);
+  padding-block-start: .65rem;
+  font-size: .8rem;
+  font-weight: 650;
+}
+
+.cardAction span {
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+.portfolioPage .detailHero {
+  padding-block: 8.25rem 0;
+  background: var(--paper);
+}
+
+.detailHeading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, .7fr);
+  align-items: end;
+  gap: clamp(2rem, 6vw, 6rem);
+  margin-block: 2.5rem;
+}
+
+.portfolioPage .detailHero h1 {
+  max-width: 18ch;
+  margin-block: .75rem 1.3rem;
+  font-size: clamp(2.4rem, 5.8vw, 5.5rem);
+  line-height: 1.3;
+  letter-spacing: -.05em;
+  text-wrap: balance;
+}
+
+.portfolioPage .detailHero .detailSummary {
+  max-width: 45rem;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: clamp(1rem, 1.4vw, 1.18rem);
+  line-height: 1.95;
+}
+
+.kicker {
+  color: var(--accent-deep);
+  font-size: .76rem;
+  font-weight: 650;
+  letter-spacing: .025em;
+  line-height: 1.8;
+}
+
+.projectFacts {
+  align-self: end;
+}
+
+.statusBadge {
+  display: inline-flex;
+  max-width: 100%;
+  padding: .4rem .7rem;
+  border: 1px solid #c8d8f5;
+  border-radius: .35rem;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: .72rem;
+  font-weight: 650;
+  line-height: 1.7;
+}
+
+.projectFacts dl {
+  margin-block: 1.15rem 0;
+}
+
+.projectFacts dl > div {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, .55fr) minmax(0, 1fr);
+  gap: 1rem;
+  border-block-start: 1px solid var(--line);
+  padding-block: .8rem;
+  font-size: .82rem;
+}
+
+.projectFacts dt {
+  color: var(--muted-strong);
+}
+
+.projectFacts dd {
+  margin: 0;
+}
+
+.serviceBrief {
+  border-inline-start: 1px solid var(--line-strong);
+  padding-inline-start: 1.75rem;
+}
+
+.portfolioPage .detailHero .conceptNotice {
+  max-width: none;
+  margin-block: 0 1.4rem;
+  border-inline-start: 2px solid var(--accent);
+  padding-inline-start: .85rem;
+  color: var(--muted-strong);
+  font-size: .8rem;
+  line-height: 1.9;
+}
+
+.portfolioPage .heroMedia {
+  position: relative;
+  height: clamp(22rem, 49vw, 44rem);
+  min-height: 0;
+  margin-block: 2rem 0;
+}
+
+.portfolioPage .heroMedia :global(.mediaFrame) {
+  min-height: 0;
+  border-radius: .85rem;
+}
+
+.portfolioPage .detailBody {
+  padding-block: clamp(3.5rem, 7vw, 7rem);
+}
+
+.portfolioPage .detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, .5fr) minmax(0, 1.4fr);
+  align-items: start;
+  gap: clamp(2rem, 8vw, 9rem);
+}
+
+.detailAside {
+  position: sticky;
+  inset-block-start: 7rem;
+}
+
+.contentsNav h2,
+.roleList h2 {
+  margin-block: 0 .8rem;
+  color: var(--muted-strong);
+  font-size: .8rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.7;
+}
+
+.contentsNav ol,
+.roleList ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contentsNav ol {
+  border-block-start: 1px solid var(--line);
+}
+
+.contentsNav a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: .85rem;
+  border-block-end: 1px solid var(--line);
+  padding-block: .6rem;
+  font-size: .87rem;
+  line-height: 1.7;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.contentsNav a:hover {
+  color: var(--accent-deep);
+}
+
+.contentsNav a span {
+  color: var(--muted-strong);
+  font-size: .7rem;
+}
+
+.roleList {
+  margin-block-start: 2rem;
+}
+
+.roleList li {
+  padding-block: .3rem;
+  font-size: .84rem;
+  line-height: 1.8;
+}
+
+.relatedServiceLinks {
+  margin-block-start: 1rem;
+}
+
+.relatedServiceLinks a,
+.inlineLink {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--accent-deep);
+  font-size: .82rem;
+  font-weight: 600;
+  line-height: 1.8;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .2rem;
+}
+
+.detailAside > .inlineLink,
+.serviceBrief .inlineLink {
+  margin-block-start: 1rem;
+}
+
+.caseContent {
+  min-width: 0;
+}
+
+.caseSection {
+  position: relative;
+  scroll-margin-block-start: 7rem;
+  border-block-start: 1px solid var(--line);
+  padding-block: 2rem 2.5rem;
+}
+
+.caseSection:last-child {
+  padding-block-end: 0;
+}
+
+.sectionNumber {
+  display: block;
+  margin-block-end: .55rem;
+  color: var(--accent);
+  font-size: .75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.caseSection h2 {
+  margin-block: 0 1.15rem;
+  font-size: clamp(1.65rem, 3.2vw, 2.75rem);
+  line-height: 1.4;
+  letter-spacing: -.035em;
+}
+
+.caseSection p {
+  max-width: 52rem;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 1rem;
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.caseSection .capabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.capabilityGrid .capability {
+  display: grid;
+  gap: .9rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: #f5f4ef;
+  padding: 1.1rem;
+  color: var(--ink);
+  font-size: .9rem;
+  line-height: 1.85;
+}
+
+.capability span {
+  color: var(--accent);
+  font-size: .75rem;
+}
+
+.deliverableList,
+.processList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deliverableList li {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  border-block-end: 1px solid var(--line);
+  padding-block: 1rem;
+  font-size: .95rem;
+  line-height: 1.9;
+}
+
+.deliverableList li:first-child {
+  border-block-start: 1px solid var(--line);
+}
+
+.deliverableList li span {
+  color: var(--accent);
+}
+
+.processList li {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-block: 1.2rem;
+}
+
+.processList li + li {
+  border-block-start: 1px solid var(--line);
+}
+
+.processNumber {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--accent-deep);
+  font-size: .78rem;
+}
+
+.processList h3 {
+  margin-block: .3rem .55rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  letter-spacing: -.02em;
+}
+
+.processList p {
+  font-size: .92rem;
+}
+
+.faqList {
+  border-block-start: 1px solid var(--line);
+}
+
+.faqList details {
+  border-block-end: 1px solid var(--line);
+}
+
+.faqList summary {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 1rem;
+  cursor: pointer;
+  font-size: .95rem;
+  font-weight: 650;
+  line-height: 1.8;
+  list-style: none;
+}
+
+.faqList summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqList summary span {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 1.3rem;
+  transition: transform 180ms ease;
+}
+
+.faqList details[open] summary span {
+  transform: rotate(45deg);
+}
+
+.faqList details p {
+  padding-block: 0 1.5rem;
+  font-size: .95rem;
+}
+
+.gallerySection {
+  scroll-margin-block-start: 7rem;
+  padding-block: 1rem clamp(4rem, 7vw, 7rem);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-block-end: 2rem;
+}
+
+.sectionHeading h2 {
+  margin-block: .45rem 0;
+  font-size: clamp(1.8rem, 3.2vw, 3rem);
+  line-height: 1.4;
+}
+
+.sectionHeading p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: .92rem;
+  line-height: 1.9;
+}
+
+.portfolioPage .galleryGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-block-start: 0;
+}
+
+.portfolioPage .galleryGrid :global(.mediaFrame) {
+  min-height: 0;
+  aspect-ratio: 1.3;
+  border-radius: .85rem;
+}
+
+.portfolioPage .galleryGrid :global(.mediaFrame):first-child {
+  min-height: 0;
+  aspect-ratio: 1.85;
+  grid-column: 1 / -1;
+}
+
+.portfolioPage .relatedSection {
+  padding-block: clamp(3rem, 6vw, 6rem);
+  background: #f0f2f6;
+}
+
+.projectPagination {
+  padding-block: 2rem;
+  border-block: 1px solid var(--line);
+}
+
+.projectPagination > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2rem;
+}
+
+.previousProject,
+.nextProject {
+  display: grid;
+  min-height: 44px;
+  gap: .25rem;
+  text-decoration: none;
+}
+
+.nextProject {
+  text-align: end;
+}
+
+.previousProject > span:first-child,
+.nextProject > span:first-child {
+  color: var(--muted-strong);
+  font-size: .73rem;
+}
+
+.previousProject strong,
+.nextProject strong {
+  font-size: .95rem;
+  font-weight: 650;
+  line-height: 1.8;
+}
+
+.previousProject > span:last-child,
+.nextProject > span:last-child {
+  display: inline-block;
+  justify-self: start;
+  color: var(--accent);
+  transform: scaleX(var(--inline-direction));
+}
+
+.nextProject > span:last-child {
+  justify-self: end;
+}
+
+.indexLink {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: .75rem;
+  font-size: .82rem;
+  font-weight: 650;
+  text-underline-offset: .3rem;
+}
+
+.indexLink span {
+  color: var(--accent);
+}
+
+.otherServices {
+  padding-block: 3rem;
+}
+
+.otherServices h2 {
+  margin-block: 0 1.5rem;
+  font-size: clamp(1.65rem, 2.7vw, 2.5rem);
+  line-height: 1.4;
+}
+
+.otherServices > div > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.otherServices a {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.otherServices a span {
+  color: var(--accent-deep);
+  font-size: .85rem;
+}
+
+.otherServices a strong {
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.8;
+}
+
+.emptyState {
+  padding-block: 4rem;
+  border-block: 1px solid var(--line);
+  text-align: center;
+}
+
+.emptyState h2 {
+  font-size: 1.8rem;
+  line-height: 1.5;
+}
+
+.emptyState p {
+  color: var(--muted-strong);
+}
+
+.outlineButton {
+  min-height: 44px;
+  padding: .6rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: .4rem;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+@media (max-width: 1000px) {
+  .filterHeading {
+    align-items: start;
+    flex-direction: column;
+    gap: .9rem;
+  }
+
+  .detailHeading {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr);
+    gap: 2rem;
+  }
+
+  .portfolioPage .detailGrid {
+    grid-template-columns: minmax(0, .65fr) minmax(0, 1.4fr);
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .portfolioPage .archiveGrid,
+  .portfolioPage .serviceGrid,
+  .relatedGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .archiveSection {
+    padding-block-start: .5rem;
+  }
+
+  .filterHeading {
+    padding-block-end: 1.5rem;
+  }
+
+  .filterBar .filterButton {
+    padding-inline: .85rem;
+    font-size: .76rem;
+  }
+
+  .cardMedia {
+    aspect-ratio: 1.35;
+  }
+
+  .serviceTileMedia {
+    aspect-ratio: 1.7;
+  }
+
+  .serviceCopy {
+    padding: 1.25rem;
+  }
+
+  .portfolioPage .detailHero {
+    padding-block-start: 7rem;
+  }
+
+  .detailHeading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.8rem;
+    margin-block: 1.6rem 2rem;
+  }
+
+  .portfolioPage .detailHero h1 {
+    max-width: none;
+    font-size: clamp(2.3rem, 10vw, 3.4rem);
+  }
+
+  .projectFacts dl {
+    margin-block-start: .8rem;
+  }
+
+  .serviceBrief {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 1.5rem;
+    padding-inline-start: 0;
+  }
+
+  .portfolioPage .heroMedia {
+    height: clamp(20rem, 85vw, 34rem);
+    margin-block-start: 1.5rem;
+  }
+
+  .portfolioPage .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+
+  .detailAside {
+    position: static;
+  }
+
+  .contentsNav ol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1rem;
+  }
+
+  .roleList ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+  }
+
+  .caseSection {
+    padding-block: 1.5rem 2rem;
+  }
+
+  .caseSection h2 {
+    font-size: 1.75rem;
+  }
+
+  .caseSection p {
+    font-size: .95rem;
+  }
+
+  .caseSection .capabilityGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sectionHeading {
+    align-items: start;
+    flex-direction: column;
+    gap: .9rem;
+  }
+
+  .portfolioPage .galleryGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .portfolioPage .galleryGrid :global(.mediaFrame),
+  .portfolioPage .galleryGrid :global(.mediaFrame):first-child {
+    aspect-ratio: 1.15;
+  }
+
+  .projectPagination > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .indexLink {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: .75rem;
+  }
+
+  .otherServices > div > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolioPage *,
+  .portfolioPage *::before,
+  .portfolioPage *::after {
+    scroll-behavior: auto;
+    transition: none;
+    animation: none;
+  }
+
+  .portfolioPage :global(.mediaFrame):hover img,
+  .portfolioPage :global(.textLink):hover span {
+    transform: none;
+  }
+}

@@ -1,42 +1,131 @@
+MANDEGAR COMMAND REFERENCE
+Run commands from D:\Projects\Navid\Mandegar in PowerShell.
+
+INSTALL AND LOCAL PREVIEW
+
+npm ci
 npm run dev
+
+Local site:
+http://localhost:3300/fa
+http://localhost:3300/en
+http://localhost:3300/ar
+
+Non-home page previews (replace fa with en or ar to check translations):
+http://localhost:3300/fa/projects
+http://localhost:3300/fa/projects/placeholder-exhibition-01
+http://localhost:3300/fa/services
+http://localhost:3300/fa/services/event-production
+http://localhost:3300/fa/about
+http://localhost:3300/fa/contact
+http://localhost:3300/fa/legal
+
+Creative homepage preview URLs:
 http://localhost:3300/fa?intro=0&phase=discovery&creative=1
 http://localhost:3300/fa?intro=0&phase=experiences
 http://localhost:3300/fa?intro=0&phase=reveal
 
+EDIT CONTENT
+
+content/projects.json       Project text, categories, media keys and relationships
+content/services.json       Service text, capabilities, deliverables, process and FAQs
+content/media.json          Media paths, alt text, captions, placeholder and rights flags
+content/pages.json          Page introductions and About approach/principles/geography
+content/page-copy.json      Shared text, CTAs, notices, About workflow/illustrated roles and brief
+content/site.json           Brand, navigation, footer, social links, address and social image
+content/contacts.json       Verified email, phone and WhatsApp destinations
+content/legal.json          Legal text, draft/approved status and review date
+content/people.json         Approved people and partners
+content/trust.json          Approved clients/testimonials; reserved metric records
+content/journey.json        Homepage project/About/collaboration/finale labels and sample disciplines
+content/seo.json            Default page titles and search descriptions
+content/ui.json             Shared navigation and interface labels
+content/homepage.json       Legacy homepage copy and optional overrides (off by default)
+
+Text fields include fa, en and ar. Edit all three languages.
+Projects/services reference named keys in media.json.
+Place local images/videos in public/media/ and use paths such as /media/projects/hero.webp.
+Do not include /public, a locale or /Mandegar in media paths.
+Use publicationState: draft, published or archived to control project/service visibility.
+Keep concept, contact and media placeholders marked until approved replacements are supplied.
+Homepage animation, games and some homepage copy remain in code; see the guide.
+
+Detailed editing guide:
+D:\Projects\Navid\Mandegar\Docs\CONTENT_EDITING_GUIDE.md
+
+VALIDATE AND CHECK
+
+npm run content:check
+npm run lint
+npm run typecheck
+
+Optional final-launch content check:
+npm run content:check -- --strict
+
+Strict mode rejects remaining placeholders and legal review drafts.
+The normal check accepts clearly labelled placeholders for development and preview.
+Every npm run build also validates content automatically.
+
+BUILD A STATIC WEBSITE WITHOUT PUBLISHING
 
 npm run build:pages
-This creates the static site at:
 
-[out/](D:/Projects/Navid/Mandegar/out)
+Output:
+D:\Projects\Navid\Mandegar\out\
 
-To build and push only the exported contents to git@github-echend:EchenD/Mandegar.git:
+This builds the complete uploadable site with the current GitHub Pages settings.
+It does not push to a repository. Upload the contents of out/ to the chosen static host.
+
+Build for the root of your own domain:
+npm run build:pages -- -BasePath / -SiteUrl https://your-domain.com
+
+PUBLISH THE STATIC WEBSITE
+
+npm run content:publish
+
+This validates and builds, clones the target repository into a temporary directory,
+replaces its published files with the contents of out/, commits them and pushes.
+Run it when you intend to publish. Git/SSH access to the target repository is required.
+
+Current defaults:
+Repository: git@github-echend:EchenD/Mandegar.git
+Branch: main
+Base path: /Mandegar
+Site URL: https://echend.github.io/Mandegar
+
+Equivalent publishing command:
 npm run deploy:pages
 
+Publish to a chosen repository for a custom domain at its root:
+npm run content:publish -- -Repository git@github.com:your-account/your-site.git -Branch main -BasePath / -SiteUrl https://your-domain.com
 
-For a future custom domain, run:
-npm run deploy:pages -- -BasePath "/" -SiteUrl "https://example.com"
+Configure the domain and HTTPS on the hosting provider separately.
+Deploy a complete export after content changes; uploading JSON alone does not update the site.
 
+OPTIONAL MEDIA CDN
 
+Use public/ media on your hosting, or configure an HTTPS CDN origin in .env.local:
+MEDIA_CDN_ORIGIN=https://media.your-domain.com
 
+For CDN media, use full URLs from that exact origin in media.json.
+Leave MEDIA_CDN_ORIGIN empty when serving media from public/.
+Keep text in the local content files. Changing asset URLs requires a rebuild;
+replacing a file at the same CDN URL also requires managing its cache.
 
-For final production, I recommend deploying the source repository as a normal Node.js Next.js application:
-npm ci
-npm run build
-npm run start
+NORMAL NEXT.JS NODE SERVER
 
-The server will need these environment variables:
-NEXT_PUBLIC_SANITY_PROJECT_ID=
-NEXT_PUBLIC_SANITY_DATASET=production
-SANITY_API_VERSION=2025-01-01
-SANITY_REVALIDATE_SECRET=
-SANITY_API_READ_TOKEN=
-ENABLE_EMBEDDED_STUDIO=false
+Use this option when your host runs a Node.js application instead of serving out/.
+Keep MANDEGAR_STATIC_EXPORT and NEXT_PUBLIC_BASE_PATH unset for a normal root-domain build.
+Set this in .env.local or in the build environment:
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
 
-Browser
-   ↓ HTTPS
-Nginx / reverse proxy
-   ↓
-Next.js Node server
-   ↓
-Sanity API
+npm ci
+npm run build
+npm start
+
+next start uses port 3000 by default. To use the preview port:
+npm start -- --port 3300
+
+The host can place its HTTPS reverse proxy in front of the Node server.
+Content is bundled at build time for this option too: rebuild and restart/deploy
+after editing JSON. Sanity servers, Studio, tokens and webhooks are no longer required.

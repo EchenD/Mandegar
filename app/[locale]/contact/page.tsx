@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
-import type { Locale } from "@/lib/i18n";
+import Link from "next/link";
+import { Breadcrumbs } from "@/components/editorial/Breadcrumbs";
+import { CopyBrief } from "@/components/editorial/CopyBrief";
+import { PageIntro } from "@/components/editorial/PageIntro";
+import styles from "@/components/editorial/CompanyPages.module.css";
 import { getText } from "@/lib/content";
-import { getContactChannels, getEditorialPage, type ContactChannel } from "@/lib/content-source";
+import { getContactChannels, getEditorialPage, getPageCopy, type ContactChannel } from "@/lib/content-source";
+import { localizedPath, type Locale } from "@/lib/i18n";
 import { buildMetadata, pageSeo } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
@@ -16,21 +21,145 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: L
 export default async function ContactPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
   const [channels, editorial] = await Promise.all([getContactChannels(), getEditorialPage(locale, "contact")]);
-  const text = {
-    fa: { kicker: "شروع گفتگو", title: "پروژه بعدی شما از همین‌جا شروع می‌شود.", intro: "از ایده، مخاطب و زمان پروژه‌تان بگویید تا قدم بعدی را با هم شکل دهیم.", sales: "شروع یک پروژه", general: "پرسش‌های عمومی", international: "همکاری بین‌المللی" },
-    en: { kicker: "Start a conversation", title: "Your next project starts here.", intro: "Tell us your idea, who it’s for and when it happens. We’ll shape the next step together.", sales: "Start a project", general: "General enquiries", international: "International collaboration" },
-    ar: { kicker: "ابدأ الحوار", title: "يبدأ مشروعك القادم من هنا.", intro: "أخبرنا بفكرتك وجمهورها وموعدها، لنشكّل الخطوة التالية معاً.", sales: "ابدأ مشروعاً", general: "الاستفسارات العامة", international: "التعاون الدولي" },
-  }[locale];
-  if (editorial) {
-    text.kicker = getText(editorial.heroKicker, locale) || text.kicker;
-    text.title = getText(editorial.title, locale) || text.title;
-    text.intro = getText(editorial.intro, locale) || text.intro;
-  }
-  const channel = (purpose: ContactChannel["purpose"]) => channels.find((item) => item.purpose === purpose);
-  return <div className="contactPage"><section className="pageHero"><div className="pageWidth"><div className="sectionKicker">01 / {text.kicker}</div><h1>{text.title}</h1><p>{text.intro}</p></div></section><section className="sectionPad"><div className="pageWidth contactGrid"><div><div className="sectionKicker">02 / {locale === "fa" ? "مسیرهای تماس" : locale === "ar" ? "قنوات التواصل" : "Contact channels"}</div><h2>{locale === "fa" ? "مسیر مناسب گفتگوی شما." : locale === "ar" ? "القناة المناسبة لاستفسارك." : "The right channel for your enquiry."}</h2></div><div><ContactCard title={text.sales} locale={locale} channel={channel("sales")} /><ContactCard title={text.general} locale={locale} channel={channel("general")} /><ContactCard title={text.international} locale={locale} channel={channel("international")} />{channels.length === 0 ? <p className="contactNote">{locale === "fa" ? "اطلاعات تماس پس از تأیید در این صفحه قرار می‌گیرد." : locale === "ar" ? "ستظهر بيانات التواصل هنا بعد تأكيدها." : "Contact information will appear here once confirmed."}</p> : null}</div></div></section></div>;
+  const copy = getPageCopy(locale);
+  const [fallbackTitle, fallbackIntro] = pageSeo[locale].contact;
+  const purposes: Array<{ purpose: ContactChannel["purpose"]; title: string; body: string }> = [
+    { purpose: "sales", title: copy.contactSalesTitle, body: copy.contactSalesBody },
+    { purpose: "general", title: copy.contactGeneralTitle, body: copy.contactGeneralBody },
+    { purpose: "international", title: copy.contactInternationalTitle, body: copy.contactInternationalBody },
+    { purpose: "whatsapp", title: copy.contactWhatsappTitle, body: copy.contactWhatsappBody },
+  ];
+  const heroTitle = editorial ? getText(editorial.title, locale) : fallbackTitle;
+  const briefTemplate = `${copy.briefTitle}\n\n${copy.briefFields.map((field) => `${field}: `).join("\n\n")}`;
+
+  return (
+    <div className={`contactPage ${styles.page}`}>
+      <PageIntro
+        locale={locale}
+        eyebrow={editorial ? getText(editorial.heroKicker, locale) : heroTitle}
+        title={heroTitle}
+        intro={editorial ? getText(editorial.intro, locale) : fallbackIntro}
+        aside={(
+          <a className={styles.briefPreview} href="#project-brief">
+            <span className={styles.previewIndex} aria-hidden="true">{String(copy.briefFields.length).padStart(2, "0")}</span>
+            <h2>{copy.briefTitle}</h2>
+            <p>{copy.briefBody}</p>
+            <span className={styles.previewArrow} aria-hidden="true">↙</span>
+          </a>
+        )}
+      >
+        <Breadcrumbs locale={locale} items={[{ label: editorial ? getText(editorial.heroKicker, locale) : heroTitle }]} />
+      </PageIntro>
+
+      <section className={`sectionPad ${styles.section}`} aria-labelledby="channels-title">
+        <div className="pageWidth">
+          <div className={styles.wideHeader}>
+            <div className={styles.sectionHeader}>
+              <div className="sectionKicker">02 / {copy.contactChannelsKicker}</div>
+              <h2 id="channels-title">{copy.contactChannelsTitle}</h2>
+            </div>
+            <p className={styles.lead}>{copy.contactChannelsBody}</p>
+          </div>
+          <div className={`contactGrid ${styles.contactGrid}`}>
+            {purposes.map((item, index) => {
+              const matches = channels.filter((channel) => channel.purpose === item.purpose);
+              return (
+                <ContactCard
+                  key={item.purpose}
+                  locale={locale}
+                  index={index + 1}
+                  title={item.title}
+                  body={item.body}
+                  channels={matches}
+                  copy={copy}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="project-brief" className={`sectionPad ${styles.briefSection}`} aria-labelledby="brief-title">
+        <div className={`pageWidth ${styles.split}`}>
+          <div className={styles.sectionHeader}>
+            <div className="sectionKicker">03 / {copy.briefKicker}</div>
+            <h2 id="brief-title">{copy.briefTitle}</h2>
+            <p className={styles.lead}>{copy.briefBody}</p>
+            <CopyBrief
+              template={briefTemplate}
+              labels={{ copy: copy.copyBrief, copied: copy.copiedBrief, fallback: copy.copyBriefFallback, failed: copy.copyBriefFailed }}
+            />
+            <p className={styles.privacyNote}>{copy.briefPrivacyNote}</p>
+          </div>
+          <ol className={styles.briefFields}>
+            {copy.briefFields.map((field, index) => <li key={field}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h3>{field}</h3></li>)}
+          </ol>
+        </div>
+      </section>
+
+      <div className={`pageWidth ${styles.contactExplore}`}>
+        <Link prefetch={false} className={styles.secondaryLink} href={localizedPath(locale, "services")}>{copy.viewServices}<span aria-hidden="true">↗</span></Link>
+        <Link prefetch={false} className={styles.secondaryLink} href={localizedPath(locale, "projects")}>{copy.viewProjects}<span aria-hidden="true">↗</span></Link>
+      </div>
+    </div>
+  );
 }
 
-function ContactCard({ title, locale, channel }: { title: string; locale: Locale; channel?: ContactChannel }) {
-  const details = channel ? [channel.phone && <a key="phone" href={`tel:${channel.phone}`} data-analytics="phone_click" data-analytics-label={channel.purpose}>{channel.phone}</a>, channel.whatsapp && <a key="whatsapp" href={channel.whatsapp.startsWith("http") ? channel.whatsapp : `https://wa.me/${channel.whatsapp.replace(/\D/g, "")}`} data-analytics="whatsapp_click" data-analytics-label={channel.purpose}>WhatsApp</a>, channel.email && <a key="email" href={`mailto:${channel.email}`} data-analytics="email_click" data-analytics-label={channel.purpose}>{channel.email}</a>].filter(Boolean) : [];
-  return <div className="contactCard"><h3>{channel ? getText(channel.label, locale) : title}</h3>{channel?.availability ? <p>{channel.availability}</p> : null}{details.length ? <div className="contactDetails">{details}</div> : <div className="contactPlaceholder">{locale === "fa" ? "اطلاعات تماس هنوز در دسترس نیست." : locale === "ar" ? "بيانات التواصل غير متاحة بعد." : "Contact details are not available yet."}</div>}</div>;
+function ContactCard({ locale, index, title, body, channels, copy }: {
+  locale: Locale;
+  index: number;
+  title: string;
+  body: string;
+  channels: ContactChannel[];
+  copy: ReturnType<typeof getPageCopy>;
+}) {
+  const details = channels.filter((channel) => !channel.isPlaceholder).flatMap((channel, channelIndex) => {
+    const email = channel.email && isEmail(channel.email) ? channel.email : null;
+    const phone = channel.phone && isPhone(channel.phone) ? channel.phone : null;
+    const whatsapp = channel.whatsapp ? whatsappUrl(channel.whatsapp) : null;
+    const availability = channel.availabilityText ? getText(channel.availabilityText, locale) : channel.availability;
+    if (!email && !phone && !whatsapp) return [];
+    return [
+      <div className={styles.channelGroup} key={`${channel.purpose}-${channelIndex}`}>
+        {channels.length > 1 ? <strong>{getText(channel.label, locale)}</strong> : null}
+        {availability ? <p>{availability}</p> : null}
+        <div className={`contactDetails ${styles.contactDetails}`}>
+          {email ? <a href={`mailto:${email}`} data-analytics="email_click" data-analytics-label={channel.purpose}><span>{copy.contactEmail}</span><bdi>{email}</bdi><span aria-hidden="true">↗</span></a> : null}
+          {phone ? <a href={`tel:${phone.replace(/[^+\d]/g, "")}`} data-analytics="phone_click" data-analytics-label={channel.purpose}><span>{copy.contactPhone}</span><bdi>{phone}</bdi><span aria-hidden="true">↗</span></a> : null}
+          {whatsapp ? <a href={whatsapp} target="_blank" rel="noopener noreferrer" data-analytics="whatsapp_click" data-analytics-label={channel.purpose}><span>{copy.contactWhatsapp}</span><span aria-hidden="true">↗</span></a> : null}
+        </div>
+      </div>,
+    ];
+  });
+  const channelDescription = channels.find((channel) => channel.description)?.description;
+
+  return (
+    <article className={`contactCard ${styles.contactCard}`}>
+      <span className={styles.cardIndex} aria-hidden="true">{String(index).padStart(2, "0")}</span>
+      <h3>{title}</h3>
+      <p>{channelDescription ? getText(channelDescription, locale) : body}</p>
+      {details.length > 0 ? details : (
+        <div className={`contactPlaceholder ${styles.contactPlaceholder}`}>
+          <span className={styles.statusDot} aria-hidden="true" />
+          <div><strong>{copy.contactPlaceholderTitle}</strong><p>{copy.contactPlaceholderBody}</p></div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    && !/@(?:[^@]*\.)?(?:example|invalid|test|localhost)(?:\.[a-z]+)?$/i.test(value)
+    && !/placeholder/i.test(value);
+}
+
+function isPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return /^\+?[\d\s().-]+$/.test(value) && digits.length >= 7 && digits.length <= 15 && !/^(\d)\1+$/.test(digits);
+}
+
+function whatsappUrl(value: string) {
+  if (/^https:\/\/(?:wa\.me|(?:api\.|www\.)?whatsapp\.com)\//i.test(value)) return value;
+  return isPhone(value) ? `https://wa.me/${value.replace(/\D/g, "")}` : null;
 }

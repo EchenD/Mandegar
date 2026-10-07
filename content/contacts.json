@@ -1,0 +1,44 @@
+[
+  {
+    "purpose": "sales",
+    "label": {
+      "fa": "شروع یک پروژه",
+      "en": "Start a project",
+      "ar": "ابدأ مشروعاً"
+    },
+    "description": {
+      "fa": "ایده، مخاطب و زمان پروژه را مطرح کنید تا قدم بعدی را بررسی کنیم.",
+      "en": "Share your idea, audience and timing so we can discuss a useful next step.",
+      "ar": "شارك فكرتك وجمهورك وموعدك لنناقش الخطوة التالية."
+    },
+    "isPlaceholder": true
+  },
+  {
+    "purpose": "general",
+    "label": {
+      "fa": "پرسش‌های عمومی",
+      "en": "General enquiries",
+      "ar": "الاستفسارات العامة"
+    },
+    "description": {
+      "fa": "برای پرسش درباره رویکرد، خدمات یا وب‌سایت.",
+      "en": "For questions about our approach, services or the website.",
+      "ar": "للأسئلة عن نهجنا أو خدماتنا أو الموقع."
+    },
+    "isPlaceholder": true
+  },
+  {
+    "purpose": "international",
+    "label": {
+      "fa": "همکاری",
+      "en": "Collaboration",
+      "ar": "التعاون"
+    },
+    "description": {
+      "fa": "درباره پروژه مشترک، پشتیبانی تولید یا فرصت همکاری گفتگو کنیم.",
+      "en": "Discuss a shared brief, production support or a possible collaboration.",
+      "ar": "لنناقش مشروعاً مشتركاً أو دعم الإنتاج أو فرصة تعاون."
+    },
+    "isPlaceholder": true
+  }
+]

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f6f5f2"/>
+  <path d="M72 72H1128M72 558H1128" stroke="#d9d9d6"/>
+  <circle cx="976" cy="310" r="174" fill="none" stroke="#c9d6f6" stroke-width="52"/>
+  <circle cx="976" cy="310" r="94" fill="none" stroke="#3464cc" stroke-width="2"/>
+  <circle cx="976" cy="310" r="14" fill="#3464cc"/>
+  <circle cx="88" cy="130" r="8" fill="#3464cc"/>
+  <text x="111" y="139" font-family="Arial, sans-serif" font-size="23" letter-spacing="6" fill="#4d5560">IDEA TO EXPERIENCE</text>
+  <text x="72" y="343" font-family="Arial, sans-serif" font-size="98" font-weight="700" letter-spacing="-5" fill="#1a1e24">Mandegar.</text>
+  <text x="76" y="405" font-family="Arial, sans-serif" font-size="28" fill="#58616d">Events. Spaces. Interactive experiences.</text>
+  <text x="76" y="526" font-family="Arial, sans-serif" font-size="17" letter-spacing="3" fill="#58616d">CREATIVE DIRECTION / PRODUCTION / DELIVERY</text>
+</svg>

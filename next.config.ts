@@ -5,10 +5,17 @@ const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const basePath = !configuredBasePath || configuredBasePath === "/"
   ? ""
   : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`;
+const mediaCdnOrigin = process.env.MEDIA_CDN_ORIGIN ? new URL(process.env.MEDIA_CDN_ORIGIN) : null;
+if (mediaCdnOrigin && (mediaCdnOrigin.protocol !== "https:" || mediaCdnOrigin.username || mediaCdnOrigin.password)) {
+  throw new Error("MEDIA_CDN_ORIGIN must be a public HTTPS origin without credentials.");
+}
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  agentRules: false,
   poweredByHeader: false,
+  // The locale lives in the root layout, so unmatched routes need a global 404.
+  experimental: { globalNotFound: true },
   output: staticExport ? "export" : undefined,
   distDir: staticExport ? ".next-static" : ".next",
   basePath: staticExport ? basePath : undefined,
@@ -17,7 +24,7 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     unoptimized: staticExport,
-    remotePatterns: [{ protocol: "https", hostname: "cdn.sanity.io" }],
+    remotePatterns: mediaCdnOrigin ? [{ protocol: "https", hostname: mediaCdnOrigin.hostname, port: mediaCdnOrigin.port }] : [],
   },
   async headers() {
     const headers = [
