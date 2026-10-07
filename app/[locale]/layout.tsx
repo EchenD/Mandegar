@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 import "@fontsource-variable/vazirmatn";
 import "@/styles/globals.css";
 import { Footer } from "@/components/layout/Footer";
@@ -29,27 +28,8 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
   const locale = rawLocale as Locale;
   const config = localeConfig[locale];
   const settings = await getSiteSettings();
-  const homeScrollResetScript = `(() => {
-    const path = location.pathname.replace(/\\/+$/, "") || "/";
-    if (path !== "/${locale}") return;
-    const root = document.documentElement;
-    root.dataset.mandegarPreviousScrollRestoration = history.scrollRestoration;
-    history.scrollRestoration = "manual";
-    root.setAttribute("data-experience-scroll-lock", "");
-    const previousBehavior = root.style.scrollBehavior;
-    root.style.scrollBehavior = "auto";
-    scrollTo(0, 0);
-    root.style.scrollBehavior = previousBehavior;
-  })();`;
   return (
     <html lang={locale} dir={config.dir} data-scroll-behavior="smooth" suppressHydrationWarning>
-      <head>
-        <Script
-          id={`mandegar-home-scroll-reset-${locale}`}
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: homeScrollResetScript }}
-        />
-      </head>
       <body>
         <div className="siteShell" lang={locale} dir={config.dir} data-locale={locale}>
           <JsonLd data={[
