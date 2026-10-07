@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { narrativeScore } from "../../components/experience/narrative-score";
 import { interactionSurfaceSizes } from "../../components/experience/scene-config";
 import { getIntelligenceCopy } from "../../components/experience/intelligence-inspector-copy";
-import { getMonitorTextureSamples, observeMonitorTextures } from "./monitor-texture-observer";
+import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTextures } from "./monitor-texture-observer";
 
 test.setTimeout(180_000);
 test.use({ trace: "off", video: "off" });
@@ -21,7 +21,7 @@ async function waitForMonitor(page: Page) {
   return surface;
 }
 
-test("the wide Intelligence monitor animates, follows the latest person and retains its painted content", async ({ page }, testInfo) => {
+test("the wide Intelligence monitor animates, follows the latest person and returns to its original artwork", async ({ page }, testInfo) => {
   await observeMonitorTextures(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -35,6 +35,7 @@ test("the wide Intelligence monitor animates, follows the latest person and reta
   await expect(surface).toHaveAttribute("height", String(interactionSurfaceSizes.videoWall.canvas.height));
   await expect(surface).toHaveAttribute("aria-label", /Participation signal.*Audience insight/);
   await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).some((sample) => sample.media === "intelligence" && sample.blend > 0.99)).toBe(true);
+  expect((await getMonitorTextureSamples(page, "videoWall")).filter((sample) => sample.media === "intelligence").every((sample) => sample.base === "image")).toBe(true);
   const firstFrame = await surface.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
   await expect.poll(() => surface.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).not.toBe(firstFrame);
   await page.screenshot({ path: testInfo.outputPath("intelligence-ambient-desktop.png") });
@@ -51,10 +52,14 @@ test("the wide Intelligence monitor animates, follows the latest person and reta
   await page.keyboard.press("Escape");
   await expect(surface).toHaveAttribute("data-monitor-person", "none");
 
+  await clearMonitorTextureSamples(page);
   await seek(page, "proof");
   await expect(surface).toHaveAttribute("data-monitor-state", "hidden");
   await expect(surface).toHaveAttribute("data-monitor-blend", "0.000");
-  await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("intelligence");
+  await expect.poll(async () => {
+    const sample = (await getMonitorTextureSamples(page, "videoWall")).at(-1);
+    return sample?.media === "image" && sample.blend === 1;
+  }).toBe(true);
   await seek(page, "intelligence");
   await waitForMonitor(page);
   await expect(surface).toHaveAttribute("data-monitor-person", "none");
@@ -70,6 +75,7 @@ test("reverse travel hands the wide monitor from Intelligence back to scroll lig
   // The authored reveal preview is halfway through the scroll lighting window.
   await expect.poll(async () => Number(await page.locator("[data-stage-scroll]").getAttribute("data-stage-progress"))).toBeCloseTo(0.5, 3);
   await expect.poll(async () => (await getMonitorTextureSamples(page, "videoWall")).at(-1)?.media).toBe("stage");
+  expect((await getMonitorTextureSamples(page, "videoWall")).at(-1)?.base).toBe("image");
   await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-active-station", "none");
   await seek(page, "intelligence");
   await waitForMonitor(page);

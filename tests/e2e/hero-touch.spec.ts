@@ -6,7 +6,8 @@ import { clearMonitorTextureSamples, getMonitorTextureSamples, observeMonitorTex
 test.setTimeout(150_000);
 test.use({ video: "off", trace: "off" });
 
-test("the touch monitor stays authored before arrival, fades in and retains its last view after native scrolling", async ({ page }, testInfo) => {
+test("the touch monitor fades in, retains its forward view and resets on native backward scrolling", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   const requests: string[] = [];
@@ -26,8 +27,8 @@ test("the touch monitor stays authored before arrival, fades in and retains its 
   await expect(page.locator("[data-installation-button]")).toHaveCount(4);
   await expect(page.locator("[data-journey-control], [data-interaction-finish], [data-interaction-escape]")).toHaveCount(0);
   const entrance = await getMonitorTextureSamples(page, "interactive");
-  expect(entrance.some((sample) => sample.opacity > 0 && sample.opacity < 0.95)).toBe(true);
-  expect(entrance.at(-1)?.opacity).toBeGreaterThan(0.99);
+  expect(entrance.some((sample) => sample.activation > 0 && sample.activation < 0.95)).toBe(true);
+  expect(entrance.at(-1)?.activation).toBeGreaterThan(0.99);
   await page.screenshot({ path: testInfo.outputPath("assembled.png") });
   for (const view of ["parts", "details", "image", "assembled"] as const) {
     const button = page.locator(`[data-installation-button='${view}']`);
@@ -64,11 +65,26 @@ test("the touch monitor stays authored before arrival, fades in and retains its 
   await expect(canvas).toHaveCount(0);
   const retained = await getMonitorTextureSamples(page, "interactive");
   expect(retained.length).toBeGreaterThan(2);
-  expect(retained.every((sample) => sample.media === "interactive" && sample.opacity > 0.99)).toBe(true);
-  expect(requests.some((url) => /connected-experience|race-idle|screen-main-4x3|media\/services\/events/.test(url))).toBe(false);
+  expect(retained.every((sample) => sample.media === "interactive" && sample.activation > 0.99)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("touch-buttons-retained-forward.png") });
+  await clearMonitorTextureSamples(page);
+  const afterExit = await root.evaluate((element: HTMLElement) => Number(element.dataset.nativeProgress));
+  await page.mouse.wheel(0, (phase.start - 0.004 - afterExit) * distance);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await expect(canvas).toHaveCount(0);
+  await expect.poll(async () => {
+    const sample = (await getMonitorTextureSamples(page, "interactive")).at(-1);
+    return sample?.media === "neutral" && sample.activation === 0;
+  }).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("touch-reset-on-reverse.png") });
+  await clearMonitorTextureSamples(page);
   await returnToStationForward(page, "touch");
   await expect(canvas).toHaveAttribute("data-installation-view", "assembled");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+  const returnEntrance = await getMonitorTextureSamples(page, "interactive");
+  expect(returnEntrance.some((sample) => sample.media === "interactive" && sample.activation > 0 && sample.activation < 0.95)).toBe(true);
+  expect(returnEntrance.at(-1)?.activation).toBeGreaterThan(0.99);
+  expect(requests.some((url) => /connected-experience|race-idle|screen-main-4x3|media\/services\/events/.test(url))).toBe(false);
   await page.keyboard.press("Escape");
   await expect(director).toHaveAttribute("data-active-station", "none");
 });

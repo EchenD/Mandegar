@@ -13,10 +13,38 @@ async function assertPaintedOwnership(page: Page, screen: MonitorTextureSample["
   }, { timeout: 15_000 }).toBe(true);
   const samples = await getMonitorTextureSamples(page, screen);
   expect(samples.filter((sample) => sample.media === "image" || sample.media === "unknown"), JSON.stringify(samples)).toEqual([]);
-  // Interactive entrance uses the outgoing painted canvas. Authored idle
-  // materials remain underneath; replacement posters are never sampled.
+  expect(samples.filter((sample) => sample.media === "neutral" && sample.activation > 0), JSON.stringify(samples)).toEqual([]);
+  // Interactive entrance uses the outgoing painted canvas and never a poster.
   expect(samples.filter((sample) => sample.media === "interactive" && sample.blend < 0.999 && sample.base === "image"), JSON.stringify(samples)).toEqual([]);
 }
+
+async function assertDefaultMonitor(page: Page, screen: MonitorTextureSample["screen"]) {
+  await expect.poll(async () => {
+    const sample = (await getMonitorTextureSamples(page, screen)).at(-1);
+    return sample?.media === "neutral" && sample.activation === 0;
+  }).toBe(true);
+}
+
+test("the original center artwork loads while all three interactive monitors start without posters", async ({ page }, testInfo) => {
+  await observeMonitorTextures(page);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/en?intro=0&phase=activation", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("[data-interaction-director]")).toHaveAttribute("data-runtime", /^(full|adaptive)$/, { timeout: 80_000 });
+  await expect(page.locator("[data-experience-root]")).toHaveAttribute("data-story-stage", "activation", { timeout: 80_000 });
+  await expect.poll(async () => {
+    const sample = (await getMonitorTextureSamples(page, "videoWall")).at(-1);
+    return sample?.media === "image" && sample.blend === 1
+      || sample?.base === "image" && sample.blend === 0;
+  }, { timeout: 15_000 }).toBe(true);
+  expect(requests.some((url) => url.includes("lighting-screen-v1.webp"))).toBe(true);
+  expect(requests.filter((url) => /connected-experience|race-idle|screen-(?:main|game|interactive|center)-/.test(url))).toEqual([]);
+  for (const screen of ["interactive", "game", "main"] as const) {
+    expect(await getMonitorTextureSamples(page, screen)).toEqual([]);
+  }
+  await page.screenshot({ path: testInfo.outputPath("original-monitors-before-interaction.png") });
+});
 
 async function seek(page: Page, id: string, progress?: number) {
   const beat = narrativeScore.find((item) => item.id === id)!;
@@ -37,12 +65,10 @@ test("the rendered game keeps painted ownership through a collision, autoplay an
   await expect(page.locator("[data-game-ambient]")).toHaveAttribute("data-ambient-state", "playing");
   await assertPaintedOwnership(page, "game", "ambient");
 
-  // Routing disables the image cache, exposing the legitimate loading gap
-  // between the active station and its first painted interactive canvas.
-  await page.route("**/race-idle.webp", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 180));
-    await route.continue();
-  });
+  await clearMonitorTextureSamples(page);
+  await seek(page, "reveal");
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await assertDefaultMonitor(page, "game");
   await clearMonitorTextureSamples(page);
   await returnToStationForward(page, "game");
   await expect(page.locator("[data-game-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
@@ -59,7 +85,7 @@ test("the rendered game keeps painted ownership through a collision, autoplay an
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
 });
 
-test("installation retains its monitor on exit and drawing keeps a painted forward handoff", async ({ page }) => {
+test("installation and drawing retain their forward paint and reset before their arrival on reverse", async ({ page }) => {
   await observeMonitorTextures(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/en?intro=0&phase=engagement", { waitUntil: "domcontentloaded" });
@@ -74,6 +100,7 @@ test("installation retains its monitor on exit and drawing keeps a painted forwa
   await seek(page, "activation");
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(page.locator("[data-composer-canvas]")).toHaveCount(0);
+  await assertDefaultMonitor(page, "interactive");
   await returnToStationForward(page, "touch");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-transition-progress", "1.000");
   await expect(page.locator("[data-composer-canvas]")).toHaveAttribute("data-installation-view", "assembled");
@@ -94,6 +121,11 @@ test("installation retains its monitor on exit and drawing keeps a painted forwa
   await clearMonitorTextureSamples(page);
   await continueFromResult(page, "draw");
   await assertPaintedOwnership(page, "main", "retained");
+  await clearMonitorTextureSamples(page);
+  const drawingPhase = narrativeScore.find((beat) => beat.id === "connection")!;
+  await seek(page, "connection", drawingPhase.start - 0.004);
+  await expect(director).toHaveAttribute("data-active-station", "none");
+  await assertDefaultMonitor(page, "main");
   await clearMonitorTextureSamples(page);
   await returnToStationForward(page, "draw");
   await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");

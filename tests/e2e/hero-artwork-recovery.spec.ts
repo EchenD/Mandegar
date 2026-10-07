@@ -9,71 +9,43 @@ for (const station of [
   { name: "draw", phase: "connection", file: "screen-main-4x3.webp", canvas: "[data-drawing-canvas]" },
   { name: "touch", phase: "engagement", file: "connected-experience.webp", canvas: "[data-composer-canvas]" },
 ]) {
-  test(`${station.name} starts while idle artwork is stalled and keeps visitor input when it arrives`, async ({ page }) => {
-    let releaseArtwork!: () => void;
-    const artworkGate = new Promise<void>((resolve) => { releaseArtwork = resolve; });
+  test(`${station.name} starts without idle artwork and keeps visitor keyboard input`, async ({ page }) => {
     let requested = false;
     await page.route(`**/${station.file}`, async (route) => {
       requested = true;
-      await artworkGate;
-      await route.continue().catch(() => {});
+      await route.abort();
     });
-    try {
-      await page.goto(`/en?intro=0&phase=${station.phase}`, { waitUntil: "domcontentloaded" });
-      const director = await waitForStation(page, station.name);
-      const canvas = page.locator(station.canvas);
-      await expect(canvas).toHaveAttribute("data-transition-progress", "1.000", { timeout: 10_000 });
-      expect(requested).toBe(true);
+    await page.goto(`/en?intro=0&phase=${station.phase}`, { waitUntil: "domcontentloaded" });
+    const director = await waitForStation(page, station.name);
+    const canvas = page.locator(station.canvas);
+    await expect(canvas).toHaveAttribute("data-transition-progress", "1.000", { timeout: 10_000 });
 
-      let controls;
-      let retainedAttribute;
-      if (station.name === "game") {
-        controls = page.locator("[data-game-spatial-controls]");
-        retainedAttribute = "data-game-score";
-        await activateWithKeyboard(page, "[data-game-action]");
-        await expect(controls).toHaveAttribute("data-game-status", "paused");
-      } else if (station.name === "touch") {
-        controls = page.locator("[data-touch-spatial-controls]");
-        retainedAttribute = "data-installation-view";
-        await activateWithKeyboard(page, "[data-installation-button='parts']");
-      } else {
-        controls = page.locator("[data-drawing-spatial-controls]");
-        retainedAttribute = "data-stroke-count";
-        await canvas.focus();
-        await page.keyboard.press("Space");
-        await page.keyboard.press("ArrowRight");
-        await page.keyboard.press("Space");
-      }
-      const retained = await controls.getAttribute(retainedAttribute);
-      await canvas.evaluate((element) => {
-        document.documentElement.dataset.artworkRestarted = "false";
-        const observer = new MutationObserver(() => {
-          if (Number((element as HTMLElement).dataset.transitionProgress) < 1) {
-            document.documentElement.dataset.artworkRestarted = "true";
-          }
-        });
-        observer.observe(element, { attributes: true, attributeFilter: ["data-transition-progress"] });
-      });
-      const response = page.waitForResponse((result) => result.url().endsWith(station.file) && result.ok());
-      releaseArtwork();
-      await response;
-      await page.waitForTimeout(350);
-      await expect(page.locator("html")).toHaveAttribute("data-artwork-restarted", "false");
-      await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
-      await expect(controls).toHaveAttribute(retainedAttribute, retained!);
-      await page.keyboard.press("Escape");
-      await expect(director).toHaveAttribute("data-active-station", "none");
-      await expect(director).toHaveAttribute("data-scroll-locked", "false");
-    } finally {
-      releaseArtwork();
+    if (station.name === "game") {
+      await activateWithKeyboard(page, "[data-game-action]");
+      await expect(page.locator("[data-game-spatial-controls]")).toHaveAttribute("data-game-status", "paused");
+    } else if (station.name === "touch") {
+      await activateWithKeyboard(page, "[data-installation-button='parts']");
+      await expect(canvas).toHaveAttribute("data-installation-view", "parts");
+      await expect(canvas).toHaveAttribute("data-view-transition-progress", "1.000");
+    } else {
+      await canvas.focus();
+      await page.keyboard.press("Space");
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("Space");
+      await expect(page.locator("[data-drawing-spatial-controls]")).toHaveAttribute("data-stroke-count", "1");
     }
+    expect(requested).toBe(false);
+    await expect(canvas).toHaveAttribute("data-transition-progress", "1.000");
+    await page.keyboard.press("Escape");
+    await expect(director).toHaveAttribute("data-active-station", "none");
+    await expect(director).toHaveAttribute("data-scroll-locked", "false");
   });
 }
 
 test("late final installation artwork preserves the selected view and entrance", async ({ page }) => {
   let releaseArtwork!: () => void;
   const gate = new Promise<void>((resolve) => { releaseArtwork = resolve; });
-  await page.route("**/media/services/events.webp", async (route) => {
+  await page.route("**/media/hero/touch/image.webp", async (route) => {
     await gate;
     await route.continue().catch(() => {});
   });

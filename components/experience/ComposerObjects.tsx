@@ -2,13 +2,15 @@
 
 /* eslint-disable react-hooks/immutability -- Three.js objects are updated in the render loop. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { publicAssetPath } from "@/lib/public-asset-path";
 import { bakedSceneContract } from "./baked-scene-contract";
 import { createPuzzleScreenFrame, createPuzzleTableFrame, getPuzzleWorldPoint } from "./composer-puzzle-geometry";
+import { experienceState } from "./experience-state";
 import { heroModelLoader } from "./hero-loading";
+import { getNarrativeCopyTiming } from "./narrative-copy-timing";
 import { getInstallationState, installationViews, selectInstallationView } from "./interactions/installation-demo";
 import { interactionRuntime } from "./interactions/interaction-runtime";
 
@@ -49,6 +51,8 @@ function iconTexture(index: number) {
 export function ComposerObjects({ root }: { root: THREE.Object3D }) {
   const { camera, gl } = useThree();
   const [model, setModel] = useState<THREE.Group | null>(null);
+  const revealedVisibility = useRef(0);
+  const revealedAt = useRef<number | null>(null);
   useEffect(() => {
     let mounted = true;
     let owned: THREE.Group | null = null;
@@ -120,11 +124,28 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
     document.body.style.cursor = "";
   }, [rig]);
 
-  useFrame((_state, delta) => {
+  useFrame(({ clock }, delta) => {
     const visibility = interactionRuntime.touchVisibility;
+    const timing = getNarrativeCopyTiming("engagement");
+    const progress = experienceState.progress;
+    // Reveal alongside the phase caption and retain the buttons while continuing
+    // forward; scrolling back before this phase allows the entrance to replay.
+    if (progress < timing.enterStart) {
+      revealedVisibility.current = 0;
+      revealedAt.current = null;
+    } else {
+      revealedAt.current ??= clock.elapsedTime;
+      const phaseEntrance = THREE.MathUtils.clamp(
+        (progress - timing.enterStart) / Math.max(0.0001, timing.enterEnd - timing.enterStart),
+        0,
+        1,
+      );
+      const timedEntrance = THREE.MathUtils.clamp((clock.elapsedTime - revealedAt.current) / 0.8, 0, 1);
+      revealedVisibility.current = Math.max(revealedVisibility.current, phaseEntrance, timedEntrance);
+    }
     const departing = document.querySelector("[data-experience-root]")?.hasAttribute("data-interaction-departing");
     const enabled = interactionRuntime.activeStation === "touch" && visibility > 0.85 && !departing;
-    const visible = Boolean(model && rig.frame) && visibility > 0.001;
+    const visible = Boolean(model && rig.frame) && revealedVisibility.current > 0.001;
     rig.group.visible = visible;
     const state = getInstallationState();
     if (state.revision !== rig.lastRevision) {
@@ -138,7 +159,7 @@ export function ComposerObjects({ root }: { root: THREE.Object3D }) {
     rig.buttons.forEach((button, index) => {
       const { assembly, cap, ring, materials, view } = button;
       const control = document.querySelector<HTMLButtonElement>(`[data-installation-button="${view}"]`);
-      const amount = Math.max(0, Math.min(1, (visibility - index * 0.07) / 0.79));
+      const amount = Math.max(0, Math.min(1, (revealedVisibility.current - index * 0.07) / 0.79));
       const eased = amount * amount * (3 - 2 * amount);
       materials.forEach((material) => { material.opacity = eased; });
       if (rig.frame) getPuzzleWorldPoint(rig.frame, 0.125 + index * 0.25, 0.5, assembly.position, 0.0015 + (1 - eased) * 0.018);

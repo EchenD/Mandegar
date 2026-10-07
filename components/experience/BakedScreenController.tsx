@@ -3,13 +3,24 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { bakedSceneContract, type BakedExhibitionSectionId, type BakedScreenId } from "./baked-scene-contract";
+import {
+  bakedSceneContract,
+  type BakedExhibitionSectionId,
+  type BakedScreenId,
+} from "./baked-scene-contract";
+import {
+  bindRuntimeMaterial,
+  restoreRuntimeMaterial,
+  type RuntimeMaterialBinding,
+} from "./baked-material-binding";
 import { getRevealExtent, getRevealOrigin } from "./baked-reveal-geometry";
 import { prepareBakedTexture } from "./baked-scene-material";
 import { getVisitorCreation } from "./interactions/visitor-creation";
 import { experienceState } from "./experience-state";
-import { heroTimeline } from "./hero-timeline-config";
+import type { SceneProject } from "./experience-types";
+import { sceneTokens } from "./scene-config";
 import { interactionRuntime } from "./interactions/interaction-runtime";
+import { heroTimeline } from "./hero-timeline-config";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -26,8 +37,13 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform sampler2D uMedia;
   uniform sampler2D uBaseMedia;
-  uniform float uContentOpacity;
+  uniform sampler2D uIdleMedia;
+  uniform float uBaseBlend;
   uniform float uMediaBlend;
+  uniform float uActivation;
+  uniform float uHover;
+  uniform float uHoverBrightness;
+  uniform float uHasMedia;
   uniform float uTime;
   uniform float uRevealProgress;
   uniform vec3 uRevealOrigin;
@@ -66,182 +82,308 @@ const fragmentShader = /* glsl */ `
     revealMask *= smoothstep(0.001, 0.035, uRevealProgress);
     if (hash12(gl_FragCoord.xy) > revealMask) discard;
 
-    vec3 color = mix(texture2D(uBaseMedia, vUv).rgb, texture2D(uMedia, vUv).rgb, uMediaBlend);
-    gl_FragColor = vec4(color, uContentOpacity);
+    float activation = smoothstep(0.0, 1.0, uActivation);
+    vec3 offColor = vec3(0.032, 0.026, 0.022);
+    vec3 fallbackColor = mix(
+      vec3(0.008, 0.012, 0.02),
+      vec3(0.035, 0.15, 0.28),
+      smoothstep(0.0, 1.0, vUv.x + vUv.y * 0.28)
+    );
+    vec3 baseColor = mix(texture2D(uIdleMedia, vUv).rgb, texture2D(uBaseMedia, vUv).rgb, uBaseBlend);
+    vec3 mediaColor = mix(baseColor, texture2D(uMedia, vUv).rgb, uMediaBlend);
+    vec3 poweredColor = mix(fallbackColor, mediaColor, uHasMedia);
+    vec3 color = mix(offColor, poweredColor, activation);
+    vec3 hoverColor = color * (1.0 + uHoverBrightness)
+      + vec3(uHoverBrightness * 0.045);
+    color = mix(color, hoverColor, smoothstep(0.0, 1.0, uHover));
+    gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
   }
 `;
 
-
 type ScreenRuntime = {
   id: BakedScreenId;
   sectionId: BakedExhibitionSectionId;
-  screen: THREE.Object3D;
   material: THREE.ShaderMaterial;
-  overlays: THREE.Mesh[];
+  media: THREE.Texture;
+  video: HTMLVideoElement | null;
+  bindings: RuntimeMaterialBinding[];
   liveTexture: THREE.CanvasTexture | null;
   liveCanvas: HTMLCanvasElement | null;
   liveRevision: number;
+  liveBlend: number;
   handoffTexture: THREE.CanvasTexture | null;
-  handoffStartedAt: number;
+  handoffBlend: number;
   introducedAt: number | null;
 };
 
-const screenPhases = {
-  interactive: "engagement",
-  game: "experiences",
-  main: "connection",
-  videoWall: "reveal",
-} as const;
-
-function canIntroduce(runtime: ScreenRuntime) {
-  const phaseId = runtime.id === "videoWall" && experienceState.narrative.phase === "intelligence"
-    ? "intelligence" : screenPhases[runtime.id];
-  const phase = heroTimeline.phases.find((item) => item.id === phaseId)!;
-  return experienceState.progress >= phase.start && experienceState.progress <= phase.end;
+function hasActiveSurface(id: BakedScreenId) {
+  return interactionRuntime.activeStation !== null
+    && interactionRuntime.activeStation === (id === "game" ? "game" : id === "main" ? "draw" : id === "interactive" ? "touch" : id === "videoWall" ? "stage" : null);
 }
 
-function canvasTexture(canvas: HTMLCanvasElement) {
-  const texture = prepareBakedTexture(new THREE.CanvasTexture(canvas)) as THREE.CanvasTexture;
-  texture.generateMipmaps = false;
-  texture.minFilter = THREE.LinearFilter;
+function createFallbackTexture() {
+  const data = new Uint8Array([2, 3, 5, 255]);
+  const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
   return texture;
+}
+
+function getActivation(id: BakedScreenId) {
+  const production = experienceState.stage.production;
+  if (id === "videoWall") return production.videoWallScreen;
+  if (id === "interactive") return production.interactiveScreen;
+  if (id === "game") return production.gameScreen;
+  return production.mainScreen;
 }
 
 function getSectionReveal(id: BakedExhibitionSectionId) {
   const production = experienceState.stage.production;
-  return id === "central" ? production.centralReveal
-    : id === "left" ? production.leftReveal : production.rightReveal;
+  if (id === "central") return production.centralReveal;
+  if (id === "left") return production.leftReveal;
+  return production.rightReveal;
 }
 
-/** An overlay preserves the GLB material underneath, including during first arrival. */
-export function BakedScreenController({ root }: { root: THREE.Object3D }) {
-  const runtimesRef = useRef<ScreenRuntime[]>([]);
+function getScreenSources(projects: SceneProject[]) {
+  // The center wall keeps its original media; interactive screens have no poster.
+  return {
+    videoWall: sceneTokens.bakedScene.screens.videoWall || projects[0]?.src || "",
+    interactive: "",
+    game: "",
+    main: "",
+  } satisfies Record<BakedScreenId, string>;
+}
+
+function getIntroductionPhase(id: BakedScreenId) {
+  const phaseId = id === "interactive" ? "engagement" : id === "game" ? "experiences" : "connection";
+  return heroTimeline.phases.find((item) => item.id === phaseId)!;
+}
+
+export function BakedScreenController({
+  root,
+  projects,
+}: {
+  root: THREE.Object3D;
+  projects: SceneProject[];
+}) {
+  const runtimesRef = useRef<Record<BakedScreenId, ScreenRuntime> | null>(null);
   const reducedRef = useRef(false);
 
   useEffect(() => {
+    let active = true;
     root.updateMatrixWorld(true);
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const updateMotion = () => { reducedRef.current = motion.matches; };
     updateMotion();
     motion.addEventListener("change", updateMotion);
-    const fallback = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
-    fallback.needsUpdate = true;
-    const result: ScreenRuntime[] = [];
+    const result = {} as Record<BakedScreenId, ScreenRuntime>;
     (Object.keys(bakedSceneContract.exhibition.screens) as BakedScreenId[]).forEach((id) => {
-      const screen = root.getObjectByName(bakedSceneContract.exhibition.screens[id]);
-      if (!screen) return;
+      const media = createFallbackTexture();
       const sectionId = bakedSceneContract.exhibition.screenSections[id];
-      const contract = bakedSceneContract.exhibition.sections[sectionId];
-      const sectionRoot = root.getObjectByName(contract.root) ?? root;
-      const origin = getRevealOrigin(sectionRoot, root.getObjectByName(contract.revealAnchor));
+      const sectionContract = bakedSceneContract.exhibition.sections[sectionId];
+      const sectionRoot = root.getObjectByName(sectionContract.root) ?? root;
+      const revealOrigin = getRevealOrigin(
+        sectionRoot,
+        root.getObjectByName(sectionContract.revealAnchor),
+      );
       const material = new THREE.ShaderMaterial({
         name: `MAT_SCREEN_${id.toUpperCase()}`,
         uniforms: {
-          uMedia: { value: fallback },
-          uBaseMedia: { value: fallback },
+          uMedia: { value: media },
+          uBaseMedia: { value: media },
+          uIdleMedia: { value: media },
+          uBaseBlend: { value: 1 },
           uMediaBlend: { value: 1 },
-          uContentOpacity: { value: 0 },
+          uActivation: { value: 0 },
+          uHover: { value: 0 },
+          uHoverBrightness: { value: 0 },
+          uHasMedia: { value: 0 },
           uTime: { value: 0 },
           uRevealProgress: { value: 0 },
-          uRevealOrigin: { value: origin },
-          uRevealExtent: { value: getRevealExtent(sectionRoot, origin) },
+          uRevealOrigin: { value: revealOrigin },
+          uRevealExtent: { value: getRevealExtent(sectionRoot, revealOrigin) },
           uRevealEdgeWidth: { value: 0.42 },
           uRevealTurbulence: { value: 0.4 },
         },
         vertexShader,
         fragmentShader,
         toneMapped: false,
-        transparent: true,
         depthTest: true,
-        depthWrite: false,
+        depthWrite: true,
         polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       });
-      result.push({
-        id, sectionId, screen, material, overlays: [],
-        liveTexture: null, liveCanvas: null, liveRevision: 0,
-        handoffTexture: null, handoffStartedAt: 0, introducedAt: null,
-      });
+      const object = root.getObjectByName(bakedSceneContract.exhibition.screens[id]);
+      result[id] = {
+        id,
+        sectionId,
+        material,
+        media,
+        video: null,
+        bindings: object ? bindRuntimeMaterial(object, material) : [],
+        liveTexture: null,
+        liveCanvas: null,
+        liveRevision: 0,
+        liveBlend: 1,
+        handoffTexture: null,
+        handoffBlend: 1,
+        introducedAt: null,
+      };
     });
     runtimesRef.current = result;
+
+    const sources = getScreenSources(projects);
+    const loader = new THREE.TextureLoader();
+    (Object.keys(result) as BakedScreenId[]).forEach((id) => {
+      const source = sources[id];
+      if (!source) return;
+      const isVideo = /\.(mp4|webm|ogv)(\?.*)?$/i.test(source);
+      if (isVideo) {
+        const video = document.createElement("video");
+        video.src = source;
+        video.crossOrigin = "anonymous";
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        const texture = prepareBakedTexture(new THREE.VideoTexture(video));
+        texture.generateMipmaps = false;
+        texture.minFilter = THREE.LinearFilter;
+        result[id].media.dispose();
+        result[id].media = texture;
+        result[id].video = video;
+        result[id].material.uniforms.uBaseMedia.value = texture;
+        result[id].material.uniforms.uIdleMedia.value = texture;
+        if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
+        result[id].material.uniforms.uHasMedia.value = 1;
+        return;
+      }
+      loader.load(
+        source,
+        (texture) => {
+          if (!active) {
+            texture.dispose();
+            return;
+          }
+          prepareBakedTexture(texture);
+          result[id].media.dispose();
+          result[id].media = texture;
+          result[id].material.uniforms.uBaseMedia.value = texture;
+          result[id].material.uniforms.uIdleMedia.value = texture;
+          if (!result[id].liveTexture) result[id].material.uniforms.uMedia.value = texture;
+          result[id].material.uniforms.uHasMedia.value = 1;
+        },
+        undefined,
+        () => {
+          if (active && process.env.NODE_ENV !== "production") {
+            console.warn(`[Mandegar] Screen media could not be loaded: ${source}`);
+          }
+        },
+      );
+    });
+
     return () => {
+      active = false;
       motion.removeEventListener("change", updateMotion);
-      runtimesRef.current = [];
-      result.forEach((runtime) => {
-        runtime.overlays.forEach((mesh) => mesh.removeFromParent());
+      if (runtimesRef.current === result) {
+        runtimesRef.current = null;
+      }
+
+      (Object.values(result) as ScreenRuntime[]).forEach((runtime) => {
+        if (runtime.video) {
+          runtime.video.pause();
+          runtime.video.removeAttribute("src");
+          runtime.video.load();
+        }
+        restoreRuntimeMaterial(runtime.bindings, runtime.material);
         runtime.liveTexture?.dispose();
         runtime.handoffTexture?.dispose();
+        runtime.media.dispose();
         runtime.material.dispose();
       });
-      fallback.dispose();
     };
-  }, [root]);
+  }, [projects, root]);
 
   useFrame(({ clock }) => {
-    const now = clock.elapsedTime;
-    const production = experienceState.stage.production;
-    runtimesRef.current.forEach((runtime) => {
-      const savedWall = runtime.id === "main" ? getVisitorCreation().drawingWall : null;
-      const ambient = runtime.id === "game" ? interactionRuntime.ambientGameSurface : null;
-      const entry = interactionRuntime.monitorEntries[runtime.id]
-        ?? ambient ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
-      // A registered canvas can exist before its phase (the scroll stage does).
-      // It must not replace the authored idle material until actual arrival.
-      const ready = entry && (runtime.introducedAt !== null || canIntroduce(runtime))
-        && (runtime.id !== "videoWall" || runtime.introducedAt !== null || ("blend" in entry ? entry.blend ?? 1 : 1) > 0.001);
-      if (ready && entry.canvas !== runtime.liveCanvas) {
-        // Snapshot the outgoing surface. Its owner may continue painting or
-        // unmount during the crossfade; the transition still has a stable source.
-        runtime.handoffTexture?.dispose();
-        runtime.handoffTexture = null;
-        if (runtime.liveCanvas) {
-          const snapshot = document.createElement("canvas");
-          snapshot.width = runtime.liveCanvas.width;
-          snapshot.height = runtime.liveCanvas.height;
-          snapshot.getContext("2d")?.drawImage(runtime.liveCanvas, 0, 0);
-          runtime.handoffTexture = canvasTexture(snapshot);
-        }
-        runtime.liveTexture?.dispose();
-        runtime.liveCanvas = entry.canvas;
-        runtime.liveRevision = entry.revision;
-        runtime.liveTexture = canvasTexture(entry.canvas);
-        runtime.handoffStartedAt = now;
-        runtime.material.uniforms.uMedia.value = runtime.liveTexture;
-        runtime.material.uniforms.uBaseMedia.value = runtime.handoffTexture ?? runtime.liveTexture;
-        if (runtime.introducedAt === null) {
-          runtime.introducedAt = now;
-          const originals: THREE.Mesh[] = [];
-          runtime.screen.traverse((object) => { if (object instanceof THREE.Mesh) originals.push(object); });
-          originals.forEach((original) => {
-            const overlay = new THREE.Mesh(original.geometry, runtime.material);
-            overlay.name = `fxScreen_dynamic_${runtime.id}`;
-            overlay.raycast = () => {};
-            original.add(overlay);
-            runtime.overlays.push(overlay);
-          });
-        }
-      }
-      if (ready && entry.canvas === runtime.liveCanvas && runtime.liveTexture
-        && entry.revision !== runtime.liveRevision) {
-        runtime.liveRevision = entry.revision;
-        runtime.liveTexture.needsUpdate = true;
-      }
-      // Unregistering a producer deliberately leaves its last painted surface
-      // on the monitor. Only scene disposal releases that retained texture.
-      const fade = reducedRef.current ? 1 : Math.min(1, Math.max(0, (now - (runtime.introducedAt ?? now)) / 0.7));
-      const handoff = reducedRef.current ? 1 : Math.min(1, (now - runtime.handoffStartedAt) / 0.6);
-      runtime.material.uniforms.uContentOpacity.value = fade * fade * (3 - 2 * fade);
-      runtime.material.uniforms.uMediaBlend.value = handoff * handoff * (3 - 2 * handoff);
-      runtime.material.uniforms.uTime.value = now;
+    const runtimes = runtimesRef.current;
+    if (!runtimes) {
+      return;
+    }
+
+    (Object.values(runtimes) as ScreenRuntime[]).forEach((runtime) => {
+      const activation = getActivation(runtime.id);
+      const production = experienceState.stage.production;
+      runtime.material.uniforms.uHover.value = 0;
+      runtime.material.uniforms.uTime.value = clock.elapsedTime;
       runtime.material.uniforms.uRevealProgress.value = getSectionReveal(runtime.sectionId);
       runtime.material.uniforms.uRevealEdgeWidth.value = production.revealEdgeWidth;
       runtime.material.uniforms.uRevealTurbulence.value = production.revealTurbulence;
-      if (runtime.handoffTexture && handoff >= 1) {
-        runtime.material.uniforms.uBaseMedia.value = runtime.liveTexture;
+      const savedWall = runtime.id === "main" ? getVisitorCreation().drawingWall : null;
+      const ambientGame = runtime.id === "game" ? interactionRuntime.ambientGameSurface : null;
+      const nextEntry = interactionRuntime.monitorEntries[runtime.id] ?? ambientGame ?? (savedWall ? { canvas: savedWall, revision: 0 } : null);
+      const interactive = runtime.id !== "videoWall";
+      const phase = interactive ? getIntroductionPhase(runtime.id) : null;
+      // Keep the three interactive screens painted going forward; returning
+      // before their phase restores the original idle material without a poster.
+      if (phase && experienceState.progress < phase.start) runtime.introducedAt = null;
+      const ready = !phase || runtime.introducedAt !== null
+        || (experienceState.progress >= phase.start && experienceState.progress <= phase.end);
+      const liveEntry = ready ? nextEntry ?? ((interactive || hasActiveSurface(runtime.id)) && runtime.liveCanvas
+        ? { canvas: runtime.liveCanvas, revision: runtime.liveRevision, blend: runtime.liveBlend }
+        : null) : null;
+      if (interactive && liveEntry && runtime.introducedAt === null) runtime.introducedAt = clock.elapsedTime;
+      const entrance = runtime.introducedAt === null ? 0
+        : reducedRef.current ? 1 : Math.max(0, Math.min(1, (clock.elapsedTime - runtime.introducedAt) / 0.7));
+      runtime.material.uniforms.uActivation.value = interactive
+        ? entrance * entrance * (3 - 2 * entrance) : activation;
+      if ((liveEntry?.canvas ?? null) !== runtime.liveCanvas) {
+        runtime.handoffTexture?.dispose();
+        const entering = Number(liveEntry?.canvas.dataset.transitionProgress ?? 1);
+        runtime.handoffTexture = liveEntry && hasActiveSurface(runtime.id) && entering < 1
+          ? runtime.liveTexture
+          : null;
+        runtime.handoffBlend = runtime.handoffTexture ? runtime.liveBlend : 1;
+        if (runtime.liveTexture !== runtime.handoffTexture) runtime.liveTexture?.dispose();
+        runtime.liveCanvas = liveEntry?.canvas ?? null;
+        runtime.liveRevision = 0;
+        runtime.liveTexture = liveEntry
+          ? prepareBakedTexture(new THREE.CanvasTexture(liveEntry.canvas)) as THREE.CanvasTexture
+          : null;
+        if (runtime.liveTexture) {
+          runtime.liveTexture.generateMipmaps = false;
+          runtime.liveTexture.minFilter = THREE.LinearFilter;
+          runtime.material.uniforms.uMedia.value = runtime.liveTexture;
+          runtime.material.uniforms.uHasMedia.value = 1;
+        } else {
+          runtime.material.uniforms.uMedia.value = runtime.media;
+          runtime.material.uniforms.uHasMedia.value = interactive ? 0 : 1;
+        }
+      }
+      if (liveEntry && runtime.liveTexture && liveEntry.revision !== runtime.liveRevision) {
+        runtime.liveRevision = liveEntry.revision;
+        runtime.liveTexture.needsUpdate = true;
+      }
+      const entering = Number(liveEntry?.canvas.dataset.transitionProgress ?? 1);
+      if (runtime.handoffTexture && (!hasActiveSurface(runtime.id) || entering >= 1)) {
         runtime.handoffTexture.dispose();
         runtime.handoffTexture = null;
+      }
+      runtime.material.uniforms.uBaseMedia.value = runtime.handoffTexture ?? runtime.media;
+      runtime.material.uniforms.uBaseBlend.value = runtime.handoffTexture ? runtime.handoffBlend : 1;
+      const presentationBlend = runtime.handoffTexture
+        ? Math.max(0, Math.min(1, entering))
+        : 1;
+      const surfaceBlend = liveEntry && "blend" in liveEntry ? liveEntry.blend : undefined;
+      runtime.liveBlend = typeof surfaceBlend === "number" && Number.isFinite(surfaceBlend)
+        ? Math.max(0, Math.min(1, surfaceBlend)) : presentationBlend;
+      runtime.material.uniforms.uMediaBlend.value = runtime.liveBlend;
+      if (!runtime.video) return;
+      if (activation > 0.04 && runtime.video.paused) {
+        void runtime.video.play().catch(() => undefined);
+      } else if (activation <= 0.01 && !runtime.video.paused) {
+        runtime.video.pause();
       }
     });
   });

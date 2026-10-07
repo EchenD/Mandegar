@@ -7,13 +7,14 @@ export type MonitorTextureSample = {
   blend: number;
   transition: number | null;
   opacity: number;
+  activation: number;
 };
 
 /** Observe rendered sampler ownership rather than adding hooks to the scene. */
 export async function observeMonitorTextures(page: Page) {
   await page.addInitScript(() => {
     type Source = { label: string; screen: "game" | "main" | "interactive" | "videoWall" | null; canvas?: HTMLCanvasElement };
-    type Program = { media?: number; base?: number; blend?: number; opacity?: number };
+    type Program = { media?: number; base?: number; blend?: number; opacity?: number; activation?: number };
     type Context = {
       program: WebGLProgram | null;
       unit: number;
@@ -38,7 +39,7 @@ export async function observeMonitorTextures(page: Page) {
         const screen = source.src.includes("screen-game-") || source.src.includes("race-idle.webp") ? "game"
           : source.src.includes("screen-main-") ? "main"
             : source.src.includes("screen-interactive-") || source.src.includes("connected-experience.webp") ? "interactive"
-              : source.src.includes("screen-center-") ? "videoWall" : null;
+              : source.src.includes("screen-center-") || source.src.includes("lighting-screen-v1.webp") ? "videoWall" : null;
         return { label: "image", screen };
       }
       const canvasScreen = source.hasAttribute("data-game-canvas") || source.hasAttribute("data-game-ambient") ? "game"
@@ -67,6 +68,9 @@ export async function observeMonitorTextures(page: Page) {
       const base = baseTexture ? state.sources.get(baseTexture) : undefined;
       const screen = media?.screen ?? base?.screen;
       if (!screen) return;
+      // A live canvas identifies its paired neutral base texture. Remember that
+      // texture so reverse travel can be observed after the live canvas releases.
+      if (baseTexture && !base) state.sources.set(baseTexture, { label: "neutral", screen });
       observer.__monitorTextureSamples.push({
         screen,
         media: media?.label ?? "unknown",
@@ -74,6 +78,7 @@ export async function observeMonitorTextures(page: Page) {
         blend: program.blend,
         transition: media?.canvas?.dataset.transitionProgress ? Number(media.canvas.dataset.transitionProgress) : null,
         opacity: program.opacity ?? 1,
+        activation: program.activation ?? 1,
       });
       if (observer.__monitorTextureSamples.length > 2_000) observer.__monitorTextureSamples.shift();
     };
@@ -113,7 +118,7 @@ export async function observeMonitorTextures(page: Page) {
       const locate = prototype.getUniformLocation;
       prototype.getUniformLocation = function (program, name) {
         const location = locate.call(this, program, name);
-        if (location && ["uMedia", "uBaseMedia", "uMediaBlend", "uContentOpacity"].includes(name)) {
+        if (location && ["uMedia", "uBaseMedia", "uMediaBlend", "uContentOpacity", "uActivation"].includes(name)) {
           const state = stateFor(this);
           let uniforms = state.programs.get(program);
           if (!uniforms) {
@@ -136,6 +141,7 @@ export async function observeMonitorTextures(page: Page) {
         const uniform = location ? stateFor(this).locations.get(location) : undefined;
         if (uniform?.name === "uMediaBlend") uniform.program.blend = value;
         else if (uniform?.name === "uContentOpacity") uniform.program.opacity = value;
+        else if (uniform?.name === "uActivation") uniform.program.activation = value;
         scalar.call(this, location, value);
       };
       const indexed = prototype.drawElements;

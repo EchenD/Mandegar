@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
+import { publicAssetPath } from "@/lib/public-asset-path";
 import type { ScenePhaseId } from "../narrative-score";
 import { heroTimeline } from "../hero-timeline-config";
 import { sampleHeroTimeline } from "../hero-timeline";
@@ -95,6 +96,16 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       && new URLSearchParams(window.location.search).get("anchors") === "1"));
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (runtime !== "full" && runtime !== "adaptive") return;
+    // Prepare the first Touch view before its caption and screen reveal together.
+    const image = new Image();
+    image.decoding = "async";
+    image.fetchPriority = "low";
+    image.src = publicAssetPath("/media/hero/touch/assembled.webp");
+    void image.decode().catch(() => undefined);
+  }, [runtime]);
 
   useEffect(() => {
     const input = arrivalInput.current;
@@ -240,33 +251,19 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
     const phase = heroTimeline.phases.find((item) => item.id === interactionRegistry[expectedStation].phase);
     if (!root || !phase) return;
     let frame: number;
-    let previousProgress = Number(root.dataset.nativeProgress ?? 0);
-    let previousTime = performance.now();
-    let lastMotionAt = previousTime;
-    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-    let sampled = false;
     const checkArrival = () => {
-      const now = performance.now();
       const progress = Number(root.dataset.nativeProgress ?? 0);
       if (root.dataset.scrollDirection === "backward" || progress < phase.start) autoStarted.current[expectedStation] = false;
-      const pixels = Math.abs(progress - previousProgress) * Math.max(1, Number(root.dataset.cameraScrollDistance) || root.offsetHeight - innerHeight);
-      const speed = pixels / Math.max(16, now - previousTime);
-      if (pixels > 1) lastMotionAt = now;
       const input = arrivalInput.current;
-      const fastWheel = now - input.wheelAt < 250 && Math.abs(input.wheelDelta) > innerHeight * 1.5;
-      const touchSettled = !input.touching && now - input.touchEndedAt >= 160
-        && (!coarsePointer || (now - lastMotionAt >= 100 && now - input.nativeScrolledAt >= 160));
-      previousProgress = progress;
-      previousTime = now;
-      if (sampled && root.dataset.scrollDirection === "forward"
+      // Screen content starts with the chapter text, including during an active
+      // wheel gesture or swipe. Participation keeps native scrolling available.
+      if (root.dataset.scrollDirection === "forward"
         && root.dataset.storyStage === phase.id && root.dataset.reducedMotion !== "true"
         && !autoStarted.current[expectedStation] && !interactionRuntime.activeStation
-        && progress >= phase.preview - .0001 && progress < phase.end
-        && speed <= 2.4 && touchSettled && !fastWheel && now - input.wheelAt >= 160) {
+        && progress >= phase.start && progress < phase.end) {
         enter(expectedStation, input.keyboard ? "keyboard" : "automatic");
         return;
       }
-      sampled = true;
       frame = requestAnimationFrame(checkArrival);
     };
     frame = requestAnimationFrame(checkArrival);
@@ -399,8 +396,14 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   }, [state.activeStation, state.input]);
 
   useEffect(() => {
-    if (state.activeStation && state.activeStation !== expectedStation) exit(state.lifecycle !== "complete");
-  }, [exit, expectedStation, state.activeStation, state.lifecycle]);
+    if (!state.activeStation || state.activeStation === expectedStation) return;
+    if (expectedStation) {
+      // A newly reached monitor must not wait for the previous controls' outro.
+      if (departureTimer.current !== null) clearTimeout(departureTimer.current);
+      departureTimer.current = null;
+      finishExit(state.lifecycle !== "complete");
+    } else exit(state.lifecycle !== "complete");
+  }, [exit, expectedStation, finishExit, state.activeStation, state.lifecycle]);
 
   useEffect(() => {
     if (!state.activeStation) return;

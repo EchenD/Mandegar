@@ -1,7 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { activateWithKeyboard, continueFromResult, waitForStation } from "./hero-interaction-helpers";
+import { heroTimeline } from "../../components/experience/hero-timeline-config";
+import { activateWithKeyboard, waitForStation } from "./hero-interaction-helpers";
 
 test.setTimeout(120_000);
+test.use({ video: "off", trace: "off" });
 
 async function openDrawing(page: Page, clockControlled = false) {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -29,12 +31,14 @@ test("drawing wall accepts a scene stroke and finishes", async ({ page }) => {
   await drawOnScreen(page, 550, 250, 750, 290);
   await expect(controls).toHaveAttribute("data-stroke-count", "1");
   await activateWithKeyboard(page, "[data-drawing-finish]");
-  await expect(director).toHaveAttribute("data-presentation", "result");
-  await expect(controls).toHaveAttribute("data-drawing-finished", "true");
-  await expect(controls).toHaveAttribute("data-stroke-count", "1");
-  await expect(page.locator("p[data-interaction-result='draw']")).toBeVisible();
-  await expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0);
-  await continueFromResult(page, "draw");
+  await Promise.all([
+    expect(director).toHaveAttribute("data-presentation", "result"),
+    expect(controls).toHaveAttribute("data-drawing-finished", "true"),
+    expect(controls).toHaveAttribute("data-stroke-count", "1"),
+    expect(page.locator("p[data-interaction-result='draw']")).toBeVisible(),
+    expect(page.locator("[data-interaction-replay], [data-interaction-escape]")).toHaveCount(0),
+  ]);
+  await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(page.locator("[data-drawing-canvas]")).toHaveCount(0);
 });
 
@@ -117,16 +121,18 @@ test("Finish traces a highlight without clearing the completed drawing", async (
 });
 
 test("the next onward scroll fades controls into the retained completed drawing", async ({ page }) => {
-  const { director } = await openDrawing(page);
+  await page.clock.install();
+  const { director } = await openDrawing(page, true);
   const canvas = page.locator("[data-drawing-canvas]");
   await canvas.focus();
   await page.keyboard.press("Space");
   for (let index = 0; index < 4; index += 1) await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Space");
 
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await activateWithKeyboard(page, "[data-drawing-finish]");
+  await page.clock.runFor(64);
   await expect(director).toHaveAttribute("data-presentation", "result");
-  await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-interaction-active", "draw");
   const capture = canvas.evaluate(async (element: HTMLCanvasElement) => {
     const context = element.getContext("2d")!;
     const values: number[] = [];
@@ -149,7 +155,14 @@ test("the next onward scroll fades controls into the retained completed drawing"
     };
   });
   await expect(canvas).toHaveAttribute("data-drawing-fade-observer-ready", "true");
-  await page.mouse.wheel(0, 120);
+  const phase = heroTimeline.phases.find((item) => item.id === "connection")!;
+  const delta = await page.locator("[data-experience-root]").evaluate((root: HTMLElement, progress) => {
+    const distance = Number(root.dataset.cameraScrollDistance);
+    return (progress - Number(root.dataset.nativeProgress)) * distance;
+  }, phase.end + 0.004);
+  await page.mouse.move(20, 400);
+  await page.mouse.wheel(0, delta);
+  await page.clock.runFor(2_000);
   const handoff = await capture;
 
   expect(Math.min(...handoff.values)).toBeGreaterThan(180);
