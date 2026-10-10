@@ -14,8 +14,16 @@ async function expectReadableWork(page: Page) {
     await projectLink.getAttribute("aria-label") ?? "",
   );
   await expect(firstProject.locator("[data-project-category]")).toHaveCount(0);
-  await expect(projectLink.locator("[data-project-action]")).toBeVisible();
-  await expect(projectLink.locator("[data-project-action]")).toBeInViewport();
+  await expect(firstProject.locator("[data-project-action]")).toHaveCount(0);
+  if (await journey.getAttribute("data-motion") !== "reduced") {
+    const imageLink = journey.locator("[data-orbit-card][data-featured='true'] [data-project-image-link]");
+    await expect(imageLink).toHaveCount(1);
+    await expect(imageLink).toBeInViewport();
+    await expect(imageLink).toHaveAttribute("href", await projectLink.getAttribute("href") ?? "");
+    expect(await journey.locator("[data-orbit-card][data-featured='false'] [data-project-image-link]").evaluateAll((links) => links.every((link) => (
+      (link as HTMLAnchorElement).tabIndex === -1 && link.closest<HTMLElement>("[data-orbit-card]")?.inert
+    )))).toBe(true);
+  }
   const director = page.locator("[data-interaction-director]");
   await expect(director).toHaveAttribute("data-active-station", "none");
   await expect(director).toHaveAttribute("data-scroll-locked", "false");
@@ -42,21 +50,18 @@ test.describe("mobile work shortcut", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
   for (const locale of ["fa", "ar"] as const) {
-    test(`${locale} shortcut stays out of active controls and reaches work after exit`, async ({ page }, testInfo) => {
+    test(`${locale} mobile navigation reaches work without adding a shortcut beside the controls`, async ({ page }, testInfo) => {
       await page.goto(`/${locale}?intro=0&phase=engagement`, { waitUntil: "domcontentloaded" });
-      const director = await waitForStation(page, "touch");
+      await waitForStation(page, "touch");
       const shortcut = page.locator("[data-work-shortcut]");
       await expect(shortcut).toBeAttached();
       await expect(shortcut).toBeHidden();
-      await page.locator("[data-interaction-escape]").tap();
-      await expect(director).toHaveAttribute("data-active-station", "none");
-      await expect(shortcut).toBeVisible();
-      await expect(shortcut).toBeInViewport();
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-      const box = await shortcut.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
-      await page.screenshot({ path: testInfo.outputPath(`${locale}-mobile-shortcut.png`) });
-      await shortcut.tap();
+      await page.locator("[aria-controls='primary-navigation']").tap();
+      const projectsLink = page.locator("#primary-navigation a[href='#showcase']");
+      await expect(projectsLink).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`${locale}-mobile-navigation.png`) });
+      await projectsLink.tap();
       await expectReadableWork(page);
       await page.screenshot({ path: testInfo.outputPath(`${locale}-mobile-work.png`) });
     });

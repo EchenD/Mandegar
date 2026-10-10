@@ -132,22 +132,45 @@
 .staticRoot { width: min(84rem, calc(100% - 3rem)); margin-inline: auto; padding-block: clamp(5rem, 9vw, 9rem); color: #16191d; }
 .staticHeading { margin-block-end: 3rem; text-align: center; }
 .staticGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 4rem); }
-.staticCard { min-width: 0; border-block-end: 1px solid rgba(22, 25, 29, .12); padding-block-end: 2rem; text-align: center; }
+.staticCard { min-width: 0; border-block-end: 1px solid rgba(22, 25, 29, .12); padding-block-end: 2rem; scroll-margin-block-start: 5.5rem; text-align: center; }
 .staticImage { display: block; width: 100%; height: min(36svh, 24rem); object-fit: contain; }
 .staticCardCopy { padding-inline: .5rem; }
 .staticCard h3 { font-size: clamp(1.35rem, 2vw, 2rem); }
 
 @media (max-width: 760px) {
-  .heading { inset-block-start: max(5.5rem, 12svh); }
+  .heading { inset-block-start: max(4.75rem, 9svh); }
   .kicker { font-size: .62rem; }
-  .panels { inset-block-start: 61%; min-height: 12rem; }
-  .panel h3 { margin: .45rem 0 .6rem; font-size: clamp(1.35rem, 6.2vw, 1.85rem); }
-  .panel p { max-width: 33rem; font-size: .8rem; line-height: 1.85; }
-  .number { font-size: .58rem; }
-  .scrollHint { inset-block-end: 1.5rem; font-size: .58rem; }
+  .panels { inset-block: 0; inset-inline: 1.1rem; min-height: 0; }
+  .panel h3 {
+    position: absolute;
+    inset-block-start: max(7rem, 14svh);
+    inset-inline: 0;
+    margin: 0;
+    font-size: clamp(1.3rem, 5.6vw, 1.75rem);
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+  .panels .panel p {
+    position: absolute;
+    inset-block-start: 70%;
+    inset-inline: 0;
+    max-width: 40ch;
+    min-height: 0;
+    margin: 0 auto;
+    font-size: .8rem;
+    line-height: 1.85;
+    text-wrap: balance;
+  }
+  .number, .scrollHint { display: none; }
   .poster { inset-block-start: calc(50% - var(--services-presence, 1) * 3%); width: 96vw; height: 60svh; }
   .staticGrid { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
   .staticRoot { padding-block: 4rem; }
+  .staticHeading { margin-block-end: 1.5rem; }
+  .staticCard { display: grid; }
+  .staticCardCopy { display: contents; }
+  .staticCard h3 { grid-row: 1; margin-block: 0 .5rem; }
+  .staticImage { grid-row: 2; }
+  .staticGrid .staticCard p { grid-row: 3; min-height: 0; margin-inline: auto; padding-inline: .5rem; }
 }
 
 @media (max-height: 700px) and (min-width: 761px) {
@@ -159,11 +182,46 @@
 }
 
 @media (max-height: 500px) and (min-width: 761px) {
+  .panels { inset-block-start: 55%; }
   .panel h3 { margin-block: .3rem .35rem; font-size: 1.4rem; }
   .panel p { font-size: .73rem; line-height: 1.6; }
 }
 
 @media (max-height: 500px) {
   .scrollHint { display: none; }
-  .panels { inset-block-start: 55%; }
+}
+
+@media (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+  .heading, .number, .scrollHint { display: none; }
+  .panels { inset-block: 0; inset-inline: 1.5rem; min-height: 0; }
+  .panel h3 {
+    position: absolute;
+    inset-block-start: 5.5rem;
+    inset-inline: 0;
+    margin: 0;
+    font-size: clamp(1.3rem, 3vw, 1.6rem);
+    line-height: 1.35;
+  }
+  .panels .panel p {
+    position: absolute;
+    inset-block-start: 73%;
+    inset-inline: 0;
+    max-width: 54ch;
+    min-height: 0;
+    margin: 0 auto;
+    font-size: .75rem;
+    line-height: 1.65;
+    text-wrap: balance;
+  }
+  .poster { inset-block-start: 55%; width: 68vw; height: 42svh; }
+}
+
+@media (max-width: 760px) and (max-height: 500px) and (orientation: landscape) {
+  .panel h3 { inset-block-start: 4.75rem; }
+}
+
+@media (max-width: 760px) and (max-height: 500px) and (orientation: portrait) {
+  .heading { inset-block-start: 4.5rem; }
+  .panel h3 { inset-block-start: 6rem; }
+  .poster { inset-block-start: 55%; height: 50svh; }
 }

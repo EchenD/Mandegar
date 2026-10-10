@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getText } from "@/lib/localized-text";
 import type { SiteSettings } from "@/lib/content-source";
-import { navigateHomeSection, type HomeSection } from "@/lib/home-navigation";
+import { getHomeSection, getNavigationHomeSection, navigateHomeSection } from "@/lib/home-navigation";
 import { getUi, locales, localizedPath, type Locale } from "@/lib/i18n";
 import styles from "./Header.module.css";
 
@@ -69,6 +69,7 @@ export function Header({ locale, settings }: HeaderProps) {
     { href: localizedPath(locale, "projects"), label: copy.navigation.projects },
     { href: localizedPath(locale, "services"), label: copy.navigation.services },
     { href: localizedPath(locale, "about"), label: copy.navigation.about },
+    { href: localizedPath(locale, "partners"), label: copy.navigation.partners },
     { href: localizedPath(locale, "contact"), label: copy.navigation.contact },
   ];
   const links = settings?.navigation.length ? settings.navigation.map((item) => ({ href: navigationPath(locale, item.path), label: getText(item.label, locale) })).filter((item) => item.label) : defaultLinks;
@@ -89,10 +90,7 @@ export function Header({ locale, settings }: HeaderProps) {
         inert={mobileNavigation && !open ? true : undefined}
       >
         {links.map((link) => {
-          const slug = link.href.replace(/\/+$/, "").split("/").at(-1);
-          const section: HomeSection | null = home
-            ? slug === "projects" ? "showcase" : slug === "services" ? "services" : slug === "about" ? "about" : slug === "contact" ? "contact" : null
-            : null;
+          const section = home ? getNavigationHomeSection(link.href) : null;
           return <Link prefetch={false} key={link.href} href={section ? `#${section}` : link.href} aria-current={!home && (pathname === link.href || pathname.startsWith(`${link.href}/`)) ? "page" : undefined} onClick={(event) => {
             setOpen(false);
             if (section && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.button === 0) {
@@ -126,6 +124,8 @@ export function Header({ locale, settings }: HeaderProps) {
 
 function navigationPath(locale: Locale, path: string) {
   const cleanPath = path.replace(/^\/+/, "").replace(/^(fa|en|ar)(\/|$)/, "");
+  const section = cleanPath.startsWith("#") ? getHomeSection(cleanPath) : null;
+  if (section) return localizedPath(locale, section === "showcase" ? "projects" : section);
   return localizedPath(locale, cleanPath);
 }
 

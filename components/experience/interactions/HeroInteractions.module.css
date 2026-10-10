@@ -19,6 +19,7 @@
   transition: opacity .4s ease, transform .4s ease;
 }
 .journeyMessage { max-width: 32rem; margin: 0; color: #f7f4eb; font-size: clamp(.8rem, 1vw, .95rem); line-height: 1.55; text-wrap: balance; text-shadow: 0 2px 12px #000; }
+.mobileInstruction { display: none; }
 .root[data-presentation="departing"] .journeyControl { opacity: 0; transform: translate(-50%, .4rem); pointer-events: none; }
 .root[data-presentation="departing"] button { pointer-events: none; }
 .root[data-presentation="departing"] .mobileDrawingDock { opacity: 0; transition: opacity .38s ease; }
@@ -388,7 +389,41 @@
 @keyframes photoCopyArrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 760px) {
-  .journeyControl[data-phase] { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 4rem); }
+  .root { inset-block-end: auto; height: 100svh; }
+  .journeyControl[data-phase] {
+    inset: 0;
+    display: block;
+    width: 100%;
+    transform: none;
+  }
+  .journeyMessage {
+    position: absolute;
+    left: 50%;
+    top: var(--hero-mobile-copy-top, calc(env(safe-area-inset-top, 0px) + 7.75rem));
+    width: calc(100% - 2.4rem);
+    max-width: 30rem;
+    font-size: .875rem;
+    line-height: 1.6;
+    transform: translateX(-50%);
+  }
+  .desktopInstruction { display: none; }
+  .mobileInstruction { display: inline; }
+  .journeyButton {
+    position: absolute;
+    left: 50%;
+    bottom: var(--hero-mobile-skip-bottom, calc(env(safe-area-inset-bottom, 0px) + 4rem));
+    transform: translateX(-50%);
+  }
+  .journeyControl > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .root[data-presentation="departing"] .journeyControl { transform: none; }
   .puzzleInteraction {
     left: 50%;
     inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
@@ -413,7 +448,7 @@
   .mobileGameDock {
     position: absolute;
     left: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
+    inset-block-end: var(--hero-mobile-dock-bottom, calc(env(safe-area-inset-bottom, 0px) + 8rem));
     z-index: 2;
     display: grid;
     gap: .5rem;
@@ -480,7 +515,7 @@
   .mobileDrawingDock {
     position: absolute;
     left: 50%;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 10rem);
+    inset-block-end: var(--hero-mobile-dock-bottom, calc(env(safe-area-inset-bottom, 0px) + 8rem));
     z-index: 2;
     display: grid;
     gap: .65rem;
@@ -524,6 +559,31 @@
   .phoneResult { right: -.6rem; bottom: -.8rem; width: 5rem; }
   .hotspot { max-width: 11rem; }
   .hotspot small { font-size: .57rem; }
+}
+
+@media (min-width: 480px) and (max-width: 760px) and (max-height: 420px) {
+  .journeyMessage { width: calc(100% - 8rem); }
+  .journeyButton { left: auto; right: 1.25rem; width: 8rem; padding-inline: .5rem; transform: none; }
+  .mobileGameDock,
+  .mobileDrawingDock { left: 1.25rem; inset-block-end: var(--hero-mobile-skip-bottom); width: calc(100% - 11rem); transform: none; }
+}
+
+@media (max-width: 479px) and (max-height: 420px) {
+  .journeyMessage { top: var(--hero-mobile-copy-top); width: calc(100% - 8rem); font-size: .8rem; line-height: 1.5; }
+  .mobileDrawingDock { gap: .3rem; padding: .5rem; }
+}
+
+@media (max-width: 479px) and (max-height: 340px) {
+  .root[data-presentation="active"] .journeyMessage {
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

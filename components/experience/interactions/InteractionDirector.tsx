@@ -8,7 +8,7 @@ import { sampleHeroTimeline } from "../hero-timeline";
 import { experienceState } from "../experience-state";
 import { DrawingInteraction } from "./DrawingInteraction";
 import { GameInteraction } from "./GameInteraction";
-import { getInteractionCopy } from "./interaction-copy";
+import { getInteractionCopy, getMobileHeroCopy } from "./interaction-copy";
 import { getStationForPhase, interactionRegistry } from "./interaction-registry";
 import { interactionRuntime, resetInteractionRuntime } from "./interaction-runtime";
 import { initialInteractionState, interactionReducer } from "./interaction-state";
@@ -50,6 +50,7 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
   runtime: "pending" | "fallback" | "adaptive" | "full";
 }) {
   const copy = useMemo(() => getInteractionCopy(locale), [locale]);
+  const mobileCopy = getMobileHeroCopy(locale);
   const initialAnchors = useMemo(() => fallbackFrame(), []);
   const [state, dispatch] = useReducer(interactionReducer, initialInteractionState);
   const [expectedStation, setExpectedStation] = useState<InteractionStation | null>(null);
@@ -475,8 +476,8 @@ export const InteractionDirector = memo(function InteractionDirector({ locale, a
       <ScrollScenes locale={locale} enabled={runtime === "adaptive" || runtime === "full"} />
       {station && station !== "touch" && (
         <div className={styles.journeyControl} data-journey-control data-phase={activePhase}>
-          <p className={styles.journeyMessage} data-interaction-result={isResult ? station : undefined} role={isResult ? "status" : undefined} tabIndex={isResult ? -1 : undefined}>
-            {isResult ? station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : copy.stations[station].instruction}
+          <p className={styles.journeyMessage} data-interaction-instruction data-interaction-result={isResult ? station : undefined} role={isResult ? "status" : undefined} tabIndex={isResult ? -1 : undefined}>
+            {isResult ? station === "photo" ? copy.photo.delivery : station === "stage" ? copy.stage.finale : station === "game" ? copy.game.crashed : copy.draw.complete : <><span className={styles.desktopInstruction}>{copy.stations[station].instruction}</span><span className={styles.mobileInstruction}>{mobileCopy.instructions[station]}</span></>}
           </p>
           {!isResult &&
           <button type="button" className={styles.journeyButton} data-interaction-escape data-mobile-interaction-skip

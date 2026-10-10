@@ -323,6 +323,13 @@ export function ScrollMotion({
         ?? 0.409091;
       checkpoint.current ??= { progress: staticProgress, overflow: 0 };
       syncExperience(staticProgress, true);
+      applySeek = (request) => {
+        window.scrollTo({ top: request.top ?? 0, left: 0, behavior: "instant" });
+      };
+      if (pendingSeek.current) {
+        applySeek(pendingSeek.current);
+        pendingSeek.current = null;
+      }
       document.documentElement.style.scrollBehavior = previousBehavior;
       return () => {
         window.removeEventListener("resize", syncViewport);

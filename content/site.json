@@ -31,12 +31,21 @@
     },
     {
       "label": {
+        "fa": "همراهان ما",
+        "en": "Partners",
+        "ar": "شركاؤنا"
+      },
+      "path": "partners",
+      "order": 3
+    },
+    {
+      "label": {
         "fa": "تماس",
         "en": "Contact",
         "ar": "تواصل"
       },
       "path": "contact",
-      "order": 3
+      "order": 4
     }
   ],
   "socialLinks": [],

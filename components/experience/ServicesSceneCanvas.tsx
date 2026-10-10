@@ -30,6 +30,7 @@ const modelPath = publicAssetPath("/models/services/mandegar-services.glb?v=stud
 const cameraTargetY = .85;
 const cameraRadius = Math.hypot(7, 6.3 - cameraTargetY, 7);
 const cameraElevation = Math.asin((6.3 - cameraTargetY) / cameraRadius);
+const compactLandscapeQuery = "(max-width: 1000px) and (max-height: 500px) and (orientation: landscape)";
 
 /** Begin the same cached load used by the canvas during the opening experience. */
 export function preloadServicesScene() {
@@ -57,6 +58,8 @@ function ServicesWorld({ bridge, mobile, host, onUnlit }: Props & { host: RefObj
   const root = useRef<THREE.Group>(null);
   const placement = useRef<THREE.Group>(null);
   const { camera, gl, invalidate, scene, size } = useThree();
+  const [compactLandscape, setCompactLandscape] = useState(() => typeof window !== "undefined" && window.matchMedia(compactLandscapeQuery).matches);
+  const compactViewport = size.height <= 500 && (mobile || compactLandscape);
   const animation = useRef({ elapsed: 0, pointerX: 0, pointerY: 0 });
   const lifecycle = useRef({ warmed: false, warming: false, frame: 0, progress: 0, rotation: 0, breathScale: 1, pointerX: 0, pointerY: 0 });
   const contactShadow = useMemo(() => {
@@ -172,6 +175,14 @@ function ServicesWorld({ bridge, mobile, host, onUnlit }: Props & { host: RefObj
   }, [source.scene]);
 
   useEffect(() => {
+    const viewport = window.matchMedia(compactLandscapeQuery);
+    const sync = () => setCompactLandscape(viewport.matches);
+    sync();
+    viewport.addEventListener("change", sync);
+    return () => viewport.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
     onUnlit(asset.unlit);
     host.current?.setAttribute("data-services-material-unlit", String(asset.unlit));
     host.current?.setAttribute("data-services-textures", String(asset.textures.size));
@@ -185,16 +196,18 @@ function ServicesWorld({ bridge, mobile, host, onUnlit }: Props & { host: RefObj
     orthographic.position.set(7, 6.3, 7);
     orthographic.lookAt(0, cameraTargetY, 0);
     Object.assign(orthographic, {
-      zoom: mobile
-        ? Math.min(size.width * .115, size.height * .066)
-        : Math.min(size.width * .065, size.height * .082),
+      zoom: compactViewport
+        ? Math.min(size.width * .09, size.height * .05)
+        : mobile
+          ? Math.min(size.width * .115, size.height * .066)
+          : Math.min(size.width * .065, size.height * .082),
     });
     orthographic.updateProjectionMatrix();
     invalidate();
     return () => {
       if (sceneBridge.invalidate === invalidate) Object.assign(sceneBridge, { invalidate: undefined });
     };
-  }, [bridge, camera, invalidate, mobile, size.height, size.width]);
+  }, [bridge, camera, compactViewport, invalidate, mobile, size.height, size.width]);
 
   useEffect(() => {
     let disposed = false;
@@ -349,7 +362,7 @@ function ServicesWorld({ bridge, mobile, host, onUnlit }: Props & { host: RefObj
     const ambientWeight = settled * settled * lift ** 4;
     const phase = animation.current.elapsed * Math.PI / 3;
     const breathe = Math.sin(phase) * ambientWeight;
-    const y = cameraTargetY * (1 - settled) + (mobile ? 0 : 1) * settled + breathe * .015;
+    const y = cameraTargetY * (1 - settled) + (compactViewport ? -.8 : mobile ? 0 : 1) * settled + breathe * .015;
     const scale = motion.scale * (1 + breathe * .004);
     const damping = 1 - Math.exp(-step * 4.5);
     const pointerX = mobile ? 0 : THREE.MathUtils.clamp(bridge.current.pointerX ?? 0, -1, 1);

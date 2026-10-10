@@ -89,6 +89,17 @@
 .stationLeader line { stroke: #ceb991; stroke-width: 1; opacity: .8; }
 
 @media (max-width: 760px) {
-  .root { inset-block-end: 5.25rem; width: min(18rem, calc(100% - 2rem)); }
-  .explore { padding-inline: .65rem; font-size: .68rem; }
+  .root {
+    inset-inline: 0;
+    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+    width: min(26rem, calc(100% - 2.4rem));
+    margin-inline: auto;
+  }
+  .controls { justify-content: center; }
+  .root[data-pinned="true"][data-person]:not([data-person="none"]) .stationTarget {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .exploreControls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+  .explore { justify-content: center; gap: .5rem; padding-inline: .5rem; font-size: .7rem; }
 }

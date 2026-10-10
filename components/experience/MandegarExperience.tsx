@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
-import { getHomeSection, homeSectionLabels, type HomeSection } from "@/lib/home-navigation";
+import { getHomeScrollCheckpoint, getHomeSection, homeSectionLabels, type HomeScrollCheckpoint, type HomeSection } from "@/lib/home-navigation";
 import type { JourneyClient, JourneyVoice } from "./ConnectedJourney";
 import { ExperienceIntro } from "./ExperienceIntro";
 import { resetIntro } from "./intro-director";
@@ -12,7 +12,7 @@ import { ScrollMotion } from "./ScrollMotion";
 import { experienceState } from "./experience-state";
 import { narrativeScore, type ScenePhaseId } from "./narrative-score";
 import { InteractionDirector } from "./interactions/InteractionDirector";
-import { getInteractionCopy } from "./interactions/interaction-copy";
+import { getInteractionCopy, getMobileHeroCopy } from "./interactions/interaction-copy";
 import { AmbientGame } from "./interactions/AmbientGame";
 import { IntelligenceInspector } from "./IntelligenceInspector";
 import { IntelligenceMonitor } from "./IntelligenceMonitor";
@@ -171,16 +171,17 @@ export function MandegarExperience({
 }: ExperienceProps) {
   const [activePhase, setActivePhase] = useState<ScenePhaseId>("arrival");
   const interactionCopy = useMemo(() => getInteractionCopy(locale), [locale]);
+  const mobileCopy = getMobileHeroCopy(locale);
   const [runtime, setRuntime] = useState<"pending" | "fallback" | "adaptive" | "full">("pending");
   const [loadProgress, setLoadProgress] = useState(0);
   const [interactionReady, setInteractionReady] = useState(false);
   const [introComplete, setIntroComplete] = useState(false);
-  const [workReady, setWorkReady] = useState(false);
-  const workJump = useRef<(() => void) | null>(null);
+  const [workJump, setWorkJump] = useState<(() => void) | null>(null);
+  const workReady = workJump !== null;
   const pendingSection = useRef<HomeSection | null>(null);
+  const pendingHomeScroll = useRef<HomeScrollCheckpoint | null>(null);
   const handleWorkReady = useCallback((jump: (() => void) | null) => {
-    workJump.current = jump;
-    setWorkReady(jump !== null);
+    setWorkJump(() => jump);
   }, []);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [backToTopVisible, setBackToTopVisible] = useState(false);
@@ -242,13 +243,33 @@ export function MandegarExperience({
       const section = event?.type === "mandegar:home-section"
         ? (event as CustomEvent<{ section: HomeSection }>).detail.section
         : getHomeSection(window.location.hash);
-      if (!section) return;
-      pendingSection.current = section;
+      if (event?.type === "popstate" && !window.location.hash) {
+        pendingSection.current = null;
+        pendingHomeScroll.current = getHomeScrollCheckpoint() ?? { top: 0 };
+      } else if (section) {
+        pendingSection.current = section;
+        pendingHomeScroll.current = null;
+      }
+      if (!section && !pendingHomeScroll.current) return;
       const root = document.querySelector<HTMLElement>("[data-experience-root]");
       if (root) root.dataset.scrollSeekRequested = "true";
       window.dispatchEvent(new Event("mandegar:skip-intro"));
       setIntroComplete(true);
-      if (loadProgress !== 100 || !workReady || !interactionReady) return;
+      // The journey switches to its static layout before the hero canvas can
+      // publish its fallback runtime. Wait for that height change before seeking.
+      if (loadProgress !== 100 || !workJump || !interactionReady || runtime === "pending"
+        || (window.matchMedia("(prefers-reduced-motion: reduce)").matches && runtime !== "fallback")) return;
+      if (pendingHomeScroll.current) {
+        const checkpoint = pendingHomeScroll.current;
+        pendingHomeScroll.current = null;
+        if (root?.dataset.reducedMotion === "true") {
+          window.scrollTo({ top: "top" in checkpoint ? checkpoint.top : 0, behavior: "instant" });
+        } else {
+          root?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { ...checkpoint, sync: true } }));
+        }
+        return;
+      }
+      if (!section) return;
       document.querySelector<HTMLElement>("[data-connected-journey]")?.dispatchEvent(
         new CustomEvent("mandegar:journey-seek", { detail: { label: homeSectionLabels[section], focus: true } }),
       );
@@ -257,13 +278,13 @@ export function MandegarExperience({
     window.addEventListener("mandegar:home-section", seekSection);
     window.addEventListener("hashchange", seekSection);
     window.addEventListener("popstate", seekSection);
-    if (pendingSection.current || getHomeSection(window.location.hash)) seekSection();
+    if (pendingSection.current || pendingHomeScroll.current || getHomeSection(window.location.hash)) seekSection();
     return () => {
       window.removeEventListener("mandegar:home-section", seekSection);
       window.removeEventListener("hashchange", seekSection);
       window.removeEventListener("popstate", seekSection);
     };
-  }, [interactionReady, loadProgress, workReady]);
+  }, [interactionReady, loadProgress, runtime, workJump]);
 
   useEffect(() => {
     return subscribeHeroLoading((progress) => setLoadProgress((current) => Math.max(current, progress)));
@@ -496,19 +517,19 @@ export function MandegarExperience({
               <p data-copy-line>{copy.discoveryBody}</p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="activation" data-interaction-cue data-cinematic-beat>
-              <p data-copy-line>{interactionCopy.stations.photo.instruction}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{interactionCopy.stations.photo.instruction}</span><span className={styles.mobileCopy}>{mobileCopy.instructions.photo}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="engagement" data-interaction-cue data-cinematic-beat>
-              <p data-copy-line>{interactionCopy.stations.touch.instruction}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{interactionCopy.stations.touch.instruction}</span><span className={styles.mobileCopy}>{mobileCopy.instructions.touch}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="reveal" data-interaction-cue data-cinematic-beat>
-              <p data-copy-line>{interactionCopy.stations.stage.instruction}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{interactionCopy.stations.stage.instruction}</span><span className={styles.mobileCopy}>{mobileCopy.instructions.stage}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="experiences" data-interaction-cue data-cinematic-beat>
-              <p data-copy-line>{interactionCopy.stations.game.instruction}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{interactionCopy.stations.game.instruction}</span><span className={styles.mobileCopy}>{mobileCopy.instructions.game}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="connection" data-interaction-cue data-cinematic-beat>
-              <p data-copy-line>{interactionCopy.stations.draw.instruction}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{interactionCopy.stations.draw.instruction}</span><span className={styles.mobileCopy}>{mobileCopy.instructions.draw}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="proof" data-cinematic-beat>
               <span data-copy-line>{copy.proofEyebrow}</span>
@@ -518,7 +539,7 @@ export function MandegarExperience({
             <section className={styles.sceneCopy} data-scene-copy="intelligence" data-cinematic-beat>
               <span data-copy-line>{copy.intelligenceEyebrow}</span>
               <h2 data-copy-line>{copy.intelligenceTitle}</h2>
-              <p data-copy-line>{copy.intelligenceBody}</p>
+              <p data-copy-line><span className={styles.desktopCopy}>{copy.intelligenceBody}</span><span className={styles.mobileCopy}>{mobileCopy.intelligence}</span></p>
             </section>
             <section className={styles.sceneCopy} data-scene-copy="invitation" data-cinematic-beat>
               <span data-copy-line>{copy.invitationEyebrow}</span>
@@ -532,12 +553,16 @@ export function MandegarExperience({
             </section>
           </div>
 
-          <button className={styles.soundControl} type="button" aria-pressed={soundEnabled} onClick={toggleSound}>
-            <span aria-hidden="true">{soundEnabled ? "◖" : "○"}</span>
-            {soundEnabled ? copy.muteSound : copy.enableSound}
+          <button className={styles.soundControl} type="button" data-hero-sound aria-label={soundEnabled ? copy.muteSound : copy.enableSound} title={soundEnabled ? copy.muteSound : copy.enableSound} aria-pressed={soundEnabled} onClick={toggleSound}>
+            <span className={styles.soundMark} aria-hidden="true">{soundEnabled ? "◖" : "○"}</span>
+            <svg className={styles.soundIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M11 4 6 8H3v8h3l5 4V4Z" />
+              {soundEnabled ? <><path d="M15 8a6 6 0 0 1 0 8" /><path d="M18 5a10 10 0 0 1 0 14" /></> : <path d="m16 9 5 6m0-6-5 6" />}
+            </svg>
+            <span className={styles.soundLabel}>{soundEnabled ? copy.muteSound : copy.enableSound}</span>
           </button>
 
-          {workReady ? <button className={styles.workShortcut} type="button" data-work-shortcut onClick={() => workJump.current?.()}>
+          {workReady ? <button className={styles.workShortcut} type="button" data-work-shortcut onClick={() => workJump?.()}>
             {pageCopy.viewWork}<span aria-hidden="true">↓</span>
           </button> : null}
 

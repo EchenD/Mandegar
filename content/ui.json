@@ -4,6 +4,7 @@
       "projects": "پروژه‌ها",
       "services": "خدمات",
       "about": "درباره ما",
+      "partners": "همراهان ما",
       "contact": "تماس"
     },
     "start": "شروع یک پروژه",
@@ -31,6 +32,7 @@
       "projects": "Projects",
       "services": "Services",
       "about": "About",
+      "partners": "Partners",
       "contact": "Contact"
     },
     "start": "Start a project",
@@ -58,6 +60,7 @@
       "projects": "المشاريع",
       "services": "الخدمات",
       "about": "من نحن",
+      "partners": "شركاؤنا",
       "contact": "تواصل"
     },
     "start": "ابدأ مشروعاً",

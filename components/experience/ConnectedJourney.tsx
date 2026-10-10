@@ -119,7 +119,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     ? Array.from({ length: 8 }, (_, index) => selected[index % selected.length])
     : [], [selected]);
   const configuredCopy = words[locale];
-  const ui = { ...configuredCopy, partnersLabel: clients.length ? configuredCopy.partnersLabel : configuredCopy.genericPartnersLabel };
+  const ui = configuredCopy;
   const partnerItems = useMemo<JourneyClient[]>(() => clients.length
     ? clients
     : ui.disciplines.map((name) => ({ name })), [clients, ui.disciplines]);
@@ -242,32 +242,61 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       (link ?? node).focus({ preventScroll: true });
     };
     if (staticJourney) {
-      const seekStatic = (label: string) => {
+      let readinessFrame: number | undefined;
+      let seekFrame: number | undefined;
+      const staticLayoutReady = () => Number.parseFloat(getComputedStyle(node).marginBlockStart) === 0;
+      const applyStaticSeek = (label: string) => {
         const index = /^Service([1-5])$/.exec(label)?.[1];
         const target = index
           ? node.querySelector<HTMLElement>(`[data-service-index="${Number(index) - 1}"]`)
           : label === "Services" ? node.querySelector<HTMLElement>("[data-services]")
           : label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]")
+          : label.startsWith("Partners") ? node.querySelector<HTMLElement>("[data-partners]")
           : label === "Finale" || label === "Contact" ? node.querySelector<HTMLElement>("[data-final-cta]") : node;
+        if (hero) hero.dataset.scrollSeekRequested = "true";
         target?.scrollIntoView({ behavior: "instant", block: "start" });
-        (target?.querySelector<HTMLElement>("a, button") ?? target)?.focus({ preventScroll: true });
+        hero?.dispatchEvent(new CustomEvent("mandegar:seek", { detail: { top: window.scrollY } }));
+        if (target === node) focusWork();
+        else (label.startsWith("Partners") ? target : target?.querySelector<HTMLElement>("a, button") ?? target)?.focus({ preventScroll: true });
+      };
+      const seekStatic = (label: string) => {
+        if (seekFrame !== undefined) cancelAnimationFrame(seekFrame);
+        const seekWhenReady = () => {
+          // The static layers can enter normal flow before the old overlap
+          // margin releases. Read the final layout before choosing a position.
+          if (!staticLayoutReady()) {
+            seekFrame = requestAnimationFrame(seekWhenReady);
+            return;
+          }
+          seekFrame = undefined;
+          applyStaticSeek(label);
+        };
+        seekFrame = requestAnimationFrame(seekWhenReady);
       };
       const handleSeek = (event: Event) => {
         const label = (event as CustomEvent<{ label?: string }>).detail?.label;
         if (label) seekStatic(label);
       };
       node.addEventListener("mandegar:journey-seek", handleSeek);
-      onWorkReady?.(() => {
-        node.scrollIntoView({ behavior: "instant", block: "start" });
-        focusWork();
-      });
+      const publishReadiness = () => {
+        if (!staticLayoutReady()) {
+          readinessFrame = requestAnimationFrame(publishReadiness);
+          return;
+        }
+        readinessFrame = undefined;
+        onWorkReady?.(() => seekStatic("Work"));
+      };
+      readinessFrame = requestAnimationFrame(publishReadiness);
       return () => {
+        if (readinessFrame !== undefined) cancelAnimationFrame(readinessFrame);
+        if (seekFrame !== undefined) cancelAnimationFrame(seekFrame);
         onWorkReady?.(null);
         node.removeEventListener("mandegar:journey-seek", handleSeek);
       };
     }
     let jumpToWork: (() => void) | undefined;
     let seekToLabel: ((label: string) => void) | undefined;
+    let seekFocusFrame: number | undefined;
     const handleJourneySeek = (event: Event) => {
       const detail = (event as CustomEvent<{ label?: string; focus?: boolean }>).detail;
       if (!detail?.label) return;
@@ -275,9 +304,14 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       if (detail.focus) {
         const target = detail.label === "Services" ? node.querySelector<HTMLElement>("[data-services]")
           : detail.label.startsWith("About") ? node.querySelector<HTMLElement>("[data-about]")
+          : detail.label.startsWith("Partners") ? node.querySelector<HTMLElement>("[data-partners]")
           : detail.label === "Finale" || detail.label === "Contact" ? node.querySelector<HTMLElement>("[data-final-cta]")
           : node.querySelector<HTMLElement>("[data-project-copy='0']");
-        requestAnimationFrame(() => (target?.querySelector<HTMLElement>("a, button") ?? target ?? node).focus({ preventScroll: true }));
+        if (seekFocusFrame !== undefined) cancelAnimationFrame(seekFocusFrame);
+        seekFocusFrame = requestAnimationFrame(() => {
+          seekFocusFrame = undefined;
+          (detail.label?.startsWith("Partners") ? target ?? node : target?.querySelector<HTMLElement>("a, button") ?? target ?? node).focus({ preventScroll: true });
+        });
       }
     };
     node.addEventListener("mandegar:journey-seek", handleJourneySeek);
@@ -361,6 +395,14 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       const nextIndex = Math.min(count - 1, previousIndex + 1);
       const mix = safePosition - previousIndex;
       const easedMix = mix * mix * (3 - 2 * mix);
+      const featuredIndex = Math.round(safePosition);
+      const featuredProject = node.querySelector<HTMLElement>(`[data-project-copy="${featuredIndex}"]`);
+      const featuredVisible = node.dataset.journeyPhase === "projects"
+        && experienceState.handoffProgress > .995
+        && orbit.collapse < .02
+        && Math.abs(safePosition - featuredIndex) < .04
+        && featuredProject?.style.visibility !== "hidden"
+        && Number(featuredProject?.style.opacity) > .95;
       sphereRotation.copy(rotations[previousIndex]).slerp(rotations[nextIndex], easedMix);
       transitionEuler.set(
         orbit.spin * Math.PI * 1.6,
@@ -390,10 +432,21 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         card.style.filter = `blur(${blur.toFixed(2)}px) grayscale(${orbit.collapse.toFixed(3)}) saturate(${(1 - orbit.spinBlur * .38).toFixed(2)}) brightness(${(1 - orbit.collapse * .985).toFixed(3)})`;
         card.style.opacity = String(.14 + depth * .86);
         card.style.zIndex = String(Math.round(depth * 100));
+        const featured = featuredVisible && index === featuredIndex;
+        if (card.dataset.featured !== String(featured)) {
+          if (!featured && card.contains(document.activeElement)) node.focus({ preventScroll: true });
+          card.dataset.featured = String(featured);
+          card.inert = !featured;
+          card.setAttribute("aria-hidden", String(!featured));
+          const link = card.querySelector<HTMLAnchorElement>("[data-project-image-link]");
+          if (link) link.tabIndex = featured ? 0 : -1;
+        }
       });
     };
     const renderPartnerWheel = () => {
       const count = Math.max(1, partnerCards.length);
+      const compactMobile = mobile && window.innerHeight <= 600;
+      const shortMobile = mobile && window.innerHeight <= 500;
       const fold = THREE.MathUtils.clamp(partnerWheel.fold, 0, 1);
       const handoff = THREE.MathUtils.clamp(partnerWheel.handoff, 0, 1);
       const fanCenterOffset = (mobile ? -2 : -3.5)
@@ -439,12 +492,18 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         const frontalRingDepth = THREE.MathUtils.lerp(.5, ringDepth, .35);
         const depth = THREE.MathUtils.lerp(fanDepth, frontalRingDepth, partnerWheel.ring);
         const radiusX = THREE.MathUtils.lerp(mobile ? 22 : 21, mobile ? 32 : 30, partnerWheel.ring);
-        const radiusY = THREE.MathUtils.lerp(mobile ? 20 : 18, mobile ? 27 : 25, partnerWheel.ring);
+        const radiusY = THREE.MathUtils.lerp(
+          mobile ? shortMobile ? 6 : compactMobile ? 8 : 12 : 18,
+          mobile ? shortMobile ? 8 : compactMobile ? 10 : 15 : 25,
+          partnerWheel.ring,
+        );
         const ringX = Math.cos(angle) * radiusX * localSpread;
         const ringY = Math.sin(angle) * radiusY * localSpread;
         const ringZ = (-110 + depth * 220) * localSpread;
         const x = THREE.MathUtils.lerp(ringX, 0, localFold);
-        const y = THREE.MathUtils.lerp(ringY, 0, localFold);
+        // Short screens reserve room for the heading, then fold into the canvas center.
+        const readingOffset = shortMobile ? (window.innerHeight <= 420 ? 10 : 16) * (1 - localFold) : 0;
+        const y = THREE.MathUtils.lerp(ringY, 0, localFold) + readingOffset;
         const z = THREE.MathUtils.lerp(ringZ, index === 0 ? 18 : -index * 2.2, localFold);
         const ringScale = index === 0 && localSpread < .01
           ? .82 + partnerWheel.entry * .18
@@ -859,6 +918,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         .set("[data-partners-kicker]", { autoAlpha: 1 }, partnerStart + 3.62);
       typeText(partnerCenterText, ui.partnersLabel, partnerStart + 3.48, .07, 1.05);
       typeText(partnerKickerText, `04 / ${ui.partnersLabel}`, partnerStart + 3.62, .035, .9);
+      tl.addLabel("PartnersRead", partnerStart + 4.65);
       tl.to(partnerWheel, {
         rotation: Math.PI / 2,
         duration: 3.25,
@@ -875,6 +935,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
           ease: "power3.inOut",
           onUpdate: renderPartnerWheel,
         }, foldStart)
+        .addLabel("PartnersFold", foldStart + 1.65)
         .to(partnerWheel, {
           retreat: 1,
           duration: 9.4,
@@ -946,10 +1007,19 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       onWorkReady?.(null);
       node.removeEventListener("mandegar:journey-seek", handleJourneySeek);
       cancelAnimationFrame(refresh);
+      if (seekFocusFrame !== undefined) cancelAnimationFrame(seekFocusFrame);
       cancelAnimationFrame(motionFrame);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("blur", resetPointer);
+      if (cards.some((card) => card.contains(document.activeElement))) node.focus({ preventScroll: true });
       ctx.revert();
+      cards.forEach((card) => {
+        card.dataset.featured = "false";
+        card.inert = true;
+        card.setAttribute("aria-hidden", "true");
+        const link = card.querySelector<HTMLAnchorElement>("[data-project-image-link]");
+        if (link) link.tabIndex = -1;
+      });
       publishHandoff(0);
       partnerScene.style.removeProperty("transform");
       partnerScene.style.removeProperty("z-index");
@@ -1031,9 +1101,11 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
     <div className={styles.stage} data-journey-surface>
       <div className={styles.world} data-world data-layer aria-hidden="true"><span className={styles.orbit} /><span className={styles.worldRule} /></div>
       <div className={styles.projectsWorld} data-projects-world data-layer>
-        <div className={styles.orbitTrack} data-project-orbit aria-hidden="true">
-          {sphereProjects.map((project, index) => <div key={`${project.slug}-${index}`} className={styles.orbitCard} data-orbit-card={index}>
-            <Image src={project.mediaSrc} alt="" fill priority={index === 0} sizes="(max-width: 760px) 76vw, 50vw" />
+        <div className={styles.orbitTrack} data-project-orbit>
+          {sphereProjects.map((project, index) => <div key={`${project.slug}-${index}`} className={styles.orbitCard} data-orbit-card={index} data-featured="false" aria-hidden="true" inert>
+            <Link prefetch={false} className={styles.projectImageLink} href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title} tabIndex={-1} data-project-image-link>
+              <Image src={project.mediaSrc} alt="" fill priority={index === 0} sizes="(max-width: 760px) 76vw, 50vw" />
+            </Link>
             <span className={styles.photoShade} />
           </div>)}
         </div>
@@ -1041,12 +1113,11 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       {!selected.length ? <div className={styles.empty}><h2>{copy.projectTitle}</h2><p>{copy.projectsEmpty}</p></div> : null}
       {selected.map((project, index) => <article className={styles.projectCopy} key={project.slug} data-project-copy={index} data-layer>
         <div className={styles.titlePosition}>
-          <Link href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title}>
+          <Link prefetch={false} href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title} data-project-title-link>
             <h2><span data-project-title>{project.title}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
-            <span className={styles.projectAction} data-project-action>{copy.viewProject}<span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></span>
+            <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
           </Link>
         </div>
-        <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
       </article>)}
 
       <section className={styles.servicesLayer} tabIndex={-1} data-services data-layer aria-label={locale === "fa" ? "خدمات ما" : locale === "ar" ? "خدماتنا" : "Our services"}>
@@ -1077,7 +1148,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         </div>
         <Link className={styles.aboutLink} data-about-link href={aboutHref || localizedPath(locale, "about")}><span data-about-link-text>{ui.more}</span><i className={styles.inlineCursor} aria-hidden="true" /><span aria-hidden="true">↗</span></Link>
       </section>
-      <section className={styles.partners} data-partners data-layer aria-label={ui.partnersLabel}>
+      <section className={styles.partners} tabIndex={-1} data-partners data-layer aria-label={ui.partnersLabel}>
         <small className={styles.kicker} data-partners-kicker><span data-partners-kicker-text>04 / {ui.partnersLabel}</span><i className={styles.inlineCursor} aria-hidden="true" /></small>
         {firstPartnerImage ? <div className={styles.partnerFallback} data-partner-fallback aria-hidden="true">
           <Image
@@ -1115,7 +1186,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         {(!spatialEnabled || staticJourney) ? <div className={styles.logo} data-logo-fallback role="img" aria-label="Mandegar">
           <span style={{ WebkitMaskImage: `url("${logo}")`, maskImage: `url("${logo}")` } as CSSProperties} />
         </div> : null}
-        <div className={styles.finaleDetail}><h2 data-final-title aria-label={ui.finale}><span data-finale-title-text>{ui.finale}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2><Link data-final-cta href={localizedPath(locale, "contact")}><span data-finale-cta-text>{ui.contact}</span><i className={styles.inlineCursor} aria-hidden="true" /><span aria-hidden="true">↗</span></Link></div>
+        <div className={styles.finaleDetail}><h2 data-final-title aria-label={ui.finale}><span data-finale-title-text>{ui.finale}</span></h2><Link data-final-cta href={localizedPath(locale, "contact")}><span data-finale-cta-text>{ui.contact}</span><span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></Link></div>
         {/* The previous paged logo grid stays out of this motion prototype.
         <div className={styles.partnerViewport}>{partnerPages.map((page, pageIndex) => <div className={styles.partnerPage} data-partner-page={pageIndex} data-layer key={pageIndex}>
           <div className={styles.partnerGrid}>{page.map((client: JourneyClient, index) => <div className={styles.partnerCell} data-partner-cell key={`${client.name}-${index}`}>

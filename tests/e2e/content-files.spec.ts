@@ -94,6 +94,14 @@ test("navigation cannot link to an archived project", () => {
   expect(result.stderr).toMatch(/site\.navigation\[0\]\.path: references an unknown or unpublished detail page/);
 });
 
+test("navigation rejects an unknown homepage section", () => {
+  const result = validateFixture((directory) => editJson<{ navigation: Array<{ path: string }> }>(directory, "site.json", (site) => {
+    site.navigation[0].path = "#unknown";
+  }));
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/site\.navigation\[0\]\.path: must be a safe internal route path/);
+});
+
 test("placeholder contacts cannot create active enquiry links", () => {
   const result = validateFixture((directory) => editJson<Array<{ email?: string }>>(directory, "contacts.json", (contacts) => {
     contacts[0].email = "contact@example.com";

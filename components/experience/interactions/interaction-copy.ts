@@ -219,3 +219,43 @@ export function getInteractionCopy(locale: Locale) {
   if (locale === "ar") return arabic;
   return english;
 }
+
+const mobileHeroCopy = {
+  fa: {
+    instructions: {
+      photo: "رسیدن عکس به گوشی خود را ببینید.",
+      touch: "با چهار دکمه، داستان ماندگار را کشف کنید.",
+      stage: "برای روشن‌شدن چراغ‌ها اسکرول کنید.",
+      game: "بکشید یا فلش‌ها را بزنید؛ از ماشین‌ها دوری کنید.",
+      draw: "روی دیوار بکشید، سپس «پایان» را بزنید.",
+    },
+    intelligence: "افراد یا تجربه‌ها را لمس کنید.",
+  },
+  en: {
+    instructions: {
+      photo: "Watch your photo arrive on your phone.",
+      touch: "Use the four buttons to explore our story.",
+      stage: "Scroll to switch on the lights.",
+      game: "Drag or tap the arrows to steer. Avoid traffic.",
+      draw: "Draw on the wall, then tap Finish.",
+    },
+    intelligence: "Tap people or experiences to explore.",
+  },
+  ar: {
+    instructions: {
+      photo: "شاهد صورتك تصل إلى هاتفك.",
+      touch: "استخدم الأزرار الأربعة لاكتشاف قصتنا.",
+      stage: "مرّر لتشغيل الأضواء.",
+      game: "اسحب أو اضغط الأسهم للتوجيه. تجنّب السيارات.",
+      draw: "ارسم على الجدار ثم اضغط «إنهاء».",
+    },
+    intelligence: "المس الأشخاص أو التجارب لاستكشافها.",
+  },
+} as const satisfies Record<Locale, {
+  instructions: Record<InteractionStation, string>;
+  intelligence: string;
+}>;
+
+export function getMobileHeroCopy(locale: Locale) {
+  return mobileHeroCopy[locale];
+}

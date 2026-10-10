@@ -3,7 +3,9 @@ import Image from "next/image";
 import { getText } from "@/lib/localized-text";
 import { getContactChannels, getPageCopy, type SiteSettings } from "@/lib/content-source";
 import { getUi, localizedPath, type Locale } from "@/lib/i18n";
+import { getHomeSection } from "@/lib/home-navigation";
 import styles from "./Footer.module.css";
+import { HomeSectionLink } from "./HomeSectionLink";
 
 export async function Footer({ locale, settings }: { locale: Locale; settings?: SiteSettings }) {
   const ui = getUi(locale);
@@ -18,6 +20,7 @@ export async function Footer({ locale, settings }: { locale: Locale; settings?: 
     { href: localizedPath(locale, "projects"), label: ui.navigation.projects },
     { href: localizedPath(locale, "services"), label: ui.navigation.services },
     { href: localizedPath(locale, "about"), label: ui.navigation.about },
+    { href: localizedPath(locale, "partners"), label: ui.navigation.partners },
     { href: localizedPath(locale, "contact"), label: ui.navigation.contact },
   ];
   const brand = settings?.title || "MANDEGAR";
@@ -33,7 +36,7 @@ export async function Footer({ locale, settings }: { locale: Locale; settings?: 
           </div>
           <nav className={`footerLinks ${styles.links}`} aria-label={copy.footerNavigation}>
             <span className={styles.label}>{copy.footerNavigation}</span>
-            {navigation.map((item) => <Link prefetch={false} key={item.href} href={item.href}>{item.label}</Link>)}
+            {navigation.map((item) => <HomeSectionLink key={item.href} locale={locale} href={item.href}>{item.label}</HomeSectionLink>)}
           </nav>
           <div className={`footerMeta ${styles.contact}`}>
             <span className={styles.label}>{copy.footerContact}</span>
@@ -54,5 +57,7 @@ export async function Footer({ locale, settings }: { locale: Locale; settings?: 
 
 function navigationPath(locale: Locale, path: string) {
   const cleanPath = path.replace(/^\/+/, "").replace(/^(fa|en|ar)(\/|$)/, "");
+  const section = cleanPath.startsWith("#") ? getHomeSection(cleanPath) : null;
+  if (section) return localizedPath(locale, section === "showcase" ? "projects" : section);
   return localizedPath(locale, cleanPath);
 }

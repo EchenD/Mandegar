@@ -57,7 +57,12 @@ async function expectWorldReadout(page: Page, id: string) {
   await expect(inspector).toHaveAttribute("data-world-readout-kind", "person-insight");
   await expect(inspector).toHaveAttribute("data-world-readout-text", /.+/);
   await expect(inspector).toHaveAttribute("data-world-readout-font-size", "15");
-  await expect(page.locator("[data-scene-copy='intelligence']")).toBeVisible();
+  const chapterCopy = page.locator("[data-scene-copy='intelligence']");
+  if (page.viewportSize()!.width <= 760) {
+    await expect(chapterCopy).toBeHidden();
+  } else {
+    await expect(chapterCopy).toBeVisible();
+  }
 }
 
 test("hovering and clicking a real scene person previews and pins a compact head signal", async ({ page }, testInfo) => {
@@ -76,7 +81,7 @@ test("hovering and clicking a real scene person previews and pins a compact head
   await hoverPerson(page, point.id);
   await expect(inspector).toHaveAttribute("data-person", point.id);
   await expect(inspector).toHaveAttribute("data-pinned", "false");
-  await expect(inspector).toContainText(getIntelligenceCopy("en").example);
+  await expect(inspector).toHaveAccessibleName(getIntelligenceCopy("en").example);
   await expectWorldReadout(page, point.id);
   await expect(page.locator("[data-scene-copy='intelligence']")).toHaveText(chapterCopy!);
   await expect(inspector.locator("[data-intelligence-explore]")).toBeFocused();
@@ -158,13 +163,19 @@ test.describe("mobile head signal", () => {
   test("a Persian scene tap pins a compact signal with semantic records and reachable controls", async ({ page }, testInfo) => {
     const inspector = await openIntelligence(page, "fa");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    const stationTargets = inspector.locator("[data-intelligence-station-target]");
+    await expect.poll(() => stationTargets.count(), { timeout: 10_000 }).toBeGreaterThan(0);
     const point = await firstPerson(page);
     await page.touchscreen.tap(point.x, point.y);
     await expect(inspector).toHaveAttribute("data-person", point.id);
     await expect(inspector).toHaveAttribute("data-pinned", "true");
-    await expect(inspector).toContainText(getIntelligenceCopy("fa").example);
+    await expect(inspector).toHaveAccessibleName(getIntelligenceCopy("fa").example);
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intelligence-selected", "true");
     await expectWorldReadout(page, point.id);
+    for (const target of await stationTargets.all()) await expect(target).toBeHidden();
+    await expect(inspector.locator("[data-intelligence-previous]")).toBeVisible();
+    await expect(inspector.locator("[data-intelligence-next]")).toBeVisible();
+    await expect(inspector.locator("[data-intelligence-close]")).toBeVisible();
     await expect(inspector).toHaveAttribute("data-world-readout-font-size", "15");
     const semanticReadout = await inspector.locator("[data-intelligence-readout]").boundingBox();
     expect(semanticReadout?.width).toBeLessThanOrEqual(1);
@@ -183,6 +194,7 @@ test.describe("mobile head signal", () => {
     await testInfo.attach("intelligence-persian-tap", { path: screenshotPath, contentType: "image/png" });
     await inspector.locator("[data-intelligence-close]").click();
     await expect(inspector).toHaveAttribute("data-person", "none");
+    await expect(stationTargets.first()).toBeVisible();
     await expect(page.locator("[data-experience-root]")).not.toHaveAttribute("data-intelligence-selected", "true");
   });
 });
@@ -192,7 +204,7 @@ test("Arabic examples use localized labels and retain keyboard access", async ({
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await inspector.locator("[data-intelligence-explore]").focus();
   await page.keyboard.press("Enter");
-  await expect(inspector).toContainText(getIntelligenceCopy("ar").example);
+  await expect(inspector).toHaveAccessibleName(getIntelligenceCopy("ar").example);
   await expectWorldReadout(page, (await inspector.getAttribute("data-person"))!);
   await expect(inspector.locator("[data-intelligence-next]")).toBeFocused();
   await page.keyboard.press("Escape");

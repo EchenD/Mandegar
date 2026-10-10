@@ -210,6 +210,8 @@ const publishedProjectSlugs = new Set(allProjects.filter((project) => isRecord(p
 const publishedServiceSlugs = new Set(allServices.filter((service) => isRecord(service) && service.publicationState === "published").map((service) => service.slug));
 
 function publicRoute(value, path, localeRequired = false) {
+  const homeSections = ["#showcase", "#services", "#about", "#partners", "#contact"];
+  if (!localeRequired && homeSections.includes(value)) return;
   if (typeof value !== "string" || /[\s\\?#%:]/.test(value) || value.startsWith("//") || value.includes("..")) return error(path, "must be a safe internal route path");
   const segments = value.replace(/^\//, "").split("/").filter(Boolean);
   if (locales.includes(segments[0])) {
@@ -218,7 +220,7 @@ function publicRoute(value, path, localeRequired = false) {
   }
   else if (localeRequired) error(path, "homepage CTA paths must include fa, en or ar");
   const [page, slug, ...extra] = segments;
-  if (extra.length || (page && !["projects", "services", "about", "contact", "legal"].includes(page))) return error(path, "must point to an existing public page");
+  if (extra.length || (page && !["projects", "services", "about", "partners", "contact", "legal"].includes(page))) return error(path, "must point to an existing public page");
   if (slug && (page === "projects" ? !publishedProjectSlugs.has(slug) : page === "services" ? !publishedServiceSlugs.has(slug) : true)) error(path, "references an unknown or unpublished detail page");
 }
 
@@ -313,7 +315,7 @@ if (isRecord(data.trust)) {
   }
 } else error("trust", "must be an object");
 
-for (const pageKey of ["projects", "services", "about", "contact"]) {
+for (const pageKey of ["projects", "services", "about", "partners", "contact"]) {
   const page = data.pages?.[pageKey];
   if (!isRecord(page)) { error(`pages.${pageKey}`, "must be an editorial page object"); continue; }
   for (const field of ["heroKicker", "title", "intro"]) localized(page[field], `pages.${pageKey}.${field}`);
@@ -364,7 +366,7 @@ for (const locale of locales) {
     }
   }
   if (!isRecord(data.ui?.[locale])) error(`ui.${locale}`, "must provide translated navigation and interface text");
-  for (const page of ["home", "projects", "services", "about", "contact", "legal"]) {
+  for (const page of ["home", "projects", "services", "about", "partners", "contact", "legal"]) {
     const tuple = data.seo?.[locale]?.[page];
     if (!Array.isArray(tuple) || tuple.length !== 2) error(`seo.${locale}.${page}`, "must provide [title, description]");
     else tuple.forEach((value, index) => requiredString(value, `seo.${locale}.${page}[${index}]`));
