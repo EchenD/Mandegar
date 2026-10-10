@@ -1,11 +1,11 @@
 :HL["/Mandegar/_next/static/chunks/41iwpli5pr7ls.css","style"]
 :HL["/Mandegar/_next/static/chunks/1gvbi6yp8litl.css","style"]
-:HL["/Mandegar/_next/static/chunks/4544n0o30d8_p.css","style"]
+:HL["/Mandegar/_next/static/chunks/0shmh3ra8q8e4.css","style"]
 :HC["/",""]
-:HL["/Mandegar/_next/static/chunks/2n6xysb7str4t.css","style"]
+:HL["/Mandegar/_next/static/chunks/0sicva4g35mtf.css","style"]
 :HL["/Mandegar/_next/static/chunks/00qi60g0r5iwz.css","style"]
 4:[["children",{"s":"__PAGE__","h":160}]]
 3:[["children",{"s":{"n":"slug","t":"d","k":"event-intelligence","s":[]},"h":96,"c":"$Q4"}]]
 2:[["children",{"s":"services","h":64,"c":"$Q3"}]]
 1:[["children",{"s":{"n":"locale","t":"d","k":"ar","s":["api","studio"]},"h":48,"c":"$Q2"}]]
-0:{"b":"NSydoltVM27WE2i4EeziM","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"HNV3xL_sluIf6l_m0M9YH","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
