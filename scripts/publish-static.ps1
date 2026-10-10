@@ -71,7 +71,7 @@ try {
     return
   }
 
-  & git clone $Repository $temporaryClone
+  & git clone --reference-if-able $projectRoot $Repository $temporaryClone
   if ($LASTEXITCODE -ne 0) { throw "Could not clone $Repository." }
 
   Push-Location $temporaryClone
