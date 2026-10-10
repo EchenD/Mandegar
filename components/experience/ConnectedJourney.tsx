@@ -1114,7 +1114,10 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
       {selected.map((project, index) => <article className={styles.projectCopy} key={project.slug} data-project-copy={index} data-layer>
         <div className={styles.titlePosition}>
           <Link prefetch={false} href={localizedPath(locale, `projects/${project.slug}`)} aria-label={project.title} data-project-title-link>
-            <h2><span data-project-title>{project.title}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2>
+            <h2>
+              <span className={styles.projectTitleText}><span data-project-title>{project.title}</span><i className={styles.inlineCursor} aria-hidden="true" /></span>
+              <span className={styles.projectTitleArrow} aria-hidden="true">↗</span>
+            </h2>
             <Image className={styles.staticPhoto} src={project.mediaSrc} alt="" width={1200} height={800} />
           </Link>
         </div>
