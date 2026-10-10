@@ -1,0 +1,222 @@
+[
+  {
+    "phase": "arrival",
+    "frame": 75,
+    "projection": [
+      94.48388545117083,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "discovery",
+    "frame": 300,
+    "projection": [
+      88.4519448334314,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "activation",
+    "frame": 600,
+    "projection": [
+      88.4519448334314,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "engagement",
+    "frame": 875,
+    "projection": [
+      84.76128610360354,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "reveal",
+    "frame": 1220,
+    "projection": [
+      94.48388545117083,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "experiences",
+    "frame": 1565,
+    "projection": [
+      86.63462680148973,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "connection",
+    "frame": 1825,
+    "projection": [
+      82.83034041531663,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "proof",
+    "frame": 2085,
+    "projection": [
+      86.63462680148973,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "intelligence",
+    "frame": 2240,
+    "projection": [
+      94.48388545117083,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "invitation",
+    "frame": 2420,
+    "projection": [
+      91.92492919668389,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  },
+  {
+    "phase": "loop",
+    "frame": 2500,
+    "projection": [
+      94.48388545117083,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "renderSize": [
+      682,
+      1477
+    ],
+    "displaySize": [
+      390,
+      844
+    ],
+    "devicePixelRatio": 3,
+    "antialias": true
+  }
+]

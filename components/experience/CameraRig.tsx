@@ -11,6 +11,9 @@ import { heroTimeline } from "./hero-timeline-config";
 import { compileHeroTimeline } from "./hero-timeline";
 import handoff from "../../Docs/CreativeProduction/camera-timing-handoff.template.json";
 import { heroEnding } from "./hero-ending";
+import { getResponsiveCameraFov } from "./camera-framing";
+
+export { getResponsiveCameraFov } from "./camera-framing";
 
 function smoothstep(value: number) {
   const safe = Math.min(1, Math.max(0, value));
@@ -75,18 +78,6 @@ export function syncPerspectiveCameraProjection(
   camera.far = nextFar;
   camera.updateProjectionMatrix();
   return true;
-}
-
-export function getResponsiveCameraFov(fov: number, width: number, height: number) {
-  if (width <= 0 || height <= 0 || !Number.isFinite(fov)) return fov;
-  const aspect = width / height;
-  if (width > 760 && aspect >= 1) return fov;
-  // Preserve the authored landscape shot's horizontal view on portrait screens.
-  // Only the lens changes; camera transforms and animation remain untouched.
-  const framingAspect = Math.max(aspect, 16 / 9);
-  return THREE.MathUtils.radToDeg(2 * Math.atan(
-    Math.tan(THREE.MathUtils.degToRad(fov) / 2) * framingAspect / aspect,
-  ));
 }
 
 export function CameraRig({ source }: { source: string }) {
@@ -232,7 +223,7 @@ export function CameraRig({ source }: { source: string }) {
 
     if (perspectiveCamera.isPerspectiveCamera) {
       syncPerspectiveCameraProjection(perspectiveCamera, {
-        fov: getResponsiveCameraFov(baseFov, size.width, size.height),
+        fov: getResponsiveCameraFov(baseFov, size.width, size.height, cameraProgress),
         near: baseNear,
         far: baseFar,
       });
@@ -278,6 +269,7 @@ export function CameraRig({ source }: { source: string }) {
       const root = debugRoot.current;
       if (root) {
         root.dataset.cameraFrame = String(heroTimeline.firstFrame + (heroTimeline.lastFrame - heroTimeline.firstFrame) * cameraProgress);
+        root.dataset.cameraProjection = JSON.stringify([perspectiveCamera.fov, perspectiveCamera.aspect, perspectiveCamera.near, perspectiveCamera.far]);
         root.dataset.cameraPose = JSON.stringify([...camera.position.toArray(), ...camera.quaternion.toArray()]);
         root.dataset.cameraPointer = JSON.stringify(cameraPointer.current.toArray());
       }

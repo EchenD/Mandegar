@@ -63,3 +63,50 @@ test("animated homepage service button opens its dedicated page", async ({ page 
   await expect(page).toHaveURL(/\/en\/services\/event-production\/?$/);
   await expect(page.locator(".serviceDetail h1")).toBeVisible();
 });
+
+for (const locale of ["fa", "en", "ar"] as const) {
+  for (const viewport of [{ width: 1003, height: 808 }, { width: 360, height: 640 }, { width: 320, height: 568 }]) {
+    test(`${locale} service title links stay clear of descriptions and the scroll hint at ${viewport.width}px`, async ({ page }, testInfo) => {
+      test.setTimeout(240_000);
+      await page.setViewportSize(viewport);
+      await page.goto(`/${locale}?intro=0#services`, { waitUntil: "domcontentloaded" });
+      await expect(page.locator("[data-loading-progress]")).toHaveAttribute("data-loading-progress", "100", { timeout: 90_000 });
+      await expect(page.locator("html")).toHaveAttribute("dir", locale === "en" ? "ltr" : "rtl");
+      const journey = page.locator("[data-connected-journey]");
+      const showcase = page.locator("[data-services-showcase]");
+      const hint = showcase.locator("[data-services-scroll-hint]");
+
+      for (let index = 0; index < serviceSlugs.length; index += 1) {
+        await journey.evaluate((node, label) => node.dispatchEvent(new CustomEvent("mandegar:journey-seek", { detail: { label } })), `Service${index + 1}`);
+        const panel = showcase.locator(`[data-service-index='${index}']`);
+        await expect(panel).toHaveAttribute("data-active", "true");
+        await expect(panel).toHaveAttribute("data-description-writing", "false");
+        const link = panel.locator("h3 [data-service-button]");
+        await expect(link).toHaveAttribute("href", `/${locale}/services/${serviceSlugs[index]}`);
+        await expect(link).toBeInViewport();
+        await expect(hint).toBeVisible();
+        const { linkBounds, descriptionBounds, hintBounds } = await panel.evaluate((element) => ({
+          linkBounds: element.querySelector("h3 [data-service-button]")?.getBoundingClientRect().toJSON(),
+          descriptionBounds: element.querySelector("p")?.getBoundingClientRect().toJSON(),
+          hintBounds: element.closest("[data-services-showcase]")?.querySelector("[data-services-scroll-hint]")?.getBoundingClientRect().toJSON(),
+        }));
+        expect(linkBounds).not.toBeNull();
+        expect(descriptionBounds).not.toBeNull();
+        expect(hintBounds).not.toBeNull();
+        expect(linkBounds!.height).toBeGreaterThanOrEqual(44);
+        expect(linkBounds!.y + linkBounds!.height).toBeLessThanOrEqual(descriptionBounds!.y);
+        expect(descriptionBounds!.y + descriptionBounds!.height + 8).toBeLessThanOrEqual(hintBounds!.y);
+        expect(hintBounds!.y + hintBounds!.height).toBeLessThanOrEqual(viewport.height);
+        if (locale === "fa" && viewport.width === 1003 && index === 3) {
+          await page.screenshot({ path: testInfo.outputPath("fa-content-title-link.png") });
+        }
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+      const lastLink = showcase.locator("[data-service-button]").last();
+      await lastLink.focus();
+      await expect(lastLink).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(new RegExp(`/${locale}/services/${serviceSlugs.at(-1)}/?$`), { timeout: 30_000 });
+    });
+  }
+}

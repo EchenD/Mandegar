@@ -134,6 +134,10 @@ export function ScrollMotion({
     let pendingRuntime: ExperienceRuntime | null = null;
     let initialPositionCancelled = false;
     let applySeek: ((request: SeekRequest) => void) | undefined;
+    let viewportInitialized = false;
+    let viewportFrame: number | null = null;
+    let resizeCheckpoint: ScrollCheckpoint | null = null;
+    let restoreViewport: (() => void) | undefined;
 
     const showPhaseRail = () => {
       if (root.dataset.scrollEngaged === "true") return;
@@ -154,8 +158,22 @@ export function ScrollMotion({
     // additional scroll distance. Frame 2500 is reached before that ending.
     const getScrollDistance = () => Math.max(1, (cameraTrack.current?.offsetHeight ?? root.offsetHeight) - window.innerHeight);
     const syncViewport = () => {
+      if (viewportInitialized && !staticMode && !suspended && previousNativeProgress !== null) {
+        const relativeTop = window.scrollY - root.offsetTop;
+        const previousDistance = Number(root.dataset.cameraScrollDistance) || getScrollDistance();
+        if (relativeTop >= 0 && relativeTop <= previousDistance) {
+          // Save the displayed frame before resizing changes the scroll track.
+          resizeCheckpoint = { progress: previousNativeProgress, overflow: 0 };
+          suspended = true;
+        }
+      }
       root.style.setProperty("--experience-viewport-height", `${window.innerHeight}px`);
       root.dataset.cameraScrollDistance = String(getScrollDistance());
+      viewportInitialized = true;
+      if (resizeCheckpoint && restoreViewport) {
+        if (viewportFrame !== null) window.cancelAnimationFrame(viewportFrame);
+        viewportFrame = window.requestAnimationFrame(restoreViewport);
+      }
     };
     syncViewport();
     window.addEventListener("resize", syncViewport);
@@ -187,8 +205,8 @@ export function ScrollMotion({
         const lockedProgress = root.hasAttribute("data-interaction-active")
           ? Number(root.dataset.nativeProgress)
           : Number.NaN;
-        checkpoint.current = {
-          progress: Number.isFinite(lockedProgress) ? clamp01(lockedProgress) : getNativeProgress(),
+        checkpoint.current = resizeCheckpoint ?? {
+          progress: Number.isFinite(lockedProgress) ? clamp01(lockedProgress) : previousNativeProgress ?? getNativeProgress(),
           overflow: Number.isFinite(lockedProgress)
             ? 0
             : relativeTop < 0 ? relativeTop : Math.max(0, relativeTop - distance),
@@ -212,6 +230,10 @@ export function ScrollMotion({
       const request: SeekRequest = validProgress
         ? { progress: clamp01(detail.progress!), sync: detail.sync }
         : { top: detail.top };
+      // An explicit destination supersedes a resize queued in the same frame.
+      resizeCheckpoint = null;
+      if (viewportFrame !== null) window.cancelAnimationFrame(viewportFrame);
+      viewportFrame = null;
       initialPositionCancelled = true;
       root.dataset.scrollSeekRequested = "true";
       if (applySeek && pendingRuntime === null) {
@@ -436,6 +458,18 @@ export function ScrollMotion({
       ScrollTrigger.update();
     };
 
+    restoreViewport = () => {
+      viewportFrame = null;
+      if (!resizeCheckpoint || pendingRuntime !== null || resumeRequested.current) return;
+      const position = resizeCheckpoint;
+      // Refresh pinned content as well as the camera's scroll distance. The
+      // canvas must measure the new viewport before its DPR is recalculated.
+      ScrollTrigger.refresh();
+      suspended = false;
+      goToProgress(position.progress, true);
+      resizeCheckpoint = null;
+    };
+
     applySeek = (detail) => {
       cancelFinish();
       if (typeof detail.progress === "number") goToProgress(detail.progress, detail.sync);
@@ -510,6 +544,7 @@ export function ScrollMotion({
 
     return () => {
       window.removeEventListener("resize", syncViewport);
+      if (viewportFrame !== null) window.cancelAnimationFrame(viewportFrame);
       window.cancelAnimationFrame(initialFrame);
       window.cancelAnimationFrame(restoreBehaviorFrame);
       cancelFinish();

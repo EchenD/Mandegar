@@ -35,9 +35,20 @@
 
 .panel { position: absolute; inset: 0; opacity: 0; }
 .panel[data-active="true"] { opacity: 1; }
-.serviceLink { display: inline-flex; align-items: center; gap: .75rem; min-height: 2.75rem; margin-block-start: .85rem; padding: .55rem 1.1rem; border: 1px solid rgba(34,92,255,.4); border-radius: 2rem; color: #225cff; background: #f7f7f4; font-size: .8rem; text-decoration: none; pointer-events: auto; }
-.serviceLink:hover { background: #e7ecff; }
+.serviceLink {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .35em;
+  min-height: 2.75rem;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.serviceLink > span:first-child { min-width: 0; }
+.serviceLink:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .16em; }
 .serviceLink:focus-visible { outline: 2px solid #225cff; outline-offset: 3px; }
+.linkArrow { flex-shrink: 0; color: #225cff; font-size: .45em; }
 .number { display: block; color: rgba(22, 25, 29, .44); font-size: .63rem; letter-spacing: .1em; line-height: 1.6; }
 
 .panel h3, .staticCard h3 {
@@ -155,5 +166,4 @@
 @media (max-height: 500px) {
   .scrollHint { display: none; }
   .panels { inset-block-start: 55%; }
-  .serviceLink { margin-block-start: .3rem; }
 }

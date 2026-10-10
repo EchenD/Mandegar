@@ -263,7 +263,7 @@ export const qualityProfiles: Record<SceneQuality, {
   antialias: boolean;
 }> = {
   full: { dpr: [1, 1.5], audiencePoints: 34, radialSegments: 64, antialias: true },
-  adaptive: { dpr: [1, 1.15], audiencePoints: 16, radialSegments: 32, antialias: false },
+  adaptive: { dpr: [1, 1.75], audiencePoints: 16, radialSegments: 32, antialias: true },
 };
 
 export const assetSlots = {

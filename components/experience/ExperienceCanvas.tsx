@@ -20,6 +20,7 @@ import { experienceState } from "./experience-state";
 import type { SceneProject } from "./experience-types";
 import { assetSlots, qualityProfiles, sceneTokens, type SceneQuality } from "./scene-config";
 import { whenHeroAssetsReady } from "./hero-loading";
+import { getHeroRenderDpr } from "./hero-render-quality";
 
 type RuntimeState = "pending" | "fallback" | SceneQuality;
 type ExperienceCanvasProps = {
@@ -30,6 +31,12 @@ type ExperienceCanvasProps = {
   onRuntimeReady?: (runtime: RuntimeState) => void;
   onFirstFrame?: () => void;
 };
+
+function getCurrentRenderDpr(quality: SceneQuality, width: number, height: number) {
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const constrained = memory <= 4 || (navigator.hardwareConcurrency || 8) <= 4;
+  return getHeroRenderDpr(quality, width, height, window.devicePixelRatio, constrained);
+}
 
 function ExhibitionWorld({
   locale,
@@ -83,6 +90,8 @@ export function ExperienceCanvas({
   const [runtime, setRuntime] = useState<RuntimeState>("pending");
   const [pageVisible, setPageVisible] = useState(true);
   const [sceneVisible, setSceneVisible] = useState(true);
+  const [renderDpr, setRenderDpr] = useState(1);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cancelAssetReady = useRef<(() => void) | null>(null);
   const handleSceneReady = useCallback(() => {
     cancelAssetReady.current?.();
@@ -92,28 +101,37 @@ export function ExperienceCanvas({
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const responsiveViewport = window.matchMedia("(max-width: 760px), (pointer: coarse)");
+    const connection = (navigator as Navigator & { connection?: EventTarget & { saveData?: boolean } }).connection;
     let fallbackFrame: number | null = null;
     const updateRuntime = () => {
       if (fallbackFrame !== null) window.cancelAnimationFrame(fallbackFrame);
       fallbackFrame = null;
       const reduced = motion.matches;
-      const saveData = Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+      const saveData = Boolean(connection?.saveData);
       const supportsWebGL = hasWebGLSupport();
       const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
-      const adaptive = window.matchMedia("(max-width: 760px)").matches
+      const adaptive = responsiveViewport.matches
         || (navigator.hardwareConcurrency || 8) <= 4
         || deviceMemory <= 4;
       const nextRuntime: RuntimeState = enabledByCms && !reduced && !saveData && supportsWebGL
         ? (adaptive ? "adaptive" : "full")
         : "fallback";
       experienceState.quality = nextRuntime === "full" ? "full" : "adaptive";
+      if (nextRuntime !== "fallback") {
+        const bounds = canvasRef.current?.parentElement?.getBoundingClientRect();
+        setRenderDpr(getCurrentRenderDpr(nextRuntime, bounds?.width || innerWidth, bounds?.height || innerHeight));
+      }
       setRuntime(nextRuntime);
       onRuntimeReady?.(nextRuntime);
       if (nextRuntime === "fallback") fallbackFrame = window.requestAnimationFrame(() => onFirstFrame?.());
     };
     const frame = window.requestAnimationFrame(updateRuntime);
     motion.addEventListener("change", updateRuntime);
+    responsiveViewport.addEventListener("change", updateRuntime);
+    connection?.addEventListener?.("change", updateRuntime);
     const onVisibilityChange = () => setPageVisible(document.visibilityState === "visible");
+    onVisibilityChange();
     const onPointerMove = (event: PointerEvent) => {
       const canvas = document.querySelector<HTMLCanvasElement>("[data-experience-canvas='true']");
       const bounds = canvas?.getBoundingClientRect();
@@ -136,6 +154,8 @@ export function ExperienceCanvas({
       window.cancelAnimationFrame(frame);
       if (fallbackFrame !== null) window.cancelAnimationFrame(fallbackFrame);
       motion.removeEventListener("change", updateRuntime);
+      responsiveViewport.removeEventListener("change", updateRuntime);
+      connection?.removeEventListener?.("change", updateRuntime);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("blur", resetPointer);
@@ -150,6 +170,38 @@ export function ExperienceCanvas({
       document.body.style.cursor = "";
     };
   }, [enabledByCms, onFirstFrame, onRuntimeReady]);
+
+  useEffect(() => {
+    if (runtime === "pending" || runtime === "fallback") return;
+    const container = canvasRef.current?.parentElement;
+    if (!container) return;
+    let resolutionQuery: MediaQueryList | undefined;
+    const updateDpr = () => {
+      const bounds = container.getBoundingClientRect();
+      if (bounds.width > 0 && bounds.height > 0) {
+        setRenderDpr(getCurrentRenderDpr(runtime, bounds.width, bounds.height));
+      }
+    };
+    const watchResolution = () => {
+      resolutionQuery?.removeEventListener("change", onResolutionChange);
+      resolutionQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      resolutionQuery.addEventListener("change", onResolutionChange);
+    };
+    function onResolutionChange() {
+      updateDpr();
+      watchResolution();
+    }
+    const observer = new ResizeObserver(updateDpr);
+    observer.observe(container);
+    window.addEventListener("resize", updateDpr);
+    updateDpr();
+    watchResolution();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateDpr);
+      resolutionQuery?.removeEventListener("change", onResolutionChange);
+    };
+  }, [runtime]);
 
   useEffect(() => {
     if (runtime === "pending" || runtime === "fallback") return;
@@ -177,6 +229,7 @@ export function ExperienceCanvas({
   return (
     <CanvasErrorBoundary fallback={<CanvasFallback className={className} />} onError={handleCanvasFailure}>
       <Canvas
+        ref={canvasRef}
         className={className}
         data-experience-canvas="true"
         data-particle-system="transition-boundary"
@@ -185,11 +238,11 @@ export function ExperienceCanvas({
         data-postprocessing="none"
         data-scene-pipeline={sceneTokens.rendering.pipeline}
         aria-hidden="true"
-        dpr={[profile.dpr[0], profile.dpr[1]]}
+        dpr={renderDpr}
         frameloop={pageVisible && sceneVisible ? "always" : "never"}
         camera={{ position: [0, 4, 27], fov: 48, near: 0.1, far: 60 }}
         shadows={false}
-        gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "low-power" }}
+        gl={{ alpha: false, antialias: profile.antialias, powerPreference: runtime === "full" ? "high-performance" : "default" }}
         onPointerDown={() => { experienceState.pointerPulse = 1; }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NoToneMapping;

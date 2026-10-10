@@ -39,9 +39,13 @@ export function ServicesShowcase({
               <Image className={styles.staticImage} src={service.image} alt="" width={960} height={720} unoptimized data-service-poster />
               <div className={styles.staticCardCopy}>
                 <span className={styles.number} data-service-number dir="ltr" aria-hidden="true">{String(index + 1).padStart(2, "0")} / 05</span>
-                <h3>{service.title[locale]}</h3>
+                <h3>
+                  <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} aria-label={`${service.title[locale]} — ${ui.details}`} data-service-button>
+                    <span>{service.title[locale]}</span>
+                    <span className={styles.linkArrow} aria-hidden="true">↗</span>
+                  </Link>
+                </h3>
                 <p>{service.description[locale]}</p>
-                <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} data-service-button>{ui.details}<span aria-hidden="true">↗</span></Link>
               </div>
             </article>
           ))}
@@ -85,15 +89,19 @@ export function ServicesShowcase({
             >
               <span className={styles.number} data-service-number dir="ltr" aria-hidden="true">{String(index + 1).padStart(2, "0")} / 05</span>
               <h3 aria-label={service.title[locale]}>
-                <span data-service-title-text aria-hidden="true">{service.title[locale]}</span>
-                <span className={styles.titleCaret} aria-hidden="true" />
+                <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} aria-label={`${service.title[locale]} — ${ui.details}`} data-service-button>
+                  <span>
+                    <span data-service-title-text aria-hidden="true">{service.title[locale]}</span>
+                    <span className={styles.titleCaret} aria-hidden="true" />
+                  </span>
+                  <span className={styles.linkArrow} aria-hidden="true">↗</span>
+                </Link>
               </h3>
               <p>
                 <span className={styles.screenReaderText} data-service-description-accessible>{service.description[locale]}</span>
                 <span data-service-description-text aria-hidden="true">{service.description[locale]}</span>
                 <span className={styles.descriptionCaret} aria-hidden="true" />
               </p>
-              <Link prefetch={false} href={localizedPath(locale, `services/${service.slug}`)} className={styles.serviceLink} data-service-button>{ui.details}<span aria-hidden="true">↗</span></Link>
             </article>
           ))}
         </div>
