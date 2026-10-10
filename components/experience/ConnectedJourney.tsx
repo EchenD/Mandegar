@@ -1186,7 +1186,7 @@ export function ConnectedJourney({ locale, projects, copy, clients = emptyClient
         {(!spatialEnabled || staticJourney) ? <div className={styles.logo} data-logo-fallback role="img" aria-label="Mandegar">
           <span style={{ WebkitMaskImage: `url("${logo}")`, maskImage: `url("${logo}")` } as CSSProperties} />
         </div> : null}
-        <div className={styles.finaleDetail}><h2 data-final-title aria-label={ui.finale}><span data-finale-title-text>{ui.finale}</span></h2><Link data-final-cta href={localizedPath(locale, "contact")}><span data-finale-cta-text>{ui.contact}</span><span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></Link></div>
+        <div className={styles.finaleDetail}><h2 data-final-title aria-label={ui.finale}><span data-finale-title-text>{ui.finale}</span><i className={styles.inlineCursor} aria-hidden="true" /></h2><Link data-final-cta href={localizedPath(locale, "contact")}><span data-finale-cta-text>{ui.contact}</span><span aria-hidden="true">{locale === "en" ? "↗" : "↖"}</span></Link></div>
         {/* The previous paged logo grid stays out of this motion prototype.
         <div className={styles.partnerViewport}>{partnerPages.map((page, pageIndex) => <div className={styles.partnerPage} data-partner-page={pageIndex} data-layer key={pageIndex}>
           <div className={styles.partnerGrid}>{page.map((client: JourneyClient, index) => <div className={styles.partnerCell} data-partner-cell key={`${client.name}-${index}`}>

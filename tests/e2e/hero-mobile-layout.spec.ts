@@ -86,6 +86,16 @@ for (const { locale, width, height } of [
     ] as const) {
       await seekPhase(page, phase);
       await waitForStation(page, station);
+      if (station === "game") {
+        // Keep the running race from completing while its control layout is measured.
+        const game = page.locator("[data-game-spatial-controls]");
+        await expect(game).toHaveAttribute("data-game-status", "running");
+        const pause = page.locator("[data-mobile-game-action]");
+        await expect(pause).toHaveText(copy.game.pause);
+        await pause.tap();
+        await expect(game).toHaveAttribute("data-game-status", "paused");
+        await expect(pause).toHaveText(copy.game.resume);
+      }
       const instruction = page.locator("[data-interaction-instruction]");
       const controls = page.locator(dock);
       const skip = page.getByRole("button", { name: copy.skip, exact: true });

@@ -713,10 +713,12 @@
 
 @media (max-width: 760px) {
   .root {
+    --hero-mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
     --hero-mobile-copy-top: calc(env(safe-area-inset-top, 0px) + 7.75rem);
-    --hero-mobile-status-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
-    --hero-mobile-skip-bottom: calc(env(safe-area-inset-bottom, 0px) + 4rem);
-    --hero-mobile-dock-bottom: calc(env(safe-area-inset-bottom, 0px) + 8rem);
+    --hero-mobile-status-bottom: calc(var(--hero-mobile-safe-bottom) + 1rem);
+    --hero-mobile-inspector-bottom: calc(var(--hero-mobile-safe-bottom) + 4.75rem);
+    --hero-mobile-skip-bottom: calc(var(--hero-mobile-safe-bottom) + 4rem);
+    --hero-mobile-dock-bottom: calc(var(--hero-mobile-safe-bottom) + 8rem);
     height: calc(var(--experience-scroll-height-mobile, 2981.25svh) + var(--hero-ending-overlap-mobile, 412svh) - var(--experience-viewport-height, 100svh));
   }
   .loaderMark { width: 2.4rem; }
@@ -725,8 +727,18 @@
   .fallbackHalo { width: 82vw; inset-block-start: 27%; }
   .sceneCopy,
   .sceneCopy[data-scene-copy] { --copy-x: 50%; inset-block: var(--copy-y-mobile) auto; width: calc(100% - 2.4rem); }
-  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"]) {
+  .sceneCopy[data-scene-copy="discovery"],
+  .sceneCopy[data-scene-copy="proof"] { --copy-y-mobile: calc(72% - var(--hero-mobile-safe-bottom)); }
+  .sceneCopy[data-scene-copy="invitation"] { --copy-y-mobile: calc(67% - var(--hero-mobile-safe-bottom)); }
+  .sceneCopy[data-interaction-cue] {
+    --copy-y-mobile: min(calc(87% - var(--hero-mobile-safe-bottom)), calc(100% - var(--hero-mobile-status-bottom) - 3.5rem));
+  }
+  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"], [data-scene-copy="discovery"], [data-scene-copy="reveal"], [data-scene-copy="proof"], [data-scene-copy="intelligence"], [data-scene-copy="invitation"]) {
     inset-block-start: var(--hero-mobile-copy-top);
+    transform: translate(-50%, 0);
+  }
+  .sceneCopy[data-scene-copy="intelligence"] {
+    inset-block: auto calc(var(--hero-mobile-inspector-bottom) + 2.75rem + 1.5rem);
     transform: translate(-50%, 0);
   }
   .desktopCopy { display: none; }
@@ -772,15 +784,42 @@
 
 @media (min-width: 480px) and (max-width: 760px) and (max-height: 420px) {
   .root { --hero-mobile-copy-top: calc(env(safe-area-inset-top, 0px) + 4.75rem); }
-  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"]) { width: calc(100% - 8rem); }
+  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"], [data-scene-copy="invitation"]) { width: calc(100% - 8rem); }
   .sceneCopy h2 { font-size: 1.3rem; }
 }
 
 @media (max-width: 479px) and (max-height: 420px) {
   .root { --hero-mobile-copy-top: calc(env(safe-area-inset-top, 0px) + 4.75rem); }
-  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"]) { width: calc(100% - 8rem); }
+  .sceneCopy[data-scene-copy]:not([data-scene-copy="arrival"], [data-scene-copy="invitation"]) { width: calc(100% - 8rem); }
   .sceneCopy h2 { font-size: 1.3rem; }
   .sceneCopy p { font-size: .8rem; line-height: 1.5; }
+}
+
+@media (max-width: 760px) and (max-height: 540px) {
+  /* Keep compact Intelligence headings clear of the interactive scene markers. */
+  .sceneCopy[data-scene-copy="intelligence"] {
+    inset-block: calc(env(safe-area-inset-top, 0px) + 4.75rem) auto;
+    width: calc(100% - 8rem);
+  }
+  .sceneCopy[data-scene-copy="intelligence"] h2 { font-size: 1.3rem; }
+  .sceneCopy[data-scene-copy="intelligence"] p { font-size: .8rem; line-height: 1.5; }
+}
+
+@media (max-width: 359px) and (max-height: 540px) {
+  .sceneCopy[data-scene-copy="intelligence"] h2 { font-size: 1rem; }
+}
+
+@media (max-width: 760px) and (max-height: 420px) {
+  .sceneCopy[data-scene-copy="discovery"],
+  .sceneCopy[data-scene-copy="reveal"],
+  .sceneCopy[data-scene-copy="proof"],
+  .sceneCopy[data-scene-copy="invitation"] {
+    inset-block: auto calc(var(--hero-mobile-status-bottom) + 3rem);
+    transform: translate(-50%, 0);
+  }
+  .sceneCopy[data-scene-copy="invitation"] { width: calc(100% - 2.4rem); }
+  .sceneCopy[data-scene-copy="invitation"] > span { display: none; }
+  .sceneCopy[data-scene-copy="invitation"] .ctaRow { margin-block-start: .75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

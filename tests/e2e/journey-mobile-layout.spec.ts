@@ -42,6 +42,41 @@ async function expectFoldCentered(page: Page) {
   })).toBeLessThanOrEqual(2);
 }
 
+async function expectFinaleTitleOnOneLine(page: Page) {
+  const title = page.locator("[data-final-title]");
+  await expect(title).toHaveText(await title.getAttribute("aria-label") ?? "");
+  const caret = title.locator("i[aria-hidden='true']");
+  await expect(caret).toHaveCount(1);
+  const layout = await title.evaluate((heading) => {
+    const bounds = heading.getBoundingClientRect();
+    const text = heading.querySelector<HTMLElement>("[data-finale-title-text]")!;
+    const cursor = heading.querySelector<HTMLElement>("i")!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const lines = Array.from(range.getClientRects());
+    const textBounds = range.getBoundingClientRect();
+    return {
+      lineTopSpread: Math.max(...lines.map((line) => line.top)) - Math.min(...lines.map((line) => line.top)),
+      left: Math.min(textBounds.left, cursor.left) - bounds.left,
+      right: bounds.right - Math.max(textBounds.right, cursor.right),
+      viewportLeft: Math.min(textBounds.left, cursor.left),
+      viewportRight: innerWidth - Math.max(textBounds.right, cursor.right),
+      caretCenter: cursor.top + cursor.height / 2,
+      textTop: textBounds.top,
+      textBottom: textBounds.bottom,
+      caretGap: Math.min(Math.abs(cursor.left - textBounds.right), Math.abs(textBounds.left - cursor.right)),
+    };
+  });
+  expect(layout.lineTopSpread).toBeLessThanOrEqual(2);
+  expect(layout.left).toBeGreaterThanOrEqual(-1);
+  expect(layout.right).toBeGreaterThanOrEqual(-1);
+  expect(layout.viewportLeft).toBeGreaterThanOrEqual(0);
+  expect(layout.viewportRight).toBeGreaterThanOrEqual(0);
+  expect(layout.caretCenter).toBeGreaterThanOrEqual(layout.textTop);
+  expect(layout.caretCenter).toBeLessThanOrEqual(layout.textBottom);
+  expect(layout.caretGap).toBeLessThanOrEqual(8);
+}
+
 for (const [locale, viewport] of [
   ["fa", { width: 320, height: 568 }],
   ["en", { width: 390, height: 844 }],
@@ -76,7 +111,7 @@ for (const [locale, viewport] of [
     await expect(title).toHaveText(await title.getAttribute("aria-label") ?? "");
     await expect(title).toBeInViewport();
     await expect(contact).toBeInViewport();
-    await expect(title.locator("i")).toHaveCount(0);
+    await expectFinaleTitleOnOneLine(page);
     const titleBounds = await title.boundingBox();
     const contactBounds = await contact.boundingBox();
     expect(contactBounds!.height).toBeGreaterThanOrEqual(44);
@@ -89,6 +124,12 @@ for (const [locale, viewport] of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
     await page.screenshot({ path: testInfo.outputPath(`${locale}-finale-mobile.png`) });
 
+    await page.setViewportSize({ width: 320, height: 568 });
+    await seekJourney(page, "Contact");
+    await expect(contact).toBeFocused();
+    await expectFinaleTitleOnOneLine(page);
+
+    await page.setViewportSize(viewport);
     await seekJourney(page, "PartnersRead");
     await expect(partners).toBeFocused();
     await expect(heading.locator("[data-partner-center-text]")).toHaveText(partnerLabels[locale]);
@@ -163,5 +204,7 @@ test("reduced motion keeps Partners navigation and a linked project image", asyn
   await link.focus();
   await expect(link).toBeFocused();
   await expect(image).toBeInViewport();
+  await partners.locator("[data-final-title]").scrollIntoViewIfNeeded();
+  await expectFinaleTitleOnOneLine(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
 });

@@ -91,7 +91,7 @@
 @media (max-width: 760px) {
   .root {
     inset-inline: 0;
-    inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+    inset-block-end: var(--hero-mobile-inspector-bottom, calc(env(safe-area-inset-bottom, 0px) + 4.75rem));
     width: min(26rem, calc(100% - 2.4rem));
     margin-inline: auto;
   }
