@@ -6,4 +6,4 @@
 :HL["/Mandegar/_next/static/chunks/42soj0o83u9vx.css","style"]
 2:[["children",{"s":"__PAGE__","h":128}]]
 1:[["children",{"s":{"n":"locale","t":"d","k":"fa","s":["api","studio"]},"h":48,"c":"$Q2"}]]
-0:{"b":"7QbQTkjbfXZyh7wTNJfT1","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"4pqclwCtqdYlyOTpjFKLe","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
