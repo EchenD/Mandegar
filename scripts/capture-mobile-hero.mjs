@@ -42,6 +42,7 @@ try {
   });
   const page = await context.newPage();
   await page.goto(`${baseUrl}/fa?intro=0&phase=discovery`, { waitUntil: "domcontentloaded", timeout: 600_000 });
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await page.locator("[data-loading-progress='100']").waitFor({ state: "attached", timeout: 120_000 });
   await page.locator("[data-experience-canvas='true'] canvas").waitFor({ timeout: 120_000 });
   if (!await page.locator("[data-experience-root]").getAttribute("data-camera-frame")) {

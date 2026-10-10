@@ -1,0 +1,83 @@
+[
+  {
+    "name": "service-events",
+    "label": "Service1",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-design",
+    "label": "Service2",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-digital",
+    "label": "Service3",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-content",
+    "label": "Service4",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-strategy",
+    "label": "Service5",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "partners",
+    "label": "PartnersRead",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "finale",
+    "label": "Contact",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-short-phone",
+    "label": "Service4",
+    "viewport": {
+      "width": 320,
+      "height": 500
+    },
+    "overflow": 0
+  },
+  {
+    "name": "service-landscape",
+    "label": "Service4",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "overflow": 0
+  }
+]

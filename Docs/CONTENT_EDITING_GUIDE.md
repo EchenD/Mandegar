@@ -75,6 +75,8 @@ An HTTPS media CDN is optional. Set `MEDIA_CDN_ORIGIN=https://media.your-domain.
 
 `pages.json` holds introductions and About sections. Keep About section keys `approach` and `geography`; they map to the template. Principles use `approach.items`, and workflow steps live in `page-copy.json`. `people.json` is empty until approved people/partners are available. Until then, About displays illustrated collaboration roles from `page-copy.json`: edit `aboutTeamRoles` (title, body and a media key), `aboutTeamBody` and `aboutTeamPlaceholderNote` in all three languages. These concept cards are automatically replaced when approved profiles are published.
 
+The standalone Partners page uses `pages.partners` for its introduction and `network` section, with SEO fallbacks in `seo.json`. Its grid uses published, approved client records from `trust.json`. Until approved records are available, it shows the homepage's illustrative marks and role labels from `journey.json`, with the explicit `partnersPlaceholderNote` from `page-copy.json`. The same copy file holds `partnersCtaTitle`, `partnersCtaBody`, and `partnersWebsiteLabel` in all three languages.
+
 To add a person, insert a record like this into the `people.json` array. Replace every bracketed field with approved text in all languages. Keep the record as a draft while preparing it; only published records with `isPlaceholder: false` appear on the website.
 
 ```json
@@ -101,7 +103,7 @@ The current homepage collaboration section displays ten generic disciplines with
 
 `contacts.json` supports `sales`, `general`, `international` and `whatsapp`. Add verified `email`, `phone` and/or `whatsapp` fields and set `isPlaceholder: false`. Phones use E.164 format: `+`, the international country code and digits, without spaces or separators. WhatsApp accepts an international number or an HTTPS `wa.me` URL. Multiple channels per purpose are supported. The footer uses the same configured destinations. Missing destinations stay labelled instead of becoming fake links.
 
-`site.json` controls footer text, navigation, `copyrightHolder`, optional localized `address`, `socialLinks`, optional approved `brandMark`, and `socialImage`. Social links use verified HTTPS URLs. Navigation paths are internal suffixes such as `projects` and `contact`; locales are added automatically. The original social card is `public/images/mandegar-social.png`, with editable SVG source beside it.
+`site.json` controls footer text, navigation, `copyrightHolder`, optional localized `address`, `socialLinks`, optional approved `brandMark`, and `socialImage`. Social links use verified HTTPS URLs. Navigation paths are internal suffixes such as `projects`, `services`, `about`, `partners`, and `contact`; locales are added automatically. On the homepage, these links seek the corresponding section. On other pages, they open the standalone page. Legacy homepage hashes `#showcase`, `#services`, `#about`, `#partners`, and `#contact` resolve to the same destinations. The original social card is `public/images/mandegar-social.png`, with editable SVG source beside it.
 
 Edit legal text in `legal.json`. Keep `status: "draft"` until it reflects your actual company, hosting, tracking and media setup and is approved. Set a valid `updatedAt` review date such as `2026-10-07`. `status: "approved"` removes the draft notice and permits indexing/sitemap inclusion. The validator does not certify legal correctness.
 
