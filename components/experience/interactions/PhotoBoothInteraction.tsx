@@ -1,5 +1,6 @@
 "use client";
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { InteractionCopy } from "./interaction-copy";
 import {
@@ -69,7 +70,7 @@ export function PhotoBoothInteraction({
     if (!canvas || !context) return;
     const width = canvas.width;
     const height = canvas.height;
-    const fontFamily = getComputedStyle(document.body).fontFamily;
+    const fontFamily = getCanvasFontFamily();
     const currentStep = stepRef.current;
     const currentCount = countRef.current;
     const transition = transitionProgress.current;
@@ -223,9 +224,11 @@ export function PhotoBoothInteraction({
     registerPhotoSurface(canvas);
     paint();
     animateTransition(1);
-    void document.fonts?.ready.then(schedulePaint);
+    void document.fonts.ready.then(schedulePaint);
+    document.fonts.addEventListener("loadingdone", schedulePaint);
     return () => {
       mountedRef.current = false;
+      document.fonts.removeEventListener("loadingdone", schedulePaint);
       registerPhotoSurface(null);
       interactionRuntime.photoStep = "idle";
       interactionRuntime.photoCount = 3;

@@ -2,6 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- The R3F readout updates its reusable GPU objects in frame callbacks. */
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -67,11 +68,11 @@ function paintSignal(runtime: ReadoutRuntime, layout: CrowdSignalLayout, progres
   context.direction = rtl ? "rtl" : "ltr";
   context.textAlign = rtl ? "right" : "left";
   context.fillStyle = "#ceb991";
-  context.font = '600 11px "Vazirmatn Variable", sans-serif';
+  context.font = `600 11px ${getCanvasFontFamily()}`;
   context.fillText(profile.copy.title, textX, 22, width - 28);
   profile.lines.forEach((line, index) => {
     context.fillStyle = index === 0 ? "#f4f0e6" : "#d1cec3";
-    context.font = `${index === 0 ? 600 : 500} ${index === 0 ? 15 : 13}px "Vazirmatn Variable", sans-serif`;
+    context.font = `${index === 0 ? 600 : 500} ${index === 0 ? 15 : 13}px ${getCanvasFontFamily()}`;
     context.fillText(line, textX, 48 + index * 24, width - 28);
   });
   context.restore();
@@ -162,7 +163,9 @@ export function CrowdPersonReadout({ locale, getPeople, getPointerHit }: {
       paintedProgress: -1, paintedOriginX: -1, paintedOriginY: -1, dirty: true, reducedMotion: motion.matches, element: null, paintCount: 0,
     };
     runtimeRef.current = runtime;
-    void document.fonts.ready.then(() => { if (runtimeRef.current === runtime) runtime.dirty = true; });
+    const fontsLoaded = () => { if (runtimeRef.current === runtime) runtime.dirty = true; };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     group.visible = false;
     group.add(line, dots, sprite);
     const updateMotion = () => { runtime.reducedMotion = motion.matches; runtime.dirty = true; };
@@ -179,6 +182,7 @@ export function CrowdPersonReadout({ locale, getPeople, getPointerHit }: {
     motion.addEventListener("change", updateMotion);
     return () => {
       unsubscribe();
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       window.removeEventListener("blur", hide);
       document.removeEventListener("visibilitychange", hidden);
       motion.removeEventListener("change", updateMotion);

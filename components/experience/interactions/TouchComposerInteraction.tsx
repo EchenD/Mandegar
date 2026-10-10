@@ -1,5 +1,6 @@
 "use client";
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import gsap from "gsap";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Locale } from "@/lib/i18n";
@@ -55,7 +56,7 @@ export function TouchComposerInteraction({ locale }: { locale: Locale }) {
     let lastView = getInstallationState().view;
     let interrupted = false;
     // The canvas shares the site's local Persian/Arabic font.
-    void document.fonts.load('600 57px "Vazirmatn Variable"').catch(() => undefined);
+    void document.fonts.load(`500 57px ${getCanvasFontFamily()}`).catch(() => undefined);
     const departure = (event: Event) => {
       if ((event as CustomEvent<{ station?: string }>).detail?.station !== "touch") return;
       departureTime = elapsed;

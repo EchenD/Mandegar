@@ -1,3 +1,4 @@
+import { getCanvasFontFamily } from "@/lib/typography";
 import type { InteractionCopy } from "./interaction-copy";
 import { breakoutBoard, type BreakoutGame } from "./breakout-game";
 
@@ -78,10 +79,10 @@ export function paintBreakoutScreen(
   context.direction = direction;
   context.textAlign = "center";
   context.fillStyle = "#75d8ff";
-  context.font = '700 12px "Vazirmatn Variable", Tahoma, sans-serif';
+  context.font = `700 12px ${getCanvasFontFamily()}`;
   context.fillText("MANDEGAR", canvasWidth / 2, 29);
   context.fillStyle = "#f7f7f4";
-  context.font = '650 27px "Vazirmatn Variable", Tahoma, sans-serif';
+  context.font = `650 27px ${getCanvasFontFamily()}`;
   context.fillText(copy.stations.game.title, canvasWidth / 2, 62, canvasWidth - 136);
   [
     { label: copy.game.score, value: String(current.score), x: 85 },
@@ -90,10 +91,10 @@ export function paintBreakoutScreen(
   ].forEach(({ label, value, x: physicalX }) => {
     const x = direction === "rtl" ? canvasWidth - physicalX : physicalX;
     context.fillStyle = "rgba(247,247,244,.56)";
-    context.font = '500 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `500 13px ${getCanvasFontFamily()}`;
     context.fillText(label, x, 96, 130);
     context.fillStyle = "#f7f7f4";
-    context.font = '700 20px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `700 20px ${getCanvasFontFamily()}`;
     context.fillText(value, x, 120);
   });
   roundedRect(context, breakoutBoard.left, breakoutBoard.top, breakoutBoard.right - breakoutBoard.left, breakoutBoard.bottom - breakoutBoard.top, 16);
@@ -162,21 +163,21 @@ export function paintBreakoutScreen(
     context.lineWidth = 1;
     context.stroke();
     context.fillStyle = "#f7f7f4";
-    context.font = '650 25px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `650 25px ${getCanvasFontFamily()}`;
     context.fillText(complete ? current.outcome === "won" ? copy.game.win : copy.game.result : actionLabel, canvasWidth / 2, 368, canvasWidth - 166);
     context.fillStyle = "rgba(247,247,244,.65)";
-    context.font = '500 15px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `500 15px ${getCanvasFontFamily()}`;
     if (complete) {
       context.fillStyle = "#75d8ff";
-      context.font = '750 46px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `750 46px ${getCanvasFontFamily()}`;
       context.fillText(String(current.score), canvasWidth / 2, 425);
-      context.font = '500 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `500 17px ${getCanvasFontFamily()}`;
       context.fillText(`${copy.game.best}: ${best}`, canvasWidth / 2, 466, canvasWidth - 166);
     } else context.fillText(copy.stations.game.instruction, canvasWidth / 2, 402, canvasWidth - 166);
     context.restore();
   }
   context.fillStyle = "rgba(247,247,244,.56)";
-  context.font = '500 14px "Vazirmatn Variable", Tahoma, sans-serif';
+  context.font = `500 14px ${getCanvasFontFamily()}`;
   context.fillText(`${copy.game.remaining}: ${cleared}`, canvasWidth / 2, 628, canvasWidth - 100);
   if (interactive) {
     context.save();
@@ -195,7 +196,7 @@ export function paintBreakoutScreen(
       context.lineWidth = focused ? 2 : 1;
       context.stroke();
       context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.28)";
-      context.font = '600 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `600 17px ${getCanvasFontFamily()}`;
       context.fillText(label, (bounds.left + bounds.width / 2) * canvasWidth, 681, bounds.width * canvasWidth - 14);
     });
     const closeFocused = hoveredControl === "close" || focusedControl === "close";

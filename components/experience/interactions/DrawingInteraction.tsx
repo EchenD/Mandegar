@@ -1,5 +1,6 @@
 "use client";
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { interactionSurfaceSizes } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
@@ -172,10 +173,10 @@ export function DrawingInteraction({
     context.direction = direction;
     context.textAlign = "center";
     context.fillStyle = "#75d8ff";
-    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `700 13px ${getCanvasFontFamily()}`;
     context.fillText("MANDEGAR", width / 2, 37);
     context.fillStyle = "#f7f7f4";
-    context.font = '620 30px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `620 30px ${getCanvasFontFamily()}`;
     context.fillText(copy.stations.draw.title, width / 2, 78, width - 170);
     context.restore();
 
@@ -230,7 +231,7 @@ export function DrawingInteraction({
       context.direction = direction;
       context.textAlign = "center";
       context.fillStyle = "rgba(247,247,244,.42)";
-      context.font = '500 19px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `500 19px ${getCanvasFontFamily()}`;
       context.fillText(copy.stations.draw.instruction, width / 2, areaTop + areaHeight / 2, areaWidth - 100);
       context.strokeStyle = "rgba(117,216,255,.48)";
       context.lineWidth = 1.5;
@@ -272,7 +273,7 @@ export function DrawingInteraction({
       context.direction = direction;
       context.textAlign = "center";
       context.fillStyle = enabled ? "#f7f7f4" : "rgba(247,247,244,.38)";
-      context.font = '680 21px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `680 21px ${getCanvasFontFamily()}`;
       context.fillText(labels[id], x + buttonWidth / 2, y + buttonHeight * 0.62, buttonWidth - 24);
     });
     context.restore();
@@ -507,11 +508,12 @@ export function DrawingInteraction({
       animateTransition(1);
     };
     begin();
-    void document.fonts?.ready.then(() => {
-      if (mounted) schedulePaint();
-    });
+    const fontsLoaded = () => { if (mounted) schedulePaint(); };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     return () => {
       mounted = false;
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       saveDrawingDraft(strokes.current);
       if (interactionRuntime.monitorEntries.main?.canvas === canvas) {
         registerInteractionCanvas("main", experience?.isConnected ? savedWall.current : null);

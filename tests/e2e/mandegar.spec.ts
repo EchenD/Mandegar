@@ -593,7 +593,9 @@ test.describe("Mandegar responsive layout", () => {
   test("homepage centers arrival copy and keeps story copy lower", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const locale of ["fa", "en"] as const) {
-      await page.goto(`/${locale}?phase=discovery`, { waitUntil: "networkidle" });
+      await page.goto(`/${locale}?intro=0&phase=discovery`, { waitUntil: "domcontentloaded" });
+      await expect(page.locator("[data-loading-progress]")).toHaveAttribute("data-loading-progress", "100", { timeout: 90_000 });
+      await page.evaluate(() => document.fonts.ready);
       const copy = page.locator("[data-scene-copy='discovery']");
       await expect(copy).toBeVisible();
       const result = await copy.evaluate((element) => ({
@@ -608,7 +610,7 @@ test.describe("Mandegar responsive layout", () => {
       expect(Math.abs((result.left + result.right) * .5 - result.viewportWidth * .5)).toBeLessThan(4);
       expect(result.top).toBeGreaterThan(result.viewportHeight * .5);
       expect(result.bottom).toBeLessThan(result.viewportHeight * .92);
-      expect(result.font).toContain("Vazirmatn Variable");
+      expect(result.font).toContain(locale === "fa" ? "rokhFaNum" : "Vazirmatn Variable");
     }
 
     await seekPhase(page, "arrival");

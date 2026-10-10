@@ -1,3 +1,4 @@
+import { getCanvasFontFamily } from "@/lib/typography";
 import type { InteractionCopy } from "./interaction-copy";
 import { getRaceArtwork, raceCarSprites } from "./race-artwork";
 import { raceBoard, type RaceGame } from "./race-game";
@@ -119,11 +120,11 @@ export function paintRaceScreen(context: CanvasRenderingContext2D, game: RaceGam
   context.direction = rtl ? "rtl" : "ltr";
   const distanceX = rtl ? 290 : 137;
   const bestX = rtl ? 137 : 290;
-  context.fillStyle = "#cfbea0"; context.font = '500 12px "Vazirmatn Variable", sans-serif';
+  context.fillStyle = "#cfbea0"; context.font = `500 12px ${getCanvasFontFamily()}`;
   context.fillText(copy.game.distance, distanceX, 36, 130);
   context.fillText(copy.game.best, bestX, 36, 130);
   context.direction = "ltr";
-  context.fillStyle = "#faf2e0"; context.font = '650 23px "Vazirmatn Variable", sans-serif';
+  context.fillStyle = "#faf2e0"; context.font = `650 23px ${getCanvasFontFamily()}`;
   context.fillText(`${game.score} m`, distanceX, 66, 135);
   context.fillText(`${best} m`, bestX, 66, 135);
 
@@ -131,7 +132,7 @@ export function paintRaceScreen(context: CanvasRenderingContext2D, game: RaceGam
     context.fillStyle = "rgba(24,29,27,.84)";
     context.beginPath(); context.roundRect(125, 312, width - 250, 76, 18); context.fill();
     context.direction = rtl ? "rtl" : "ltr";
-    context.fillStyle = "#f5ead4"; context.font = '600 22px "Vazirmatn Variable", sans-serif';
+    context.fillStyle = "#f5ead4"; context.font = `600 22px ${getCanvasFontFamily()}`;
     context.fillText(copy.game.pause, width / 2, 358, width - 275);
   }
   if (interactive && game.status !== "complete") {

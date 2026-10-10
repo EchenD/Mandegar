@@ -1,3 +1,4 @@
+import { getCanvasFontFamily } from "@/lib/typography";
 import type { IntelligenceSignalState } from "./intelligence-monitor-graphics";
 import { interactionSurfaceSizes } from "./scene-config";
 
@@ -54,7 +55,7 @@ export function createIntelligenceMonitorArtwork(context: CanvasRenderingContext
   const panelTextX = rtl ? panelLeft + panelWidth - 30 : panelLeft + 30;
   const waveStyles = [flow, "rgba(217, 161, 131, .62)", "rgba(190, 180, 168, .24)"];
   const pointColors = [palette.cyan, palette.ivory, palette.copper];
-  const font = '"Vazirmatn Variable", Tahoma, sans-serif';
+  const font = getCanvasFontFamily();
 
   return (state: IntelligenceSignalState) => {
     context.fillStyle = background;

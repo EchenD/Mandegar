@@ -1,5 +1,6 @@
 "use client";
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import { useEffect, useRef } from "react";
 import type { Locale } from "@/lib/i18n";
 import { experienceState } from "../experience-state";
@@ -28,7 +29,9 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     let frame: number;
     let disposed = false;
     image.onload = () => { previous = ""; };
-    void document.fonts.ready.then(() => { if (!disposed) previous = ""; });
+    const fontsLoaded = () => { if (!disposed) previous = ""; };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     registerPhotoSurface(photo);
     registerInteractionCanvas("videoWall", stage, 0);
     const tick = () => {
@@ -48,7 +51,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           photoContext.clearRect(0, 0, photo.width, photo.height);
           if (sample.photoStep === "countdown") {
             photoContext.fillStyle = "#f7f7f4";
-            photoContext.font = '600 180px "Vazirmatn Variable", sans-serif';
+            photoContext.font = `600 180px ${getCanvasFontFamily()}`;
             photoContext.textAlign = "center";
             photoContext.textBaseline = "middle";
             photoContext.direction = locale === "en" ? "ltr" : "rtl";
@@ -70,7 +73,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
           } else {
             context.textAlign = "center";
             context.fillStyle = "#f7f4eb";
-            context.font = '500 40px "Vazirmatn Variable", sans-serif';
+            context.font = `500 40px ${getCanvasFontFamily()}`;
             context.fillText("MANDEGAR", width / 2, height * 0.26);
           }
           if (stageVisibility > 0 && interactionRuntime.monitorEntries.videoWall?.canvas !== stage) {
@@ -93,6 +96,7 @@ export function ScrollScenes({ locale, enabled }: { locale: Locale; enabled: boo
     frame = requestAnimationFrame(tick);
     return () => {
       disposed = true;
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       cancelAnimationFrame(frame);
       image.onload = null;
       registerPhotoSurface(null);

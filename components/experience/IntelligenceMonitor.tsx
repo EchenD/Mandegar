@@ -148,13 +148,16 @@ export function IntelligenceMonitor({ locale, enabled }: { locale: Locale; enabl
     });
     document.addEventListener("visibilitychange", visibilityChanged);
     motion.addEventListener("change", motionChanged);
-    void document.fonts.ready.then(() => { if (mounted) { fontsReady = true; dirty = true; resume(); } });
+    const fontsLoaded = () => { if (mounted) { fontsReady = true; dirty = true; resume(); } };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     resume();
     return () => {
       mounted = false;
       if (frame) window.cancelAnimationFrame(frame);
       observer.disconnect();
       unsubscribe();
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       document.removeEventListener("visibilitychange", visibilityChanged);
       motion.removeEventListener("change", motionChanged);
       releaseSurface();

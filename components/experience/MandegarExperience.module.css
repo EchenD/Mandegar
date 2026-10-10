@@ -744,6 +744,8 @@
   .desktopCopy { display: none; }
   .mobileCopy { display: inline; }
   .sceneCopy h2 { max-width: 22ch; font-size: clamp(1.45rem, 6.3vw, 2.05rem); }
+  /* Rokh's Persian numeral widths make a ch cap too narrow for these titles. */
+  :global(html[lang="fa"]) .sceneCopy h2 { max-width: 100%; }
   .sceneCopy p { max-width: 30rem; margin-block-start: .6rem; font-size: .875rem; line-height: 1.6; }
   .sceneCopy[data-interaction-cue] p { margin: 0; }
   .sceneCopy > span { margin-block-end: .55rem; }

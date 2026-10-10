@@ -1,3 +1,4 @@
+import { getCanvasFontFamily } from "@/lib/typography";
 import type { Locale } from "@/lib/i18n";
 import type { InstallationView } from "./installation-demo";
 
@@ -278,7 +279,7 @@ function paintMemory(context: CanvasRenderingContext2D, progress: number, time: 
 }
 
 function textFont(context: CanvasRenderingContext2D, text: string, size: number, locale: Locale, maximumWidth: number, serif = false) {
-  const family = serif ? "Georgia, serif" : '"Vazirmatn Variable", Tahoma, sans-serif';
+  const family = serif ? "Georgia, serif" : getCanvasFontFamily();
   context.font = `${serif ? "400" : "500"} ${size}px ${family}`;
   while (context.measureText(text).width > maximumWidth && size > 12) {
     size -= 1;
@@ -339,7 +340,7 @@ export function paintTouchStory(
     context.direction = "ltr";
     context.textAlign = "left";
     context.textBaseline = "alphabetic";
-    context.font = '500 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `500 13px ${getCanvasFontFamily()}`;
     context.fillStyle = "rgba(244,233,213,.83)";
     Array.from("MANDEGAR").forEach((letter, letterIndex) => context.fillText(letter, 51 + letterIndex * 18, 49));
     line(context, [[222, 44], [514, 44]], "rgba(215,185,129,.4)");

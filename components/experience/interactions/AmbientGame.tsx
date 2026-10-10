@@ -36,6 +36,7 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     const context = canvas?.getContext("2d");
     if (!canvas || !context || !enabled || !completed) return;
     const root = canvas.closest("[data-experience-root]");
+    let mounted = true;
     let onScreen = true;
     let lastTime = performance.now();
     const observer = new IntersectionObserver(([entry]) => {
@@ -56,6 +57,9 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     const resumeClock = () => { lastTime = performance.now(); };
     document.addEventListener("visibilitychange", resumeClock);
     const stopArtwork = loadRaceArtwork(() => { lastVisibility = -1; });
+    const fontsLoaded = () => { if (mounted) lastVisibility = -1; };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
 
     const releaseSurface = () => {
       if (interactionRuntime.ambientGameSurface?.canvas === canvas) {
@@ -119,6 +123,8 @@ export function AmbientGame({ locale, enabled }: { locale: Locale; enabled: bool
     };
     frame = window.requestAnimationFrame(tick);
     return () => {
+      mounted = false;
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       window.cancelAnimationFrame(frame);
       observer.disconnect();
       document.removeEventListener("visibilitychange", resumeClock);

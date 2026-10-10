@@ -1,5 +1,6 @@
 "use client";
 
+import { getCanvasFontFamily } from "@/lib/typography";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { interactionSurfaceSizes, sceneTokens } from "../scene-config";
 import type { InteractionCopy } from "./interaction-copy";
@@ -177,13 +178,13 @@ export function StageBeamInteraction({
     context.direction = direction;
     context.textAlign = "center";
     context.fillStyle = "#225cff";
-    context.font = '700 13px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `700 13px ${getCanvasFontFamily()}`;
     context.fillText("MANDEGAR", width / 2, 30);
     context.fillStyle = "#16191d";
-    context.font = '620 34px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `620 34px ${getCanvasFontFamily()}`;
     context.fillText(copy.stations.stage.title, width / 2, 68, width - 180);
     context.fillStyle = "rgba(22,25,29,.6)";
-    context.font = '500 18px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `500 18px ${getCanvasFontFamily()}`;
     context.fillText(
       isShowing ? copy.stage.showing : complete ? copy.stage.finale : activeCount > 0 ? copy.stage.ready : copy.stations.stage.instruction,
       width / 2,
@@ -191,7 +192,7 @@ export function StageBeamInteraction({
       width - 180,
     );
     context.fillStyle = "#225cff";
-    context.font = '700 17px "Vazirmatn Variable", Tahoma, sans-serif';
+    context.font = `700 17px ${getCanvasFontFamily()}`;
     context.fillText(String(activeCount).padStart(2, "0"), width / 2, 425);
     context.restore();
 
@@ -234,7 +235,7 @@ export function StageBeamInteraction({
       context.fill();
       context.stroke();
       context.fillStyle = enabled ? "#fff" : "#16191d";
-      context.font = '750 17px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `750 17px ${getCanvasFontFamily()}`;
       context.textAlign = "center";
       context.fillText(String(index + 1).padStart(2, "0"), x, 171);
 
@@ -249,7 +250,7 @@ export function StageBeamInteraction({
 
       context.direction = direction;
       context.fillStyle = enabled ? "#16191d" : "rgba(22,25,29,.58)";
-      context.font = '650 18px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `650 18px ${getCanvasFontFamily()}`;
       context.fillText(`${copy.stage.beam} ${index + 1}`, x, 351, width * 0.16);
       if (enabled) {
         context.strokeStyle = "#225cff";
@@ -309,7 +310,7 @@ export function StageBeamInteraction({
       context.stroke();
       context.direction = direction;
       context.fillStyle = primary && enabled ? "#fff" : enabled ? "#16191d" : "rgba(22,25,29,.38)";
-      context.font = '700 18px "Vazirmatn Variable", Tahoma, sans-serif';
+      context.font = `700 18px ${getCanvasFontFamily()}`;
       context.textAlign = "center";
       context.fillText(label, left + buttonWidth / 2, top + buttonHeight * 0.63, buttonWidth - 24);
     };
@@ -512,11 +513,12 @@ export function StageBeamInteraction({
       animateTransition(1);
     };
     const stopLoading = loadMonitorArtwork(sceneTokens.bakedScene.screens.videoWall, begin);
-    void document.fonts?.ready.then(() => {
-      if (mounted) schedulePaint();
-    });
+    const fontsLoaded = () => { if (mounted) schedulePaint(); };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     return () => {
       mounted = false;
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       stopLoading();
       if (interactionRuntime.monitorEntries.videoWall?.canvas === canvas) {
         registerInteractionCanvas("videoWall", null);

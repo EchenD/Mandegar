@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { getPageCopy, getSiteSettings } from "@/lib/content-source";
 import { ensureLocale, localeConfig, locales, type Locale } from "@/lib/i18n";
 import { absoluteUrl, buildMetadata, pageSeo } from "@/lib/seo";
+import { rokhFaNum } from "@/lib/fonts";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -29,7 +30,7 @@ export default async function LocaleLayout({ children, params }: Readonly<{ chil
   const config = localeConfig[locale];
   const settings = await getSiteSettings();
   return (
-    <html lang={locale} dir={config.dir} data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={locale} dir={config.dir} className={locale === "fa" ? rokhFaNum.variable : undefined} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
         <div className="siteShell" lang={locale} dir={config.dir} data-locale={locale}>
           <JsonLd data={[

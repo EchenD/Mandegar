@@ -102,6 +102,7 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    let mounted = true;
     transitionReady.current = false;
     departingAt.current = null;
     const retained = interactionRuntime.ambientGameSurface?.canvas;
@@ -113,6 +114,9 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
       entranceBackground.current = background;
     }
     const stopArtwork = loadRaceArtwork(paint);
+    const fontsLoaded = () => { if (mounted) paint(); };
+    void document.fonts.ready.then(fontsLoaded);
+    document.fonts.addEventListener("loadingdone", fontsLoaded);
     const started = performance.now();
     let previous = started;
     let lastPublish = started;
@@ -166,6 +170,8 @@ export function GameInteraction({ copy, reducedMotion, onComplete }: {
     document.addEventListener("visibilitychange", visibility);
     frame = requestAnimationFrame(tick);
     return () => {
+      mounted = false;
+      document.fonts.removeEventListener("loadingdone", fontsLoaded);
       cancelAnimationFrame(frame);
       stopArtwork();
       observer.disconnect();

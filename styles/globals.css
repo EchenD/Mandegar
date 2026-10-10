@@ -21,9 +21,12 @@
   --ease-standard: cubic-bezier(.2, .75, .25, 1);
   --inline-direction: 1;
   --page: min(100% - 2.5rem, 90rem);
-  --font-sans: "Vazirmatn Variable", "Tahoma", sans-serif;
+  --font-default-sans: "Vazirmatn Variable", "Tahoma", sans-serif;
+  --font-sans: var(--font-default-sans);
   --serif: var(--font-sans);
 }
+html:lang(fa) { --font-sans: var(--font-rokh-fa-num, "Vazirmatn Variable"), var(--font-default-sans); }
+[lang="en"], [lang="ar"] { --font-sans: var(--font-default-sans); --serif: var(--font-sans); font-family: var(--font-sans); }
 [dir="rtl"] { --inline-direction: -1; }
 
 * { box-sizing: border-box; }
