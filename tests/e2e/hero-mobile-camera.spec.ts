@@ -29,6 +29,11 @@ test("camera framing stays continuous across narrow-window and portrait threshol
       const after = getResponsiveCameraFov(31.4, 1024, 1024 / (aspect + 0.00001), phase.preview);
       expect(Math.abs(after - before)).toBeLessThan(0.01);
     }
+    for (const height of [600, 760]) {
+      const before = getResponsiveCameraFov(31.4, 390, height - 0.01, phase.preview);
+      const after = getResponsiveCameraFov(31.4, 390, height + 0.01, phase.preview);
+      expect(Math.abs(after - before)).toBeLessThan(0.01);
+    }
   }
   for (const value of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
     expect(getResponsiveCameraFov(31.4, value, 844)).toBe(31.4);
@@ -45,7 +50,7 @@ test("mobile lenses hold during viewing windows and ease continuously through ca
     expect(getMobileCameraFramingAspect(phase.end)).toBeCloseTo(mobileCameraFraming[phase.id], 8);
     expect(getMobileCameraFramingAspect(phase.preview)).toBeCloseTo(mobileCameraFraming[phase.id], 8);
   }
-  for (const [width, height] of [[390, 844], [360, 960], [320, 1200], [760, 475]]) {
+  for (const [width, height] of [[390, 844], [390, 700], [390, 600], [320, 568], [360, 960], [320, 1200], [760, 475]]) {
     for (let index = 0; index < heroTimeline.phases.length - 1; index += 1) {
       const phase = heroTimeline.phases[index];
       const next = heroTimeline.phases[index + 1];
@@ -67,6 +72,31 @@ test("mobile lenses hold during viewing windows and ease continuously through ca
   const connection = heroTimeline.phases.find((phase) => phase.id === "connection")!;
   expect(getResponsiveCameraFov(31.4, 320, 1200, connection.preview)).toBeLessThan(90);
   expect(getResponsiveCameraFov(31.4, 390, 844, 0)).toBe(getResponsiveCameraFov(31.4, 390, 844, 1));
+});
+
+test("short portrait game views gain room while other shots retain their framing", () => {
+  const game = heroTimeline.phases.find((phase) => phase.id === "experiences")!;
+  // Keep the viewport aspect constant so this measures space reserved for the
+  // short-screen instructions, rather than ordinary portrait lens correction.
+  const aspect = 0.48;
+  const sample = (height: number, progress: number) => getResponsiveCameraFov(31.4, height * aspect, height, progress);
+  const shortGame = sample(600, game.preview);
+  const tallGame = sample(844, game.preview);
+  expect(shortGame).toBeGreaterThan(tallGame + 5);
+  for (const height of [568, 600, 680, 760, 844]) {
+    const resting = sample(height, game.preview);
+    expect(sample(height, game.start)).toBeCloseTo(resting, 8);
+    expect(sample(height, game.end)).toBeCloseTo(resting, 8);
+  }
+  const resizeValues = Array.from({ length: 101 }, (_, step) => sample(600 + 160 * step / 100, game.preview));
+  for (let index = 1; index < resizeValues.length; index += 1) {
+    expect(resizeValues[index]).toBeLessThanOrEqual(resizeValues[index - 1] + 0.000001);
+  }
+  expect(Math.abs(resizeValues[1] - resizeValues[0])).toBeLessThan(0.001);
+  expect(Math.abs(resizeValues.at(-1)! - resizeValues.at(-2)!)).toBeLessThan(0.001);
+  for (const phase of heroTimeline.phases.filter((phase) => phase.id !== "experiences")) {
+    expect(sample(600, phase.preview)).toBeCloseTo(sample(844, phase.preview), 8);
+  }
 });
 
 test("mobile rendering sharpens dense displays within the device and pixel budgets", () => {
