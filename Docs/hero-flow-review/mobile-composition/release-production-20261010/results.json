@@ -1,0 +1,360 @@
+{
+  "startedAt": "2026-10-10T11:57:46.972Z",
+  "baseUrl": "http://127.0.0.1:3400/Mandegar",
+  "caseFilter": null,
+  "outputDirectory": "D:\\Projects\\Navid\\Mandegar\\Docs\\hero-flow-review\\mobile-composition\\release-production-20261010",
+  "cases": [
+    {
+      "name": "fa-mobile",
+      "locale": "fa",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "checks": [
+        "Static root redirects to the Persian homepage",
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [
+        "fa-mobile-home-discovery.png",
+        "fa-mobile-home-partners.png",
+        "fa-mobile-finale.png",
+        "fa-mobile-finale-320px.png",
+        "fa-mobile-partners-page.png"
+      ],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/fa/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/fa/contact/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/fa/about/__next.$d$locale.about.__PAGE__.txt?_rsc=lWdzUDci6hgqhauu",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "چیزی بسازیم که ماندگار شود.",
+        "lineTopSpread": 0,
+        "viewportLeft": 61.90625,
+        "viewportRight": 61.90625,
+        "caretWidth": 2,
+        "caretHeight": 20.796875,
+        "caretCenter": 631.1484375,
+        "textTop": 616.75,
+        "textBottom": 651.75,
+        "caretGap": 3.15625,
+        "caretAnimation": "Xumola_textCursorBlink"
+      },
+      "narrowFinale": {
+        "text": "چیزی بسازیم که ماندگار شود.",
+        "lineTopSpread": 0,
+        "viewportLeft": 50.609375,
+        "viewportRight": 50.609375,
+        "caretWidth": 2,
+        "caretHeight": 17.0625,
+        "caretCenter": 437.390625,
+        "textTop": 425.4375,
+        "textBottom": 454.4375,
+        "caretGap": 2.59375,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    },
+    {
+      "name": "fa-desktop",
+      "locale": "fa",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "checks": [
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/fa/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/fa/contact/",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "چیزی بسازیم که ماندگار شود.",
+        "lineTopSpread": 0,
+        "viewportLeft": 466.71875,
+        "viewportRight": 466.71875,
+        "caretWidth": 2,
+        "caretHeight": 39.734375,
+        "caretCenter": 706.4296875,
+        "textTop": 678.84375,
+        "textBottom": 745.84375,
+        "caretGap": 6.046875,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    },
+    {
+      "name": "en-mobile",
+      "locale": "en",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "checks": [
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [
+        "en-mobile-home-discovery.png",
+        "en-mobile-home-partners.png",
+        "en-mobile-finale.png",
+        "en-mobile-partners-page.png"
+      ],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/contact/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/about/__next.$d$locale.txt?_rsc=FUh3Gxqryw1dTRX2",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/_next/static/chunks/3jlh_5_q1w-3l.js",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/media/placeholders/stage-production.webp",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/media/placeholders/interactive-wall.webp",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "Make something that stays.",
+        "lineTopSpread": 0,
+        "viewportLeft": 65.421875,
+        "viewportRight": 65.421875,
+        "caretWidth": 2,
+        "caretHeight": 20.796875,
+        "caretCenter": 631.1484375,
+        "textTop": 616.75,
+        "textBottom": 651.75,
+        "caretGap": 3.15625,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    },
+    {
+      "name": "en-desktop",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "checks": [
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/contact/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/about/__next._tree.txt?_rsc=ry-B8umWgNEV4JR9",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/en/projects/placeholder-exhibition-01/index.txt?_rsc=6wAGqfVmmikKrF_G",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "Make something that stays.",
+        "lineTopSpread": 0,
+        "viewportLeft": 473.4375,
+        "viewportRight": 473.4375,
+        "caretWidth": 2,
+        "caretHeight": 39.734375,
+        "caretCenter": 706.4296875,
+        "textTop": 678.84375,
+        "textBottom": 745.84375,
+        "caretGap": 6.046875,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    },
+    {
+      "name": "ar-mobile",
+      "locale": "ar",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "checks": [
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [
+        "ar-mobile-home-discovery.png",
+        "ar-mobile-home-partners.png",
+        "ar-mobile-finale.png",
+        "ar-mobile-partners-page.png"
+      ],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/ar/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/ar/contact/",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "لنصنع شيئاً يبقى.",
+        "lineTopSpread": 0,
+        "viewportLeft": 115.234375,
+        "viewportRight": 115.234375,
+        "caretWidth": 2,
+        "caretHeight": 20.796875,
+        "caretCenter": 631.1484375,
+        "textTop": 616.75,
+        "textBottom": 651.75,
+        "caretGap": 3.15625,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    },
+    {
+      "name": "ar-desktop",
+      "locale": "ar",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "checks": [
+        "Localized direct home route loads models, fonts and all five home anchors",
+        "Home Partners menu anchor seeks and focuses the home section",
+        "Contact anchor reaches the finale with one-line title and attached blinking caret",
+        "Featured project image is keyboard-operable and opens its exported detail page",
+        "Inner navigation preserves header/menu placement and opens the exported Partners page",
+        "Partners placeholders remain explicit and canonical/locale links use the deployed Pages URL"
+      ],
+      "screenshots": [],
+      "pageErrors": [],
+      "failedResponses": [],
+      "requestFailures": [
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/models/services/mandegar-services.glb?v=studio-2",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/ar/about/",
+          "reason": "net::ERR_ABORTED"
+        },
+        {
+          "url": "http://127.0.0.1:3400/Mandegar/ar/contact/",
+          "reason": "net::ERR_ABORTED"
+        }
+      ],
+      "assetTypes": [
+        "font/woff2",
+        "image/webp",
+        "model/gltf-binary"
+      ],
+      "passed": true,
+      "finale": {
+        "text": "لنصنع شيئاً يبقى.",
+        "lineTopSpread": 0,
+        "viewportLeft": 568.5625,
+        "viewportRight": 568.578125,
+        "caretWidth": 2,
+        "caretHeight": 39.734375,
+        "caretCenter": 706.4296875,
+        "textTop": 678.84375,
+        "textBottom": 745.84375,
+        "caretGap": 6.046875,
+        "caretAnimation": "Xumola_textCursorBlink"
+      }
+    }
+  ],
+  "passed": true,
+  "completedAt": "2026-10-10T12:01:08.924Z"
+}

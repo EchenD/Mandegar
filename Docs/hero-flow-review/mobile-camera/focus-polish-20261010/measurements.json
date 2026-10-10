@@ -1,0 +1,522 @@
+[
+  {
+    "phase": "engagement",
+    "width": 320,
+    "height": 568,
+    "frame": 875,
+    "projection": [
+      57.52081632246305,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 116.2421875,
+        "y": 340.671875,
+        "width": 32.609375,
+        "height": 44
+      },
+      {
+        "x": 152.796875,
+        "y": 338.671875,
+        "width": 31.1875,
+        "height": 44
+      },
+      {
+        "x": 187.9921875,
+        "y": 336.734375,
+        "width": 29.859375,
+        "height": 44
+      },
+      {
+        "x": 221.8984375,
+        "y": 334.875,
+        "width": 28.609375,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 320,
+    "height": 568,
+    "frame": 1565,
+    "projection": [
+      57.52081632246305,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 368.203125,
+      "width": 296,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 320,
+    "height": 568,
+    "frame": 1825,
+    "projection": [
+      55.30073171246744,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 340.578125,
+      "width": 296,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 390,
+    "height": 600,
+    "frame": 875,
+    "projection": [
+      50.882183495149384,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 144.4375,
+        "y": 370.921875,
+        "width": 39.5625,
+        "height": 44
+      },
+      {
+        "x": 188.8046875,
+        "y": 368.484375,
+        "width": 37.828125,
+        "height": 44
+      },
+      {
+        "x": 231.515625,
+        "y": 366.125,
+        "width": 36.21875,
+        "height": 44
+      },
+      {
+        "x": 272.671875,
+        "y": 363.859375,
+        "width": 34.6875,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 390,
+    "height": 600,
+    "frame": 1565,
+    "projection": [
+      50.882183495149384,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 400.203125,
+      "width": 366,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 390,
+    "height": 600,
+    "frame": 1825,
+    "projection": [
+      48.84471723520068,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 372.578125,
+      "width": 366,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 390,
+    "height": 844,
+    "frame": 875,
+    "projection": [
+      67.57859399463355,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 141.2265625,
+        "y": 496.234375,
+        "width": 39.671875,
+        "height": 44
+      },
+      {
+        "x": 185.6796875,
+        "y": 493.78125,
+        "width": 37.953125,
+        "height": 44
+      },
+      {
+        "x": 228.5,
+        "y": 491.421875,
+        "width": 36.34375,
+        "height": 44
+      },
+      {
+        "x": 269.765625,
+        "y": 489.140625,
+        "width": 34.8125,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 390,
+    "height": 844,
+    "frame": 1565,
+    "projection": [
+      67.57859399463355,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 644.203125,
+      "width": 366,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 390,
+    "height": 844,
+    "frame": 1825,
+    "projection": [
+      65.13716096807268,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 616.578125,
+      "width": 366,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 430,
+    "height": 932,
+    "frame": 875,
+    "projection": [
+      67.66028121039845,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 430,
+    "height": 932,
+    "frame": 1565,
+    "projection": [
+      67.66028121039845,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 31,
+      "y": 732.203125,
+      "width": 368,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 430,
+    "height": 932,
+    "frame": 1825,
+    "projection": [
+      65.21734068910648,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 23,
+      "y": 704.578125,
+      "width": 384,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 568,
+    "height": 320,
+    "frame": 875,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 238.09375,
+        "y": 222.765625,
+        "width": 35.8125,
+        "height": 44
+      },
+      {
+        "x": 278.25,
+        "y": 220.578125,
+        "width": 34.25,
+        "height": 44
+      },
+      {
+        "x": 316.8984375,
+        "y": 218.453125,
+        "width": 32.796875,
+        "height": 44
+      },
+      {
+        "x": 354.1640625,
+        "y": 216.421875,
+        "width": 31.421875,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 568,
+    "height": 320,
+    "frame": 1565,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 20,
+      "y": 184.203125,
+      "width": 392,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 568,
+    "height": 320,
+    "frame": 1825,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 20,
+      "y": 156.578125,
+      "width": 392,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 844,
+    "height": 390,
+    "frame": 874.9999999999998,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 844,
+    "height": 390,
+    "frame": 1565,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 844,
+    "height": 390,
+    "frame": 1825.0000000000002,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    }
+  }
+]

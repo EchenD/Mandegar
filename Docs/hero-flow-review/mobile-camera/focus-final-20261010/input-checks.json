@@ -1,0 +1,24 @@
+[
+  {
+    "viewport": "320x568",
+    "station": "game",
+    "steering": "touch drag passed",
+    "stablePausedFov": 63.903499624387486
+  },
+  {
+    "viewport": "320x568",
+    "station": "draw",
+    "drawing": "touch stroke and Undo passed"
+  },
+  {
+    "viewport": "390x844",
+    "station": "game",
+    "steering": "touch drag passed",
+    "stablePausedFov": 67.57859399463355
+  },
+  {
+    "viewport": "390x844",
+    "station": "draw",
+    "drawing": "touch stroke and Undo passed"
+  }
+]

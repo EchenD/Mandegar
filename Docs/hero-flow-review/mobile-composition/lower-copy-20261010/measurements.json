@@ -1,0 +1,1130 @@
+[
+  {
+    "locale": "fa",
+    "width": 375,
+    "height": 668,
+    "phase": "discovery",
+    "copy": {
+      "x": 19.203125,
+      "y": 432.9453125,
+      "width": 336.59375,
+      "height": 96.015625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 351,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 43.5,
+      "y": 627.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 375
+  },
+  {
+    "locale": "fa",
+    "width": 375,
+    "height": 668,
+    "phase": "reveal",
+    "copy": {
+      "x": 19.203125,
+      "y": 569.9609375,
+      "width": 336.59375,
+      "height": 22.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 351,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 43.5,
+      "y": 627.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 375
+  },
+  {
+    "locale": "fa",
+    "width": 375,
+    "height": 668,
+    "phase": "proof",
+    "copy": {
+      "x": 19.203125,
+      "y": 432.9453125,
+      "width": 336.59375,
+      "height": 96.015625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 351,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 43.5,
+      "y": 627.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 375
+  },
+  {
+    "locale": "fa",
+    "width": 375,
+    "height": 668,
+    "phase": "intelligence",
+    "copy": {
+      "x": 19.203125,
+      "y": 461.78125,
+      "width": 336.59375,
+      "height": 62.21875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 351,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 43.5,
+      "y": 627.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 192.703125,
+        "y": 548,
+        "width": 163.09375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 548,
+        "width": 163.109375,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 375
+  },
+  {
+    "locale": "fa",
+    "width": 375,
+    "height": 668,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 369.1484375,
+      "width": 336.59375,
+      "height": 156.796875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 351,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 43.5,
+      "y": 627.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 120.6875,
+      "y": 482.7578125,
+      "width": 133.640625,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 375
+  },
+  {
+    "locale": "fa",
+    "width": 320,
+    "height": 568,
+    "phase": "discovery",
+    "copy": {
+      "x": 19.203125,
+      "y": 361.21875,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 527.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 320
+  },
+  {
+    "locale": "fa",
+    "width": 320,
+    "height": 568,
+    "phase": "reveal",
+    "copy": {
+      "x": 19.203125,
+      "y": 482.9609375,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 527.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 320
+  },
+  {
+    "locale": "fa",
+    "width": 320,
+    "height": 568,
+    "phase": "proof",
+    "copy": {
+      "x": 19.203125,
+      "y": 361.21875,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 527.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 320
+  },
+  {
+    "locale": "fa",
+    "width": 320,
+    "height": 568,
+    "phase": "intelligence",
+    "copy": {
+      "x": 19.203125,
+      "y": 362.328125,
+      "width": 281.59375,
+      "height": 61.671875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 527.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 448,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 448,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 320
+  },
+  {
+    "locale": "fa",
+    "width": 320,
+    "height": 568,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 302.421875,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 527.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 93.1875,
+      "y": 415.484375,
+      "width": 133.640625,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 320
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "height": 844,
+    "phase": "discovery",
+    "copy": {
+      "x": 19.203125,
+      "y": 559.0625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 330,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 803.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "height": 844,
+    "phase": "reveal",
+    "copy": {
+      "x": 19.203125,
+      "y": 723.0703125,
+      "width": 351.59375,
+      "height": 22.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 330,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 803.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "height": 844,
+    "phase": "proof",
+    "copy": {
+      "x": 19.203125,
+      "y": 559.0625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 330,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 803.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "height": 844,
+    "phase": "intelligence",
+    "copy": {
+      "x": 19.203125,
+      "y": 636.578125,
+      "width": 351.59375,
+      "height": 63.421875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 330,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 803.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 19.203125,
+        "y": 724,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 200.1875,
+        "y": 724,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "height": 844,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 486.46875,
+      "width": 351.59375,
+      "height": 158
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 330,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 803.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 126.125,
+      "y": 601.28125,
+      "width": 137.75,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "ar",
+    "width": 360,
+    "height": 640,
+    "phase": "discovery",
+    "copy": {
+      "x": 19.203125,
+      "y": 413.0625,
+      "width": 321.59375,
+      "height": 95.46875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 336,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 599.8125,
+      "width": 280,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 360
+  },
+  {
+    "locale": "ar",
+    "width": 360,
+    "height": 640,
+    "phase": "reveal",
+    "copy": {
+      "x": 19.203125,
+      "y": 545.6015625,
+      "width": 321.59375,
+      "height": 22.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 336,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 599.8125,
+      "width": 280,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 360
+  },
+  {
+    "locale": "ar",
+    "width": 360,
+    "height": 640,
+    "phase": "proof",
+    "copy": {
+      "x": 19.203125,
+      "y": 413.0625,
+      "width": 321.59375,
+      "height": 95.46875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 336,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 599.8125,
+      "width": 280,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 360
+  },
+  {
+    "locale": "ar",
+    "width": 360,
+    "height": 640,
+    "phase": "intelligence",
+    "copy": {
+      "x": 19.203125,
+      "y": 434.328125,
+      "width": 321.59375,
+      "height": 61.671875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 336,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 599.8125,
+      "width": 280,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 185.203125,
+        "y": 520,
+        "width": 155.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 520,
+        "width": 155.609375,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 360
+  },
+  {
+    "locale": "ar",
+    "width": 360,
+    "height": 640,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 350.671875,
+      "width": 321.59375,
+      "height": 156.25
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 336,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 40,
+      "y": 599.8125,
+      "width": 280,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 120.90625,
+      "y": 463.734375,
+      "width": 118.1875,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 360
+  },
+  {
+    "locale": "fa",
+    "width": 390,
+    "height": 360,
+    "phase": "discovery",
+    "copy": {
+      "x": 64,
+      "y": 206.8125,
+      "width": 262,
+      "height": 89.1875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 319.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "fa",
+    "width": 390,
+    "height": 360,
+    "phase": "reveal",
+    "copy": {
+      "x": 64,
+      "y": 275,
+      "width": 262,
+      "height": 21
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 319.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "fa",
+    "width": 390,
+    "height": 360,
+    "phase": "proof",
+    "copy": {
+      "x": 64,
+      "y": 206.8125,
+      "width": 262,
+      "height": 89.1875
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 319.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "fa",
+    "width": 390,
+    "height": 360,
+    "phase": "intelligence",
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 262,
+      "height": 55.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 319.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 200.203125,
+        "y": 240,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 240,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "fa",
+    "width": 390,
+    "height": 360,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 185.421875,
+      "width": 351.59375,
+      "height": 110.578125
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 51,
+      "y": 319.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 128.1875,
+      "y": 252.8125,
+      "width": 133.640625,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 390
+  },
+  {
+    "locale": "fa",
+    "width": 568,
+    "height": 320,
+    "phase": "discovery",
+    "copy": {
+      "x": 64,
+      "y": 163.609375,
+      "width": 440,
+      "height": 92.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 140,
+      "y": 279.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 568
+  },
+  {
+    "locale": "fa",
+    "width": 568,
+    "height": 320,
+    "phase": "reveal",
+    "copy": {
+      "x": 64,
+      "y": 233.609375,
+      "width": 440,
+      "height": 22.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 140,
+      "y": 279.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 568
+  },
+  {
+    "locale": "fa",
+    "width": 568,
+    "height": 320,
+    "phase": "proof",
+    "copy": {
+      "x": 64,
+      "y": 163.609375,
+      "width": 440,
+      "height": 92.390625
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 140,
+      "y": 279.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 568
+  },
+  {
+    "locale": "fa",
+    "width": 568,
+    "height": 320,
+    "phase": "intelligence",
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 440,
+      "height": 58.59375
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 140,
+      "y": 279.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 289.203125,
+        "y": 200,
+        "width": 202.796875,
+        "height": 44
+      },
+      {
+        "x": 76,
+        "y": 200,
+        "width": 202.8125,
+        "height": 44
+      }
+    ],
+    "cta": null,
+    "ctaReceivesPointer": null,
+    "scrollWidth": 568
+  },
+  {
+    "locale": "fa",
+    "width": 568,
+    "height": 320,
+    "phase": "invitation",
+    "copy": {
+      "x": 19.203125,
+      "y": 142.21875,
+      "width": 529.59375,
+      "height": 113.78125
+    },
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "sound": {
+      "x": 16,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "status": {
+      "x": 140,
+      "y": 279.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "cta": {
+      "x": 217.1875,
+      "y": 212.8125,
+      "width": 133.640625,
+      "height": 43.1875
+    },
+    "ctaReceivesPointer": true,
+    "scrollWidth": 568
+  }
+]

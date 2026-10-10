@@ -1,0 +1,590 @@
+[
+  {
+    "phase": "engagement",
+    "width": 320,
+    "height": 568,
+    "activeStation": "touch",
+    "frame": 875,
+    "projection": [
+      57.52081632246305,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 116.5,
+        "y": 340.65625,
+        "width": 32.59375,
+        "height": 44
+      },
+      {
+        "x": 153.03125,
+        "y": 338.65625,
+        "width": 31.1875,
+        "height": 44
+      },
+      {
+        "x": 188.2109375,
+        "y": 336.71875,
+        "width": 29.859375,
+        "height": 44
+      },
+      {
+        "x": 222.125,
+        "y": 334.859375,
+        "width": 28.59375,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 320,
+    "height": 568,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      63.903499624387486,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 368.203125,
+      "width": 296,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 320,
+    "height": 568,
+    "activeStation": "draw",
+    "frame": 1825,
+    "projection": [
+      55.30073171246744,
+      0.5633802816901409,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 296,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 340.578125,
+      "width": 296,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 390,
+    "height": 600,
+    "activeStation": "touch",
+    "frame": 875,
+    "projection": [
+      50.882183495149384,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 142.03125,
+        "y": 373.859375,
+        "width": 39.71875,
+        "height": 44
+      },
+      {
+        "x": 186.5625,
+        "y": 371.40625,
+        "width": 38,
+        "height": 44
+      },
+      {
+        "x": 229.4296875,
+        "y": 369.0625,
+        "width": 36.390625,
+        "height": 44
+      },
+      {
+        "x": 270.7578125,
+        "y": 366.78125,
+        "width": 34.859375,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 390,
+    "height": 600,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      56.789910874077684,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 400.203125,
+      "width": 366,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 390,
+    "height": 600,
+    "activeStation": "draw",
+    "frame": 1825,
+    "projection": [
+      48.84471723520068,
+      0.65,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 372.578125,
+      "width": 366,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 390,
+    "height": 844,
+    "activeStation": "touch",
+    "frame": 875,
+    "projection": [
+      67.57859399463355,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 142.21875,
+        "y": 495.8125,
+        "width": 39.71875,
+        "height": 44
+      },
+      {
+        "x": 186.734375,
+        "y": 493.375,
+        "width": 38,
+        "height": 44
+      },
+      {
+        "x": 229.609375,
+        "y": 491.015625,
+        "width": 36.375,
+        "height": 44
+      },
+      {
+        "x": 270.921875,
+        "y": 488.75,
+        "width": 34.84375,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 390,
+    "height": 844,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      67.57859399463355,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 644.203125,
+      "width": 366,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 390,
+    "height": 844,
+    "activeStation": "draw",
+    "frame": 1825,
+    "projection": [
+      65.13716096807268,
+      0.46208530805687204,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 366,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 12,
+      "y": 616.578125,
+      "width": 366,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 430,
+    "height": 932,
+    "activeStation": "touch",
+    "frame": 875,
+    "projection": [
+      67.66028121039845,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 156.7421875,
+        "y": 549.65625,
+        "width": 43.796875,
+        "height": 44
+      },
+      {
+        "x": 205.8203125,
+        "y": 546.96875,
+        "width": 41.890625,
+        "height": 44
+      },
+      {
+        "x": 253.1015625,
+        "y": 544.375,
+        "width": 40.109375,
+        "height": 44
+      },
+      {
+        "x": 298.6484375,
+        "y": 541.859375,
+        "width": 38.421875,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 430,
+    "height": 932,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      67.66028121039845,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 31,
+      "y": 732.203125,
+      "width": 368,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 430,
+    "height": 932,
+    "activeStation": "draw",
+    "frame": 1825,
+    "projection": [
+      65.21734068910648,
+      0.4613733905579399,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 406,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 23,
+      "y": 704.578125,
+      "width": 384,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 568,
+    "height": 320,
+    "activeStation": "touch",
+    "frame": 875,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 235.390625,
+        "y": 224.484375,
+        "width": 35.875,
+        "height": 44
+      },
+      {
+        "x": 275.6015625,
+        "y": 222.28125,
+        "width": 34.328125,
+        "height": 44
+      },
+      {
+        "x": 314.3359375,
+        "y": 220.15625,
+        "width": 32.859375,
+        "height": 44
+      },
+      {
+        "x": 351.6640625,
+        "y": 218.109375,
+        "width": 31.484375,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 568,
+    "height": 320,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 20,
+      "y": 184.203125,
+      "width": 392,
+      "height": 71.796875
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 568,
+    "height": 320,
+    "activeStation": "draw",
+    "frame": 1825,
+    "projection": [
+      31.40174837348,
+      1.775,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 12,
+      "y": 0,
+      "width": 544,
+      "height": 69.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 20,
+      "y": 156.578125,
+      "width": 392,
+      "height": 99.421875
+    }
+  },
+  {
+    "phase": "engagement",
+    "width": 844,
+    "height": 390,
+    "activeStation": "touch",
+    "frame": 874.9999999999998,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [
+      {
+        "x": 362.703125,
+        "y": 279.578125,
+        "width": 43.78125,
+        "height": 44
+      },
+      {
+        "x": 411.7734375,
+        "y": 276.890625,
+        "width": 41.890625,
+        "height": 44
+      },
+      {
+        "x": 459.0390625,
+        "y": 274.296875,
+        "width": 40.109375,
+        "height": 44
+      },
+      {
+        "x": 504.5859375,
+        "y": 271.796875,
+        "width": 38.421875,
+        "height": 44
+      }
+    ],
+    "dock": null
+  },
+  {
+    "phase": "experiences",
+    "width": 844,
+    "height": 390,
+    "activeStation": "game",
+    "frame": 1565,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    }
+  },
+  {
+    "phase": "connection",
+    "width": 844,
+    "height": 390,
+    "activeStation": "draw",
+    "frame": 1825.0000000000002,
+    "projection": [
+      31.40174837348,
+      2.164102564102564,
+      0.1,
+      10000
+    ],
+    "header": {
+      "x": 20,
+      "y": 0,
+      "width": 804,
+      "height": 77.59375
+    },
+    "monitorButtons": [],
+    "dock": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    }
+  }
+]

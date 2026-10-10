@@ -1,0 +1,1523 @@
+[
+  {
+    "phase": "discovery",
+    "width": 320,
+    "height": 421,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 255.375,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 289.171875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 380.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 320,
+    "height": 421,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 337.8046875,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 40,
+      "y": 380.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 320,
+    "height": 421,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 255.375,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 289.171875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 380.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 320,
+    "height": 421,
+    "safeArea": 0,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 49.25
+    },
+    "title": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 20.46875
+    },
+    "status": {
+      "x": 40,
+      "y": 380.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 301,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 301,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 53.421875,
+        "y": 183.71875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 66.265625,
+        "y": 182.328125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 127.421875,
+        "y": 154.25,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 197.015625,
+        "y": 168.96875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 233.90625,
+        "y": 184.15625,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 320,
+    "height": 421,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 203.9375,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 237.734375,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 380.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 390,
+    "height": 430,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 260.984375,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 294.78125,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 389.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 390,
+    "height": 430,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 346.8046875,
+      "width": 351.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 51,
+      "y": 389.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 390,
+    "height": 430,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 260.984375,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 294.78125,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 389.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 390,
+    "height": 430,
+    "safeArea": 0,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 262,
+      "height": 55.390625
+    },
+    "title": {
+      "x": 64.859375,
+      "y": 76,
+      "width": 260.296875,
+      "height": 26.609375
+    },
+    "status": {
+      "x": 51,
+      "y": 389.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 200.203125,
+        "y": 310,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 310,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 70.265625,
+        "y": 186.765625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 85.90625,
+        "y": 185.0625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 160.421875,
+        "y": 150.84375,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 245.25,
+        "y": 168.765625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 290.203125,
+        "y": 187.265625,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 390,
+    "height": 430,
+    "safeArea": 0,
+    "copy": {
+      "x": 19.203125,
+      "y": 209.09375,
+      "width": 351.59375,
+      "height": 158
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 242.890625,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 389.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 320,
+    "height": 421,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 221.375,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 255.171875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 346.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 320,
+    "height": 421,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 303.8046875,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 40,
+      "y": 346.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 320,
+    "height": 421,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 221.375,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 255.171875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 346.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 320,
+    "height": 421,
+    "safeArea": 34,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 49.25
+    },
+    "title": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 20.46875
+    },
+    "status": {
+      "x": 40,
+      "y": 346.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 267,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 267,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 53.59375,
+        "y": 183.671875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 66.4375,
+        "y": 182.28125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 127.609375,
+        "y": 154.25,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 197.1875,
+        "y": 169,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 234.078125,
+        "y": 184.203125,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 320,
+    "height": 421,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 169.9375,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 203.734375,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 346.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 320,
+    "height": 568,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 327.21875,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 361.015625,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 493.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 320,
+    "height": 568,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 448.9609375,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 40,
+      "y": 493.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 320,
+    "height": 568,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 327.21875,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 361.015625,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 493.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 320,
+    "height": 568,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 328.328125,
+      "width": 281.59375,
+      "height": 61.671875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 328.328125,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 493.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 414,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 414,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 53.84375,
+        "y": 257.015625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 66.6875,
+        "y": 255.625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 127.828125,
+        "y": 227.5625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 197.4375,
+        "y": 242.28125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 234.34375,
+        "y": 257.46875,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 320,
+    "height": 568,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 268.421875,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 302.21875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 493.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 390,
+    "height": 600,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 349.390625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 383.1875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 525.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 390,
+    "height": 600,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 476.8046875,
+      "width": 351.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 51,
+      "y": 525.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 390,
+    "height": 600,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 349.390625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 383.1875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 525.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 390,
+    "height": 600,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 358.578125,
+      "width": 351.59375,
+      "height": 63.421875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 358.578125,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 525.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 200.203125,
+        "y": 446,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 446,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 69.921875,
+        "y": 272.125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 85.578125,
+        "y": 270.40625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 160.109375,
+        "y": 236.203125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 244.90625,
+        "y": 254.15625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 289.859375,
+        "y": 272.65625,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 390,
+    "height": 600,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 289,
+      "width": 351.59375,
+      "height": 158
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 322.796875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 525.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 390,
+    "height": 500,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 277.390625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 311.1875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 425.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 390,
+    "height": 500,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 382.8046875,
+      "width": 351.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 51,
+      "y": 425.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 390,
+    "height": 500,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 277.390625,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 311.1875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 425.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 390,
+    "height": 500,
+    "safeArea": 34,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 262,
+      "height": 55.390625
+    },
+    "title": {
+      "x": 64.859375,
+      "y": 76,
+      "width": 260.296875,
+      "height": 26.609375
+    },
+    "status": {
+      "x": 51,
+      "y": 425.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 200.203125,
+        "y": 346,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 346,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 70.578125,
+        "y": 222.015625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 86.234375,
+        "y": 220.328125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 160.765625,
+        "y": 186.15625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 245.578125,
+        "y": 204.140625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 290.5625,
+        "y": 222.671875,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 390,
+    "height": 500,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 222,
+      "width": 351.59375,
+      "height": 158
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 255.796875,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 425.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 390,
+    "height": 501,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 278.109375,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 311.90625,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 426.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 390,
+    "height": 501,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 383.8046875,
+      "width": 351.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 51,
+      "y": 426.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 390,
+    "height": 501,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 278.109375,
+      "width": 351.59375,
+      "height": 97.21875
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 311.90625,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 426.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 390,
+    "height": 501,
+    "safeArea": 34,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 262,
+      "height": 55.390625
+    },
+    "title": {
+      "x": 64.859375,
+      "y": 76,
+      "width": 260.296875,
+      "height": 26.609375
+    },
+    "status": {
+      "x": 51,
+      "y": 426.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 200.203125,
+        "y": 347,
+        "width": 170.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 347,
+        "width": 170.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 70.015625,
+        "y": 222.40625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 85.65625,
+        "y": 220.6875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 160.1875,
+        "y": 186.46875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 245.015625,
+        "y": 204.40625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 289.96875,
+        "y": 222.90625,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 390,
+    "height": 501,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 222.65625,
+      "width": 351.59375,
+      "height": 158
+    },
+    "title": {
+      "x": 41.265625,
+      "y": 256.453125,
+      "width": 307.484375,
+      "height": 31.4375
+    },
+    "status": {
+      "x": 51,
+      "y": 426.8125,
+      "width": 288,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 320,
+    "height": 540,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 307.0625,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 340.859375,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 465.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 320,
+    "height": 540,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 422.8046875,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 40,
+      "y": 465.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 320,
+    "height": 540,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 307.0625,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 340.859375,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 465.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 320,
+    "height": 540,
+    "safeArea": 34,
+    "copy": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 49.25
+    },
+    "title": {
+      "x": 64,
+      "y": 76,
+      "width": 192,
+      "height": 20.46875
+    },
+    "status": {
+      "x": 40,
+      "y": 465.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 386,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 386,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 53.734375,
+        "y": 243.296875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 66.578125,
+        "y": 241.890625,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 127.71875,
+        "y": 213.828125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 197.296875,
+        "y": 228.546875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 234.203125,
+        "y": 243.734375,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 320,
+    "height": 540,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 249.671875,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 283.46875,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 465.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "discovery",
+    "width": 320,
+    "height": 541,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 307.78125,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 341.578125,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 466.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "reveal",
+    "width": 320,
+    "height": 541,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 423.8046875,
+      "width": 281.59375,
+      "height": 22.390625
+    },
+    "title": null,
+    "status": {
+      "x": 40,
+      "y": 466.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "proof",
+    "width": 320,
+    "height": 541,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 307.78125,
+      "width": 281.59375,
+      "height": 95.46875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 341.578125,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 466.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  },
+  {
+    "phase": "intelligence",
+    "width": 320,
+    "height": 541,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 301.328125,
+      "width": 281.59375,
+      "height": 61.671875
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 301.328125,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 466.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [
+      {
+        "x": 165.203125,
+        "y": 387,
+        "width": 135.59375,
+        "height": 44
+      },
+      {
+        "x": 19.203125,
+        "y": 387,
+        "width": 135.609375,
+        "height": 44
+      }
+    ],
+    "markers": [
+      {
+        "x": 53.640625,
+        "y": 243.34375,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 66.484375,
+        "y": 241.953125,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 127.65625,
+        "y": 213.921875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 197.25,
+        "y": 228.6875,
+        "width": 44,
+        "height": 44
+      },
+      {
+        "x": 234.125,
+        "y": 243.890625,
+        "width": 44,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "phase": "invitation",
+    "width": 320,
+    "height": 541,
+    "safeArea": 34,
+    "copy": {
+      "x": 19.203125,
+      "y": 250.34375,
+      "width": 281.59375,
+      "height": 156.25
+    },
+    "title": {
+      "x": 19.203125,
+      "y": 284.140625,
+      "width": 281.59375,
+      "height": 29.6875
+    },
+    "status": {
+      "x": 40,
+      "y": 466.8125,
+      "width": 240,
+      "height": 24.1875
+    },
+    "actions": [],
+    "markers": []
+  }
+]
