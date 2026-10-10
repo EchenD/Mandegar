@@ -149,6 +149,56 @@
       }
     }
   },
+  "partners": {
+    "heroKicker": {
+      "fa": "همراهان ما",
+      "en": "Our partners",
+      "ar": "شركاؤنا"
+    },
+    "title": {
+      "fa": "با هم می‌سازیم.",
+      "en": "Made together.",
+      "ar": "نصنع معاً."
+    },
+    "intro": {
+      "fa": "یک تجربه از کنار هم قرار گرفتن نگاه‌ها و مهارت‌های مختلف شکل می‌گیرد. نقش هر همراه، از ایده تا اجرا، بر اساس نیاز پروژه و مسئولیت‌های مشترک تعریف می‌شود.",
+      "en": "An experience takes shape when different perspectives and skills come together. Each partner’s role, from idea to delivery, is defined around the project and shared responsibilities.",
+      "ar": "تتشكل التجربة حين تجتمع وجهات نظر ومهارات مختلفة. يُحدد دور كل شريك، من الفكرة إلى التنفيذ، وفقاً لاحتياجات المشروع والمسؤوليات المشتركة."
+    },
+    "sections": [
+      {
+        "key": "network",
+        "kicker": {
+          "fa": "یک جهت مشترک",
+          "en": "A shared direction",
+          "ar": "اتجاه مشترك"
+        },
+        "title": {
+          "fa": "همراهی در هر لایه از تجربه.",
+          "en": "Together at every layer.",
+          "ar": "معاً في كل طبقة من التجربة."
+        },
+        "body": {
+          "fa": "از طراحی فضا و روایت تا فناوری و تولید، ترکیب مهارت‌ها با دامنه هر پروژه شکل می‌گیرد.",
+          "en": "From space and storytelling to technology and production, the mix of skills follows the scope of each project.",
+          "ar": "من المساحة والسرد إلى التقنية والإنتاج، تتشكل مجموعة المهارات وفقاً لنطاق كل مشروع."
+        },
+        "items": []
+      }
+    ],
+    "seo": {
+      "title": {
+        "fa": "همراهان ما",
+        "en": "Partners",
+        "ar": "شركاؤنا"
+      },
+      "description": {
+        "fa": "نگاهی به مدل همکاری و نقش‌های همراه در طراحی و تولید تجربه‌های مندگار.",
+        "en": "Explore the collaboration model and roles behind Mandegar’s approach to designing and producing experiences.",
+        "ar": "تعرّف على نموذج التعاون والأدوار التي تشكل نهج مندگار في تصميم التجارب وإنتاجها."
+      }
+    }
+  },
   "contact": {
     "heroKicker": {
       "fa": "شروع گفتگو",

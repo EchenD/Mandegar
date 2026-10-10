@@ -11,7 +11,7 @@ const openGraphLocale: Record<Locale, string> = {
   ar: "ar_AE",
 };
 
-export const pageSeo = seoContent as Record<Locale, Record<"home" | "projects" | "services" | "about" | "contact" | "legal", [string, string]>>;
+export const pageSeo = seoContent as Record<Locale, Record<"home" | "projects" | "services" | "about" | "partners" | "contact" | "legal", [string, string]>>;
 
 export function absoluteUrl(path: string) {
   if (/^https?:\/\//i.test(path)) return path;

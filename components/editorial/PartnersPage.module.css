@@ -1,0 +1,181 @@
+.page {
+  background: var(--paper);
+}
+
+.page p,
+.page h2,
+.page h3,
+.page a {
+  overflow-wrap: anywhere;
+}
+
+.network {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding-block-start: 1.2rem;
+  border-block-start: 1px solid var(--line);
+}
+
+.network svg {
+  flex: 0 0 5.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
+  color: var(--accent);
+}
+
+.network p {
+  max-width: 22ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: .95rem;
+  font-weight: 550;
+  line-height: 1.8;
+}
+
+.archive {
+  padding-block: clamp(2.5rem, 5vw, 5rem) clamp(4rem, 7vw, 7rem);
+}
+
+.sectionHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(2rem, 6vw, 6rem);
+  margin-block-end: 2rem;
+}
+
+.sectionHeader h2 {
+  max-width: 22ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.7rem, 2.8vw, 2.75rem);
+  font-weight: 550;
+  line-height: 1.4;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+.notice {
+  max-width: 44ch;
+  margin: 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 2px solid var(--accent);
+  color: var(--muted-strong);
+  font-size: .78rem;
+  line-height: 1.9;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: clamp(1rem, 2vw, 1.6rem);
+  border: 1px solid var(--line);
+  border-radius: .85rem;
+  background: #f5f4ef;
+}
+
+.mark {
+  display: grid;
+  min-height: 8.5rem;
+  place-items: center;
+  color: var(--ink);
+}
+
+.mark svg {
+  display: block;
+  width: min(64%, 8rem);
+  height: auto;
+}
+
+.mark img {
+  display: block;
+  width: 100%;
+  height: 6rem;
+  object-fit: contain;
+}
+
+.monogram {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+.cardCopy {
+  flex: 1;
+  border-block-start: 1px solid var(--line);
+  padding-block-start: 1rem;
+}
+
+.cardCopy h3 {
+  margin: 0;
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.8;
+}
+
+.cardCopy p {
+  margin-block: .35rem 0;
+  color: var(--muted-strong);
+  font-size: .68rem;
+  line-height: 1.8;
+}
+
+.website {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 44px;
+  margin-block-start: .6rem;
+  color: var(--accent-deep);
+  font-size: .75rem;
+  text-underline-offset: .3em;
+}
+
+:global([dir="rtl"]) .sectionHeader h2 {
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .sectionHeader {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .mark {
+    min-height: 7rem;
+  }
+
+  .cardCopy h3 {
+    font-size: .8rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

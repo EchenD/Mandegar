@@ -13,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       `/${locale}/projects`,
       `/${locale}/services`,
       `/${locale}/about`,
+      `/${locale}/partners`,
       `/${locale}/contact`,
       ...(legal?.status === "approved" ? [`/${locale}/legal`] : []),
       ...projects.map((project) => `/${locale}/projects/${project.slug}`),

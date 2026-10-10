@@ -124,7 +124,7 @@ export type EditorialPageContent = {
   seo?: { title: Localized; description: Localized };
 };
 
-export async function getEditorialPage(_locale: Locale, pageKey: "projects" | "services" | "about" | "contact"): Promise<EditorialPageContent | null> {
+export async function getEditorialPage(_locale: Locale, pageKey: "projects" | "services" | "about" | "partners" | "contact"): Promise<EditorialPageContent | null> {
   return pages[pageKey] as EditorialPageContent;
 }
 
