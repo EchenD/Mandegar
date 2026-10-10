@@ -63,6 +63,9 @@ try {
     throw "The export is missing the finale logo: $finaleLogoExport"
   }
 
+  & node (Join-Path $PSScriptRoot "normalize-static-segments.mjs") $exportDirectory
+  if ($LASTEXITCODE -ne 0) { throw "Static navigation segment validation failed." }
+
   if ($BuildOnly) {
     Write-Host "Static website export is ready at $exportDirectory."
     return
