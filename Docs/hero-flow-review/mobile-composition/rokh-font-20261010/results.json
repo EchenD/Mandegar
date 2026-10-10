@@ -1,0 +1,610 @@
+{
+  "base": "http://127.0.0.1:3400/Mandegar",
+  "startedAt": "2026-10-10T19:00:09.753Z",
+  "passed": true,
+  "cases": [
+    {
+      "name": "fa-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [
+        "fa-mobile-discovery.png",
+        "fa-mobile-home-partners.png",
+        "fa-mobile-service-events.png",
+        "fa-mobile-finale-320.png",
+        "fa-mobile-partners-page.png"
+      ],
+      "homeFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "500"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "partnersFont": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 71.390625,
+        "right": 71.40625,
+        "caretGap": 3.15625,
+        "caretCenter": 629.1484375,
+        "textTop": 619.75,
+        "textBottom": 648.75,
+        "title": "چیزی بسازیم که ماندگار شود."
+      },
+      "finale320": {
+        "lineSpread": 0,
+        "left": 58.40625,
+        "right": 58.40625,
+        "caretGap": 2.59375,
+        "caretCenter": 436.390625,
+        "textTop": 428.4375,
+        "textBottom": 452.4375,
+        "title": "چیزی بسازیم که ماندگار شود."
+      },
+      "innerFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_SemiBold.1b8oyotpmhbb1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_Regular.0r_9_d44hmktc.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_ExtraBold.2h2h_y5zfkit6.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_Bold.36i9dtb8dnxi5.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "fa-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [],
+      "homeFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "500"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "partnersFont": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 484.84375,
+        "right": 484.859375,
+        "caretGap": 6.046875,
+        "caretCenter": 703.4296875,
+        "textTop": 684.84375,
+        "textBottom": 740.84375,
+        "title": "چیزی بسازیم که ماندگار شود."
+      },
+      "innerFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "400"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "600"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "700"
+          },
+          {
+            "family": "rokhFaNum",
+            "weight": "800"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_SemiBold.1b8oyotpmhbb1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_Regular.0r_9_d44hmktc.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_ExtraBold.2h2h_y5zfkit6.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/RokhFaNum_Bold.36i9dtb8dnxi5.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "en-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [],
+      "homeFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "partnersFont": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 65.421875,
+        "right": 65.421875,
+        "caretGap": 3.15625,
+        "caretCenter": 631.1484375,
+        "textTop": 616.75,
+        "textBottom": 651.75,
+        "title": "Make something that stays."
+      },
+      "finale320": {
+        "lineSpread": 0,
+        "left": 53.5,
+        "right": 53.5,
+        "caretGap": 2.59375,
+        "caretCenter": 437.390625,
+        "textTop": 425.4375,
+        "textBottom": 454.4375,
+        "title": "Make something that stays."
+      },
+      "innerFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-arabic-wght-normal.0tzxgo2fuaf-x.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "en-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [],
+      "homeFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "partnersFont": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 473.4375,
+        "right": 473.4375,
+        "caretGap": 6.046875,
+        "caretCenter": 706.4296875,
+        "textTop": 678.84375,
+        "textBottom": 745.84375,
+        "title": "Make something that stays."
+      },
+      "innerFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "ltr"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-arabic-wght-normal.0tzxgo2fuaf-x.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "ar-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [],
+      "homeFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "partnersFont": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 115.234375,
+        "right": 115.234375,
+        "caretGap": 3.15625,
+        "caretCenter": 631.1484375,
+        "textTop": 616.75,
+        "textBottom": 651.75,
+        "title": "لنصنع شيئاً يبقى."
+      },
+      "finale320": {
+        "lineSpread": 0,
+        "left": 94.359375,
+        "right": 94.375,
+        "caretGap": 2.59375,
+        "caretCenter": 437.390625,
+        "textTop": 425.4375,
+        "textBottom": 454.4375,
+        "title": "لنصنع شيئاً يبقى."
+      },
+      "innerFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-arabic-wght-normal.0tzxgo2fuaf-x.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "ar-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pageErrors": [],
+      "consoleErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "captures": [],
+      "homeFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "partnersFont": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+      "finale": {
+        "lineSpread": 0,
+        "left": 568.5625,
+        "right": 568.578125,
+        "caretGap": 6.046875,
+        "caretCenter": 706.4296875,
+        "textTop": 678.84375,
+        "textBottom": 745.84375,
+        "title": "لنصنع شيئاً يبقى."
+      },
+      "innerFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "headerDelta": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "partnerPageFonts": {
+        "family": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "loaded": [
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          },
+          {
+            "family": "Vazirmatn Variable",
+            "weight": "100 900"
+          }
+        ],
+        "overflow": 0,
+        "dir": "rtl"
+      },
+      "fontAssets": [
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-latin-wght-normal.00gnhmt88g2y1.woff2",
+        "http://127.0.0.1:3400/Mandegar/_next/static/media/vazirmatn-arabic-wght-normal.0tzxgo2fuaf-x.woff2"
+      ],
+      "passed": true,
+      "deviceScaleFactor": 1
+    }
+  ],
+  "finishedAt": "2026-10-10T19:01:56.761Z"
+}
