@@ -1,0 +1,308 @@
+{
+  "base": "http://127.0.0.1:3400/Mandegar",
+  "startedAt": "2026-10-10T19:19:06.472Z",
+  "passed": true,
+  "cases": [
+    {
+      "name": "fa-320",
+      "locale": "fa",
+      "width": 320,
+      "height": 568,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "فضای گردهمایی",
+        "fontFamily": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 102.71875,
+        "right": 102.734375,
+        "headingBottom": 122.796875,
+        "imageTop": 176.093994140625,
+        "arrowTextOverlap": -9.828125,
+        "caretTextGap": 2.234375,
+        "overflow": 0,
+        "arrowHeight": 15.5,
+        "textHeight": 21
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "fa-320.png",
+      "longTitle": {
+        "overflow": 0,
+        "groupTextOverflow": "ellipsis",
+        "groupOverflow": "hidden",
+        "arrowInsideHeading": true,
+        "arrowInsideLink": true,
+        "caretClipped": true
+      },
+      "passed": true
+    },
+    {
+      "name": "en-1440",
+      "locale": "en",
+      "width": 1440,
+      "height": 900,
+      "density": 1,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "The Gathering Space",
+        "fontFamily": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 579.421875,
+        "right": 579.421875,
+        "headingBottom": 157.875,
+        "imageTop": 205.1190185546875,
+        "arrowTextOverlap": -16.109375,
+        "caretTextGap": 4.03125,
+        "overflow": 0,
+        "arrowHeight": 17.484375,
+        "textHeight": 45
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "en-1440.png",
+      "passed": true
+    },
+    {
+      "name": "fa-390",
+      "locale": "fa",
+      "width": 390,
+      "height": 844,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "فضای گردهمایی",
+        "fontFamily": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 126.21875,
+        "right": 126.234375,
+        "headingBottom": 212.5,
+        "imageTop": 263.37353515625,
+        "arrowTextOverlap": -11.53125,
+        "caretTextGap": 2.71875,
+        "overflow": 0,
+        "arrowHeight": 15.5,
+        "textHeight": 25
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "fa-390.png",
+      "passed": true
+    },
+    {
+      "name": "en-390",
+      "locale": "en",
+      "width": 390,
+      "height": 844,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "The Gathering Space",
+        "fontFamily": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 99.046875,
+        "right": 99.0625,
+        "headingBottom": 210.546875,
+        "imageTop": 265.36962890625,
+        "arrowTextOverlap": -11.53125,
+        "caretTextGap": 2.71875,
+        "overflow": 0,
+        "arrowHeight": 14.5,
+        "textHeight": 30
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "en-390.png",
+      "passed": true
+    },
+    {
+      "name": "en-320",
+      "locale": "en",
+      "width": 320,
+      "height": 568,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "The Gathering Space",
+        "fontFamily": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 80.4375,
+        "right": 80.4375,
+        "headingBottom": 121.1875,
+        "imageTop": 177.70849609375,
+        "arrowTextOverlap": -9.828125,
+        "caretTextGap": 2.234375,
+        "overflow": 0,
+        "arrowHeight": 14.5,
+        "textHeight": 25
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "en-320.png",
+      "passed": true
+    },
+    {
+      "name": "ar-390",
+      "locale": "ar",
+      "width": 390,
+      "height": 844,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "مساحة اللقاء",
+        "fontFamily": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 135.171875,
+        "right": 135.1875,
+        "headingBottom": 212.5,
+        "imageTop": 264.77880859375,
+        "arrowTextOverlap": -11.53125,
+        "caretTextGap": 2.71875,
+        "overflow": 0,
+        "arrowHeight": 15.5,
+        "textHeight": 30
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "ar-390.png",
+      "passed": true
+    },
+    {
+      "name": "ar-320",
+      "locale": "ar",
+      "width": 320,
+      "height": 568,
+      "density": 3,
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "مساحة اللقاء",
+        "fontFamily": "\"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 110.078125,
+        "right": 110.078125,
+        "headingBottom": 122.796875,
+        "imageTop": 176.958740234375,
+        "arrowTextOverlap": -9.828125,
+        "caretTextGap": 2.234375,
+        "overflow": 0,
+        "arrowHeight": 15.5,
+        "textHeight": 25
+      },
+      "linkMetrics": {
+        "height": 44,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "ar-320.png",
+      "passed": true
+    },
+    {
+      "name": "fa-320-reduced",
+      "locale": "fa",
+      "width": 320,
+      "height": 568,
+      "density": 3,
+      "reducedMotion": "reduce",
+      "pageErrors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "geometry": {
+        "title": "فضای گردهمایی",
+        "fontFamily": "rokhFaNum, \"Vazirmatn Variable\", Tahoma, sans-serif",
+        "arrowColor": "rgb(34, 92, 255)",
+        "left": 74.640625,
+        "right": 22.390625,
+        "headingBottom": 140.5625,
+        "imageTop": 164.5625,
+        "arrowTextOverlap": -17.65625,
+        "caretTextGap": 4.46875,
+        "overflow": 0,
+        "arrowHeight": 20.15625,
+        "textHeight": 41
+      },
+      "linkMetrics": {
+        "height": 352.796875,
+        "outlineColor": "rgb(34, 92, 255)",
+        "outlineOffset": "-2px",
+        "outlineStyle": "solid"
+      },
+      "hover": {
+        "textDecoration": "underline",
+        "arrowDecoration": "none"
+      },
+      "capture": "fa-320-reduced.png",
+      "passed": true
+    }
+  ],
+  "finishedAt": "2026-10-10T19:23:09.877Z",
+  "recheckedCases": [
+    "fa-320-reduced"
+  ]
+}
