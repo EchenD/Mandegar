@@ -2,7 +2,9 @@
 
 Persian-first Next.js website with English and Arabic versions. Non-home pages use editable JSON with validation and a static publishing command. No content server or Sanity account is required.
 
-See [the content editing guide](Docs/CONTENT_EDITING_GUIDE.md) for the file map, project/service updates, media replacement, footer settings and publishing instructions. Concept projects and unapproved media remain labelled; contact details and legal text still need owner approval.
+Follow [the complete content editing guide](Docs/CONTENT_EDITING_GUIDE.md) to change page text, homepage phases, projects, services, partners, images, videos and 3D artwork. Use [the deployment guide](Docs/DEPLOYMENT_GUIDE.md) for step-by-step commands to validate, commit, preview and publish to GitHub Pages or your own domain, and roll back a release. Concept projects and unapproved media remain labelled; contact details and legal text still need owner approval.
+
+راهنماهای فارسی: [ویرایش کامل محتوا](Docs/CONTENT_EDITING_GUIDE.fa.md) و [انتشار سایت](Docs/DEPLOYMENT_GUIDE.fa.md).
 
 ## Run locally
 
@@ -25,7 +27,7 @@ npm run build
 npm start
 ```
 
-Every production build validates content first. `npm run build:pages` prepares a static website in `out/` without publishing. `npm run content:publish` builds and pushes to the configured GitHub Pages repository; see the guide before choosing a destination.
+Every production build validates content first. `npm run build:pages` prepares a static website in `out/` without publishing. `npm run content:publish` builds and pushes to the configured GitHub Pages repository; see [the deployment guide](Docs/DEPLOYMENT_GUIDE.md) before choosing a destination.
 
 ## Browser QA
 
